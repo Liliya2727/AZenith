@@ -182,14 +182,16 @@ class ZXFloatingAppRootService : RootService() {
                         data.enforceInterface(DESCRIPTOR)
                         val pkg = data.readString().orEmpty()
                         val displayId = data.readInt()
-                        launchPackageOnDisplay(pkg, displayId)
+                        val allowLandscape = data.readInt() != 0
+                        launchPackageOnDisplay(pkg, displayId, allowLandscape)
                         reply?.writeNoException()
                         return true
                     }
                     TRANSACTION_ENFORCE_PORTRAIT -> {
                         data.enforceInterface(DESCRIPTOR)
                         val displayId = data.readInt()
-                        enforcePortraitOnDisplay(displayId)
+                        val locked = data.readInt() != 0
+                        enforcePortraitOnDisplay(displayId, locked)
                         reply?.writeNoException()
                         return true
                     }
@@ -507,19 +509,27 @@ class ZXFloatingAppRootService : RootService() {
         }
     }
 
-    private fun enforcePortraitOnDisplay(displayId: Int) {
+    private fun enforcePortraitOnDisplay(displayId: Int, locked: Boolean = true) {
         if (displayId <= 0) return
         ioExecutor.execute {
             runCatching {
-                val cmd = "cmd window set-ignore-orientation-request -d $displayId true >/dev/null 2>&1; " +
-                    "cmd window set-fix-to-user-rotation -d $displayId enabled >/dev/null 2>&1; " +
-                    "cmd window user-rotation -d $displayId lock 0 >/dev/null 2>&1"
+                val cmd = if (locked) {
+                    "cmd window set-ignore-orientation-request -d $displayId true >/dev/null 2>&1; " +
+                        "cmd window fixed-to-user-rotation -d $displayId enabled >/dev/null 2>&1; " +
+                        "cmd window user-rotation -d $displayId lock 0 >/dev/null 2>&1"
+                } else {
+                    // Orientation-agnostic app: pin the user rotation but stop discarding the
+                    // app's own requests, so a landscape request can rotate the display.
+                    "cmd window set-ignore-orientation-request -d $displayId false >/dev/null 2>&1; " +
+                        "cmd window fixed-to-user-rotation -d $displayId disabled >/dev/null 2>&1; " +
+                        "cmd window user-rotation -d $displayId lock 0 >/dev/null 2>&1"
+                }
                 Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", cmd)).waitFor(1200, TimeUnit.MILLISECONDS)
             }
         }
     }
 
-    private fun launchPackageOnDisplay(pkg: String, displayId: Int) {
+    private fun launchPackageOnDisplay(pkg: String, displayId: Int, allowLandscape: Boolean = false) {
         if (pkg.isBlank() || displayId <= 0) return
         Log.i("ZXFloatRoot", "launchPackageOnDisplay: pkg=$pkg displayId=$displayId")
         ioExecutor.execute {
@@ -537,14 +547,29 @@ class ZXFloatingAppRootService : RootService() {
                     }
                 }
 
-                // 1. Lock orientation to portrait and ensure display is unfrozen
-                val lockCmd = "cmd window set-ignore-orientation-request -d $displayId true; " +
-                    "cmd window set-fix-to-user-rotation -d $displayId enabled; " +
-                    "cmd window user-rotation -d $displayId lock 0; " +
-                    "cmd window set-display-windowing-mode -d $displayId 1; " +
+                // 1. Portrait is only forced on apps that promise portrait in their manifest;
+                //    orientation-agnostic apps keep their own requests so we can watch for them
+                if (!allowLandscape) {
+                    val lockCmd = "cmd window set-ignore-orientation-request -d $displayId true; " +
+                        "cmd window fixed-to-user-rotation -d $displayId enabled; " +
+                        "cmd window user-rotation -d $displayId lock 0; "
+                    runCatching {
+                        Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", lockCmd))
+                            .waitFor(1000, TimeUnit.MILLISECONDS)
+                    }
+                } else {
+                    val releaseCmd = "cmd window set-ignore-orientation-request -d $displayId false; " +
+                        "cmd window fixed-to-user-rotation -d $displayId disabled; " +
+                        "cmd window user-rotation -d $displayId lock 0; "
+                    runCatching {
+                        Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", releaseCmd))
+                            .waitFor(1000, TimeUnit.MILLISECONDS)
+                    }
+                }
+                val windowingCmd = "cmd window set-display-windowing-mode -d $displayId 1; " +
                     "cmd window dismiss-keyguard"
                 runCatching {
-                    Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", lockCmd))
+                    Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", windowingCmd))
                         .waitFor(1000, TimeUnit.MILLISECONDS)
                 }
 
@@ -721,7 +746,7 @@ class ZXFloatingDisplayRootClient(private val remote: IBinder) {
         }
     }
 
-    fun launchAppOnDisplay(pkg: String, displayId: Int) {
+    fun launchAppOnDisplay(pkg: String, displayId: Int, allowLandscape: Boolean = false) {
         if (displayId <= 0 || pkg.isBlank()) return
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -729,6 +754,7 @@ class ZXFloatingDisplayRootClient(private val remote: IBinder) {
             data.writeInterfaceToken(DESCRIPTOR)
             data.writeString(pkg)
             data.writeInt(displayId)
+            data.writeInt(if (allowLandscape) 1 else 0)
             remote.transact(ZXFloatingAppRootService.TRANSACTION_LAUNCH_APP, data, reply, 0)
             reply.readException()
         } catch (_: Exception) {
@@ -738,13 +764,14 @@ class ZXFloatingDisplayRootClient(private val remote: IBinder) {
         }
     }
 
-    fun enforcePortrait(displayId: Int) {
+    fun enforcePortrait(displayId: Int, locked: Boolean = true) {
         if (displayId <= 0) return
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         try {
             data.writeInterfaceToken(DESCRIPTOR)
             data.writeInt(displayId)
+            data.writeInt(if (locked) 1 else 0)
             remote.transact(ZXFloatingAppRootService.TRANSACTION_ENFORCE_PORTRAIT, data, reply, 0)
             reply.readException()
         } catch (_: Exception) {

@@ -23,6 +23,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
 import android.graphics.Matrix
 import android.graphics.PixelFormat
 import android.graphics.SurfaceTexture
@@ -124,7 +126,9 @@ import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.ui.theme.AZenithTheme
@@ -166,6 +170,14 @@ class ZXFloatingAppSession(
     var lastActiveTimestampMs by mutableLongStateOf(System.currentTimeMillis())
     var isClosing: Boolean = false
 
+    // The app declared a landscape-only orientation in its manifest, so its virtual display is
+    // created landscape and the portrait lock is skipped for it.
+    var prefersLandscape by mutableStateOf(false)
+
+    // The app declared a portrait-only orientation, so its virtual display is hard-locked and
+    // never watched for runtime orientation requests.
+    var lockPortrait by mutableStateOf(true)
+
     var isFreeform by mutableStateOf(false)
     var virtualWidth: Int = 720
     var virtualHeight: Int = 1280
@@ -196,6 +208,28 @@ class ZXFloatingAppManager(
         const val VIRTUAL_PORTRAIT_DPI = 320
         const val PORTRAIT_ASPECT_RATIO = 9f / 16f
 
+        const val VIRTUAL_LANDSCAPE_WIDTH = 1280
+        const val VIRTUAL_LANDSCAPE_HEIGHT = 720
+
+        /** Manifest orientations that only make sense turned sideways. */
+        private val LANDSCAPE_ORIENTATIONS = setOf(
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,
+            ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE,
+            ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+        )
+
+        /** Manifest orientations that promise the app never wants to be turned. */
+        private val PORTRAIT_ORIENTATIONS = setOf(
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,
+            ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT,
+            ActivityInfo.SCREEN_ORIENTATION_LOCKED
+        )
+
+        private const val ORIENTATION_POLL_MS = 400L
+        private const val ORIENTATION_DEBOUNCE_MS = 600L
+
         private const val GESTURE_NONE = 0
         private const val GESTURE_TOPBAR_PENDING = 1
         private const val GESTURE_TOPBAR_DRAG = 2
@@ -218,6 +252,7 @@ class ZXFloatingAppManager(
     private var nextSessionId = 1
     private var rootClient: ZXFloatingDisplayRootClient? = null
     private var rootBindingInFlight = false
+    private val orientationWatchJobs = mutableMapOf<Int, Job>()
     private var minimizedStackHostView: FrameLayout? = null
     private var minimizedStackParams: WindowManager.LayoutParams? = null
     private var snapAnimator: ValueAnimator? = null
@@ -239,6 +274,54 @@ class ZXFloatingAppManager(
     fun isPackageHosted(pkg: String?): Boolean {
         if (pkg.isNullOrBlank()) return false
         return sessions.any { it.packageName == pkg }
+    }
+
+    /**
+     * True when the launcher activity promises a portrait-only orientation. Such an app never
+     * asks for landscape at runtime, so its display can be hard-locked and left unwatched.
+     */
+    fun appDeclaresPortrait(pkg: String): Boolean {
+        val orientation = launcherOrientationOf(pkg) ?: return false
+        return orientation in PORTRAIT_ORIENTATIONS
+    }
+
+    private fun launcherOrientationOf(pkg: String): Int? {
+        if (pkg.isBlank()) return null
+        return try {
+            val pm = context.packageManager
+            val info = pm.getPackageInfo(pkg, PackageManager.GET_ACTIVITIES)
+            val activities = info.activities ?: return null
+            val launchClass = pm.getLaunchIntentForPackage(pkg)?.component?.className
+            (activities.firstOrNull { it.name == launchClass } ?: activities.firstOrNull { it.enabled })
+                ?.screenOrientation
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * True when the package declares a landscape-only orientation, i.e. it cannot render itself
+     * upright. Deliberately ignores sensor/user/full-sensor, which only *allow* landscape.
+     */
+    fun appNeedsLandscape(pkg: String): Boolean {
+        if (pkg.isBlank()) return false
+        return try {
+            val pm = context.packageManager
+            val info = pm.getPackageInfo(pkg, PackageManager.GET_ACTIVITIES)
+            val activities = info.activities ?: return false
+            val launchClass = pm.getLaunchIntentForPackage(pkg)?.component?.className
+            val launcher = activities.firstOrNull { it.name == launchClass }
+                ?: activities.firstOrNull { it.enabled }
+            val launcherOrientation = launcher?.screenOrientation
+                ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            launcherOrientation in LANDSCAPE_ORIENTATIONS ||
+                // unspecified/behind inherit from elsewhere in the app, so scan the whole manifest
+                (launcherOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED ||
+                    launcherOrientation == ActivityInfo.SCREEN_ORIENTATION_BEHIND) &&
+                activities.any { it.screenOrientation in LANDSCAPE_ORIENTATIONS }
+        } catch (_: Exception) {
+            false
+        }
     }
 
     fun prebindRootServiceIfPossible() {
@@ -299,6 +382,8 @@ class ZXFloatingAppManager(
                 initialWidthPx = normW,
                 initialHeightPx = normH
             )
+            session.prefersLandscape = appNeedsLandscape(pkg)
+            session.lockPortrait = !session.prefersLandscape && appDeclaresPortrait(pkg)
             sessions.add(session)
             attachSessionWindow(session)
             syncMinimizedStackWindow()
@@ -376,7 +461,7 @@ class ZXFloatingAppManager(
         val displayId = session.virtualDisplayId
         if (displayId > 0 && !session.hasLaunchedApp) {
             session.hasLaunchedApp = true
-            rootClient?.launchAppOnDisplay(session.packageName, displayId)
+            rootClient?.launchAppOnDisplay(session.packageName, displayId, !session.lockPortrait)
         }
         syncMinimizedStackWindow()
     }
@@ -402,6 +487,7 @@ class ZXFloatingAppManager(
 
     fun closeSession(session: ZXFloatingAppSession) {
         session.isClosing = true
+        orientationWatchJobs.remove(session.sessionId)?.cancel()
         sessions.remove(session)
         releaseSessionDisplay(session)
         session.hostView?.let { view ->
@@ -417,6 +503,8 @@ class ZXFloatingAppManager(
 
     fun destroyAllSessions() {
         snapAnimator?.cancel()
+        orientationWatchJobs.values.forEach { it.cancel() }
+        orientationWatchJobs.clear()
         val copy = sessions.toList()
         sessions.clear()
         copy.forEach { session ->
@@ -527,6 +615,73 @@ class ZXFloatingAppManager(
         val lp = session.layoutParams ?: return
         runCatching {
             windowManager.updateViewLayout(host, lp)
+        }
+    }
+
+    private fun startOrientationWatch(session: ZXFloatingAppSession) {
+        orientationWatchJobs.remove(session.sessionId)?.cancel()
+        orientationWatchJobs[session.sessionId] = scope.launch(Dispatchers.IO) {
+            val dm = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager ?: return@launch
+            var pendingSince = 0L
+            while (isActive && !session.isClosing) {
+                delay(ORIENTATION_POLL_MS)
+                val rotation = runCatching { dm.getDisplay(session.virtualDisplayId)?.rotation }
+                    .getOrNull() ?: continue
+                val sideways = rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270
+                // A display sitting at ROTATION_0 is already happy, whichever way it is shaped;
+                // only a *sideways* display is an app asking to be turned.
+                val displayIsLandscape = session.virtualWidth > session.virtualHeight
+                val wants = when {
+                    !sideways -> null
+                    displayIsLandscape -> false
+                    else -> true
+                }
+                if (wants == null || wants == session.prefersLandscape) {
+                    pendingSince = 0L
+                    continue
+                }
+                val now = System.currentTimeMillis()
+                if (pendingSince == 0L) pendingSince = now
+                if (now - pendingSince < ORIENTATION_DEBOUNCE_MS) continue
+                pendingSince = 0L
+                withContext(Dispatchers.Main) { applyObservedOrientation(session, wants) }
+            }
+        }
+    }
+
+    /** Follow an orientation the app asked for on its own, by resizing display and window. */
+    private fun applyObservedOrientation(session: ZXFloatingAppSession, landscape: Boolean) {
+        if (session.prefersLandscape == landscape) return
+        session.prefersLandscape = landscape
+        val virtW: Int
+        val virtH: Int
+        if (landscape) {
+            virtW = VIRTUAL_LANDSCAPE_WIDTH
+            virtH = VIRTUAL_LANDSCAPE_HEIGHT
+        } else {
+            virtW = VIRTUAL_PORTRAIT_WIDTH
+            virtH = VIRTUAL_PORTRAIT_HEIGHT
+        }
+        session.virtualWidth = virtW
+        session.virtualHeight = virtH
+
+        val dm = context.resources.displayMetrics
+        val density = dm.density
+        val borderPx = (4f * density).roundToInt()
+        val topBarPx = (34f * density).roundToInt()
+        val contentH = (session.heightPx - borderPx - topBarPx).coerceAtLeast((72 * density).roundToInt())
+        val targetW = (((contentH + topBarPx + borderPx) * virtW.toFloat() / virtH).roundToInt())
+            .coerceIn((120 * density).roundToInt(), dm.widthPixels - 8)
+        session.widthPx = targetW
+        session.windowX = session.windowX.coerceIn(8, (dm.widthPixels - targetW - 8).coerceAtLeast(8))
+
+        if (session.isFreeform) {
+            // freeform derives the display size from the window, so moving the window is enough
+            commitFreeformDimensions(session)
+        } else {
+            rootClient?.resizeVirtualDisplay(session.virtualDisplayId, virtW, virtH, VIRTUAL_PORTRAIT_DPI)
+            session.renderTextureView?.surfaceTexture?.setDefaultBufferSize(virtW, virtH)
+            updateSessionWindowLayout(session)
         }
     }
 
@@ -986,30 +1141,42 @@ class ZXFloatingAppManager(
             showModeToast("Freeform enabled")
             commitFreeformDimensions(session)
         } else {
-            showModeToast("Portrait locked")
+            val landscape = session.prefersLandscape
+            showModeToast(if (landscape) "Landscape locked" else "Portrait locked")
+            val dm = context.resources.displayMetrics
             val borderPx = (4f * density).roundToInt()
             val topBarPx = (34f * density).roundToInt()
             val contentH = (session.heightPx - borderPx - topBarPx).coerceAtLeast((72 * density).roundToInt())
-            val contentW = (contentH * PORTRAIT_ASPECT_RATIO).roundToInt()
-            val targetW = contentW + borderPx
+            val virtW: Int
+            val virtH: Int
+            val targetW: Int
+            if (landscape) {
+                virtW = VIRTUAL_LANDSCAPE_WIDTH
+                virtH = VIRTUAL_LANDSCAPE_HEIGHT
+                targetW = (((contentH + topBarPx + borderPx) *
+                    VIRTUAL_LANDSCAPE_WIDTH.toFloat() / VIRTUAL_LANDSCAPE_HEIGHT).roundToInt())
+                    .coerceIn((120 * density).roundToInt(), dm.widthPixels - 8)
+            } else {
+                virtW = VIRTUAL_PORTRAIT_WIDTH
+                virtH = VIRTUAL_PORTRAIT_HEIGHT
+                val contentW = (contentH * PORTRAIT_ASPECT_RATIO).roundToInt()
+                targetW = contentW + borderPx
+            }
             session.widthPx = targetW
-            session.virtualWidth = VIRTUAL_PORTRAIT_WIDTH
-            session.virtualHeight = VIRTUAL_PORTRAIT_HEIGHT
+            session.virtualWidth = virtW
+            session.virtualHeight = virtH
 
             val client = rootClient
             if (client != null && client.isBinderAlive) {
                 client.resizeVirtualDisplay(
                     session.virtualDisplayId,
-                    VIRTUAL_PORTRAIT_WIDTH,
-                    VIRTUAL_PORTRAIT_HEIGHT,
+                    virtW,
+                    virtH,
                     VIRTUAL_PORTRAIT_DPI
                 )
-                client.enforcePortrait(session.virtualDisplayId)
+                client.enforcePortrait(session.virtualDisplayId, locked = session.lockPortrait)
             }
-            session.renderTextureView?.surfaceTexture?.setDefaultBufferSize(
-                VIRTUAL_PORTRAIT_WIDTH,
-                VIRTUAL_PORTRAIT_HEIGHT
-            )
+            session.renderTextureView?.surfaceTexture?.setDefaultBufferSize(virtW, virtH)
             updateSessionWindowLayout(session)
         }
     }
@@ -1033,8 +1200,13 @@ class ZXFloatingAppManager(
     }
 
     fun bindSessionSurface(session: ZXFloatingAppSession, surfaceTexture: SurfaceTexture) {
-        val virtW = if (session.isFreeform && session.virtualWidth > 0) session.virtualWidth else VIRTUAL_PORTRAIT_WIDTH
-        val virtH = if (session.isFreeform && session.virtualHeight > 0) session.virtualHeight else VIRTUAL_PORTRAIT_HEIGHT
+        val landscape = session.prefersLandscape
+        val baseW = if (landscape) VIRTUAL_LANDSCAPE_WIDTH else VIRTUAL_PORTRAIT_WIDTH
+        val baseH = if (landscape) VIRTUAL_LANDSCAPE_HEIGHT else VIRTUAL_PORTRAIT_HEIGHT
+        val virtW = if (session.isFreeform && session.virtualWidth > 0) session.virtualWidth else baseW
+        val virtH = if (session.isFreeform && session.virtualHeight > 0) session.virtualHeight else baseH
+        session.virtualWidth = virtW
+        session.virtualHeight = virtH
         surfaceTexture.setDefaultBufferSize(virtW, virtH)
         val surface = Surface(surfaceTexture)
         session.renderSurface = surface
@@ -1066,8 +1238,8 @@ class ZXFloatingAppManager(
             if (client != null && client.isBinderAlive) {
                 createdDisplayId = client.createVirtualDisplay(
                     name = "AZenithFloat_${session.sessionId}",
-                    width = VIRTUAL_PORTRAIT_WIDTH,
-                    height = VIRTUAL_PORTRAIT_HEIGHT,
+                    width = baseW,
+                    height = baseH,
                     dpi = VIRTUAL_PORTRAIT_DPI,
                     surface = surface
                 )
@@ -1075,8 +1247,9 @@ class ZXFloatingAppManager(
                     session.virtualDisplayId = createdDisplayId
                     if (!session.hasLaunchedApp) {
                         session.hasLaunchedApp = true
-                        client.launchAppOnDisplay(session.packageName, createdDisplayId)
+                        client.launchAppOnDisplay(session.packageName, createdDisplayId, !session.lockPortrait)
                     }
+                    if (!session.lockPortrait) startOrientationWatch(session)
                 }
             }
 
@@ -1087,8 +1260,8 @@ class ZXFloatingAppManager(
                         // Private virtual display with no OWN_CONTENT_ONLY restrictions
                         val vd = dm.createVirtualDisplay(
                             "AZenithFloat_${session.sessionId}",
-                            VIRTUAL_PORTRAIT_WIDTH,
-                            VIRTUAL_PORTRAIT_HEIGHT,
+                            baseW,
+                            baseH,
                             VIRTUAL_PORTRAIT_DPI,
                             surface,
                             0
@@ -1097,6 +1270,7 @@ class ZXFloatingAppManager(
                             session.localVirtualDisplay = vd
                             val displayId = vd.display.displayId
                             session.virtualDisplayId = displayId
+                            if (!session.lockPortrait) startOrientationWatch(session)
                             val launchIntent = context.packageManager
                                 .getLaunchIntentForPackage(session.packageName)
                             val component = launchIntent?.component?.flattenToShortString()
@@ -1105,10 +1279,21 @@ class ZXFloatingAppManager(
                                 session.hasLaunchedApp = true
                                 scope.launch(Dispatchers.IO) {
                                     runCatching {
+                                        val orientationCmds = if (session.lockPortrait) {
+                                            arrayOf(
+                                                "cmd window set-ignore-orientation-request -d $displayId true",
+                                                "cmd window fixed-to-user-rotation -d $displayId enabled",
+                                                "cmd window user-rotation -d $displayId lock 0"
+                                            )
+                                        } else {
+                                            arrayOf(
+                                                "cmd window set-ignore-orientation-request -d $displayId false",
+                                                "cmd window fixed-to-user-rotation -d $displayId disabled",
+                                                "cmd window user-rotation -d $displayId lock 0"
+                                            )
+                                        }
                                         Shell.cmd(
-                                            "cmd window set-ignore-orientation-request -d $displayId true",
-                                            "cmd window set-fix-to-user-rotation -d $displayId enabled",
-                                            "cmd window user-rotation -d $displayId lock 0",
+                                            *orientationCmds,
                                             "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 --activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x10000000 -n $component"
                                         ).exec()
                                     }

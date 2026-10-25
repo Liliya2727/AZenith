@@ -173,6 +173,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import zx.azenith.ui.theme.AZenithTheme
+import zx.azenith.ui.component.ResetConfirmDialog
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -282,6 +283,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var windowManager: WindowManager? = null
     private var audioManager: AudioManager? = null
     private var floatingAppManager: ZXFloatingAppManager? = null
+    private var wasFloatingWindowsOpen = false
+    private var floatingTeardownGraceUntilMs = 0L
     private var rootOverlayView: View? = null
     private var crosshairView: ComposeView? = null
     private var hudView: View? = null
@@ -290,31 +293,11 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var telemetryJob: Job? = null
     private var windowTransitionJob: Job? = null
     private var fpsTrackingActive = false
-    private var fpsWindowStartNs = 0L
-    private var fpsFrameCount = 0
+    private var fpsSamplerJob: Job? = null
+    private var fpsSampleLastFrames = -1L
+    private var fpsSampleLastAtMs = 0L
 
     private val telemetryCollector by lazy { ZXRealTelemetryCollector() }
-
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (!fpsTrackingActive) return
-            if (fpsWindowStartNs == 0L) {
-                fpsWindowStartNs = frameTimeNanos
-                fpsFrameCount = 0
-            } else {
-                fpsFrameCount++
-                val elapsedNs = frameTimeNanos - fpsWindowStartNs
-                if (elapsedNs >= 500_000_000L) {
-                    val measured = ((fpsFrameCount * 1_000_000_000.0) / elapsedNs).roundToInt()
-                    val cap = panelState.fpsCap.coerceAtLeast(60)
-                    panelState.currentFps = measured.coerceIn(1, cap)
-                    fpsWindowStartNs = frameTimeNanos
-                    fpsFrameCount = 0
-                }
-            }
-            Choreographer.getInstance().postFrameCallback(this)
-        }
-    }
 
     private lateinit var prefs: SharedPreferences
 
@@ -1388,6 +1371,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val nowMs = System.currentTimeMillis()
                     val inLaunchGrace = nowMs < pendingLaunchGraceUntilMs
 
+                    val hasFloatingWindows = floatingAppManager?.sessions?.isNotEmpty() == true
+                    if (wasFloatingWindowsOpen && !hasFloatingWindows) {
+                        // The game behind the floating windows needs a beat to be resumed again;
+                        // sampling that gap would tear the game panel down with the last window.
+                        floatingTeardownGraceUntilMs = nowMs + 2_500L
+                    }
+                    wasFloatingWindowsOpen = hasFloatingWindows
+
                     val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
                     var screenAwake = pm?.isInteractive ?: true
                     var focusedPkg: String? = null
@@ -1411,7 +1402,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
 
                     if (!focusedPkg.isNullOrBlank()) {
-                        val hasFloatingWindows = floatingAppManager?.sessions?.isNotEmpty() == true
                         val isHostedFloatingApp = floatingAppManager?.isPackageHosted(focusedPkg) == true ||
                             floatingAppManager?.sessions?.any { it.packageName == focusedPkg } == true
                         val isHomeLauncher = isLauncherPackage(focusedPkg)
@@ -1443,6 +1433,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 isHandleVisible = true
                                 startFpsChoreographer()
                             }
+                        } else if (screenAwake && nowMs < floatingTeardownGraceUntilMs) {
+                            // Last floating window just closed: hold the panel until the game
+                            // behind it is resumed, or it vanishes with the floating app.
                         } else {
                             pendingLaunchPkg = null
                             pendingLaunchGraceUntilMs = 0L
@@ -1545,16 +1538,63 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun startFpsChoreographer() {
         if (fpsTrackingActive) return
         fpsTrackingActive = true
-        fpsWindowStartNs = 0L
-        fpsFrameCount = 0
+        fpsSampleLastFrames = -1L
+        fpsSampleLastAtMs = 0L
         updateDisplayRefreshRateCap()
-        Choreographer.getInstance().postFrameCallback(frameCallback)
+        fpsSamplerJob?.cancel()
+        fpsSamplerJob = serviceScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(1_000L)
+                val pkg = activeGamePackage
+                if (pkg.isNullOrBlank()) {
+                    fpsSampleLastFrames = -1L
+                    fpsSampleLastAtMs = 0L
+                    panelState.currentFps = 0
+                    continue
+                }
+                val frames = readRenderedFrameCount(pkg)
+                val now = System.currentTimeMillis()
+                if (frames == null) {
+                    // No process or no HWUI counter (typical for a GL/Vulkan game): there is no
+                    // honest number to show, so show none instead of inventing one.
+                    fpsSampleLastFrames = -1L
+                    fpsSampleLastAtMs = 0L
+                    panelState.currentFps = 0
+                    continue
+                }
+                if (fpsSampleLastFrames >= 0L && now > fpsSampleLastAtMs) {
+                    val delta = frames - fpsSampleLastFrames
+                    val measured = (delta * 1000.0 / (now - fpsSampleLastAtMs)).roundToInt()
+                    val cap = panelState.fpsCap.coerceAtLeast(60)
+                    withContext(Dispatchers.Main) {
+                        panelState.currentFps = measured.coerceIn(0, cap)
+                    }
+                }
+                fpsSampleLastFrames = frames
+                fpsSampleLastAtMs = now
+            }
+        }
+    }
+
+    /** HWUI's cumulative frame counter for [pkg], or null when it cannot be read. */
+    private fun readRenderedFrameCount(pkg: String): Long? {
+        return try {
+            val result = Shell.cmd("dumpsys gfxinfo $pkg").exec()
+            if (!result.isSuccess) return null
+            val line = result.out.firstOrNull { it.startsWith("Total frames rendered") } ?: return null
+            line.substringAfter(":").trim().toLongOrNull()
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun stopFpsChoreographer() {
         if (!fpsTrackingActive) return
         fpsTrackingActive = false
-        runCatching { Choreographer.getInstance().removeFrameCallback(frameCallback) }
+        fpsSamplerJob?.cancel()
+        fpsSamplerJob = null
+        fpsSampleLastFrames = -1L
+        fpsSampleLastAtMs = 0L
     }
 
     private fun updateDisplayRefreshRateCap() {
@@ -2440,6 +2480,23 @@ fun SidePanelRoot(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 20.dp)
         )
+
+        // 5. Reset confirmation modal — hosted at the root so the scrim covers the whole
+        // window; the workspace node is panel-sized and carries the morph graphicsLayer
+        val resetSpec = state.resetConfirm
+        if (resetSpec != null) {
+            ResetConfirmDialog(
+                visible = true,
+                onDismiss = { state.dismissResetConfirm() },
+                onConfirm = {
+                    resetSpec.onConfirm()
+                    state.dismissResetConfirm()
+                },
+                title = resetSpec.title,
+                message = resetSpec.message,
+                confirmText = resetSpec.confirmText
+            )
+        }
     }
 }
 
@@ -3009,67 +3066,6 @@ private fun SidepanelWorkspaceRow(
                         )
                     }
             )
-        }
-
-        if (state.resetConfirmVisible) {
-            val sch = MaterialTheme.colorScheme
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(sch.scrim.copy(alpha = 0.5f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { state.resetConfirmVisible = false }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = sch.surfaceContainerHigh,
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {}
-                        )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text("Reset to default?", style = MaterialTheme.typography.titleMedium, color = sch.onSurface)
-                        Text(
-                            "This discards your current customization for this screen.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = sch.onSurfaceVariant
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = sch.surfaceContainerHighest,
-                                modifier = Modifier.clip(CircleShape).clickable { state.resetConfirmVisible = false }
-                            ) {
-                                Text("Cancel", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge, color = sch.onSurface)
-                            }
-                            Surface(
-                                shape = CircleShape,
-                                color = sch.error,
-                                modifier = Modifier.clip(CircleShape).clickable {
-                                    state.resetConfirmVisible = false
-                                    state.resetCurrentSubscreen()
-                                }
-                            ) {
-                                Text("Reset", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge, color = sch.onError)
-                            }
-                        }
-                    }
-                }
-            }
         }
 
         // Falling / Dropping Widget Animation Overlay
@@ -3708,7 +3704,9 @@ private fun MainSidepanelContent(
                         color = scheme.surfaceContainerHigh,
                         modifier = Modifier
                             .clip(CircleShape)
-                            .clickable { state.resetConfirmVisible = true }
+                            .clickable {
+                                state.requestResetConfirm { state.resetCurrentSubscreen() }
+                            }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -4046,7 +4044,12 @@ private fun RightWidgetDrawer(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .clickable { state.resetDefaultWidgets() }
+                            .clickable {
+                                state.requestResetConfirm(
+                                    title = "Reset widget layout?",
+                                    message = "This restores the default widget order and library."
+                                ) { state.resetDefaultWidgets() }
+                            }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(

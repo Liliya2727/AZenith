@@ -29,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import zx.azenith.ui.component.RESET_DEFAULT_MESSAGE
+import zx.azenith.ui.component.RESET_DEFAULT_TITLE
 
 data class SidePanelQuickTool(
     val id: String,
@@ -119,6 +121,14 @@ sealed interface SidePanelFeedBlock {
     ) : SidePanelFeedBlock
 }
 
+/** What the shared reset-confirmation modal should ask before running [onConfirm]. */
+data class ResetConfirmSpec(
+    val title: String,
+    val message: String,
+    val confirmText: String = "Reset",
+    val onConfirm: () -> Unit
+)
+
 @Stable
 class ZXSidePanelStateHolder {
     companion object {
@@ -148,7 +158,7 @@ class ZXSidePanelStateHolder {
     var editMode by mutableStateOf(false)
     var activeSubscreen by mutableStateOf<String?>(null)
     var appsPickMode by mutableStateOf(false)
-    var resetConfirmVisible by mutableStateOf(false)
+    var resetConfirm by mutableStateOf<ResetConfirmSpec?>(null)
     var activeScrollCategory by mutableStateOf("overview")
 
     var liveMonitor by mutableStateOf(SidePanelLiveMonitorState())
@@ -652,6 +662,18 @@ class ZXSidePanelStateHolder {
         return blocks
     }
 
+    fun requestResetConfirm(
+        title: String = RESET_DEFAULT_TITLE,
+        message: String = RESET_DEFAULT_MESSAGE,
+        onConfirm: () -> Unit
+    ) {
+        resetConfirm = ResetConfirmSpec(title, message, onConfirm = onConfirm)
+    }
+
+    fun dismissResetConfirm() {
+        resetConfirm = null
+    }
+
     fun toggleEditMode(force: Boolean? = null) {
         if (activeSubscreen != null) {
             activeSubscreen = null
@@ -667,13 +689,13 @@ class ZXSidePanelStateHolder {
             editMode = false
         }
         appsPickMode = false
-        resetConfirmVisible = false
+        resetConfirm = null
         activeSubscreen = subscreenName
     }
 
     fun closeSubscreen() {
         appsPickMode = false
-        resetConfirmVisible = false
+        resetConfirm = null
         activeSubscreen = null
     }
 
