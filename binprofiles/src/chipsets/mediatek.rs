@@ -31,6 +31,17 @@ const GPU_POWER_LIMITED_KNOBS: [&str; 5] = [
     "ignore_pbm_limited",
 ];
 
+const DVFSRC_DEVFREQ: &str = "/sys/class/devfreq/mtk-dvfsrc-devfreq";
+
+/// DRAM (dvfsrc devfreq): `true` = pin to max (performance), `false` = full range (balanced/eco).
+fn apply_dram_freq(pin_max: bool) {
+    if pin_max {
+        devfreq_max_perf(DVFSRC_DEVFREQ);
+    } else {
+        devfreq_unlock(DVFSRC_DEVFREQ);
+    }
+}
+
 /// `1` = limits enforced (balanced/eco), `0` = limits lifted (performance).
 /// `SYS_BOOST` takes the opposite value.
 fn apply_ppm_policy_status(limit: &str, sys_boost: &str) {
@@ -128,10 +139,11 @@ pub fn mediatek_balance() {
     apply_gpu_opp_limit(Some(0), "-1");
     write_lock("1", "/sys/devices/system/cpu/eas/enable");
     apply_gpu_power_limited("0");
-    write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
+    
     write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     write_lock("1", "/sys/kernel/eara_thermal/enable");
     apply_dvfsrc("255", "-1", "userspace");
+    apply_dram_freq(false);
     apply_mali_power_policy("coarse_demand");
 }
 
@@ -150,10 +162,11 @@ pub fn mediatek_performance() {
     apply_gpu_opp_limit(get_mtk_gpu_max_freq(), "0");
     write_lock("0", "/sys/devices/system/cpu/eas/enable");
     apply_gpu_power_limited("1");
-    write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
+    
     write_lock("stop 1", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     write_lock("0", "/sys/kernel/eara_thermal/enable");
     apply_dvfsrc("0", "0", "performance");
+    apply_dram_freq(true);
     apply_mali_power_policy("always_on");
 }
 
@@ -167,9 +180,10 @@ pub fn mediatek_powersave() {
     apply_gpu_opp_limit(Some(0), "-1");
     write_lock("1", "/sys/devices/system/cpu/eas/enable");
     apply_gpu_power_limited("0");
-    write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
+    
     write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     write_lock("1", "/sys/kernel/eara_thermal/enable");
     apply_dvfsrc("255", "-1", "powersave");
+    apply_dram_freq(false);
     apply_mali_power_policy("coarse_demand");
 }
