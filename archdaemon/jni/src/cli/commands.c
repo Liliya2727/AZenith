@@ -186,9 +186,8 @@ int require_daemon_running(void) {
  * app broadcast reset.
  */
 void clearlogs(void) {
-    systemv("rm -f /data/adb/.config/AZenith/debug/AZenith.log*");
-    systemv("rm -f /data/adb/.config/AZenith/debug/AZenithVerbose.log*");
-    systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log*");
+    systemv("rm -f /data/adb/.config/AZenith/debug/AZenith*.*");
+    systemv("rm -f /data/adb/.config/AZenith/sysmon.*");
     log_info("cli", "cleared all log files and rotated generations");
     systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n "
             "zx.azenith/.receiver.ZenithReceiver --ez clearall true >/dev/null "
