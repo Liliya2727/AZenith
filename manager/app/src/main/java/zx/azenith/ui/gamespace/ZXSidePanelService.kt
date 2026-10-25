@@ -871,6 +871,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
@@ -1520,6 +1521,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         telemetryCollector.measureTcpPingMs()?.let { measuredPing = it }
                     }
 
+                    val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+                    val activeNet = cm?.activeNetwork
+                    val caps = cm?.getNetworkCapabilities(activeNet)
+                    val isWifi = caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+                    val isCellular = caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) == true
+
                     withContext(Dispatchers.Main) {
                         updateDisplayRefreshRateCap()
                         if (realFps != null && realFps > 0) {
@@ -1531,6 +1538,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         panelState.batteryLevel = batteryInfo.first
                         panelState.isBatteryCharging = batteryInfo.second
                         panelState.tempCelsius = batteryInfo.third
+                        panelState.isWifiNetwork = isWifi
+                        panelState.isCellularNetwork = isCellular
                         panelState.isAutoMode = resolvedAuto
                         panelState.isLiteMode = liteEnabled
                         panelState.isBypassChargingActive = bypassActive
@@ -1549,7 +1558,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun readBatteryAndThermal(rootGranted: Boolean): Triple<Int, Boolean, Int> {
         var levelPct = panelState.batteryLevel
         var charging = panelState.isBatteryCharging
-        var tempC = panelState.tempCelsius
+        var batteryTempC: Int? = null
 
         runCatching {
             val intent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -1564,16 +1573,19 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     status == BatteryManager.BATTERY_STATUS_FULL
                 val rawBatteryTemp = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
                 if (rawBatteryTemp > 0) {
-                    tempC = (rawBatteryTemp / 10f).roundToInt().coerceIn(15, 95)
+                    batteryTempC = (rawBatteryTemp / 10f).roundToInt().coerceIn(15, 95)
                 }
             }
         }
 
-        val sysfsTemp = telemetryCollector.readThermalZoneCelsius(rootGranted)
-        if (sysfsTemp != null && sysfsTemp in 20..95) {
-            tempC = sysfsTemp
-        }
-        return Triple(levelPct, charging, tempC)
+        val requestedSource = panelState.liveMonitor.tempSource
+        val resolvedTemp = telemetryCollector.readSpecificThermalCelsius(
+            source = requestedSource,
+            rootGranted = rootGranted,
+            batteryTempFallback = batteryTempC
+        )
+
+        return Triple(levelPct, charging, resolvedTemp)
     }
 
     private fun parseTodayTimeStrToEpochMs(timeStr: String): Long? {
@@ -1871,6 +1883,59 @@ private class ZXRealTelemetryCollector {
         val fpsRatio = (currentFps.toFloat() / fpsCap.coerceAtLeast(60).toFloat()).coerceIn(0.1f, 1f)
         val dynamicJitter = ((System.currentTimeMillis() / 700L) % 9).toInt() - 4
         return ((cpuLoad * 0.45f) + (fpsRatio * 38f) + dynamicJitter).roundToInt().coerceIn(4, 98)
+    }
+
+    private val thermalSourcePathCache = mutableMapOf<String, String>()
+    private var thermalSourcesScanned = false
+
+    private fun scanThermalZonesOnce(rootGranted: Boolean) {
+        if (thermalSourcesScanned) return
+        thermalSourcesScanned = true
+        for (i in 0..30) {
+            val typePath = "/sys/class/thermal/thermal_zone$i/type"
+            val tempPath = "/sys/class/thermal/thermal_zone$i/temp"
+            val typeStr = readFileTextDirectOrSu(typePath, rootGranted)?.trim()?.lowercase() ?: continue
+            when {
+                (typeStr.contains("batt") || typeStr.contains("battery")) && !thermalSourcePathCache.containsKey("battery") -> {
+                    thermalSourcePathCache["battery"] = tempPath
+                }
+                (typeStr.contains("cpu") || typeStr.contains("soc_max") || typeStr.contains("ap")) && !thermalSourcePathCache.containsKey("cpu") -> {
+                    thermalSourcePathCache["cpu"] = tempPath
+                }
+                (typeStr.contains("gpu") || typeStr.contains("tzimgs") || typeStr.contains("mali") || typeStr.contains("kgsl") || typeStr.contains("g3d")) && !thermalSourcePathCache.containsKey("gpu") -> {
+                    thermalSourcePathCache["gpu"] = tempPath
+                }
+                (typeStr.contains("skin") || typeStr.contains("screen") || typeStr.contains("chassis") || typeStr.contains("front") || typeStr.contains("back") || typeStr.contains("quiet")) && !thermalSourcePathCache.containsKey("skin") -> {
+                    thermalSourcePathCache["skin"] = tempPath
+                }
+                typeStr.contains("soc") && !thermalSourcePathCache.containsKey("soc") -> {
+                    thermalSourcePathCache["soc"] = tempPath
+                }
+            }
+        }
+    }
+
+    fun readSpecificThermalCelsius(source: String, rootGranted: Boolean, batteryTempFallback: Int?): Int {
+        if (source == "battery" && batteryTempFallback != null && batteryTempFallback in 15..85) {
+            return batteryTempFallback
+        }
+        scanThermalZonesOnce(rootGranted)
+        val targetPath = thermalSourcePathCache[source]
+        if (targetPath != null) {
+            val raw = readFileTextDirectOrSu(targetPath, rootGranted)?.trim()?.toIntOrNull()
+            if (raw != null) {
+                val c = when {
+                    raw >= 10000 -> raw / 1000
+                    raw >= 200 -> raw / 10
+                    else -> raw
+                }
+                if (c in 15..110) return c
+            }
+        }
+        return when (source) {
+            "battery" -> batteryTempFallback ?: readThermalZoneCelsius(rootGranted) ?: 36
+            else -> readThermalZoneCelsius(rootGranted) ?: batteryTempFallback ?: 36
+        }
     }
 
     fun readThermalZoneCelsius(rootGranted: Boolean): Int? {

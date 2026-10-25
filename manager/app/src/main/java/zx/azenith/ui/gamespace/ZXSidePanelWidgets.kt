@@ -29,6 +29,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -2244,7 +2246,8 @@ fun LiveMonitorSubscreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 20.dp, horizontal = 8.dp),
+                        .horizontalScroll(rememberScrollState())
+                        .padding(vertical = 20.dp, horizontal = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     FloatingMonitorPill(state = state)
@@ -2393,6 +2396,87 @@ fun LiveMonitorSubscreen(
                 step = 1f,
                 onValueChange = { state.updateLiveMonitorOpacity(it.roundToInt()) }
             )
+        }
+
+        // 5. Size Scale Slider
+        M3WidgetCard(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Monitor size",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${lm.scalePercent}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.primary
+                )
+            }
+            M3ExpressiveLinearSlider(
+                value = lm.scalePercent.toFloat(),
+                min = 75f,
+                max = 140f,
+                step = 1f,
+                onValueChange = { state.updateLiveMonitorScale(it.roundToInt()) }
+            )
+        }
+
+        // 6. Temperature Sensor Selection
+        val tempSources = listOf(
+            "soc" to "SOC / System",
+            "battery" to "Battery",
+            "cpu" to "CPU",
+            "gpu" to "GPU",
+            "skin" to "Skin / Screen"
+        )
+        M3WidgetCard(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Temperature sensor",
+                style = MaterialTheme.typography.titleSmall,
+                color = scheme.onSurfaceVariant
+            )
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                tempSources.forEach { (sourceId, label) ->
+                    val isActive = lm.tempSource == sourceId
+                    M3ToggleTile(
+                        active = isActive,
+                        onClick = { state.updateLiveMonitorTempSource(sourceId) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                            if (isActive) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("check_circle"),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

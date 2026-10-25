@@ -83,7 +83,9 @@ data class SidePanelLiveMonitorState(
     val showPing: Boolean = false,
     val showBattery: Boolean = false,
     val showProfile: Boolean = false,
-    val opacity: Int = 92
+    val opacity: Int = 92,
+    val scalePercent: Int = 100,
+    val tempSource: String = "soc"
 )
 
 data class SidePanelAppItem(
@@ -170,6 +172,8 @@ class ZXSidePanelStateHolder {
     var pingMs by mutableIntStateOf(24)
     var batteryLevel by mutableIntStateOf(100)
     var isBatteryCharging by mutableStateOf(false)
+    var isWifiNetwork by mutableStateOf(true)
+    var isCellularNetwork by mutableStateOf(false)
     var isBypassChargingActive by mutableStateOf(false)
     var isRootAvailable by mutableStateOf(false)
 
@@ -468,7 +472,9 @@ class ZXSidePanelStateHolder {
             showPing = prefs.getBoolean("${p}lm_ping", false),
             showBattery = prefs.getBoolean("${p}lm_battery", false),
             showProfile = prefs.getBoolean("${p}lm_profile", false),
-            opacity = prefs.getInt("${p}lm_opacity", 92).coerceIn(40, 100)
+            opacity = prefs.getInt("${p}lm_opacity", 92).coerceIn(40, 100),
+            scalePercent = prefs.getInt("${p}lm_scale", 100).coerceIn(75, 140),
+            tempSource = prefs.getString("${p}lm_temp_src", "soc") ?: "soc"
         )
 
         visualFilter = prefs.getString("${p}disp_filter", "standard") ?: "standard"
@@ -522,6 +528,8 @@ class ZXSidePanelStateHolder {
         editor.putBoolean("${p}lm_battery", liveMonitor.showBattery)
         editor.putBoolean("${p}lm_profile", liveMonitor.showProfile)
         editor.putInt("${p}lm_opacity", liveMonitor.opacity)
+        editor.putInt("${p}lm_scale", liveMonitor.scalePercent)
+        editor.putString("${p}lm_temp_src", liveMonitor.tempSource)
 
         editor.putString("${p}disp_filter", visualFilter)
         editor.putInt("${p}disp_r", rgbRed)
@@ -998,6 +1006,16 @@ class ZXSidePanelStateHolder {
 
     fun updateLiveMonitorOpacity(opacityPct: Int) {
         liveMonitor = liveMonitor.copy(opacity = opacityPct.coerceIn(40, 100))
+        saveCurrentAppPreferences()
+    }
+
+    fun updateLiveMonitorScale(scalePct: Int) {
+        liveMonitor = liveMonitor.copy(scalePercent = scalePct.coerceIn(75, 140))
+        saveCurrentAppPreferences()
+    }
+
+    fun updateLiveMonitorTempSource(source: String) {
+        liveMonitor = liveMonitor.copy(tempSource = source)
         saveCurrentAppPreferences()
     }
 
