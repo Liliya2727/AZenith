@@ -566,7 +566,9 @@ internal fun BentoSliderCard(
     accent: Color,
     value: Float,
     onValueChange: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onValueChangeFinished: () -> Unit = {},
+    onHeaderClick: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     Surface(
@@ -586,7 +588,14 @@ internal fun BentoSliderCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = if (onHeaderClick != null) {
+                        Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onHeaderClick
+                        )
+                    } else Modifier
                 ) {
                     Icon(
                         imageVector = icon,
@@ -612,7 +621,7 @@ internal fun BentoSliderCard(
             ZenithSlider(
                 value = value,
                 onValueChange = onValueChange,
-                onValueChangeFinished = {},
+                onValueChangeFinished = onValueChangeFinished,
                 accent = accent,
                 modifier = Modifier.fillMaxWidth()
             )

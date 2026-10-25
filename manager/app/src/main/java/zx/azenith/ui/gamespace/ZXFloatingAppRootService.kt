@@ -530,37 +530,46 @@ class ZXFloatingAppRootService : RootService() {
                 }
 
                 // 2. Direct root launch via cmd activity ensures reliable placement on virtual display
+                var launched = false
                 if (component != null) {
                     val startCmd = "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 " +
                         "--activity-multiple-task --activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
-                        "-f 0x18008000 -n $component"
+                        "-f 0x18000000 -n $component"
                     Log.i("ZXFloatRoot", "Executing startCmd on display $displayId: $startCmd")
                     val proc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", startCmd))
-                    proc.waitFor(1200, TimeUnit.MILLISECONDS)
+                    val finished = proc.waitFor(1200, TimeUnit.MILLISECONDS)
+                    if (finished && proc.exitValue() == 0) {
+                        launched = true
+                    }
                 } else {
-                    val amPkgCmd = "am start --user 0 --display $displayId --windowingMode 1 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p $pkg"
-                    Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", amPkgCmd))
-                        .waitFor(1200, TimeUnit.MILLISECONDS)
+                    val amPkgCmd = "am start --user 0 --display $displayId --windowingMode 1 --activity-multiple-task -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p $pkg"
+                    val proc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", amPkgCmd))
+                    val finished = proc.waitFor(1200, TimeUnit.MILLISECONDS)
+                    if (finished && proc.exitValue() == 0) {
+                        launched = true
+                    }
                 }
 
-                // 3. Fallback launch via sysContext
-                val opts = ActivityOptions.makeBasic().apply {
-                    launchDisplayId = displayId
-                }
-                val intent = (launchIntent ?: Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                    setPackage(pkg)
-                    if (component != null) {
-                        setComponent(ComponentName.unflattenFromString(component))
+                // 3. Fallback launch via sysContext only if cmd activity failed
+                if (!launched) {
+                    val opts = ActivityOptions.makeBasic().apply {
+                        launchDisplayId = displayId
                     }
-                }).apply {
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK
-                    )
-                }
-                runCatching {
-                    (sysContext ?: this@ZXFloatingAppRootService).startActivity(intent, opts.toBundle())
+                    val intent = (launchIntent ?: Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                        setPackage(pkg)
+                        if (component != null) {
+                            setComponent(ComponentName.unflattenFromString(component))
+                        }
+                    }).apply {
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                        )
+                    }
+                    runCatching {
+                        (sysContext ?: this@ZXFloatingAppRootService).startActivity(intent, opts.toBundle())
+                    }
                 }
 
                 // 5. Ensure orientation stays locked and keyguard dismissed

@@ -26,9 +26,13 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -391,9 +395,15 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             launchExternalApp(pkg)
         }
         panelState.onBrightnessChangedRequest = { pct ->
-            applySystemBrightness(pct)
+            applySystemBrightness(pct, isCommit = false)
+        }
+        panelState.onBrightnessCommittedRequest = { pct ->
+            applySystemBrightness(pct, isCommit = true)
         }
         panelState.onVolumeChangedRequest = { pct, isMuted ->
+            applySystemVolume(pct, isMuted)
+        }
+        panelState.onVolumeCommittedRequest = { pct, isMuted ->
             applySystemVolume(pct, isMuted)
         }
         panelState.onToggleAutoModeRequest = { enableAuto ->
@@ -404,6 +414,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
 
         syncInitialAudioAndBrightness()
+        registerHardwareSyncObservers()
         loadInstalledLauncherApps()
         startAppMonitorWatcher()
         startRealTelemetryMonitor()
@@ -488,6 +499,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     override fun onDestroy() {
         isServiceActive = false
+        unregisterHardwareSyncObservers()
         stopFpsChoreographer()
         runCatching { prefs.unregisterOnSharedPreferenceChangeListener(prefListener) }
         monitorJob?.cancel()
@@ -962,6 +974,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private fun expandPanel() {
         if (isPanelExpanded) return
+        syncInitialAudioAndBrightness()
         val view = rootOverlayView ?: return
         val wm = windowManager ?: return
         windowTransitionJob?.cancel()
@@ -1274,10 +1287,70 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    private var volumeReceiver: BroadcastReceiver? = null
+    private var brightnessObserver: ContentObserver? = null
+
+    private fun registerHardwareSyncObservers() {
+        if (volumeReceiver == null) {
+            volumeReceiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
+                        val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
+                        if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
+                            val am = audioManager ?: return
+                            val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                            val curVol = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+                            panelState.volume = ((curVol * 100f) / maxVol).roundToInt().coerceIn(0, 100)
+                            panelState.muted = curVol == 0
+                        }
+                    }
+                }
+            }
+            val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+            runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    registerReceiver(volumeReceiver, filter, Context.RECEIVER_EXPORTED)
+                } else {
+                    registerReceiver(volumeReceiver, filter)
+                }
+            }
+        }
+
+        if (brightnessObserver == null) {
+            brightnessObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    super.onChange(selfChange)
+                    runCatching {
+                        val rawBrightness = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128)
+                        panelState.brightness = ((rawBrightness * 100f) / 255f).roundToInt().coerceIn(5, 100)
+                    }
+                }
+            }
+            runCatching {
+                contentResolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS),
+                    false,
+                    brightnessObserver!!
+                )
+            }
+        }
+    }
+
+    private fun unregisterHardwareSyncObservers() {
+        volumeReceiver?.let {
+            runCatching { unregisterReceiver(it) }
+            volumeReceiver = null
+        }
+        brightnessObserver?.let {
+            runCatching { contentResolver.unregisterContentObserver(it) }
+            brightnessObserver = null
+        }
+    }
+
     private fun syncInitialAudioAndBrightness() {
         runCatching {
             val rawBrightness = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 200)
-            panelState.brightness = ((rawBrightness * 100f) / 255f).roundToInt().coerceIn(10, 100)
+            panelState.brightness = ((rawBrightness * 100f) / 255f).roundToInt().coerceIn(5, 100)
         }
         runCatching {
             val am = audioManager ?: return@runCatching
@@ -1288,25 +1361,38 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
-    private fun applySystemBrightness(pct: Int) {
-        serviceScope.launch(Dispatchers.IO) {
-            runCatching {
-                if (Settings.System.canWrite(this@ZXSidePanelService)) {
-                    val sysVal = ((pct.coerceIn(10, 100) / 100f) * 255f).roundToInt().coerceIn(10, 255)
-                    Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, sysVal)
+    private var brightnessApplyJob: Job? = null
+    private fun applySystemBrightness(pct: Int, isCommit: Boolean = false) {
+        val fraction = (pct.coerceIn(5, 100) / 100f)
+        val sysVal = (fraction * 255f).roundToInt().coerceIn(10, 255)
+
+        runCatching {
+            if (Settings.System.canWrite(this@ZXSidePanelService)) {
+                Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, sysVal)
+            }
+        }
+
+        brightnessApplyJob?.cancel()
+        if (isCommit) {
+            if (checkRootGranted()) {
+                Shell.cmd("cmd display set-brightness $fraction").submit()
+            }
+        } else {
+            brightnessApplyJob = serviceScope.launch(Dispatchers.IO) {
+                delay(16)
+                if (checkRootGranted()) {
+                    Shell.cmd("cmd display set-brightness $fraction").submit()
                 }
             }
         }
     }
 
     private fun applySystemVolume(pct: Int, isMuted: Boolean) {
-        serviceScope.launch(Dispatchers.IO) {
-            runCatching {
-                val am = audioManager ?: return@runCatching
-                val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
-                val targetVol = if (isMuted) 0 else ((pct.coerceIn(0, 100) / 100f) * maxVol).roundToInt()
-                am.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol.coerceIn(0, maxVol), 0)
-            }
+        val am = audioManager ?: return
+        val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        val targetVol = if (isMuted) 0 else ((pct.coerceIn(0, 100) / 100f) * maxVol).roundToInt()
+        runCatching {
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol.coerceIn(0, maxVol), 0)
         }
     }
 

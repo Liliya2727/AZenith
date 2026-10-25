@@ -29,8 +29,11 @@ import android.graphics.SurfaceTexture
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.Surface
@@ -39,6 +42,7 @@ import android.view.View
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -77,6 +81,8 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -144,6 +150,10 @@ class ZXFloatingAppSession(
     var isResizing by mutableStateOf(false)
     var isDragging by mutableStateOf(false)
     var isPendingMinimizeToIcon by mutableStateOf(false)
+    var resizeModeHint by mutableStateOf<String?>(null)
+    var lastResizeModeKey: String? = null
+    var lastResizeTier: FloatingSizeState? = null
+    var hasLaunchedApp = false
     var lastActiveTimestampMs by mutableLongStateOf(System.currentTimeMillis())
 
     var virtualDisplayId: Int = -1
@@ -349,7 +359,8 @@ class ZXFloatingAppManager(
         updateSessionWindowLayout(session)
         bringSessionToFront(session)
         val displayId = session.virtualDisplayId
-        if (displayId > 0) {
+        if (displayId > 0 && !session.hasLaunchedApp) {
+            session.hasLaunchedApp = true
             rootClient?.launchAppOnDisplay(session.packageName, displayId)
         }
         syncMinimizedStackWindow()
@@ -509,6 +520,7 @@ class ZXFloatingAppManager(
             session.heightPx,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
@@ -558,10 +570,6 @@ class ZXFloatingAppManager(
                     MotionEvent.ACTION_DOWN -> {
                         session.lastActiveTimestampMs = System.currentTimeMillis()
                         bringSessionToFront(session)
-                        val displayId = session.virtualDisplayId
-                        if (displayId > 0) {
-                            rootClient?.launchAppOnDisplay(session.packageName, displayId)
-                        }
                         downRawX = ev.rawX
                         downRawY = ev.rawY
                         startWinX = session.windowX
@@ -774,7 +782,10 @@ class ZXFloatingAppManager(
         fromLeftCorner: Boolean
     ) {
         val dm = context.resources.displayMetrics
+        val density = dm.density
         val (_, miniH) = computeDimensionsForState(FloatingSizeState.MINI)
+        val (_, smallH) = computeDimensionsForState(FloatingSizeState.SMALL)
+        val (_, normalH) = computeDimensionsForState(FloatingSizeState.NORMAL)
         val (_, largeH) = computeDimensionsForState(FloatingSizeState.LARGE)
 
         val signedDx = if (fromLeftCorner) -dxPx else dxPx
@@ -788,10 +799,42 @@ class ZXFloatingAppManager(
         val isShrunkToIcon = rawTargetH < iconThresholdH
         session.isPendingMinimizeToIcon = isShrunkToIcon
 
+        // Snap to discrete tiers with magnetic snap tolerance
+        val snapTolerancePx = (16f * density).roundToInt()
+        val snappedH = if (isShrunkToIcon) {
+            rawTargetH
+        } else {
+            when {
+                abs(rawTargetH - miniH) <= snapTolerancePx -> miniH
+                abs(rawTargetH - smallH) <= snapTolerancePx -> smallH
+                abs(rawTargetH - normalH) <= snapTolerancePx -> normalH
+                abs(rawTargetH - largeH) <= snapTolerancePx -> largeH
+                else -> rawTargetH
+            }
+        }
+
         val minPreviewH = (miniH * 0.62f).roundToInt()
-        val targetH = rawTargetH.coerceIn(minPreviewH, largeH)
+        val targetH = snappedH.coerceIn(minPreviewH, largeH)
         val targetTier = if (isShrunkToIcon) FloatingSizeState.MINI else resolveNearestSizeTier(targetH)
-        val density = dm.density
+
+        // Haptic tick feedback when transitioning between mode boundaries
+        val currentModeKey = if (isShrunkToIcon) "ICON" else targetTier.name
+        if (session.lastResizeModeKey != currentModeKey) {
+            session.lastResizeModeKey = currentModeKey
+            session.hostView?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+        session.resizeModeHint = if (isShrunkToIcon) {
+            "Release to minimize"
+        } else {
+            when (targetTier) {
+                FloatingSizeState.MINI -> "Mini window"
+                FloatingSizeState.SMALL -> "Small window"
+                FloatingSizeState.NORMAL -> "Standard window"
+                FloatingSizeState.LARGE -> "Expanded window"
+                else -> "Floating window"
+            }
+        }
+
         val borderPx = (4f * density).roundToInt()
         val topBarPx = if (targetTier == FloatingSizeState.MINI || isShrunkToIcon) 0 else (34f * density).roundToInt()
         val contentH = (targetH - borderPx - topBarPx).coerceAtLeast((72 * density).roundToInt())
@@ -811,14 +854,44 @@ class ZXFloatingAppManager(
         updateSessionWindowLayout(session)
     }
 
+    private var lastModeToast: Toast? = null
+
+    private fun showModeToast(message: String) {
+        Handler(Looper.getMainLooper()).post {
+            lastModeToast?.cancel()
+            val t = Toast.makeText(context, message, Toast.LENGTH_SHORT)
+            lastModeToast = t
+            t.show()
+        }
+    }
+
     fun settleSessionResize(session: ZXFloatingAppSession) {
         val willMinimize = session.isPendingMinimizeToIcon
         session.isPendingMinimizeToIcon = false
+        session.resizeModeHint = null
+        session.lastResizeModeKey = null
+
+        val hapticConstant = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            HapticFeedbackConstants.CONFIRM
+        } else {
+            HapticFeedbackConstants.VIRTUAL_KEY
+        }
+        session.hostView?.performHapticFeedback(hapticConstant)
+
         if (willMinimize) {
+            showModeToast("Minimized to icon")
             minimizeSessionToIcon(session)
         } else {
             val settledTier = resolveNearestSizeTier(session.heightPx)
             applySizePreset(session, settledTier)
+            val label = when (settledTier) {
+                FloatingSizeState.MINI -> "Mini window"
+                FloatingSizeState.SMALL -> "Small window"
+                FloatingSizeState.NORMAL -> "Standard window"
+                FloatingSizeState.LARGE -> "Expanded window"
+                else -> "Floating window"
+            }
+            showModeToast(label)
         }
     }
 
@@ -1060,6 +1133,7 @@ class ZXFloatingAppManager(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
@@ -1397,6 +1471,29 @@ private fun FloatingAppWindowContent(
                         }
                     }
                 }
+            }
+        }
+
+        // Resizing Mode Feedback Pill (Centered above bottom edge)
+        AnimatedVisibility(
+            visible = session.isResizing && !isPendingIcon && session.resizeModeHint != null,
+            enter = fadeIn(animationSpec = tween(100)),
+            exit = fadeOut(animationSpec = tween(100)),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 14.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = scheme.surfaceContainerHighest.copy(alpha = 0.94f),
+                shadowElevation = 6.dp
+            ) {
+                Text(
+                    text = session.resizeModeHint.orEmpty(),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = scheme.primary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
             }
         }
     }

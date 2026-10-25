@@ -62,7 +62,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -932,10 +934,21 @@ private fun BrightnessSliderWidget(
     span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
-    val brightnessFraction = (state.brightness / 100f).coerceIn(0.05f, 1f)
+    var isDragging by remember { mutableStateOf(false) }
+    var localFraction by remember {
+        mutableFloatStateOf((state.brightness / 100f).coerceIn(0.05f, 1f))
+    }
+
+    LaunchedEffect(state.brightness) {
+        if (!isDragging) {
+            localFraction = (state.brightness / 100f).coerceIn(0.05f, 1f)
+        }
+    }
+
+    val displayPercent = (localFraction * 100).roundToInt().coerceIn(5, 100)
     val brightnessIcon = when {
-        brightnessFraction < 0.33f -> Icons.Rounded.BrightnessLow
-        brightnessFraction < 0.66f -> Icons.Rounded.BrightnessMedium
+        localFraction < 0.33f -> Icons.Rounded.BrightnessLow
+        localFraction < 0.66f -> Icons.Rounded.BrightnessMedium
         else -> Icons.Rounded.BrightnessHigh
     }
 
@@ -944,7 +957,18 @@ private fun BrightnessSliderWidget(
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        val next = when {
+                            state.brightness < 40 -> 60
+                            state.brightness < 80 -> 100
+                            else -> 25
+                        }
+                        localFraction = next / 100f
+                        state.updateHorizontalBrightness(next)
+                        state.commitHorizontalBrightness(next)
+                    },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -956,7 +980,7 @@ private fun BrightnessSliderWidget(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "${state.brightness}%",
+                    text = "$displayPercent%",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = scheme.tertiary
                 )
@@ -998,7 +1022,7 @@ private fun BrightnessSliderWidget(
                     )
                 }
                 Text(
-                    text = "${state.brightness}%",
+                    text = "$displayPercent%",
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = scheme.tertiary
                 )
@@ -1007,11 +1031,16 @@ private fun BrightnessSliderWidget(
             Spacer(Modifier.height(4.dp))
 
             ZenithSlider(
-                value = brightnessFraction,
+                value = localFraction,
                 onValueChange = { newFraction ->
+                    isDragging = true
+                    localFraction = newFraction.coerceIn(0.05f, 1f)
                     state.updateHorizontalBrightness((newFraction * 100).roundToInt().coerceIn(5, 100))
                 },
-                onValueChangeFinished = {},
+                onValueChangeFinished = {
+                    isDragging = false
+                    state.commitHorizontalBrightness((localFraction * 100).roundToInt().coerceIn(5, 100))
+                },
                 accent = scheme.tertiary,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -1020,11 +1049,17 @@ private fun BrightnessSliderWidget(
         BentoSliderCard(
             icon = brightnessIcon,
             title = "Brightness",
-            valuePercent = state.brightness,
+            valuePercent = displayPercent,
             accent = scheme.tertiary,
-            value = brightnessFraction,
+            value = localFraction,
             onValueChange = { newFraction ->
+                isDragging = true
+                localFraction = newFraction.coerceIn(0.05f, 1f)
                 state.updateHorizontalBrightness((newFraction * 100).roundToInt().coerceIn(5, 100))
+            },
+            onValueChangeFinished = {
+                isDragging = false
+                state.commitHorizontalBrightness((localFraction * 100).roundToInt().coerceIn(5, 100))
             },
             modifier = Modifier.fillMaxWidth()
         )
@@ -1038,10 +1073,21 @@ private fun VolumeSliderWidget(
     span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
-    val volFraction = if (state.muted) 0f else (state.volume / 100f).coerceIn(0f, 1f)
+    var isDragging by remember { mutableStateOf(false) }
+    var localFraction by remember {
+        mutableFloatStateOf(if (state.muted) 0f else (state.volume / 100f).coerceIn(0f, 1f))
+    }
+
+    LaunchedEffect(state.volume, state.muted) {
+        if (!isDragging) {
+            localFraction = if (state.muted) 0f else (state.volume / 100f).coerceIn(0f, 1f)
+        }
+    }
+
+    val displayPercent = if (state.muted) 0 else (localFraction * 100).roundToInt().coerceIn(0, 100)
     val volumeIcon = when {
-        state.muted || volFraction <= 0.01f -> Icons.AutoMirrored.Rounded.VolumeMute
-        volFraction < 0.5f -> Icons.AutoMirrored.Rounded.VolumeDown
+        state.muted || localFraction <= 0.01f -> Icons.AutoMirrored.Rounded.VolumeMute
+        localFraction < 0.5f -> Icons.AutoMirrored.Rounded.VolumeDown
         else -> Icons.AutoMirrored.Rounded.VolumeUp
     }
 
@@ -1064,7 +1110,7 @@ private fun VolumeSliderWidget(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = if (state.muted) "Muted" else "${state.volume}%",
+                    text = if (state.muted) "Muted" else "$displayPercent%",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = scheme.primary
                 )
@@ -1111,7 +1157,7 @@ private fun VolumeSliderWidget(
                     )
                 }
                 Text(
-                    text = if (state.muted) "0%" else "${state.volume}%",
+                    text = if (state.muted) "0%" else "$displayPercent%",
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = scheme.primary
                 )
@@ -1120,11 +1166,19 @@ private fun VolumeSliderWidget(
             Spacer(Modifier.height(4.dp))
 
             ZenithSlider(
-                value = volFraction,
+                value = localFraction,
                 onValueChange = { newFraction ->
+                    isDragging = true
+                    localFraction = newFraction.coerceIn(0f, 1f)
+                    if (state.muted && newFraction > 0.01f) {
+                        state.muted = false
+                    }
                     state.updateHorizontalVolume((newFraction * 100).roundToInt().coerceIn(0, 100))
                 },
-                onValueChangeFinished = {},
+                onValueChangeFinished = {
+                    isDragging = false
+                    state.commitHorizontalVolume((localFraction * 100).roundToInt().coerceIn(0, 100))
+                },
                 accent = scheme.primary,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -1133,12 +1187,22 @@ private fun VolumeSliderWidget(
         BentoSliderCard(
             icon = volumeIcon,
             title = "Volume",
-            valuePercent = if (state.muted) 0 else state.volume,
+            valuePercent = displayPercent,
             accent = scheme.primary,
-            value = volFraction,
+            value = localFraction,
             onValueChange = { newFraction ->
+                isDragging = true
+                localFraction = newFraction.coerceIn(0f, 1f)
+                if (state.muted && newFraction > 0.01f) {
+                    state.muted = false
+                }
                 state.updateHorizontalVolume((newFraction * 100).roundToInt().coerceIn(0, 100))
             },
+            onValueChangeFinished = {
+                isDragging = false
+                state.commitHorizontalVolume((localFraction * 100).roundToInt().coerceIn(0, 100))
+            },
+            onHeaderClick = { state.toggleMuteAudio() },
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -2897,12 +2961,10 @@ fun AppsManagerSubscreen(
     state: ZXSidePanelStateHolder
 ) {
     val scheme = MaterialTheme.colorScheme
-    var selectedTab by remember { mutableStateOf(0) }
-    var pendingWarningApp by remember { mutableStateOf<SidePanelAppItem?>(null) }
+    var showSystemApps by remember { mutableStateOf(false) }
 
     val userApps = remember(state.installedApps) { state.installedApps.filter { !it.isSystemApp } }
-    val sysApps = remember(state.installedApps) { state.installedApps.filter { it.isSystemApp } }
-    val displayedApps = if (selectedTab == 0) userApps else sysApps
+    val displayedApps = if (showSystemApps) state.installedApps else userApps
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -2915,87 +2977,73 @@ fun AppsManagerSubscreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = if (state.editMode) "Edit Sidepanel Shortcuts" else "More Apps",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = scheme.onSurface,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = if (state.editMode) {
-                            "Tap an app to add or remove it from the sidebar"
-                        } else {
-                            "Tap an app to launch it instantly in a floating window"
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = scheme.onSurfaceVariant
-                    )
-                }
-
-                // Filter Tabs: User Apps vs System Apps
+                // Header row with title, description, and singular System Apps toggle
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(scheme.surfaceContainerHigh)
-                        .padding(3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    listOf("User Apps (${userApps.size})", "System Apps (${sysApps.size})").forEachIndexed { index, title ->
-                        val isSelected = selectedTab == index
-                        val tabBg by animateColorAsState(
-                            targetValue = if (isSelected) scheme.primary else Color.Transparent,
-                            animationSpec = tween(180),
-                            label = "tabBg"
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (state.editMode) "Edit Sidepanel Shortcuts" else "More Apps",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = scheme.onSurface,
+                            fontWeight = FontWeight.SemiBold
                         )
-                        val tabFg by animateColorAsState(
-                            targetValue = if (isSelected) scheme.onPrimary else scheme.onSurfaceVariant,
-                            animationSpec = tween(180),
-                            label = "tabFg"
+                        Text(
+                            text = if (state.editMode) {
+                                "Tap an app to add or remove it from the sidebar"
+                            } else {
+                                "Tap an app to launch it in a floating window"
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant
                         )
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(9.dp))
-                                .background(tabBg)
-                                .clickable { selectedTab = index }
-                                .padding(vertical = 7.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = tabFg,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        }
                     }
-                }
 
-                // System Apps Warning Notice when on System Apps tab
-                if (selectedTab == 1) {
+                    // Singular System Apps toggle (Material 3 container pill)
+                    val toggleContainer by animateColorAsState(
+                        targetValue = if (showSystemApps) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                        animationSpec = tween(180),
+                        label = "systemToggleContainer"
+                    )
+                    val toggleContent by animateColorAsState(
+                        targetValue = if (showSystemApps) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                        animationSpec = tween(180),
+                        label = "systemToggleContent"
+                    )
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = scheme.errorContainer.copy(alpha = 0.35f),
-                        border = BorderStroke(1.dp, scheme.error.copy(alpha = 0.50f)),
-                        modifier = Modifier.fillMaxWidth()
+                        color = toggleContainer,
+                        contentColor = toggleContent,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                val next = !showSystemApps
+                                showSystemApps = next
+                                if (next) {
+                                    state.showToast(
+                                        "Showing all apps. System apps may not be optimized for floating windows.",
+                                        "warning"
+                                    )
+                                }
+                            }
                     ) {
                         Row(
-                            modifier = Modifier.padding(10.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
-                                imageVector = ZXSidePanelIcons.get("do_not_disturb_on"),
+                                imageVector = ZXSidePanelIcons.get(if (showSystemApps) "check" else "tune"),
                                 contentDescription = null,
-                                tint = scheme.error,
-                                modifier = Modifier.size(18.dp)
+                                tint = toggleContent,
+                                modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = "System apps (e.g. Settings, Camera) may not work or function properly as they are not optimized for floating windows.",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = scheme.onErrorContainer
+                                text = "System Apps",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = toggleContent
                             )
                         }
                     }
@@ -3022,7 +3070,7 @@ fun AppsManagerSubscreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (selectedTab == 0) "No user installed apps found" else "No system apps found",
+                            text = if (!showSystemApps) "No user installed apps found" else "No apps found",
                             style = MaterialTheme.typography.bodySmall,
                             color = scheme.onSurfaceVariant
                         )
@@ -3030,12 +3078,12 @@ fun AppsManagerSubscreen(
                 } else {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         displayedApps.chunked(3).forEach { rowApps ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 rowApps.forEach { app ->
                                     val isAdded = state.quickApps.contains(app.packageName)
@@ -3058,7 +3106,7 @@ fun AppsManagerSubscreen(
                                         animationSpec = tween(durationMillis = 200),
                                         label = "AppCellContent"
                                     )
-                                    val shape = RoundedCornerShape(20.dp)
+                                    val shape = RoundedCornerShape(18.dp)
 
                                     Surface(
                                         shape = shape,
@@ -3066,6 +3114,7 @@ fun AppsManagerSubscreen(
                                         contentColor = contentColor,
                                         modifier = Modifier
                                             .weight(1f)
+                                            .height(96.dp)
                                             .clip(shape)
                                             .clickable {
                                                 if (isActiveGame) {
@@ -3073,21 +3122,20 @@ fun AppsManagerSubscreen(
                                                 } else if (state.editMode) {
                                                     state.toggleQuickApp(app.packageName)
                                                 } else {
-                                                    if (app.isSystemApp) {
-                                                        pendingWarningApp = app
-                                                    } else {
-                                                        state.launchQuickApp(app.packageName)
-                                                    }
+                                                    state.launchQuickApp(app.packageName)
                                                 }
                                             }
                                     ) {
-                                        Box(modifier = Modifier.fillMaxWidth()) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
                                             Column(
                                                 modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                                                    .fillMaxSize()
+                                                    .padding(horizontal = 6.dp, vertical = 8.dp),
                                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                verticalArrangement = Arrangement.Center
                                             ) {
                                                 if (app.iconBitmap != null) {
                                                     Image(
@@ -3095,7 +3143,7 @@ fun AppsManagerSubscreen(
                                                         contentDescription = app.name,
                                                         contentScale = ContentScale.Fit,
                                                         modifier = Modifier
-                                                            .size(34.dp)
+                                                            .size(36.dp)
                                                             .graphicsLayer { if (isActiveGame) alpha = 0.45f }
                                                             .clip(RoundedCornerShape(10.dp))
                                                     )
@@ -3104,18 +3152,25 @@ fun AppsManagerSubscreen(
                                                         imageVector = ZXSidePanelIcons.get("grid_view"),
                                                         contentDescription = app.name,
                                                         tint = contentColor,
-                                                        modifier = Modifier.size(28.dp)
+                                                        modifier = Modifier.size(30.dp)
                                                     )
                                                 }
-                                                Text(
-                                                    text = if (isActiveGame) "${app.name}\n(Active Game)" else app.name,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = contentColor,
-                                                    textAlign = TextAlign.Center,
-                                                    maxLines = 2,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    modifier = Modifier.fillMaxWidth()
-                                                )
+                                                Spacer(Modifier.height(4.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(28.dp),
+                                                    contentAlignment = Alignment.TopCenter
+                                                ) {
+                                                    Text(
+                                                        text = if (isActiveGame) "${app.name}\n(Active Game)" else app.name,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = contentColor,
+                                                        textAlign = TextAlign.Center,
+                                                        maxLines = 2,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
                                             }
 
                                             // Top-Right Badge: Only shown in edit mode
@@ -3144,99 +3199,8 @@ fun AppsManagerSubscreen(
                                     }
                                 }
                                 repeat(3 - rowApps.size) {
-                                    Spacer(modifier = Modifier.weight(1f))
+                                    Spacer(modifier = Modifier.weight(1f).height(96.dp))
                                 }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // System App Warning Confirmation Dialog Overlay
-        if (pendingWarningApp != null) {
-            val warnApp = pendingWarningApp!!
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(scheme.scrim.copy(alpha = 0.65f))
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = scheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.50f)),
-                    modifier = Modifier
-                        .fillMaxWidth(0.96f)
-                        .padding(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = ZXSidePanelIcons.get("do_not_disturb_on"),
-                                contentDescription = null,
-                                tint = scheme.error,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Text(
-                                text = "System App Warning",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = scheme.onSurface,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Text(
-                            text = "${warnApp.name} is a system application. System apps are not optimized for floating windows and may not render or function properly on virtual displays.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onSurfaceVariant
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = scheme.surfaceContainerHighest,
-                                modifier = Modifier.clickable { pendingWarningApp = null }
-                            ) {
-                                Text(
-                                    text = "Cancel",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = scheme.onSurface,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                                )
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = scheme.error,
-                                modifier = Modifier.clickable {
-                                    val targetPkg = warnApp.packageName
-                                    pendingWarningApp = null
-                                    if (state.editMode) {
-                                        state.toggleQuickApp(targetPkg)
-                                    } else {
-                                        state.launchQuickApp(targetPkg)
-                                    }
-                                }
-                            ) {
-                                Text(
-                                    text = "Open Anyway",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = scheme.onError,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                                )
                             }
                         }
                     }

@@ -258,7 +258,9 @@ class ZXSidePanelStateHolder {
     var onSelectProfileRequest: ((String) -> Unit)? = null
     var onToggleAutoModeRequest: ((Boolean) -> Unit)? = null
     var onBrightnessChangedRequest: ((Int) -> Unit)? = null
+    var onBrightnessCommittedRequest: ((Int) -> Unit)? = null
     var onVolumeChangedRequest: ((Int, Boolean) -> Unit)? = null
+    var onVolumeCommittedRequest: ((Int, Boolean) -> Unit)? = null
 
     val activeWidgets = mutableStateListOf<String>().apply {
         addAll(DEFAULT_ACTIVE_WIDGETS)
@@ -819,22 +821,48 @@ class ZXSidePanelStateHolder {
         }
     }
 
+    private var unmutedVolumeCache = 40
+
     fun updateHorizontalBrightness(value: Int) {
-        val clamped = value.coerceIn(10, 100)
+        val clamped = value.coerceIn(5, 100)
         brightness = clamped
         onBrightnessChangedRequest?.invoke(clamped)
+    }
+
+    fun commitHorizontalBrightness(value: Int) {
+        val clamped = value.coerceIn(5, 100)
+        brightness = clamped
+        onBrightnessCommittedRequest?.invoke(clamped)
     }
 
     fun updateHorizontalVolume(value: Int) {
         val clamped = value.coerceIn(0, 100)
         volume = clamped
         muted = clamped == 0
+        if (!muted) unmutedVolumeCache = clamped
         onVolumeChangedRequest?.invoke(clamped, muted)
+    }
+
+    fun commitHorizontalVolume(value: Int) {
+        val clamped = value.coerceIn(0, 100)
+        volume = clamped
+        muted = clamped == 0
+        if (!muted) unmutedVolumeCache = clamped
+        onVolumeCommittedRequest?.invoke(clamped, muted)
     }
 
     fun toggleMuteAudio() {
         muted = !muted
-        onVolumeChangedRequest?.invoke(volume, muted)
+        if (muted) {
+            if (volume > 0) unmutedVolumeCache = volume
+            onVolumeChangedRequest?.invoke(0, true)
+            onVolumeCommittedRequest?.invoke(0, true)
+        } else {
+            val restored = if (volume > 0) volume else unmutedVolumeCache.coerceIn(10, 100)
+            volume = restored
+            onVolumeChangedRequest?.invoke(restored, false)
+            onVolumeCommittedRequest?.invoke(restored, false)
+        }
     }
 
     fun triggerQuickTool(toolId: String) {
