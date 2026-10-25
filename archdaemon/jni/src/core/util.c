@@ -281,7 +281,7 @@ void restart_target_app(const char* pkg) {
     is_restarting_renderer = true; // reuse existing flag, guards inotify/pid logic during respawn
     systemv("am force-stop %s && am start -n $(cmd package resolve-activity --brief %s | tail -n 1)",
             pkg, pkg);
-    usleep(500000);
+    usleep(700000);
     is_restarting_renderer = false;
 }
 

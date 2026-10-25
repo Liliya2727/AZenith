@@ -16,26 +16,57 @@
 
 #include <AZenith.h>
 #include <regex.h>
+#include <stdlib.h>
+#include <sys/system_properties.h>
 
 /**
- * @brief Reads an Android system property via getprop.
+ * @brief Reads an Android system property as an integer.
  */
 static int get_prop_int(const char* prop) {
-    char cmd[128];
-    char buf[64] = {0};
+    char buf[PROP_VALUE_MAX] = {0};
 
-    snprintf(cmd, sizeof(cmd), "getprop %s", prop);
-
-    FILE* fp = popen(cmd, "r");
-    if (!fp) return 0;
-
-    if (fgets(buf, sizeof(buf), fp) == NULL) {
-        pclose(fp);
+    if (__system_property_get(prop, buf) <= 0)
         return 0;
-    }
-    pclose(fp);
 
     return (int)strtol(buf, NULL, 10);
+}
+
+/**
+ * @brief Applies downscale/fps via `cmd game set` (Android 13+).
+ * @return true on success.
+ */
+static bool apply_game_set(const char* pkg, const char* downscale, const char* fps) {
+    char cmd[256];
+    size_t n = (size_t)snprintf(cmd, sizeof(cmd), "cmd game set --mode 2");
+
+    if (!IS_DEFAULT(downscale) && n < sizeof(cmd))
+        n += (size_t)snprintf(cmd + n, sizeof(cmd) - n, " --downscale %s", downscale);
+    if (!IS_DEFAULT(fps) && n < sizeof(cmd))
+        n += (size_t)snprintf(cmd + n, sizeof(cmd) - n, " --fps %s", fps);
+    if (n < sizeof(cmd))
+        snprintf(cmd + n, sizeof(cmd) - n, " %s", pkg);
+
+    return systemv("%s", cmd) == 0;
+}
+
+/**
+ * @brief Applies downscale/fps via device_config game_overlay (Android 12 path,
+ *        also used as fallback when `cmd game set` fails on Android 13+).
+ * @return true on success.
+ */
+static bool apply_legacy(const char* pkg, const char* downscale, const char* fps) {
+    char config[128];
+    size_t n = (size_t)snprintf(config, sizeof(config), "mode=2");
+
+    if (!IS_DEFAULT(downscale) && n < sizeof(config))
+        n += (size_t)snprintf(config + n, sizeof(config) - n, ",downscaleFactor=%s", downscale);
+    if (!IS_DEFAULT(fps) && n < sizeof(config))
+        n += (size_t)snprintf(config + n, sizeof(config) - n, ",fps=%s", fps);
+
+    if (systemv("cmd device_config put game_overlay %s %s", pkg, config) != 0)
+        return false;
+
+    return systemv("cmd game mode 2 %s", pkg) == 0;
 }
 
 /**
@@ -44,7 +75,7 @@ static int get_prop_int(const char* prop) {
  *         already active or nothing to apply.
  */
 bool apply_resolution_target(DaemonContext* ctx, const char* pkg,
-                               const char* downscale, const char* fps) {
+                             const char* downscale, const char* fps) {
     if (IS_DEFAULT(downscale) && IS_DEFAULT(fps))
         return false;
 
@@ -53,55 +84,50 @@ bool apply_resolution_target(DaemonContext* ctx, const char* pkg,
         return false;
     }
 
-    int sdk = get_prop_int("ro.build.version.release");
-    char cmd[256];
-
-    if (sdk >= 13) {
-        int n = snprintf(cmd, sizeof(cmd), "cmd game set --mode 2");
-
-        if (!IS_DEFAULT(downscale))
-            n += snprintf(cmd + n, sizeof(cmd) - n, " --downscale %s", downscale);
-        if (!IS_DEFAULT(fps))
-            n += snprintf(cmd + n, sizeof(cmd) - n, " --fps %s", fps);
-
-        snprintf(cmd + n, sizeof(cmd) - n, " %s", pkg);
-
-        systemv(cmd);
-        ctx->resolution_applied = true;
-        ctx->used_legacy_fallback = false;
-        log_info("resolution", "applied pkg=%s api=%d downscale=%s fps=%s",
-                 pkg, sdk, IS_DEFAULT(downscale) ? "-" : downscale, IS_DEFAULT(fps) ? "-" : fps);
-        return true;
+    int sdk = get_prop_int("ro.build.version.sdk");
+    if (sdk < 31) {
+        log_debug("resolution", "game mode API unsupported sdk=%d", sdk);
+        return false;
     }
 
-    char config[128];
-    int n = snprintf(config, sizeof(config), "mode=2");
+    if (sdk >= 33) {
+        if (apply_game_set(pkg, downscale, fps)) {
+            ctx->resolution_applied = true;
+            ctx->used_legacy_fallback = false;
+            log_info("resolution", "applied pkg=%s sdk=%d downscale=%s fps=%s",
+                     pkg, sdk, IS_DEFAULT(downscale) ? "-" : downscale,
+                     IS_DEFAULT(fps) ? "-" : fps);
+            return true;
+        }
+        log_warn("resolution", "cmd game set failed pkg=%s, falling back to device_config", pkg);
+    }
 
-    if (!IS_DEFAULT(downscale))
-        n += snprintf(config + n, sizeof(config) - n, ",downscaleFactor=%s", downscale);
-    if (!IS_DEFAULT(fps))
-        n += snprintf(config + n, sizeof(config) - n, ",fps=%s", fps);
-
-    systemv("cmd device_config put game_overlay %s %s", pkg, config);
-    systemv("cmd game mode 2 %s", pkg);
+    if (!apply_legacy(pkg, downscale, fps)) {
+        log_warn("resolution", "legacy apply failed pkg=%s sdk=%d", pkg, sdk);
+        return false;
+    }
 
     ctx->resolution_applied = true;
     ctx->used_legacy_fallback = true;
-    log_info("resolution", "applied pkg=%s api=%d mode=legacy downscale=%s fps=%s",
-             pkg, sdk, IS_DEFAULT(downscale) ? "-" : downscale, IS_DEFAULT(fps) ? "-" : fps);
+    log_info("resolution", "applied pkg=%s sdk=%d mode=legacy downscale=%s fps=%s",
+             pkg, sdk, IS_DEFAULT(downscale) ? "-" : downscale,
+             IS_DEFAULT(fps) ? "-" : fps);
     return true;
 }
 
 /**
- * @brief Restores window size/density from ctx's saved fallback values.
- * @param ctx Daemon context holding the saved fallback.
+ * @brief Resets the per-app game mode config applied by apply_resolution_target().
+ * @param ctx Daemon context holding the applied state and which path was used.
+ * @param pkg Package name the config was applied to.
  */
 void restore_resolution_target(DaemonContext* ctx, const char* pkg) {
     if (!ctx->resolution_applied) return;
 
     if (ctx->used_legacy_fallback) {
         systemv("cmd device_config delete game_overlay %s", pkg);
-        systemv("cmd game reset %s", pkg);
+        /* A13+ has `game reset`, A12 doesn't: fall back to mode 1 (standard) */
+        if (systemv("cmd game reset %s", pkg) != 0)
+            systemv("cmd game mode 1 %s", pkg);
     } else {
         systemv("cmd game reset --mode 2 %s", pkg);
     }
