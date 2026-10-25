@@ -43,18 +43,14 @@ fn apply_dram_freq(pin_max: bool) {
 }
 
 /// `1` = limits enforced (balanced/eco), `0` = limits lifted (performance).
-/// `SYS_BOOST` takes the opposite value.
-fn apply_ppm_policy_status(limit: &str, sys_boost: &str) {
+fn apply_ppm_policy_status(limit: &str) {
     if !Path::new("/proc/ppm/policy_status").exists() {
         return;
     }
 
     let content = fs::read_to_string("/proc/ppm/policy_status").unwrap_or_default();
     for line in content.lines() {
-        let is_limit = PPM_LIMIT_POLICIES.iter().any(|policy| line.contains(policy));
-        let is_sys_boost = line.contains("SYS_BOOST");
-
-        if !is_limit && !is_sys_boost {
+        if !PPM_LIMIT_POLICIES.iter().any(|policy| line.contains(policy)) {
             continue;
         }
 
@@ -62,12 +58,7 @@ fn apply_ppm_policy_status(limit: &str, sys_boost: &str) {
             continue;
         };
 
-        if is_limit {
-            write_lock(&format!("{} {}", idx_str, limit), "/proc/ppm/policy_status");
-        }
-        if is_sys_boost {
-            write_lock(&format!("{} {}", idx_str, sys_boost), "/proc/ppm/policy_status");
-        }
+        write_lock(&format!("{} {}", idx_str, limit), "/proc/ppm/policy_status");
     }
 }
 
@@ -130,7 +121,7 @@ fn apply_mali_power_policy(policy: &str) {
 }
 
 pub fn mediatek_balance() {
-    apply_ppm_policy_status("1", "0");
+    apply_ppm_policy_status("1");
     write_lock("2", "/sys/kernel/fpsgo/common/force_onoff");
     write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
     write_lock("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
@@ -148,7 +139,7 @@ pub fn mediatek_balance() {
 }
 
 pub fn mediatek_performance() {
-    apply_ppm_policy_status("0", "1");
+    apply_ppm_policy_status("0");
 
     // FPSGO is only turned off when the user disables it via `usefpsgo`.
     if getprop("persist.sys.azenithconf.usefpsgo") == "0" {
@@ -171,7 +162,7 @@ pub fn mediatek_performance() {
 }
 
 pub fn mediatek_powersave() {
-    apply_ppm_policy_status("1", "0");
+    apply_ppm_policy_status("1");
     write_lock("2", "/sys/kernel/fpsgo/common/force_onoff");
     write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
     write_lock("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
