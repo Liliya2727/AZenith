@@ -89,7 +89,8 @@ data class SidePanelLiveMonitorState(
 data class SidePanelAppItem(
     val packageName: String,
     val name: String,
-    val iconBitmap: ImageBitmap? = null
+    val iconBitmap: ImageBitmap? = null,
+    val isSystemApp: Boolean = false
 )
 
 data class SidePanelWidgetMeta(
@@ -251,6 +252,7 @@ class ZXSidePanelStateHolder {
     val installedApps = mutableStateListOf<SidePanelAppItem>()
     val quickApps = mutableStateListOf<String>()
     var defaultQuickApps: List<String> = emptyList()
+    var activeGamePackage by mutableStateOf<String?>(null)
     var onQuickAppsChanged: ((List<String>) -> Unit)? = null
     var onLaunchAppRequest: ((String) -> Unit)? = null
     var onSelectProfileRequest: ((String) -> Unit)? = null

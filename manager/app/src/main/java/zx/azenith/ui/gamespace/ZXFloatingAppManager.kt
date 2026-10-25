@@ -188,6 +188,7 @@ class ZXFloatingAppManager(
     var stackSide by mutableStateOf("right")
     var stackY by mutableIntStateOf(260)
     var isStackExpanded by mutableStateOf(false)
+    var isHostForegroundPackage: ((String) -> Boolean)? = null
 
     private var nextSessionId = 1
     private var rootClient: ZXFloatingDisplayRootClient? = null
@@ -237,7 +238,7 @@ class ZXFloatingAppManager(
     }
 
     fun openFloatingApp(pkg: String) {
-        if (pkg.isBlank() || pkg == context.packageName) return
+        if (pkg.isBlank() || pkg == context.packageName || isHostForegroundPackage?.invoke(pkg) == true) return
         scope.launch(Dispatchers.Main) {
             val existing = sessions.firstOrNull { it.packageName == pkg }
             if (existing != null) {
@@ -1237,7 +1238,6 @@ private fun FloatingAppWindowContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .shadow(14.dp, RoundedCornerShape(cornerRadius), clip = false)
             .clip(RoundedCornerShape(cornerRadius))
             .background(scheme.surfaceContainerLowest)
             .border(borderThickness, borderColor, RoundedCornerShape(cornerRadius))
@@ -1399,20 +1399,6 @@ private fun FloatingAppWindowContent(
                 }
             }
         }
-
-        // Bottom-left corner resize indicator on floating border
-        if (!isPendingIcon) {
-            CornerResizeIndicator(
-                isLeftCorner = true,
-                modifier = Modifier.align(Alignment.BottomStart)
-            )
-
-            // Bottom-right corner resize indicator on floating border
-            CornerResizeIndicator(
-                isLeftCorner = false,
-                modifier = Modifier.align(Alignment.BottomEnd)
-            )
-        }
     }
 }
 
@@ -1493,55 +1479,6 @@ private fun TopBarIconButton(
         contentAlignment = Alignment.Center
     ) {
         content()
-    }
-}
-
-@Composable
-private fun CornerResizeIndicator(
-    isLeftCorner: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val scheme = MaterialTheme.colorScheme
-    Box(modifier = modifier.size(28.dp)) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokePx = 3.dp.toPx()
-            val inset = 4.dp.toPx()
-            val armLen = 12.dp.toPx()
-            val h = size.height
-            val w = size.width
-
-            if (isLeftCorner) {
-                drawLine(
-                    color = scheme.primary,
-                    start = Offset(inset, h - inset - armLen),
-                    end = Offset(inset, h - inset),
-                    strokeWidth = strokePx,
-                    cap = StrokeCap.Round
-                )
-                drawLine(
-                    color = scheme.primary,
-                    start = Offset(inset, h - inset),
-                    end = Offset(inset + armLen, h - inset),
-                    strokeWidth = strokePx,
-                    cap = StrokeCap.Round
-                )
-            } else {
-                drawLine(
-                    color = scheme.primary,
-                    start = Offset(w - inset, h - inset - armLen),
-                    end = Offset(w - inset, h - inset),
-                    strokeWidth = strokePx,
-                    cap = StrokeCap.Round
-                )
-                drawLine(
-                    color = scheme.primary,
-                    start = Offset(w - inset - armLen, h - inset),
-                    end = Offset(w - inset, h - inset),
-                    strokeWidth = strokePx,
-                    cap = StrokeCap.Round
-                )
-            }
-        }
     }
 }
 

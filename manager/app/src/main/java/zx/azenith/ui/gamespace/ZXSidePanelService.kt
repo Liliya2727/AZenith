@@ -366,7 +366,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         drawableToImageBitmap(packageManager.getApplicationIcon(pkg), 96)
                     }.getOrNull()
             }
-        ).also { it.prebindRootServiceIfPossible() }
+        ).apply {
+            isHostForegroundPackage = { pkg -> pkg == activeGamePackage }
+            prebindRootServiceIfPossible()
+        }
 
         // Ensure app-local API mirror directory exists and is world-accessible for the daemon
         runCatching {
@@ -424,6 +427,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     lastUsageForegroundPkg = pkg
                     lastUsageEventTs = now
                     activeGamePackage = pkg
+                    panelState.activeGamePackage = pkg
                     activeGameLabel = label ?: resolveAppLabel(pkg)
                     panelState.loadForApp(pkg)
                     attachOverlayIfNeeded()
@@ -441,6 +445,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         lastUsageEventTs = now
                         if (activeGamePackage != matchedPkg) {
                             activeGamePackage = matchedPkg
+                            panelState.activeGamePackage = matchedPkg
                             activeGameLabel = label
                             panelState.loadForApp(matchedPkg)
                         }
@@ -569,6 +574,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun launchExternalApp(pkg: String) {
+        if (pkg == activeGamePackage) {
+            panelState.showToast("Cannot open current game in floating window", "block")
+            return
+        }
         collapsePanel()
         serviceScope.launch {
             delay(140)
@@ -596,11 +605,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val iconBmp = runCatching {
                         drawableToImageBitmap(info.loadIcon(pm), 96)
                     }.getOrNull()
+                    val appInfo = info.activityInfo?.applicationInfo
+                    val isSys = appInfo != null && (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                     loaded.add(
                         SidePanelAppItem(
                             packageName = pkg,
                             name = label,
-                            iconBitmap = iconBmp
+                            iconBitmap = iconBmp,
+                            isSystemApp = isSys
                         )
                     )
                 }
@@ -1133,6 +1145,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 sideSetting = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
                                 if (switchedGame) {
                                     activeGamePackage = focusedPkg
+                                    panelState.activeGamePackage = focusedPkg
                                     activeGameLabel = label
                                     panelState.loadForApp(focusedPkg)
                                 }
@@ -1150,6 +1163,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                             pendingLaunchPkg = null
                             pendingLaunchGraceUntilMs = 0L
                             activeGamePackage = null
+                            panelState.activeGamePackage = null
                             activeGameLabel = null
                             if (isHandleVisible || isViewAttached) {
                                 withContext(Dispatchers.Main) {
@@ -2681,34 +2695,66 @@ private fun DetachedLeftRail(
                     val app = state.installedApps.find { it.packageName == pkgName } ?: return@forEach
                     val shape = RoundedCornerShape(16.dp)
 
-                    Surface(
-                        shape = shape,
-                        color = scheme.surfaceContainerHigh,
-                        contentColor = scheme.onSurface,
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(shape)
-                            .clickable { state.launchQuickApp(app.packageName) }
+                    Box(
+                        modifier = Modifier.size(46.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            shape = shape,
+                            color = scheme.surfaceContainerHigh,
+                            contentColor = scheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(shape)
+                                .clickable {
+                                    if (state.editMode) {
+                                        state.toggleQuickApp(app.packageName)
+                                    } else {
+                                        state.launchQuickApp(app.packageName)
+                                    }
+                                }
                         ) {
-                            if (app.iconBitmap != null) {
-                                Image(
-                                    bitmap = app.iconBitmap,
-                                    contentDescription = app.name,
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                )
-                            } else {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (app.iconBitmap != null) {
+                                    Image(
+                                        bitmap = app.iconBitmap,
+                                        contentDescription = app.name,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = ZXSidePanelIcons.get("grid_view"),
+                                        contentDescription = app.name,
+                                        tint = scheme.onSurface,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Top-Right '-' remove badge when sidepanel is in edit mode
+                        if (state.editMode) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 3.dp, y = (-3).dp)
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(scheme.error)
+                                    .clickable { state.toggleQuickApp(app.packageName) },
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Icon(
-                                    imageVector = ZXSidePanelIcons.get("grid_view"),
-                                    contentDescription = app.name,
-                                    tint = scheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = ZXSidePanelIcons.get("remove"),
+                                    contentDescription = "Remove shortcut",
+                                    tint = scheme.onError,
+                                    modifier = Modifier.size(11.dp)
                                 )
                             }
                         }
@@ -2719,19 +2765,19 @@ private fun DetachedLeftRail(
                 val addShape = RoundedCornerShape(16.dp)
                 Surface(
                     shape = addShape,
-                    color = scheme.surfaceContainerHigh,
-                    contentColor = scheme.onSurface,
+                    color = if (state.editMode) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                    contentColor = if (state.editMode) scheme.onPrimaryContainer else scheme.onSurface,
                     modifier = Modifier
                         .size(46.dp)
-                        .graphicsLayer { alpha = 0.7f }
+                        .graphicsLayer { alpha = if (state.editMode) 1f else 0.85f }
                         .clip(addShape)
                         .clickable { state.openSubscreen("appsManager") }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = ZXSidePanelIcons.get("add"),
-                            contentDescription = "Manage quick launch apps",
-                            tint = scheme.onSurface,
+                            contentDescription = if (state.editMode) "Edit sidepanel shortcuts" else "More floating apps",
+                            tint = if (state.editMode) scheme.onPrimaryContainer else scheme.onSurface,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -3001,7 +3047,7 @@ private fun MainSidepanelContent(
                     "liveMonitor" -> "Live Monitor"
                     "crosshair" -> "Crosshair settings"
                     "display" -> "Color Scheme"
-                    "appsManager" -> "Manage Apps"
+                    "appsManager" -> if (state.editMode) "Edit Sidepanel Apps" else "More Apps"
                     else -> "Settings"
                 }
 
