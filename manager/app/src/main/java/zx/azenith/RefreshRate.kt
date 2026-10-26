@@ -1,26 +1,8 @@
-/*
- * Copyright (C) 2026-2027 Zexshia
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package zx.azenith
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.hardware.display.DisplayManager
-import android.view.Display
 import android.util.Log
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.CoroutineScope
@@ -51,41 +33,38 @@ class RefreshRateReceiver : BroadcastReceiver() {
     }
 
     private fun applyRefreshRate(context: Context, fps: Int) {
-        val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-        val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+        val modDir = "/data/adb/modules/AZenith"
+        val jsonFile = "$modDir/rr_modes.json"
 
-        if (display == null) {
-            Log.w(TAG, "Display not available")
-            return
-        }
+        val findIdCmd = """
+            if [ -f "$jsonFile" ]; then
+                cat "$jsonFile" | grep -o '{"id":[0-9]*,"hz":$fps}' | head -n1 | grep -o '[0-9]*' | head -n1
+            else
+                dumpsys SurfaceFlinger | grep -oE 'id=[0-9]+,[^}]*vsyncRate=[0-9.]+' | grep "vsyncRate=$fps\." | head -n1 | sed -E 's/.*id=([0-9]+).*/\1/'
+            fi
+        """.trimIndent()
 
-        val supportedRates = display.supportedModes
-            .map { Math.round(it.refreshRate) }
-            .distinct()
-            .sortedDescending()
+        val output = Shell.cmd(findIdCmd).exec().out
+        val targetId = output.firstOrNull()?.trim()?.toIntOrNull()
 
-        Log.d(TAG, "Supported rates: $supportedRates")
-
-        val sfIndex = supportedRates.indexOf(fps)
-
-        if (sfIndex == -1) {
-            Log.w(TAG, "FPS $fps not supported. Supported: $supportedRates")
+        if (targetId == null) {
+            Log.w(TAG, "Hardware mode ID tidak ditemukan untuk ${fps}Hz")
             return
         }
 
         val commands = arrayOf(
-            "service call SurfaceFlinger 1035 i32 $sfIndex",
+            "service call SurfaceFlinger 1035 i32 $targetId",
+            "echo $targetId > $modDir/current_rr.txt",
             "setprop persist.vendor.display.refresh_rate $fps",
             "setprop persist.sys.display.refresh_rate $fps"
         )
 
         val result = Shell.cmd(*commands).exec()
-        
+
         if (result.isSuccess) {
-            Log.d(TAG, "Refresh rate → ${fps}Hz (SF index: $sfIndex) ✓")
+            Log.d(TAG, "Refresh rate berhasil dikunci → ${fps}Hz (SF ID: $targetId) ✓")
         } else {
-            Log.w(TAG, "Failed: ${result.err}")
+            Log.w(TAG, "Gagal mengunci refresh rate: ${result.err}")
         }
     }
-
 }

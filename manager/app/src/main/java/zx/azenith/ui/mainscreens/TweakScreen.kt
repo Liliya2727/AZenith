@@ -460,11 +460,11 @@ fun TweakScreen(
                                 icon = Icons.Rounded.WebStories,
                                 label = stringResource(R.string.refreshrates),
                                 value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
-                                showArrow = isFullModeEnabled,
-                                highlight = isFullModeEnabled,
+                                showArrow = true,
+                                highlight = true,
                                 isLoading = viewModel.isRefreshRateLoading
                             ) {
-                                showRefreshRateDialog = isFullModeEnabled
+                                showRefreshRateDialog = true
                             }
                         }
 
