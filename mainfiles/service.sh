@@ -105,20 +105,8 @@ appops set zx.azenith RUN_IN_BACKGROUND allow > /dev/null 2>&1
 appops set zx.azenith RUN_ANY_IN_BACKGROUND allow > /dev/null 2>&1
 dumpsys deviceidle whitelist +zx.azenith > /dev/null 2>&1
 
-MODDIR="/data/adb/modules/AZenith"
 SF_MODES=$(dumpsys SurfaceFlinger | grep -oE 'id=[0-9]+,[^}]*vsyncRate=[0-9.]+' | sed -E 's/id=([0-9]+).*vsyncRate=([0-9]+)\..*/{"id":\1,"hz":\2}/' | sort -u -t: -k3 -n | tr '\n' ',' | sed 's/,$//')
 [ -n "$SF_MODES" ] && echo "[$SF_MODES]" > "$MODDIR/rr_modes.json"
-(
-    logcat -b events | grep -E "screen_toggled|power_screen_state" | while read -r _; do
-        if [ -f "$MODDIR/current_rr.txt" ]; then
-            TARGET_ID=$(cat "$MODDIR/current_rr.txt")
-            if [ -n "$TARGET_ID" ]; then
-                sleep 0.3
-                service call SurfaceFlinger 1035 i32 "$TARGET_ID"
-            fi
-        fi
-    done
-) &
 
 # Exec Binder Companion Daemon
 "$BIN_MON"
