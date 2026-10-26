@@ -26,6 +26,10 @@ import org.lsposed.hiddenapibypass.HiddenApiBypass
 object MainKt {
     @JvmStatic
     fun main(args: Array<String>) {
+        if (args.contains("--fps")) {
+            FpsClient.main(args)
+            return
+        }
         val writer = if (args.isNotEmpty()) {
             PrintWriter(File(args[0]).bufferedWriter())
         } else {

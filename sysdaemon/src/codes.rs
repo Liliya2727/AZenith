@@ -10,7 +10,7 @@ use crate::log::{debug, error, info, warn};
 // The resolver APK is only needed to look up the transaction codes of the
 // running ROM. It is written to a temporary path and removed afterwards.
 const APK_PATH: &str = "/data/local/tmp/zenith_resolver.apk";
-const RESOLVER_APK: &[u8] = include_bytes!("../binder_resolver.apk");
+pub(crate) const RESOLVER_APK: &[u8] = include_bytes!("../binder_resolver.apk");
 
 pub(crate) struct Codes {
     pub(crate) reg: u32, pub(crate) fg_act: u32, pub(crate) fg_svc: u32,

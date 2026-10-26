@@ -12,6 +12,7 @@
 // Module layout:
 //   ndk       libbinder_ndk via dlopen
 //   codes     transaction code resolver (binder_resolver.apk)
+//   fps       root app_process hosting WindowManager's TaskFpsCallback -> current_fps
 //   pkg       uid -> package (IPackageManager) + package -> label
 //   label     package -> label from the APK resources (AXML + resources.arsc)
 //   procs     /proc scan (process table + initial foreground guess)
@@ -19,6 +20,7 @@
 //   status    screen/battery saver/zen mode/battery level & charging
 //   state     the monitor state + atomic publishing of app_status/background_apps
 mod codes;
+mod fps;
 mod label;
 mod lock;
 mod log;
@@ -133,6 +135,7 @@ fn main() {
     log_init();
     log::install_panic_hook();
     info!("daemon starting (pid {}, log level {})", std::process::id(), level_name());
+    fps::start();
     state::capture_previous();
     ensure_current_modes();
 

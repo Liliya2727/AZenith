@@ -2283,6 +2283,14 @@ private class ZXRealTelemetryCollector {
      */
     fun sampleFps(pkg: String, rootGranted: Boolean, defaultCap: Int): Int {
         val cap = defaultCap.coerceAtLeast(60)
+        // Best source first: the daemon's root fps client streams SurfaceFlinger's own
+        // FrameTimeline report, i.e. the rate frames actually reached the display, with no layer
+        // probing and no per-second dumpsys fork. Empty or stale falls through to the tiers below.
+        readDaemonFps(cap, rootGranted)?.let {
+            lastFps = it
+            lastFpsSource = "frametimeline"
+            return lastFps
+        }
         // Portable first: per-layer presented frames, needs no root and assumes nothing
         // about the SoC. The vendor node is the fallback for builds that stubbed it.
         readSurfaceFlingerFps(pkg)?.let {
@@ -2321,6 +2329,22 @@ private class ZXRealTelemetryCollector {
             if (fps > best) best = fps
         }
         return best.takeIf { it > 0 }
+    }
+
+    /**
+     * The daemon's fps client writes "<fps> <epoch_ms>". The stamp is what separates a live
+     * reading from a frozen one, because /data/adb is root-only and the file cannot be stat'ed
+     * without su.
+     */
+    private fun readDaemonFps(cap: Int, rootGranted: Boolean): Int? {
+        val raw = readFileTextDirectOrSu("/data/adb/.config/AZenith/API/current_fps", rootGranted)
+            ?: return null
+        val f = raw.trim().split(Regex("\\s+"))
+        if (f.size < 2) return null
+        val fps = f[0].toIntOrNull() ?: return null
+        val at = f[1].toLongOrNull() ?: return null
+        if (System.currentTimeMillis() - at > 3_000L) return null
+        return fps.coerceIn(1, cap)
     }
 
     /**
