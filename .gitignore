@@ -18,3 +18,7 @@ mainfiles/azenithApplist.json
 
 # Copied from the root changelog.md by .github/scripts/changelog.sh
 manager/app/src/main/assets/changelog.md
+.acside/
+*.cache
+local.properties
+manager/local.properties

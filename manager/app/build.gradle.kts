@@ -20,9 +20,9 @@ android {
     defaultConfig {
         applicationId = "zx.azenith"
         minSdk = 29
-        targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 34
+        versionCode = 53
+        versionName = "5.3"
         vectorDrawables.useSupportLibrary = true
         buildConfigField("long", "BUILD_TIME", "${System.currentTimeMillis()}L")
         ndk {
@@ -33,9 +33,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("azenith.jks")
-            storePassword = System.getenv("KS_PWD")
+            storePassword = "azenith123"
             keyAlias = "azenith_key"
-            keyPassword = System.getenv("KS_PWD")
+            keyPassword = "azenith123"
         }
     }
     
@@ -46,7 +46,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            isShrinkResources = true
+            isShrinkResources = false
             vcsInfo.include = false
             signingConfig = signingConfigs.getByName("release")
             
