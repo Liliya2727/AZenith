@@ -91,6 +91,7 @@ import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import java.io.File
 import kotlin.math.abs
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -123,6 +124,11 @@ class MainActivity : ComponentActivity() {
         
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
+        }
+
+        // Chinese forks reset the app-list app-op on boot, so re-assert it every launch.
+        lifecycleScope.launch(Dispatchers.IO) {
+            RootUtils.ensurePackageVisibility()
         }
 
         if (savedInstanceState != null) {

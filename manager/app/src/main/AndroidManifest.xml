@@ -17,6 +17,10 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- The manager enumerates the full package list (app list screen, game detection). -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
+    <!-- Vendor permission on MIUI/HyperOS and other Chinese forks; harmless where unknown. -->
+    <uses-permission android:name="com.android.permission.GET_INSTALLED_APPS" tools:ignore="ProtectedPermissions" />
     
     <queries>
         <intent>

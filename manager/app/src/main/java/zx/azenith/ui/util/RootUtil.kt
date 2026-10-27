@@ -368,4 +368,27 @@ object RootUtils {
     fun isModuleUpdatePendingReboot(): Boolean {
         return SuFile("/data/adb/modules/AZenith/update").exists()
     }
+
+    /**
+     * MIUI/HyperOS and other Chinese forks gate package visibility behind a vendor
+     * app-op, and `pm grant` alone leaves the list showing only this app. The
+     * app-ops are a parallel route, not a follow-up to the grant, so every
+     * spelling is issued regardless of what the grant returned.
+     */
+    fun ensurePackageVisibility() {
+        val cmds = mutableListOf(
+            "pm grant zx.azenith android.permission.QUERY_ALL_PACKAGES",
+            "pm grant zx.azenith com.android.permission.GET_INSTALLED_APPS",
+            "appops set zx.azenith android:query_all_packages allow",
+            "appops set zx.azenith query_all_packages allow",
+            "appops set zx.azenith android:get_installed_apps allow",
+            "appops set zx.azenith GET_INSTALLED_APPS allow",
+            "appops set zx.azenith 10022 allow"
+        )
+        try {
+            Shell.cmd(cmds.joinToString("\n") { "$it 2>/dev/null" }).exec()
+        } catch (e: Exception) {
+            // no-op
+        }
+    }
 }

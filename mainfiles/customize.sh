@@ -448,6 +448,15 @@ if [ "$APP_INSTALLED" = "true" ]; then
     appops set zx.azenith RUN_IN_BACKGROUND allow > /dev/null 2>&1
     appops set zx.azenith RUN_ANY_IN_BACKGROUND allow > /dev/null 2>&1
     appops set zx.azenith ACCESS_RESTRICTED_SETTINGS allow > /dev/null 2>&1
+    # Chinese forks (MIUI/HyperOS) gate the package list behind a vendor app-op;
+    # the app-ops are a parallel route to visibility, not a follow-up to pm grant.
+    pm grant zx.azenith android.permission.QUERY_ALL_PACKAGES > /dev/null 2>&1
+    pm grant zx.azenith com.android.permission.GET_INSTALLED_APPS > /dev/null 2>&1
+    appops set zx.azenith android:query_all_packages allow > /dev/null 2>&1
+    appops set zx.azenith query_all_packages allow > /dev/null 2>&1
+    appops set zx.azenith android:get_installed_apps allow > /dev/null 2>&1
+    appops set zx.azenith GET_INSTALLED_APPS allow > /dev/null 2>&1
+    appops set zx.azenith 10022 allow > /dev/null 2>&1
     dumpsys deviceidle whitelist +zx.azenith > /dev/null 2>&1
 fi
 

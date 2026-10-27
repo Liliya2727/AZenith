@@ -99,6 +99,13 @@ install_manager() {
 		pm grant zx.azenith android.permission.POST_NOTIFICATIONS >/dev/null 2>&1
 		pm grant zx.azenith android.permission.READ_MEDIA_IMAGES >/dev/null 2>&1
 		appops set zx.azenith SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
+		pm grant zx.azenith android.permission.QUERY_ALL_PACKAGES >/dev/null 2>&1
+		pm grant zx.azenith com.android.permission.GET_INSTALLED_APPS >/dev/null 2>&1
+		appops set zx.azenith android:query_all_packages allow >/dev/null 2>&1
+		appops set zx.azenith query_all_packages allow >/dev/null 2>&1
+		appops set zx.azenith android:get_installed_apps allow >/dev/null 2>&1
+		appops set zx.azenith GET_INSTALLED_APPS allow >/dev/null 2>&1
+		appops set zx.azenith 10022 allow >/dev/null 2>&1
 
 		echo "- Launching manager..."
 		sleep 1
