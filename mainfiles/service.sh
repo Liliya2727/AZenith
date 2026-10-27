@@ -55,8 +55,8 @@ STATE=$(getprop persist.sys.azenith.state)
 # Expose public read access on CPU/GPU telemetry sysfs nodes and API mirror so the app reads via File IO without shell polling
 "$BIN_SVC" --setup-access
 
-SF_MODES=$(dumpsys SurfaceFlinger | grep -oE 'id=[0-9]+,[^}]*vsyncRate=[0-9.]+' | sed -E 's/id=([0-9]+).*vsyncRate=([0-9]+)\..*/{"id":\1,"hz":\2}/' | sort -u -t: -k3 -n | tr '\n' ',' | sed 's/,$//')
-[ -n "$SF_MODES" ] && echo "[$SF_MODES]" > "$MODDIR/rr_modes.json"
+# Dump and save refresh rates id
+"$BIN_SVC" --get_rr_modes
 
 # Exec Binder Companion Daemon
 "$BIN_MON"

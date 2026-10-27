@@ -334,3 +334,104 @@ void grant_app_permissions(void) {
     systemv("dumpsys deviceidle whitelist +zx.azenith >/dev/null 2>&1");
     log_info("cli", "app permissions granted");
 }
+
+/**
+ * @brief Parses `dumpsys SurfaceFlinger` for display modes and writes the unique
+ *        refresh rates (sorted ascending by Hz) to rr_modes.json.
+ * @note Equivalent of the old shell pipeline. The file is left untouched if no
+ *       modes are found.
+ * @return 0 on success, 1 on failure or when no modes were found.
+ */
+typedef struct {
+    int id;
+    int hz;
+} rr_mode_t;
+
+static int rr_cmp_hz(const void* a, const void* b) {
+    return ((const rr_mode_t*)a)->hz - ((const rr_mode_t*)b)->hz;
+}
+
+int dump_refresh_rate_modes(void) {
+    FILE* p = popen("dumpsys SurfaceFlinger", "r");
+    if (!p) {
+        log_error("cli", "rr_modes popen failed errno=%d", errno);
+        return 1;
+    }
+
+    rr_mode_t modes[RR_MODES_MAX];
+    int count = 0;
+    char line[8192];
+
+    while (fgets(line, sizeof(line), p)) {
+        char* cur = line;
+        while ((cur = strstr(cur, "id=")) != NULL) {
+        
+            if (cur != line && isalnum((unsigned char)cur[-1])) {
+                cur += 3;
+                continue;
+            }
+
+            char* num = cur + 3;
+            char* end = NULL;
+            long id = strtol(num, &end, 10);
+            if (end == num || *end != ',') {
+                cur += 3;
+                continue;
+            }
+
+            char* span_end = strchr(end, '}');
+            size_t span_len = span_end ? (size_t)(span_end - end) : strlen(end);
+
+            char* vs = NULL;
+            for (char* s = end; s < end + span_len;) {
+                char* f = strstr(s, "vsyncRate=");
+                if (!f || f >= end + span_len) break;
+                vs = f;
+                s = f + 10;
+            }
+            if (!vs) {
+                cur = end;
+                continue;
+            }
+
+            char* hz_str = vs + 10;
+            char* hz_end = NULL;
+            long hz = strtol(hz_str, &hz_end, 10);
+            if (hz_end != hz_str && hz > 0) {
+                int dup = 0;
+                for (int i = 0; i < count; i++) {
+                    if (modes[i].hz == (int)hz) { dup = 1; break; }
+                }
+                if (!dup && count < RR_MODES_MAX) {
+                    modes[count].id = (int)id;
+                    modes[count].hz = (int)hz;
+                    count++;
+                }
+            }
+            cur = span_end ? span_end : end + span_len;
+        }
+    }
+    pclose(p);
+
+    if (count == 0) {
+        log_warn("cli", "rr_modes no display modes found");
+        return 1;
+    }
+
+    qsort(modes, count, sizeof(rr_mode_t), rr_cmp_hz);
+
+    FILE* out = fopen(RR_MODES_PATH, "w");
+    if (!out) {
+        log_error("cli", "rr_modes open failed errno=%d", errno);
+        return 1;
+    }
+    fputc('[', out);
+    for (int i = 0; i < count; i++) {
+        fprintf(out, "%s{\"id\":%d,\"hz\":%d}", i ? "," : "", modes[i].id, modes[i].hz);
+    }
+    fputs("]\n", out);
+    fclose(out);
+
+    log_info("cli", "rr_modes written count=%d", count);
+    return 0;
+}

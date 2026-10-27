@@ -69,6 +69,9 @@ int main(int argc, char* argv[]) {
         grant_app_permissions();
         return 0;
     }
+    
+    if (IS_CMD(cmd, "--get_rr_modes", "-getrr"))
+        return dump_refresh_rate_modes();
 
     if (!require_daemon_running()) {
         return 1;
