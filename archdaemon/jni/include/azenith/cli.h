@@ -2,6 +2,7 @@
 #define AZENITH_CLI_H
 
 #include "core.h"
+#include <sys/types.h>
 
 void print_help(void);
 void clearlogs(void);
@@ -14,5 +15,7 @@ int handle_verboselog(int argc, char** argv);
 int restart_service(void);
 void shownotifications(void);
 void hidenotifications(void);
+void expose_telemetry_access(void);
+void grant_app_permissions(void);
 
 #endif

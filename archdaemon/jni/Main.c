@@ -63,6 +63,12 @@ int main(int argc, char* argv[]) {
     }
     if (IS_CMD(cmd, "--rerun", "-rr")) 
         return restart_service();
+        
+    if (IS_CMD(cmd, "--setup-access", "-sa")) {
+        expose_telemetry_access();
+        grant_app_permissions();
+        return 0;
+    }
 
     if (!require_daemon_running()) {
         return 1;

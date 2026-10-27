@@ -253,3 +253,84 @@ void hidenotifications(void) {
             "2>&1\"");
     
 }
+
+/**
+ * @brief Expose public read access on CPU/GPU telemetry sysfs nodes and API
+ *        mirror so the app reads via File IO without shell polling.
+ */
+void expose_telemetry_access(void) {
+    static const char* cpu_nodes[] = {
+        "scaling_cur_freq", "cpuinfo_cur_freq",
+        "cpuinfo_max_freq", "cpuinfo_min_freq",
+        "scaling_max_freq", "scaling_min_freq",
+    };
+    static const char* gpu_nodes[] = {
+        "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage",
+        "/sys/class/kgsl/kgsl-3d0/gpubusy",
+        "/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq",
+        "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq",
+        "/sys/kernel/gpu/gpu_busy",
+        "/sys/kernel/gpu/gpu_clock",
+        "/sys/kernel/gpu/gpu_max_clock",
+        "/sys/module/ged/parameters/gpu_loading",
+        "/sys/kernel/ged/hal/gpu_utilization",
+        "/sys/kernel/ged/hal/ged_kpi",
+        "/proc/mali/utilization",
+        "/proc/gpufreq/gpufreq_var_dump",
+        "/proc/gpufreqv2/gpufreq_status",
+        "/sys/class/misc/mali0/device/utilization",
+        "/sys/devices/platform/mali/utilization",
+    };
+    static const char* devfreq_nodes[] = {
+        "cur_freq", "max_freq", "min_freq", "load", "utilization",
+    };
+    char path[256];
+
+    /* API mirror */
+    systemv("mkdir -p /data/data/zx.azenith/API /data/adb/.config/AZenith/API");
+    chmod("/data/data/zx.azenith/API", 0777);
+    chmodg("/data/data/zx.azenith/API/*", 0644);
+    chmodg("/data/adb/.config/AZenith/API/*", 0644);
+
+    /* CPU freq + /proc/stat */
+    for (size_t i = 0; i < sizeof(cpu_nodes) / sizeof(*cpu_nodes); i++) {
+        snprintf(path, sizeof(path),
+                 "/sys/devices/system/cpu/cpu[0-9]*/cpufreq/%s", cpu_nodes[i]);
+        chmodg(path, 0444);
+    }
+    chmod("/proc/stat", 0444);
+
+    /* GPU */
+    chmod("/sys/kernel/ged", 0755);
+    chmod("/sys/kernel/ged/hal", 0755);
+    for (size_t i = 0; i < sizeof(gpu_nodes) / sizeof(*gpu_nodes); i++) {
+        chmod(gpu_nodes[i], 0444);
+    }
+
+    /* devfreq */
+    for (size_t i = 0; i < sizeof(devfreq_nodes) / sizeof(*devfreq_nodes); i++) {
+        snprintf(path, sizeof(path), "/sys/class/devfreq/*/%s", devfreq_nodes[i]);
+        chmodg(path, 0444);
+    }
+
+    /* thermal */
+    chmodg("/sys/class/thermal/thermal_zone*/temp", 0444);
+
+    log_info("cli", "telemetry access exposed");
+}
+
+/**
+ * @brief Grant runtime permissions, appops, and doze whitelist to zx.azenith.
+ */
+void grant_app_permissions(void) {
+    systemv("pm grant zx.azenith android.permission.WRITE_SECURE_SETTINGS >/dev/null 2>&1");
+    systemv("pm grant zx.azenith android.permission.PACKAGE_USAGE_STATS >/dev/null 2>&1");
+    systemv("pm grant zx.azenith android.permission.DUMP >/dev/null 2>&1");
+    systemv("appops set zx.azenith SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1");
+    systemv("appops set zx.azenith WRITE_SETTINGS allow >/dev/null 2>&1");
+    systemv("appops set zx.azenith GET_USAGE_STATS allow >/dev/null 2>&1");
+    systemv("appops set zx.azenith RUN_IN_BACKGROUND allow >/dev/null 2>&1");
+    systemv("appops set zx.azenith RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1");
+    systemv("dumpsys deviceidle whitelist +zx.azenith >/dev/null 2>&1");
+    log_info("cli", "app permissions granted");
+}
