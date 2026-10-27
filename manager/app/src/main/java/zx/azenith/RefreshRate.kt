@@ -33,7 +33,7 @@ class RefreshRateReceiver : BroadcastReceiver() {
     }
 
     private fun applyRefreshRate(context: Context, fps: Int) {
-        val modDir = "/data/adb/modules/AZenith"
+        val modDir = "/data/adb/.config/AZenith"
         val jsonFile = "$modDir/rr_modes.json"
 
         val findIdCmd = """
@@ -48,7 +48,7 @@ class RefreshRateReceiver : BroadcastReceiver() {
         val targetId = output.firstOrNull()?.trim()?.toIntOrNull()
 
         if (targetId == null) {
-            Log.w(TAG, "Hardware mode ID tidak ditemukan untuk ${fps}Hz")
+            Log.w(TAG, "Hardware mode ID not found for ${fps}Hz")
             return
         }
 
@@ -62,9 +62,9 @@ class RefreshRateReceiver : BroadcastReceiver() {
         val result = Shell.cmd(*commands).exec()
 
         if (result.isSuccess) {
-            Log.d(TAG, "Refresh rate berhasil dikunci → ${fps}Hz (SF ID: $targetId) ✓")
+            Log.d(TAG, "Refresh rate locked successfully → ${fps}Hz (SF ID: $targetId) ✓")
         } else {
-            Log.w(TAG, "Gagal mengunci refresh rate: ${result.err}")
+            Log.w(TAG, "Failed to lock refresh rate: ${result.err}")
         }
     }
 }
