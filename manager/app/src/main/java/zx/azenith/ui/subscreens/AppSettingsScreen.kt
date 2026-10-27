@@ -357,23 +357,22 @@ fun AppSettingsScreen(
                     ExpressiveList(
                         modifier = Modifier.padding(horizontal = panePadding),
                         content = buildList {
-                            if (isFullModeEnabled) {
-                                add {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.WebStories,
-                                        title = stringResource(R.string.refreshrates),
-                                        summary = stringResource(R.string.refreshrates_desc),
-                                        items = dynamicRefreshDisplayModes,
-                                        selectedIndex = rawRefreshModes.indexOfFirst {
-                                            it.equals(displayConfig.refresh_rate, ignoreCase = true)
-                                        }.coerceAtLeast(0),
-                                        onItemSelected = { index ->
-                                            val value = rawRefreshModes[index]
-                                            packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
-                                        }
-                                    )
-                                }
+                            add {
+                                ExpressiveDropdownItem(
+                                    icon = Icons.Rounded.WebStories,
+                                    title = stringResource(R.string.refreshrates),
+                                    summary = stringResource(R.string.refreshrates_desc),
+                                    items = dynamicRefreshDisplayModes,
+                                    selectedIndex = rawRefreshModes.indexOfFirst {
+                                        it.equals(displayConfig.refresh_rate, ignoreCase = true)
+                                    }.coerceAtLeast(0),
+                                    onItemSelected = { index ->
+                                        val value = rawRefreshModes[index]
+                                        packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
+                                    }
+                                )
                             }
+                            
                             add {
                                 ExpressiveDropdownItem(
                                     icon = Icons.Rounded.Layers,
@@ -447,36 +446,35 @@ fun AppSettingsScreen(
                 }
             }
         }
-        if (isFullModeEnabled) {
-            item {
-                AnimatedVisibility(
-                    visible = localMasterOn,
+        
+        item {
+            AnimatedVisibility(
+                visible = localMasterOn,
 
-                    enter = if (userToggled) {
-                        expandVertically(animationSpec = tween(400)) + fadeIn()
-                    } else {
-                        EnterTransition.None
-                    },
-                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
-                ) {
-                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
+                enter = if (userToggled) {
+                    expandVertically(animationSpec = tween(400)) + fadeIn()
+                } else {
+                    EnterTransition.None
+                },
+                exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
+            ) {
+                val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
                     
-                    Column {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        ExpressiveList(
-                            modifier = Modifier.padding(horizontal = panePadding),
-                            content = listOf( 
-                               {
-                                   ExpressiveInfoCard(
-                                       supportingContent = { Text(text = stringResource(R.string.str_by_using_per_app_refresh_rate)) },
-                                       leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                       containerColor = colorScheme.surfaceContainerLow,
-                                       onClick = {}
-                                   )
-                               }
-                            )
+                Column {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ExpressiveList(
+                        modifier = Modifier.padding(horizontal = panePadding),
+                        content = listOf( 
+                           {
+                               ExpressiveInfoCard(
+                                   supportingContent = { Text(text = stringResource(R.string.str_by_using_per_app_refresh_rate)) },
+                                   leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                   containerColor = colorScheme.surfaceContainerLow,
+                                   onClick = {}
+                               )
+                           }
                         )
-                    }
+                    )
                 }
             }
         }
