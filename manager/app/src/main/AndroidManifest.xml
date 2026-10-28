@@ -106,7 +106,7 @@
              back, anything from the manager's portrait layout. -->
         <activity
             android:name=".ui.gamespace.ZXGameSpaceActivity"
-            android:exported="false"
+            android:exported="true"
             android:launchMode="singleTask"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
@@ -125,6 +125,19 @@
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".ZXGameSpaceLauncher"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/zx_gamespace_name"
+            android:targetActivity=".ui.gamespace.ZXGameSpaceActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
