@@ -19,8 +19,10 @@
 package zx.azenith.ui.gamespace
 
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
@@ -43,16 +45,35 @@ private const val GAME_SPACE_PREFS = "settings"
 /** Key behind the Game Space mode switch; the same file the theme and UI switches use. */
 const val GAME_SPACE_MODE_KEY = "game_space_mode"
 
-/** True when the shell should take over as soon as AZenith is on screen. */
-fun isGameSpaceEnabled(context: Context): Boolean =
-    context.getSharedPreferences(GAME_SPACE_PREFS, Context.MODE_PRIVATE)
-        .getBoolean(GAME_SPACE_MODE_KEY, false)
+private const val GAME_SPACE_LAUNCHER_ALIAS = "zx.azenith.ZXGameSpaceLauncher"
 
+/** True when the AZGameSpace launcher should be visible. */
+fun isGameSpaceLauncherEnabled(context: Context): Boolean {
+    val pm = context.packageManager
+    val componentName = ComponentName(context, GAME_SPACE_LAUNCHER_ALIAS)
+    val state = pm.getComponentEnabledSetting(componentName)
+    return state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
+        state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
+}
+
+/** Show or hide the AZGameSpace launcher shortcut. */
+fun setGameSpaceLauncherEnabled(context: Context, enabled: Boolean) {
+    val pm = context.packageManager
+    val componentName = ComponentName(context, GAME_SPACE_LAUNCHER_ALIAS)
+    val newState = if (enabled) {
+        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    } else {
+        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+    }
+    pm.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
+}
+
+@Deprecated("Use isGameSpaceLauncherEnabled")
+fun isGameSpaceEnabled(context: Context): Boolean = isGameSpaceLauncherEnabled(context)
+
+@Deprecated("Use setGameSpaceLauncherEnabled")
 fun setGameSpaceEnabled(context: Context, enabled: Boolean) {
-    context.getSharedPreferences(GAME_SPACE_PREFS, Context.MODE_PRIVATE)
-        .edit()
-        .putBoolean(GAME_SPACE_MODE_KEY, enabled)
-        .apply()
+    setGameSpaceLauncherEnabled(context, enabled)
 }
 
 // One handoff per session: an activity recreated while the mode is on (rotation, process reuse)

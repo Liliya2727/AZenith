@@ -56,8 +56,8 @@ import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
 import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.gamespace.ZXGameSpaceEntry
-import zx.azenith.ui.gamespace.isGameSpaceEnabled
-import zx.azenith.ui.gamespace.setGameSpaceEnabled
+import zx.azenith.ui.gamespace.isGameSpaceLauncherEnabled
+import zx.azenith.ui.gamespace.setGameSpaceLauncherEnabled
 import zx.azenith.ui.navigation.safePopBackStack
 
 /**
@@ -69,7 +69,7 @@ import zx.azenith.ui.navigation.safePopBackStack
 fun ExperimentalScreen(navController: NavController) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    var modeOn by remember { mutableStateOf(isGameSpaceEnabled(context)) }
+    var launcherOn by remember { mutableStateOf(isGameSpaceLauncherEnabled(context)) }
     var enteringGameSpace by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -101,10 +101,10 @@ fun ExperimentalScreen(navController: NavController) {
                                     icon = Icons.Rounded.SportsEsports,
                                     title = stringResource(R.string.gamespace_enable),
                                     summary = stringResource(R.string.gamespace_enable_desc),
-                                    checked = modeOn,
+                                    checked = launcherOn,
                                     onCheckedChange = { checked ->
-                                        modeOn = checked
-                                        setGameSpaceEnabled(context, checked)
+                                        launcherOn = checked
+                                        setGameSpaceLauncherEnabled(context, checked)
                                     }
                                 )
                             },

@@ -161,7 +161,7 @@
     <string name="gamespace_exit_title">Leave Game Space?</string>
     <string name="gamespace_exit_desc">Close the Game Space shell and go back to AZenith, or close AZenith as well.</string>
 
-    <string name="zx_gamespace_name">ZXGameSpace</string>
+    <string name="zx_gamespace_name">AZGameSpace</string>
     <string name="gamespace_exit_shell">Exit Game Space</string>
     <string name="gamespace_exit_shell_subtitle">Return to standard app view</string>
     <string name="gamespace_exit_app">Exit AZenith</string>
