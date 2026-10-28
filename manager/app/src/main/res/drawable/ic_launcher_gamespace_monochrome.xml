@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Koordinat path = piksel gambar asli (1920px), di-scale ke safe zone -->
+    <group
+        android:scaleX="0.0403"
+        android:scaleY="0.0403"
+        android:translateX="15.3"
+        android:translateY="15.0">
+
+        <path
+            android:fillColor="#FF000000"
+            android:fillType="evenOdd"
+            android:pathData="
+                M937,545 L985,545 L985,683 L937,683 Z
+                M903,712 L1025,712 L1025,765 L903,765 Z
+
+                M575,790 L1365,790
+                A300,300 0 0 1 1365,1390
+                C1210,1390 1105,1265 1075,1155
+                C1062,1120 1052,1105 1030,1105
+                L905,1105
+                C885,1105 870,1125 862,1160
+                C845,1290 730,1390 575,1390
+                A300,300 0 0 1 575,790 Z
+
+                M505,875 L635,875 L635,1000 L572,1045 L505,1000 Z
+                M357,1025 L480,1025 L525,1095 L480,1160 L357,1160 Z
+                M790,1025 L665,1025 L620,1095 L665,1160 L790,1160 Z
+                M505,1190 L572,1135 L635,1190 L635,1305 L505,1305 Z
+
+                M855,885 L1072,885 L1072,975 L855,975 Z
+                M880,912 L1040,912 L1040,948 L880,948 Z
+
+                M1280,950 a82,82 0 1 0 164,0 a82,82 0 1 0 -164,0 Z
+                M1136,1090 a82,82 0 1 0 164,0 a82,82 0 1 0 -164,0 Z
+                M1425,1090 a82,82 0 1 0 164,0 a82,82 0 1 0 -164,0 Z
+                M1280,1235 a82,82 0 1 0 164,0 a82,82 0 1 0 -164,0 Z" />
+    </group>
+</vector>

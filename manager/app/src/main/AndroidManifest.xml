@@ -135,7 +135,7 @@
             android:name=".ZXGameSpaceLauncher"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher"
+            android:icon="@mipmap/ic_launcher_gamespace"
             android:label="@string/zx_gamespace_name"
             android:targetActivity=".ui.gamespace.ZXGameSpaceActivity">
             <intent-filter>
