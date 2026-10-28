@@ -133,7 +133,7 @@
 
         <activity-alias
             android:name=".ZXGameSpaceLauncher"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/zx_gamespace_name"

@@ -51,9 +51,12 @@ private const val GAME_SPACE_LAUNCHER_ALIAS = "zx.azenith.ZXGameSpaceLauncher"
 fun isGameSpaceLauncherEnabled(context: Context): Boolean {
     val pm = context.packageManager
     val componentName = ComponentName(context, GAME_SPACE_LAUNCHER_ALIAS)
-    val state = pm.getComponentEnabledSetting(componentName)
-    return state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
-        state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
+    return when (pm.getComponentEnabledSetting(componentName)) {
+        PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
+        PackageManager.COMPONENT_ENABLED_STATE_DISABLED -> false
+        PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> false
+        else -> false
+    }
 }
 
 /** Show or hide the AZGameSpace launcher shortcut. */
