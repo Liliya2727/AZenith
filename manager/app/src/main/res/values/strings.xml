@@ -125,8 +125,8 @@
     <string name="gamespace_boost_desc">Launch directly with AZenith governor, thermalcore, and FPSGO scheduling</string>
     <string name="gamespace_boost_title">AZenith Game Boost</string>
     <string name="gamespace_desc">A landscape, gamepad-first Game Space for AZenith</string>
-    <string name="gamespace_enable">Game Space mode</string>
-    <string name="gamespace_enable_desc">Open Game Space whenever AZenith starts</string>
+    <string name="gamespace_enable">GameSpace Launcher</string>
+    <string name="gamespace_enable_desc">Show AZGameSpace Icon on HomeScreen</string>
     <string name="gamespace_engine_store">AZenith Engine</string>
     <string name="gamespace_enter">Enter Game Space</string>
     <string name="gamespace_enter_desc">Hand off to the shell right now</string>
