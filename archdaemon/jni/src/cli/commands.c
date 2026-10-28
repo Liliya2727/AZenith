@@ -323,15 +323,31 @@ void expose_telemetry_access(void) {
  * @brief Grant runtime permissions, appops, and doze whitelist to zx.azenith.
  */
 void grant_app_permissions(void) {
+    systemv("pm grant zx.azenith android.permission.READ_EXTERNAL_STORAGE >/dev/null 2>&1");
+    systemv("pm grant zx.azenith android.permission.POST_NOTIFICATIONS >/dev/null 2>&1");
+    systemv("pm grant zx.azenith android.permission.READ_MEDIA_IMAGES >/dev/null 2>&1");
     systemv("pm grant zx.azenith android.permission.WRITE_SECURE_SETTINGS >/dev/null 2>&1");
     systemv("pm grant zx.azenith android.permission.PACKAGE_USAGE_STATS >/dev/null 2>&1");
+    systemv("pm grant zx.azenith android.permission.BATTERY_STATS >/dev/null 2>&1");
     systemv("pm grant zx.azenith android.permission.DUMP >/dev/null 2>&1");
+
     systemv("appops set zx.azenith SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1");
     systemv("appops set zx.azenith WRITE_SETTINGS allow >/dev/null 2>&1");
     systemv("appops set zx.azenith GET_USAGE_STATS allow >/dev/null 2>&1");
     systemv("appops set zx.azenith RUN_IN_BACKGROUND allow >/dev/null 2>&1");
     systemv("appops set zx.azenith RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1");
+    systemv("appops set zx.azenith ACCESS_RESTRICTED_SETTINGS allow >/dev/null 2>&1");
+
+    systemv("pm grant zx.azenith android.permission.QUERY_ALL_PACKAGES >/dev/null 2>&1");
+    systemv("pm grant zx.azenith com.android.permission.GET_INSTALLED_APPS >/dev/null 2>&1");
+    systemv("appops set zx.azenith android:query_all_packages allow >/dev/null 2>&1");
+    systemv("appops set zx.azenith query_all_packages allow >/dev/null 2>&1");
+    systemv("appops set zx.azenith android:get_installed_apps allow >/dev/null 2>&1");
+    systemv("appops set zx.azenith GET_INSTALLED_APPS allow >/dev/null 2>&1");
+    systemv("appops set zx.azenith 10022 allow >/dev/null 2>&1");
+
     systemv("dumpsys deviceidle whitelist +zx.azenith >/dev/null 2>&1");
+
     log_info("cli", "app permissions granted");
 }
 

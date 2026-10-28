@@ -361,14 +361,6 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
                                             val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                                             prefs.edit().putBoolean("has_completed_get_started", true).commit()
 
-                                            // The permissions below still need su, but
-                                            // the handover back to the app is done in
-                                            // process. It used to shell out to
-                                            // "am start -S", and -S force-stops the
-                                            // app first, so finishing setup killed the
-                                            // running activity and cold-started it
-                                            // again instead of navigating on.
-                                            Shell.cmd("su -c pm grant zx.azenith android.permission.READ_EXTERNAL_STORAGE && su -c pm grant zx.azenith android.permission.POST_NOTIFICATIONS && su -c pm grant zx.azenith android.permission.READ_MEDIA_IMAGES").exec()
                                             onCompleted()
                                         }
                                     }
