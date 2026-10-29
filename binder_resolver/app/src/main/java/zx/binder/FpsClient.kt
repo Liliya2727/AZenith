@@ -33,6 +33,7 @@ object FpsClient {
     private const val DEFAULT_OUT = "/data/adb/.config/AZenith/API/current_fps"
     private const val POLL_MS = 500L
     private const val STALE_MS = 5000L
+    private const val CB_DESCRIPTOR = "android.window.ITaskFpsCallback"
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -124,21 +125,29 @@ object FpsClient {
                 state.callback?.let { cb -> runCatching { unregister.invoke(wm, cb) } }
                 state.callback = null
                 state.taskId = taskId
-                if (taskId != null) {
+                if (taskId == null) {
+                    System.err.println("fps: no focused task")
+                } else {
                     val err = if (register.parameterTypes.size == 2 && iTaskFpsCallback != null) {
+                        // The Proxy only satisfies the Java type; the framework marshals the
+                        // callback through asBinder(), so that has to be a real Binder that
+                        // actually receives onFpsReported transactions.
+                        val binder = FpsBinder(state)
                         val cb = java.lang.reflect.Proxy.newProxyInstance(
                             iTaskFpsCallback.classLoader,
                             arrayOf(iTaskFpsCallback)
-                        ) { _, method, args ->
-                            if (method.name == "onFpsReported" && args != null && args.isNotEmpty()) {
-                                val fps = when (val v = args[0]) {
-                                    is Float -> v
-                                    is Number -> v.toFloat()
-                                    else -> 0f
+                        ) { proxy, method, margs ->
+                            when (method.name) {
+                                "asBinder" -> binder
+                                "onFpsReported" -> {
+                                    (margs?.firstOrNull() as? Number)?.let { state.publish(it.toFloat()) }
+                                    null
                                 }
-                                state.publish(fps)
+                                "hashCode" -> System.identityHashCode(proxy)
+                                "equals" -> proxy === margs?.firstOrNull()
+                                "toString" -> "FpsCb"
+                                else -> null
                             }
-                            null
                         }
                         runCatching { register.invoke(wm, taskId, cb) }.exceptionOrNull().also {
                             if (it == null) state.callback = cb
@@ -151,6 +160,8 @@ object FpsClient {
                     }
                     if (err != null) {
                         System.err.println("fps: register task=$taskId failed: $err")
+                        // Forget the id so the next poll retries instead of waiting for a task switch.
+                        state.taskId = null
                     }
                 }
             }
@@ -175,6 +186,23 @@ object FpsClient {
     private fun callInt(target: Any, name: String): Int? = runCatching {
         target.javaClass.getMethod(name).invoke(target) as? Int
     }.getOrNull()
+
+    /** Real Binder for ITaskFpsCallback: onFpsReported(float) is the first (only) transaction. */
+    private class FpsBinder(private val state: State) : android.os.Binder() {
+        override fun onTransact(code: Int, data: android.os.Parcel, reply: android.os.Parcel?, flags: Int): Boolean =
+            when (code) {
+                android.os.IBinder.INTERFACE_TRANSACTION -> {
+                    reply?.writeString(CB_DESCRIPTOR)
+                    true
+                }
+                android.os.IBinder.FIRST_CALL_TRANSACTION -> {
+                    data.enforceInterface(CB_DESCRIPTOR)
+                    state.publish(data.readFloat())
+                    true
+                }
+                else -> super.onTransact(code, data, reply, flags)
+            }
+    }
 
     private class State(private val out: File) {
         @Volatile var taskId: Int? = null
