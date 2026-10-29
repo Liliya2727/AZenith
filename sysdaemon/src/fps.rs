@@ -50,7 +50,7 @@ fn client() -> Command {
     c.env("ANDROID_I18N_ROOT", "/apex/com.android.i18n").env("ANDROID_TZDATA_ROOT", "/apex/com.android.tzdata");
     c.arg(format!("-Djava.class.path={FPS_CLIENT_APK}"))
         .arg("/")
-        .arg("zx.binder.MainKt")
+        .arg("zx.binder.FpsClient")
         .arg("--fps")
         .arg(format!("--out={FPS_FILE}"));
     c
