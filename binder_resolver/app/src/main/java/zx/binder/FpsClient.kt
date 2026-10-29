@@ -51,7 +51,9 @@ object FpsClient {
                 val asInterface = stub.getMethod("asInterface", Class.forName("android.os.IBinder"))
                 asInterface.invoke(null, binder)
             } else null
-        }.getOrNull() ?: run {
+        }.getOrNull()
+
+        if (wm == null) {
             System.err.println("fps: no WindowManager")
             return
         }
@@ -69,7 +71,7 @@ object FpsClient {
             }
             methods.addAll(target.methods)
             return methods.firstOrNull { m ->
-                m.name.contains(nameContains) && m.parameterTypes.size == paramCount
+                m.name.contains(nameContains, ignoreCase = true) && m.parameterTypes.size == paramCount
             }
         }
 
@@ -81,14 +83,28 @@ object FpsClient {
             }
         }
         if (register == null) {
+            runCatching {
+                val iwm = Class.forName("android.view.IWindowManager")
+                val all = iwm.methods + iwm.declaredMethods
+                all.firstOrNull { it.name.contains("Fps", true) && it.parameterTypes.size >= 2 }?.let { m ->
+                    // try to adapt if signature differs
+                }
+            }
+        }
+        if (register == null) {
             val candidates = mutableListOf<String>()
             var c: Class<*>? = wm.javaClass
             while (c != null && c != Any::class.java) {
-                c.declaredMethods.filter { it.name.contains("Fps") }.forEach { candidates.add("${c.simpleName}#${it.name}(${it.parameterTypes.size})") }
+                c.declaredMethods.filter { it.name.contains("Fps", true) }.forEach { candidates.add("${c.name}#${it.name}(${it.parameterTypes.joinToString(",") { p -> p.simpleName }})") }
                 c = c.superclass
             }
-            wm.javaClass.methods.filter { it.name.contains("Fps") }.forEach { candidates.add("public#${it.name}(${it.parameterTypes.size})") }
-            System.err.println("fps: registerTaskFpsCallback not found. candidates=[${candidates.joinToString(",")}]")
+            wm.javaClass.methods.filter { it.name.contains("Fps", true) }.forEach { candidates.add("public#${it.name}(${it.parameterTypes.joinToString(",") { p -> p.simpleName }})") }
+            try {
+                val iwm = Class.forName("android.view.IWindowManager")
+                iwm.methods.filter { it.name.contains("Fps", true) }.forEach { candidates.add("iwm#${it.name}(${it.parameterTypes.joinToString(",") { p -> p.simpleName }})") }
+                iwm.declaredMethods.filter { it.name.contains("Fps", true) }.forEach { candidates.add("iwmdecl#${it.name}(${it.parameterTypes.joinToString(",") { p -> p.simpleName }})") }
+            } catch (_: Throwable) {}
+            System.err.println("fps: registerTaskFpsCallback not found. candidates=[${candidates.distinct().joinToString(" | ")}]")
             return
         }
         register.isAccessible = true
