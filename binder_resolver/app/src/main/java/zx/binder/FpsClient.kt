@@ -58,7 +58,7 @@ object FpsClient {
             return
         }
 
-        fun findMethod(target: Class<*>, nameContains: String, paramCount: Int): java.lang.reflect.Method? {
+        fun findMethod(target: Class<*>, nameContains: String, paramCount: Int? = null): java.lang.reflect.Method? {
             val methods = mutableListOf<java.lang.reflect.Method>()
             var c: Class<*>? = target
             while (c != null && c != Any::class.java) {
@@ -71,38 +71,26 @@ object FpsClient {
             }
             methods.addAll(target.methods)
             return methods.firstOrNull { m ->
-                m.name.contains(nameContains, ignoreCase = true) && m.parameterTypes.size == paramCount
+                m.name.contains(nameContains, ignoreCase = true) && (paramCount == null || m.parameterTypes.size == paramCount)
             }
         }
 
-        var register = findMethod(wm.javaClass, "TaskFpsCallback", 3)
+        var register = findMethod(wm.javaClass, "TaskFpsCallback", 2)
+        if (register == null) register = findMethod(wm.javaClass, "TaskFpsCallback", 3)
         if (register == null) {
             runCatching {
                 val iwm = Class.forName("android.view.IWindowManager")
-                register = findMethod(iwm, "TaskFpsCallback", 3)
-            }
-        }
-        if (register == null) {
-            runCatching {
-                val iwm = Class.forName("android.view.IWindowManager")
-                val all = iwm.methods + iwm.declaredMethods
-                all.firstOrNull { it.name.contains("Fps", true) && it.parameterTypes.size >= 2 }?.let { m ->
-                    // try to adapt if signature differs
-                }
+                register = findMethod(iwm, "TaskFpsCallback", 2)
+                if (register == null) register = findMethod(iwm, "TaskFpsCallback", 3)
             }
         }
         if (register == null) {
             val candidates = mutableListOf<String>()
-            var c: Class<*>? = wm.javaClass
-            while (c != null && c != Any::class.java) {
-                c.declaredMethods.filter { it.name.contains("Fps", true) }.forEach { candidates.add("${c.name}#${it.name}(${it.parameterTypes.joinToString(",") { p -> p.simpleName }})") }
-                c = c.superclass
-            }
-            wm.javaClass.methods.filter { it.name.contains("Fps", true) }.forEach { candidates.add("public#${it.name}(${it.parameterTypes.joinToString(",") { p -> p.simpleName }})") }
             try {
                 val iwm = Class.forName("android.view.IWindowManager")
-                iwm.methods.filter { it.name.contains("Fps", true) }.forEach { candidates.add("iwm#${it.name}(${it.parameterTypes.joinToString(",") { p -> p.simpleName }})") }
-                iwm.declaredMethods.filter { it.name.contains("Fps", true) }.forEach { candidates.add("iwmdecl#${it.name}(${it.parameterTypes.joinToString(",") { p -> p.simpleName }})") }
+                (iwm.methods + iwm.declaredMethods).filter { it.name.contains("Fps", true) }.forEach {
+                    candidates.add("iwm#${it.name}(${it.parameterTypes.joinToString(",") { p -> p.simpleName }})")
+                }
             } catch (_: Throwable) {}
             System.err.println("fps: registerTaskFpsCallback not found. candidates=[${candidates.distinct().joinToString(" | ")}]")
             return
@@ -126,6 +114,7 @@ object FpsClient {
             Thread(r, "zenith-fps").apply { isDaemon = true }
         }
         val state = State(out)
+        val iTaskFpsCallback = runCatching { Class.forName("android.window.ITaskFpsCallback") }.getOrNull()
 
         while (true) {
             val taskId = focusedRootTaskId()
@@ -136,11 +125,31 @@ object FpsClient {
                 state.callback = null
                 state.taskId = taskId
                 if (taskId != null) {
-                    val cb = Callback(state)
-                    val err = runCatching { register.invoke(wm, taskId, executor, cb) }.exceptionOrNull()
-                    if (err == null) {
-                        state.callback = cb
+                    val err = if (register.parameterTypes.size == 2 && iTaskFpsCallback != null) {
+                        val cb = java.lang.reflect.Proxy.newProxyInstance(
+                            iTaskFpsCallback.classLoader,
+                            arrayOf(iTaskFpsCallback)
+                        ) { _, method, args ->
+                            if (method.name == "onFpsReported" && args != null && args.isNotEmpty()) {
+                                val fps = when (val v = args[0]) {
+                                    is Float -> v
+                                    is Number -> v.toFloat()
+                                    else -> 0f
+                                }
+                                state.publish(fps)
+                            }
+                            null
+                        }
+                        runCatching { register.invoke(wm, taskId, cb) }.exceptionOrNull().also {
+                            if (it == null) state.callback = cb
+                        }
                     } else {
+                        val cb = Callback(state)
+                        runCatching { register.invoke(wm, taskId, executor, cb) }.exceptionOrNull().also {
+                            if (it == null) state.callback = cb
+                        }
+                    }
+                    if (err != null) {
                         System.err.println("fps: register task=$taskId failed: $err")
                     }
                 }
