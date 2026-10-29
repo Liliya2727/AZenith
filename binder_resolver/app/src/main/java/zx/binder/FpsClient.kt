@@ -16,6 +16,7 @@
 
 package zx.binder
 
+import android.content.Context
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -41,6 +42,15 @@ object FpsClient {
 
         val wm = runCatching {
             Class.forName("android.view.WindowManagerGlobal").getMethod("getWindowManager").invoke(null)
+        }.getOrNull() ?: runCatching {
+            val serviceManager = Class.forName("android.os.ServiceManager")
+            val getService = serviceManager.getMethod("getService", String::class.java)
+            val binder = getService.invoke(null, Context.WINDOW_SERVICE) ?: getService.invoke(null, "window")
+            if (binder != null) {
+                val stub = Class.forName("android.view.IWindowManager\$Stub")
+                val asInterface = stub.getMethod("asInterface", Class.forName("android.os.IBinder"))
+                asInterface.invoke(null, binder)
+            } else null
         }.getOrNull() ?: run {
             System.err.println("fps: no WindowManager")
             return
