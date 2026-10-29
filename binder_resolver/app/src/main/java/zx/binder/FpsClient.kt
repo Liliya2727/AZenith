@@ -55,18 +55,56 @@ object FpsClient {
             System.err.println("fps: no WindowManager")
             return
         }
-        val register = wm.javaClass.methods.firstOrNull {
-            it.name == "registerTaskFpsCallback" && it.parameterTypes.size == 3
-        } ?: run {
-            System.err.println("fps: registerTaskFpsCallback not found")
+
+        fun findMethod(target: Class<*>, nameContains: String, paramCount: Int): java.lang.reflect.Method? {
+            val methods = mutableListOf<java.lang.reflect.Method>()
+            var c: Class<*>? = target
+            while (c != null && c != Any::class.java) {
+                methods.addAll(c.declaredMethods)
+                c = c.superclass
+            }
+            target.interfaces.forEach { i ->
+                methods.addAll(i.methods)
+                methods.addAll(i.declaredMethods)
+            }
+            methods.addAll(target.methods)
+            return methods.firstOrNull { m ->
+                m.name.contains(nameContains) && m.parameterTypes.size == paramCount
+            }
+        }
+
+        var register = findMethod(wm.javaClass, "TaskFpsCallback", 3)
+        if (register == null) {
+            runCatching {
+                val iwm = Class.forName("android.view.IWindowManager")
+                register = findMethod(iwm, "TaskFpsCallback", 3)
+            }
+        }
+        if (register == null) {
+            val candidates = mutableListOf<String>()
+            var c: Class<*>? = wm.javaClass
+            while (c != null && c != Any::class.java) {
+                c.declaredMethods.filter { it.name.contains("Fps") }.forEach { candidates.add("${c.simpleName}#${it.name}(${it.parameterTypes.size})") }
+                c = c.superclass
+            }
+            wm.javaClass.methods.filter { it.name.contains("Fps") }.forEach { candidates.add("public#${it.name}(${it.parameterTypes.size})") }
+            System.err.println("fps: registerTaskFpsCallback not found. candidates=[${candidates.joinToString(",")}]")
             return
         }
-        val unregister = wm.javaClass.methods.firstOrNull {
-            it.name == "unregisterTaskFpsCallback" && it.parameterTypes.size == 1
-        } ?: run {
+        register.isAccessible = true
+
+        var unregister = findMethod(wm.javaClass, "TaskFpsCallback", 1)
+        if (unregister == null) {
+            runCatching {
+                val iwm = Class.forName("android.view.IWindowManager")
+                unregister = findMethod(iwm, "TaskFpsCallback", 1)
+            }
+        }
+        if (unregister == null) {
             System.err.println("fps: unregisterTaskFpsCallback not found")
             return
         }
+        unregister.isAccessible = true
 
         val executor = Executors.newSingleThreadExecutor { r ->
             Thread(r, "zenith-fps").apply { isDaemon = true }
