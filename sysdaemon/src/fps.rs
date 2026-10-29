@@ -22,6 +22,8 @@ use crate::log::{error, info, warn};
 const FPS_CLIENT_APK: &str = "/data/adb/.config/AZenith/fpsclient.apk";
 /// "<fps> <epoch_ms>", read by the manager's live monitor.
 pub(crate) const FPS_FILE: &str = "/data/adb/.config/AZenith/API/current_fps";
+/// stdout/stderr of the client, so its diagnostics do not vanish with the daemon's stdio.
+const FPS_LOG: &str = "/data/adb/.config/AZenith/fpsclient.log";
 
 /// Keep one app_process alive. Runs on its own thread: a dead client must never take the daemon
 /// down with it, and the daemon must not block waiting for it.
@@ -50,9 +52,16 @@ fn client() -> Command {
     c.env("ANDROID_I18N_ROOT", "/apex/com.android.i18n").env("ANDROID_TZDATA_ROOT", "/apex/com.android.tzdata");
     c.arg(format!("-Djava.class.path={FPS_CLIENT_APK}"))
         .arg("/")
-        .arg("zx.binder.MainKt")
+        .arg("--nice-name=sys.azenith-fpsclient")
+        .arg("zx.binder.FpsClient")
         .arg("--fps")
         .arg(format!("--out={FPS_FILE}"));
+    if let Ok(f) = fs::File::create(FPS_LOG) {
+        if let Ok(g) = f.try_clone() {
+            c.stdout(g);
+        }
+        c.stderr(f);
+    }
     c
 }
 
