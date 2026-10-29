@@ -16,6 +16,7 @@ on:
       - "binprofiles/**"
       - "binutils/**"
       - "binpreferenced/**"
+      - "binder_resolver/**"
       - "sysdaemon/**"
       - "mainfiles/**"
       - "preloadbin/**"
