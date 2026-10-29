@@ -2263,78 +2263,23 @@ private class ZXRealTelemetryCollector {
         private set
     @Volatile var lastFpsSource: String = ""
         private set
-
-    private var hwuiPrevFrames = -1L
-    private var hwuiPrevAtMs = 0L
-    private var cachedLayer: String? = null
-    private var cachedLayerPkg: String? = null
-
-    // Layers that carry no frame history even when the name matches the package.
-    private val layerBlacklist = listOf(
-        "ActivityRecordInputSink", "InputSink", "ActivityRecord", "WindowToken",
-        "transition", "SplashScreen", "StartingWindow", "StatusBar", "NavigationBar",
-        "Letterbox", "DimLayer", "BackColor", "RoundedCorner", "ScreenDecor",
-    )
-
+        
     /**
-     * FPS for [pkg], cheapest tier first; the first honest hit wins.
-     * Tiers that come back empty fall through, tiers that come back impossible
-     * (<=0 or above the panel rate) are discarded rather than shown.
+     * FPS comes only from the daemon's fps client, which writes "<fps> <epoch_ms>"
+     * to API/current_fps. Empty, stale (>3s) or unreadable reads as 0.
      */
-    fun sampleFps(pkg: String, rootGranted: Boolean, defaultCap: Int): Int {
+    fun sampleFps(@Suppress("UNUSED_PARAMETER") pkg: String, rootGranted: Boolean, defaultCap: Int): Int {
         val cap = defaultCap.coerceAtLeast(60)
-        // Best source first: the daemon's root fps client streams SurfaceFlinger's own
-        // FrameTimeline report, i.e. the rate frames actually reached the display, with no layer
-        // probing and no per-second dumpsys fork. Empty or stale falls through to the tiers below.
-        readDaemonFps(cap, rootGranted)?.let {
-            lastFps = it
-            lastFpsSource = "frametimeline"
-            return lastFps
-        }
-        // Portable first: per-layer presented frames, needs no root and assumes nothing
-        // about the SoC. The vendor node is the fallback for builds that stubbed it.
-        readSurfaceFlingerFps(pkg)?.let {
-            lastFps = it.coerceIn(1, cap)
-            lastFpsSource = "sf-latency"
-            return lastFps
-        }
-        // MTK FPSGO: per-render-thread currentFPS, the kernel's own measurement. Goes
-        // empty when fpsgo is force-off, which AZenith's own usefpsgo=0 path triggers.
-        readFileTextDirectOrSu("/sys/kernel/fpsgo/fstb/fpsgo_status", rootGranted)?.let { raw ->
-            val fps = parseFpsgoCurrentFps(raw, pkg)
-            if (fps != null && fps in 1..cap) {
-                lastFps = fps
-                lastFpsSource = "fpsgo"
-                return lastFps
-            }
-        }
-        val hwui = readHwuiRenderFps(pkg, cap)
-        lastFps = hwui
-        lastFpsSource = if (hwui > 0) "hwui-render" else ""
-        return hwui
+        val fps = readDaemonFps(cap, rootGranted) ?: 0
+        lastFps = fps
+        lastFpsSource = if (fps > 0) "frametimeline" else ""
+        return fps
     }
 
     /**
-     * fpsgo_status rows are "tid bufID name currentFPS targetFPS ...". `name` is the
-     * kernel's 15-char comm with its leading characters chopped, and one app can hold
-     * several rows, so match by suffix and keep the fastest thread.
-     */
-    private fun parseFpsgoCurrentFps(raw: String, pkg: String): Int? {
-        var best = -1
-        for (line in raw.lineSequence()) {
-            val f = line.trim().split(Regex("\\s+"))
-            if (f.size < 5) continue
-            if (!pkg.endsWith(f[2])) continue
-            val fps = f[3].toIntOrNull() ?: continue
-            if (fps > best) best = fps
-        }
-        return best.takeIf { it > 0 }
-    }
-
-    /**
-     * The daemon's fps client writes "<fps> <epoch_ms>". The stamp is what separates a live
-     * reading from a frozen one, because /data/adb is root-only and the file cannot be stat'ed
-     * without su.
+     * The daemon's fps client writes "<fps> <epoch_ms>". The stamp separates a live
+     * reading from a frozen one, because /data/adb is root-only and the file cannot
+     * be stat'ed without su.
      */
     private fun readDaemonFps(cap: Int, rootGranted: Boolean): Int? {
         val raw = readFileTextDirectOrSu("/data/adb/.config/AZenith/API/current_fps", rootGranted)
@@ -2345,113 +2290,6 @@ private class ZXRealTelemetryCollector {
         val at = f[1].toLongOrNull() ?: return null
         if (System.currentTimeMillis() - at > 3_000L) return null
         return fps.coerceIn(1, cap)
-    }
-
-    /**
-     * True presented-frame rate from SurfaceFlinger's frame timestamps. Portable
-     * across SoCs and Android versions, and readable without root.
-     */
-    private fun readSurfaceFlingerFps(pkg: String): Int? {
-        val layer = resolveAppLayer(pkg) ?: return null
-        val raw = runShell("dumpsys SurfaceFlinger --latency '$layer'") ?: return null
-        val fps = parseLatencyFps(raw)
-        if (fps == null) {
-            cachedLayer = null
-            cachedLayerPkg = null
-        }
-        return fps
-    }
-
-    /**
-     * The layer carrying frame history is not predictable from its name (the highest
-     * #NNNN is usually a stale parent), so probe the candidates and keep whichever
-     * actually holds frames. The result is cached because probing costs one dumpsys
-     * per candidate.
-     */
-    private fun resolveAppLayer(pkg: String): String? {
-        if (cachedLayer != null && cachedLayerPkg == pkg) return cachedLayer
-        val list = runShell("dumpsys SurfaceFlinger --list") ?: return null
-        val candidates = list.lineSequence()
-            .mapNotNull { Regex("[a-zA-Z0-9_.]+/[a-zA-Z0-9_.$]+#\\d+").find(it)?.value }
-            .filter { it.startsWith("$pkg/") }
-            .filterNot { name -> layerBlacklist.any { name.contains(it) } }
-            .distinct()
-            .take(6)
-            .toList()
-        var best: String? = null
-        var bestRows = 1
-        for (name in candidates) {
-            val raw = runShell("dumpsys SurfaceFlinger --latency '$name'") ?: continue
-            val rows = raw.lines().count { it.isNotBlank() } - 1
-            if (rows > bestRows) {
-                bestRows = rows
-                best = name
-            }
-        }
-        cachedLayer = best
-        cachedLayerPkg = if (best == null) null else pkg
-        return best
-    }
-
-    /**
-     * --latency prints the vsync period on line 1, then "intendedVsync presentTime
-     * frameReady" triples in ns; Long.MAX_VALUE marks a dropped frame. Present
-     * timestamps are when frames actually reached the display, so fps comes from
-     * their spacing. The ring holds ~128 frames, which on a mostly-static app spans
-     * minutes, so only the most recent second is counted - otherwise a screen that
-     * stopped drawing keeps reporting its lifetime average instead of dropping to 0.
-     */
-    private fun parseLatencyFps(raw: String): Int? {
-        val presents = ArrayList<Long>()
-        for ((index, line) in raw.lineSequence().withIndex()) {
-            if (index == 0) continue
-            val f = line.trim().split(Regex("\\s+"))
-            if (f.size < 3) continue
-            val t = f[1].toLongOrNull() ?: continue
-            if (t <= 0L || t == Long.MAX_VALUE) continue
-            presents += t
-        }
-        if (presents.size < 2) return null
-        val newest = presents.last()
-        val windowed = presents.filter { it >= newest - 1_000_000_000L }
-        // Two frames a few ms apart are a dying animation, not a frame rate.
-        if (windowed.size < 2 || windowed.last() - windowed.first() < 200_000_000L) return null
-        val span = windowed.last() - windowed.first()
-        return ((windowed.size - 1) * 1_000_000_000.0 / span).roundToInt()
-    }
-
-    /**
-     * HWUI's cumulative frame counter, differenced over time. This is a render rate,
-     * not a presented rate: it exceeds the panel rate on a scrolling UI and reads 0
-     * for a GL/Vulkan game, so it is only reached when nothing better exists.
-     */
-    private fun readHwuiRenderFps(pkg: String, cap: Int): Int {
-        val frames = try {
-            val result = Shell.cmd("dumpsys gfxinfo $pkg").exec()
-            if (!result.isSuccess) return 0
-            val line = result.out.firstOrNull { it.startsWith("Total frames rendered") } ?: return 0
-            line.substringAfter(":").trim().toLongOrNull() ?: return 0
-        } catch (_: Exception) {
-            return 0
-        }
-        val now = System.currentTimeMillis()
-        val fps = if (hwuiPrevFrames >= 0L && now > hwuiPrevAtMs) {
-            ((frames - hwuiPrevFrames) * 1000.0 / (now - hwuiPrevAtMs)).roundToInt().coerceIn(0, cap)
-        } else {
-            0
-        }
-        hwuiPrevFrames = frames
-        hwuiPrevAtMs = now
-        return fps
-    }
-
-    private fun runShell(cmd: String): String? {
-        return try {
-            val result = Shell.cmd(cmd).exec()
-            if (result.isSuccess) result.out.joinToString("\n").ifEmpty { null } else null
-        } catch (_: Exception) {
-            null
-        }
     }
 
     private fun readFirstLineDirect(file: File): String? {
