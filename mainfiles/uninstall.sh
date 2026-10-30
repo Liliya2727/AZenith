@@ -37,7 +37,8 @@ rm -rf \
 q sys.azenith-rianixiathermalcore
 q sys.azenith-service
 q sys.azenith-appmonitoring
-    
+q sys.azenith-fpsclient
+        
 pm uninstall zx.azenith >/dev/null 2>&1 &
 
 for dir in "/data/adb/ap/bin" "/data/adb/ksu/bin"; do
