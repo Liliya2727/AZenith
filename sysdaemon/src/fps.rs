@@ -20,7 +20,7 @@
 //
 // <cfg>/debug/explicit_fps_mthd pins the source:
 //
-//   missing / empty          automatic: try windowmanager, then uprobe, then surfaceflinger, and
+//   missing / empty          automatic: try uprobe, then windowmanager, then surfaceflinger, and
 //                            stay on the last one that published
 //   use_windmanager          windowmanager only, even when it keeps failing
 //   use_uprobe | use_ebpf    uprobe only, even when it keeps failing
@@ -51,8 +51,8 @@ const FPS_LOG: &str = "/data/adb/.config/AZenith/fpsclient.log";
 /// Source pin, see the module docs. Missing or empty means automatic.
 const METHOD_FLAG: &str = "/data/adb/.config/AZenith/debug/explicit_fps_mthd";
 
-/// The windowmanager client has to publish a reading within this window, otherwise the source
-/// counts as broken and the fallback takes over.
+/// A source has to publish a reading within this window, otherwise it counts as broken and the
+/// fallback takes over.
 const CLIENT_STARTUP_TIMEOUT: Duration = Duration::from_secs(15);
 /// Pause before a source is started again after an ordinary exit.
 const RETRY_DELAY: Duration = Duration::from_secs(5);
@@ -87,12 +87,21 @@ impl Method {
         }
     }
 
-    /// Next source to try in automatic mode.
+    /// First source tried in automatic mode, in order of preference.
+    fn first_auto() -> Self {
+        if UPROBE_SUPPORTED {
+            Method::Uprobe
+        } else {
+            Method::WindowManager
+        }
+    }
+
+    /// Next source to try in automatic mode, in order of preference.
     fn next_auto(self) -> Self {
         match self {
-            Method::WindowManager if UPROBE_SUPPORTED => Method::Uprobe,
+            Method::Uprobe => Method::WindowManager,
             Method::WindowManager => Method::SurfaceFlinger,
-            Method::Uprobe => Method::SurfaceFlinger,
+            Method::SurfaceFlinger if UPROBE_SUPPORTED => Method::Uprobe,
             Method::SurfaceFlinger => Method::WindowManager,
         }
     }
@@ -109,9 +118,9 @@ pub(crate) fn start() {
 /// `run_*` returns `true` when the source was publishing at some point (an ordinary exit, or a
 /// flag change) and `false` when it never produced a reading.
 fn supervise() {
-    // Automatic mode starts with the cheap source and remembers the last working one, so a
+    // Automatic mode starts with the preferred source and remembers the last working one, so a
     // fallback survives an ordinary restart instead of flapping back every cycle.
-    let mut auto = Method::WindowManager;
+    let mut auto = Method::first_auto();
 
     loop {
         let forced = explicit_method();
