@@ -123,6 +123,9 @@ if ! _app_installed; then
 		if install_manager; then
 			_cleanup_apk
 			if _service_exists; then
+				# The manager was just installed, so it has no permissions yet; without
+				# SYSTEM_ALERT_WINDOW the Game Space overlay cannot attach until reboot.
+				"$BIN_SVC" --setup-access >/dev/null 2>&1
 				exec "$BIN_SVC" --appactivity >/dev/null 2>&1
 			else
 				echo "[!] Service binary not found at $BIN_SVC" >&2
