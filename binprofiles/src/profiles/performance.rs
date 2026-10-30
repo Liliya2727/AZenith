@@ -2,11 +2,11 @@
 //!
 //! Follows the taxonomy order defined in [`super::common`]:
 //! guard → resolve governor → apply governor → freq → log freq →
-//! common tweaks → clear bg apps → chipset → log.
+//! common tweaks → touchpanel → clear bg apps → chipset → drop caches → log.
 
 use super::common::{
-    apply_common_tweaks, apply_cpu_freq, clear_background_apps_if_enabled, BlockIoTweaks,
-    CommonTweaks, CpuFreqMode,
+    apply_common_tweaks, apply_cpu_freq, apply_drop_caches, apply_touchpanel,
+    clear_background_apps_if_enabled, BlockIoTweaks, CommonTweaks, CpuFreqMode,
 };
 use crate::chipsets::{apply_chipset, ChipsetProfile};
 use crate::utils::*;
@@ -20,9 +20,9 @@ const TWEAKS: CommonTweaks = CommonTweaks {
     vfs_cache_pressure: "80",
     drop_caches: Some("3"),
     power_efficient: "N",
-    eas_enabled: "0",
-    stune_boost: "30",
+    stune_boost: "1",
     stune_boost_enabled: "1",
+    stune_prefer_idle: "1",
     battery_saver: "0",
     battery_saver_bool: "N",
     split_lock_mitigate: "0",
@@ -70,6 +70,9 @@ pub fn performance_profile() {
     // 6. Shared tweaks
     apply_common_tweaks(&TWEAKS);
 
+    // 6.5 Touch panel latency
+    apply_touchpanel(true);
+
     // 7. Clear background apps
     clear_background_apps_if_enabled();
 
@@ -78,6 +81,9 @@ pub fn performance_profile() {
         apply_chipset(ChipsetProfile::Performance);
     }
 
-    // 9. Done
+    // 9. Drop caches last, once every other node has been written
+    apply_drop_caches(TWEAKS.drop_caches);
+
+    // 10. Done
     log_info("profiles", "performance profile applied");
 }
