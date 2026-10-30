@@ -444,8 +444,9 @@ mod uprobe {
 
     use crate::log::debug;
 
-    /// Embedded copy of `assets/fps_probe.bpf.o`, see the C source next to it.
-    const OBJECT: &[u8] = include_bytes!("../assets/fps_probe.bpf.o");
+    /// Embedded copy of `assets/fps_probe.bpf.o`, see the C source next to it. The parser needs
+    /// the ELF header aligned, and the linker does not guarantee that for a plain `include_bytes!`.
+    const OBJECT: &[u8] = aya::include_bytes_aligned!("../assets/fps_probe.bpf.o");
     const PROGRAM: &str = "fps_probe";
     const MAP: &str = "RING_BUF";
     const LIBGUI: &str = "/system/lib64/libgui.so";
@@ -612,6 +613,16 @@ mod uprobe {
         // SAFETY: `unlimited` is a valid rlimit and setrlimit only reads it.
         unsafe {
             libc::setrlimit(libc::RLIMIT_MEMLOCK, &unlimited);
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        fn object_is_aligned() {
+            // aya refuses to parse an unaligned ELF header, and `include_bytes!` would only
+            // guarantee alignment 1.
+            assert_eq!(super::OBJECT.as_ptr() as usize % 32, 0);
         }
     }
 }
