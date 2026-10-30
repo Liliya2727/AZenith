@@ -2,9 +2,9 @@
 //!
 //! Follows the taxonomy order defined in [`super::common`]:
 //! guard → resolve governor → apply governor → freq → log freq →
-//! common tweaks → chipset → log.
+//! common tweaks → touchpanel → chipset → log.
 
-use super::common::{apply_common_tweaks, apply_cpu_freq, CommonTweaks, CpuFreqMode};
+use super::common::{apply_common_tweaks, apply_cpu_freq, apply_touchpanel, CommonTweaks, CpuFreqMode};
 use crate::chipsets::{apply_chipset, ChipsetProfile};
 use crate::utils::*;
 
@@ -12,9 +12,9 @@ const TWEAKS: CommonTweaks = CommonTweaks {
     vfs_cache_pressure: "120",
     drop_caches: None,
     power_efficient: "Y",
-    eas_enabled: "1",
     stune_boost: "0",
     stune_boost_enabled: "0",
+    stune_prefer_idle: "0",
     battery_saver: "1",
     battery_saver_bool: "Y",
     split_lock_mitigate: "1",
@@ -48,6 +48,9 @@ pub fn eco_mode() {
 
     // 6. Shared tweaks
     apply_common_tweaks(&TWEAKS);
+
+    // 6.5 Touch panel: restore stock latency limits
+    apply_touchpanel(false);
 
     // 7. Clear background apps: performance profile only
 

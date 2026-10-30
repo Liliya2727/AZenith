@@ -247,6 +247,7 @@ pub fn restartservice() {
     let _ = systemv("pkill -9 -f sys.azenith-rianixiathermalcore");
     let _ = systemv("pkill -9 -f sys.azenith-service");
     let _ = systemv("pkill -9 -f sys.azenith-appmonitoring");
+    let _ = systemv("pkill -9 -f sys.azenith-fpsclient");
     
     setprop("persist.sys.azenith.state", "stopped");
     

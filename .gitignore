@@ -1,5 +1,7 @@
 *.zip
 *.o
+# The fps uprobe is shipped prebuilt so the build needs no clang.
+!sysdaemon/assets/fps_probe.bpf.o
 *.vscode
 libs/
 target/

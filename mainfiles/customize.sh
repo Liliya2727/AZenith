@@ -433,9 +433,23 @@ fi
 if [ "$APP_INSTALLED" = "true" ]; then
     echo "- Enabling Launcher..."
     pm enable --user 0 zx.azenith/.Launcher > /dev/null 2>&1
-    
+
+    # The module is not mounted yet, so the binary is staged to /data/local/tmp instead of
+    # being run from $MODPATH; it is removed again as soon as the grants are done.
+    # Without SYSTEM_ALERT_WINDOW Game Space cannot draw its overlay, and a fresh install
+    # would show none until the device is rebooted.
     echo "- Setting Permissions..."
-    
+    BIN_STAGE="$TMP_DIR/sys.azenith-service"
+    if [ -f "$MODPATH/system/bin/sys.azenith-service" ]; then
+        cp "$MODPATH/system/bin/sys.azenith-service" "$BIN_STAGE" && {
+            chmod 0755 "$BIN_STAGE"
+            "$BIN_STAGE" --setup-access
+            rm -f "$BIN_STAGE"
+        }
+    else
+        echo "[!] Permission setup skipped: service binary missing"
+    fi
+
 fi
 
 # Remove old module files if available

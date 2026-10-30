@@ -370,13 +370,20 @@ object RootUtils {
     }
 
     /**
+     * Re-asserts the app-ops the manager cannot take for granted after a boot.
+     *
      * MIUI/HyperOS and other Chinese forks gate package visibility behind a vendor
      * app-op, and `pm grant` alone leaves the list showing only this app. The
      * app-ops are a parallel route, not a follow-up to the grant, so every
      * spelling is issued regardless of what the grant returned.
+     *
+     * The same forks can reset SYSTEM_ALERT_WINDOW, and without that app-op Game
+     * Space can neither attach its overlay nor start its foreground service from
+     * the daemon's background broadcast, so it is re-asserted here as well.
      */
     fun ensurePackageVisibility() {
         val cmds = mutableListOf(
+            "appops set zx.azenith SYSTEM_ALERT_WINDOW allow",
             "pm grant zx.azenith android.permission.QUERY_ALL_PACKAGES",
             "pm grant zx.azenith com.android.permission.GET_INSTALLED_APPS",
             "appops set zx.azenith android:query_all_packages allow",

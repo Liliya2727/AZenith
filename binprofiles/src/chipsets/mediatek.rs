@@ -8,7 +8,9 @@
 //! 4. DRAM boost
 //! 5. `cpufreq` cci/power mode
 //! 6. `apply_gpu_opp_limit`
-//! 7. EAS
+//! 7. EAS (`/sys/devices/system/cpu/eas/enable`) — MediaTek is the only SoC
+//!    where forcing this node is safe, so it is owned here instead of in
+//!    `profiles::common`. Every other chipset leaves EAS alone.
 //! 8. `apply_gpu_power_limited`
 //! 9. syslimiter + battery OC protect
 //! 10. EARA thermal
