@@ -126,7 +126,7 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
 
-        // Chinese forks reset the app-list app-op on boot, so re-assert it every launch.
+        // Chinese forks reset app-ops on boot (app list, overlay), so re-assert them every launch.
         lifecycleScope.launch(Dispatchers.IO) {
             RootUtils.ensurePackageVisibility()
         }
