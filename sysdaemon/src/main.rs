@@ -12,8 +12,9 @@
 // Module layout:
 //   ndk       libbinder_ndk via dlopen
 //   codes     transaction code resolver (binder_resolver.apk)
-//   fps       frame rate for the focused task -> current_fps: root app_process hosting
-//             WindowManager's TaskFpsCallback, with a SurfaceFlinger timestats fallback
+//   fps       frame rate for the focused task -> current_fps: eBPF uprobe on libgui frames, a
+//             root app_process hosting WindowManager's TaskFpsCallback, or a SurfaceFlinger
+//             timestats fallback
 //   pkg       uid -> package (IPackageManager) + package -> label
 //   label     package -> label from the APK resources (AXML + resources.arsc)
 //   procs     /proc scan (process table + initial foreground guess)

@@ -8,6 +8,11 @@ description = "AZenith System Monitors"
 libc = "0.2"
 signal-hook = "0.3"
 
+# aya does not build for 32-bit Android, so the uprobe fps source is
+# 64-bit only and the dependency is scoped accordingly.
+[target.'cfg(target_pointer_width = "64")'.dependencies]
+aya = "0.13"
+
 [profile.release]
 opt-level = 'z'
 lto = true
