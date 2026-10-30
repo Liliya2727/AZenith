@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-only
 //
 // Kernel side of the fps uprobe. The daemon loads this object, attaches
 // `fps_probe` to the Surface::queueBuffer* family in libgui for the focused
@@ -44,4 +44,7 @@ int fps_probe(void *ctx)
     return 0;
 }
 
+// The verifier reads this string to decide which helpers are reachable; it is
+// not the copyright licence of this file (see the SPDX tag above). "GPL" is the
+// value that keeps every helper available on every kernel.
 char _license[] SEC("license") = "GPL";
