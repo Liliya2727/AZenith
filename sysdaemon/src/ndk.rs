@@ -5,7 +5,7 @@ use std::ptr::{null, null_mut};
 use std::sync::OnceLock;
 use std::{thread, time::Duration};
 
-use crate::log::{error, info, warn};
+use crate::log::{debug, error, info, warn};
 
 pub(crate) type P = *mut c_void;
 pub(crate) const UNKNOWN: i32 = i32::MIN;
@@ -136,7 +136,13 @@ pub(crate) fn service_try(name: &CStr, desc: &CStr, tries: u32) -> P {
     for attempt in 1..=tries {
         let b = unsafe { (n().AServiceManager_getService)(name.as_ptr()) };
         if !b.is_null() && unsafe { (n().AIBinder_associateClass)(b, cl) } {
-            info!("service {} acquired (attempt {attempt})", name.to_string_lossy());
+            // Callers that re-resolve the service on every poll would otherwise flood the log;
+            // only a lookup that needed retries is worth an info line.
+            if attempt == 1 {
+                debug!("service {} acquired", name.to_string_lossy());
+            } else {
+                info!("service {} acquired (attempt {attempt})", name.to_string_lossy());
+            }
             return b;
         }
         if attempt == 1 { warn!("service {} not available yet, waiting...", name.to_string_lossy()); }
