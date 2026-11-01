@@ -558,18 +558,18 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Game Space",
+                getString(zx.azenith.R.string.gamespace_notification_channel),
                 NotificationManager.IMPORTANCE_MIN
             ).apply {
-                description = "Game Space overlay service"
+                description = getString(zx.azenith.R.string.gamespace_notification_channel_desc)
                 setShowBadge(false)
             }
             nm.createNotificationChannel(channel)
         }
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(zx.azenith.R.mipmap.ic_launcher)
-            .setContentTitle("Game Space")
-            .setContentText("Game Space overlay active")
+            .setContentTitle(getString(zx.azenith.R.string.gamespace_notification_title))
+            .setContentText(getString(zx.azenith.R.string.gamespace_notification_text))
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
             .setSilent(true)
@@ -615,7 +615,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private fun launchExternalApp(pkg: String) {
         if (pkg == activeGamePackage) {
-            panelState.showToast("Cannot open current game in floating window", "block")
+            panelState.showToast(getString(zx.azenith.R.string.gamespace_toast_cannot_open_game), "block")
             return
         }
         collapsePanel()
@@ -721,6 +721,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 AZenithTheme {
                     val barHeightDp = computeHandleBarHeightDp()
                     SidePanelRoot(
+                        context = this@ZXSidePanelService,
                         state = panelState,
                         isLeft = sideSetting == "left",
                         isHandleVisible = isHandleVisible,
@@ -2311,6 +2312,7 @@ private class ZXRealTelemetryCollector {
  */
 @Composable
 fun SidePanelRoot(
+    context: Context,
     state: ZXSidePanelStateHolder,
     isLeft: Boolean,
     isHandleVisible: Boolean,
@@ -2442,7 +2444,7 @@ fun SidePanelRoot(
         // 4. Snackbar (#m3Toast)
         M3ToastSnackbar(
             visible = isExpanded && state.toastVisible,
-            message = state.toastMessage,
+            message = localizeSidePanelToast(context, state.toastMessage),
             iconName = state.toastIcon,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -2465,6 +2467,95 @@ fun SidePanelRoot(
                 confirmText = resetSpec.confirmText
             )
         }
+
+    }
+}
+
+private fun localizeSidePanelToast(context: Context, message: String): String = when {
+    message.startsWith("Placed ") ->
+        context.getString(zx.azenith.R.string.gamespace_toast_widget_placed, message.removePrefix("Placed "))
+    message.startsWith("Moved ") && message.endsWith(" to library") ->
+        context.getString(
+            zx.azenith.R.string.gamespace_toast_widget_moved_to_library,
+            message.removePrefix("Moved ").removeSuffix(" to library")
+        )
+    message.startsWith("Moved ") ->
+        context.getString(zx.azenith.R.string.gamespace_toast_widget_moved, message.removePrefix("Moved "))
+    message.startsWith("Added ") ->
+        context.getString(zx.azenith.R.string.gamespace_toast_widget_added, message.removePrefix("Added "))
+    message.startsWith("Applying ") && message.endsWith(" profile") -> {
+        val profileName = message.removePrefix("Applying ").removeSuffix(" profile")
+        val localizedProfileName = when (profileName) {
+            "ECO Mode" -> context.getString(zx.azenith.R.string.Profile_ECO_mode)
+            "Balanced" -> context.getString(zx.azenith.R.string.Profile_Balanced)
+            "Performance" -> context.getString(zx.azenith.R.string.Profile_Performance)
+            "Performance Lite" -> context.getString(zx.azenith.R.string.profile_perflite)
+            else -> profileName
+        }
+        context.getString(zx.azenith.R.string.gamespace_toast_applying_profile, localizedProfileName)
+    }
+    message.startsWith("CPU Load: ") -> {
+        val values = Regex("""CPU Load: (\d+)% • Temp: (\d+)°C""").matchEntire(message)
+        if (values != null) {
+            context.getString(
+                zx.azenith.R.string.gamespace_toast_cpu_load,
+                values.groupValues[1].toInt(),
+                values.groupValues[2].toInt()
+            )
+        } else {
+            message
+        }
+    }
+    message.startsWith("GPU Load: ") -> {
+        val values = Regex("""GPU Load: (\d+)% • (\d+) FPS""").matchEntire(message)
+        if (values != null) {
+            context.getString(
+                zx.azenith.R.string.gamespace_toast_gpu_load,
+                values.groupValues[1].toInt(),
+                values.groupValues[2].toInt()
+            )
+        } else {
+            message
+        }
+    }
+    message.endsWith(" started") || message.endsWith(" stopped") -> {
+        val started = message.endsWith(" started")
+        val toolName = message.removeSuffix(if (started) " started" else " stopped")
+        val localizedToolName = when (toolName) {
+            "Screenshot" -> context.getString(zx.azenith.R.string.gamespace_quick_tool_screenshot)
+            "Screen record" -> context.getString(zx.azenith.R.string.gamespace_quick_tool_screen_record)
+            "Bypass charging" -> context.getString(zx.azenith.R.string.gamespace_quick_tool_bypass_charging)
+            else -> toolName
+        }
+        context.getString(
+            zx.azenith.R.string.gamespace_toast_quick_tool_status,
+            localizedToolName,
+            context.getString(
+                if (started) zx.azenith.R.string.gamespace_status_started
+                else zx.azenith.R.string.gamespace_status_stopped
+            )
+        )
+    }
+    else -> {
+        val resourceId = when (message) {
+            "Crosshair settings reset" -> zx.azenith.R.string.gamespace_toast_crosshair_reset
+            "Live Monitor settings reset" -> zx.azenith.R.string.gamespace_toast_live_monitor_reset
+            "Display & RGB balance reset" -> zx.azenith.R.string.gamespace_toast_display_reset
+            "App shortcuts reset" -> zx.azenith.R.string.gamespace_toast_app_shortcuts_reset
+            "Restored default widget order" -> zx.azenith.R.string.gamespace_toast_widget_order_reset
+            "Auto Mode enabled — dynamic game profile active" ->
+                zx.azenith.R.string.gamespace_toast_auto_mode_enabled
+            "Manual Mode enabled — select profile below" ->
+                zx.azenith.R.string.gamespace_toast_manual_mode_enabled
+            "Auto Mode is active — tap Auto Mode chip to switch manually" ->
+                zx.azenith.R.string.gamespace_toast_auto_mode_active
+            "Memory cleaned — freed 1.4 GB RAM" ->
+                zx.azenith.R.string.gamespace_toast_memory_cleaned
+            "Cannot open current game in floating window" ->
+                zx.azenith.R.string.gamespace_toast_cannot_open_game
+            else -> 0
+        }
+        if (resourceId == 0) message else context.getString(resourceId)
     }
 }
 
