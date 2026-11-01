@@ -285,6 +285,77 @@ void restart_target_app(const char* pkg) {
     is_restarting_renderer = false;
 }
 
+static bool is_russian_locale(const char* locale) {
+    if (locale == NULL) {
+        return false;
+    }
+
+    while (isspace((unsigned char)*locale)) {
+        locale++;
+    }
+
+    return locale[0] == 'r' && locale[1] == 'u' &&
+           (locale[2] == '\0' || locale[2] == '-' || locale[2] == '_' || locale[2] == ',');
+}
+
+static bool is_russian_system_locale(void) {
+    char locale[PROP_VALUE_MAX] = {0};
+    FILE* fp = popen("settings get system system_locales 2>/dev/null", "r");
+    if (fp != NULL) {
+        if (fgets(locale, sizeof(locale), fp) != NULL) {
+            trim_newline(locale);
+            char* separator = strchr(locale, ',');
+            if (separator != NULL) {
+                *separator = '\0';
+            }
+        }
+        pclose(fp);
+        if (is_russian_locale(locale)) {
+            return true;
+        }
+    }
+
+    if (__system_property_get("persist.sys.locale", locale) > 0 && is_russian_locale(locale)) {
+        return true;
+    }
+
+    if (__system_property_get("ro.product.locale", locale) > 0 && is_russian_locale(locale)) {
+        return true;
+    }
+
+    if (__system_property_get("ro.product.locale.language", locale) > 0 &&
+        is_russian_locale(locale)) {
+        return true;
+    }
+
+    fp = popen("cmd activity get-config 2>/dev/null", "r");
+    if (fp == NULL) {
+        return false;
+    }
+
+    bool russian = false;
+    while (fgets(locale, sizeof(locale), fp) != NULL) {
+        if (strncmp(locale, "config:", 7) != 0) {
+            continue;
+        }
+
+        char* config = strchr(locale, ':') + 1;
+        char* saveptr = NULL;
+        for (char* part = strtok_r(config, "-, \t\r\n", &saveptr);
+             part != NULL;
+             part = strtok_r(NULL, "-, \t\r\n", &saveptr)) {
+            if (is_russian_locale(part)) {
+                russian = true;
+                break;
+            }
+        }
+        break;
+    }
+
+    pclose(fp);
+    return russian;
+}
+
 /**
  * @brief Rewrites the `description=` field in module.prop to show a live
  *        status banner with the daemon's PID. Called once the daemon has
@@ -307,9 +378,15 @@ void update_module_description(pid_t pid) {
     fclose(fp);
 
     char new_desc[256];
-    snprintf(new_desc, sizeof(new_desc),
-             "description=[✅AZenith is Alive with PID : %d] One, Two, Three! AZenith has arrived!\n",
-             pid);
+    if (is_russian_system_locale()) {
+        snprintf(new_desc, sizeof(new_desc),
+                 "description=[✅AZenith запущен (PID: %d)] Раз, два, три! AZenith уже здесь!\n",
+                 pid);
+    } else {
+        snprintf(new_desc, sizeof(new_desc),
+                 "description=[✅AZenith is Alive with PID : %d] One, Two, Three! AZenith has arrived!\n",
+                 pid);
+    }
 
     fp = fopen(MODULE_PROP, "w");
     if (!fp) {
