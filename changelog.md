@@ -1,3 +1,14 @@
+## AZenith 5.3
+### • Changelog
+
+- The notifications and Toast messages of the Android manager are localized; the language is selected based on the locale of the app or device.
+- The system language definition has been added to the module scripts: first, the selected system locales are checked, then the Android properties and the Activity. configuration. If a translation is not found, English is used.
+- English and Russian translations of the installer messages, module actions, and descriptions in the module manager have been added.
+- The daemon status with PID is localized: a Russian description is displayed in Russian, and an English description is displayed for other languages.
+- A workflow for the fork has been added: it builds a test APK and a ZIP module without the release signature key.
+- The end of the chmodg.c file has been fixed, which was causing -Werror to stop the NDK build.
+- A Russian README and links between the Russian and English versions of the documentation have been added.
+
 ## AZenith 5.2
 ### • Changelog
 - Minor UI Improvement: Implemented a scrollable page and simplified design
