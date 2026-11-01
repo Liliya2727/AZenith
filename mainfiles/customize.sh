@@ -27,6 +27,16 @@ readonly APK_COMP="$MODPATH/AZenith.apk"
 readonly TMP_DIR="/data/local/tmp"
 readonly TMP_APK="$TMP_DIR/AZenith_install.apk"
 
+mkdir -p "$TMP_DIR"
+unzip -o "$ZIPFILE" "installer-lang.sh" "translations/*/strings.sh" -d "$TMP_DIR" >&2
+[ -f "$TMP_DIR/installer-lang.sh" ] || abort "! Installer language data is missing."
+AZENITH_TRANSLATIONS_DIR="$TMP_DIR/translations"
+. "$TMP_DIR/installer-lang.sh"
+
+installer_msg() {
+    echo "$(azenith_text "$@")"
+}
+
 # Create File
 make_node() {
 	[ ! -f "$2" ] && echo "$1" >"$2"
@@ -35,10 +45,10 @@ make_node() {
 # Prepare app files
 _prepare_apk() {
     if [ ! -f "$APK_COMP" ]; then
-        echo "[!] APK not found at $APK_COMP" >&2
+        installer_msg apk_missing "$APK_COMP" >&2
         return 1
     fi    
-    echo "- Preparing APK for installation..."
+    installer_msg preparing_apk
     cp "$APK_COMP" "$TMP_APK" || return 1
     chmod 644 "$TMP_APK" || return 1  
     return 0
@@ -71,16 +81,16 @@ install_manager() {
     while kill -0 $pid 2>/dev/null; do
         clear
         case $((i % 4)) in
-            0) echo "[-] Installing $app_name..." ;;
-            1) echo "[/] Installing $app_name..." ;;
-            2) echo "[|] Installing $app_name..." ;;
-            3) echo "[\] Installing $app_name..." ;;
+            0) installer_msg installing_spinner - "$app_name" ;;
+            1) installer_msg installing_spinner / "$app_name" ;;
+            2) installer_msg installing_spinner '|' "$app_name" ;;
+            3) installer_msg installing_spinner '\' "$app_name" ;;
         esac
         sleep 0.1
         i=$((i + 1))
 
         if [ $i -ge $MAX_TIMEOUT ]; then
-            echo "[!] Installation took too long. Stopping..."
+            installer_msg install_timeout_stopping
             kill -9 $pid 2>/dev/null
             echo "Timeout: Installation exceeded 10 seconds" > "$tmp_log"
             break
@@ -95,21 +105,21 @@ install_manager() {
     rm -f "$tmp_log"
 
     if echo "$result" | grep -iq "Success"; then
-        echo "[✓] $app_name installed successfully"
+        installer_msg install_success "$app_name"
 		echo ""
         return 0
     else
-        echo "[!] Failed to install $app_name"
+        installer_msg install_failed "$app_name"
         if echo "$result" | grep -iq "Timeout"; then
-            echo "  Error: Installation failed due to Timeout"
-            echo "  Possible reason: Your Rom blocking background install."
+            installer_msg install_timeout
+            installer_msg install_timeout_reason
         else
-            echo "  Error log: $(echo "$result" | head -n 2)"
+            installer_msg install_error_log "$(echo "$result" | head -n 2)"
         fi
-        echo "! Run module Action"
-        echo "! Or unzip the module file, and"
-        echo "! Install it manually"
-        echo "- Continuing module installation..."
+        installer_msg run_module_action
+        installer_msg unzip_module_manual
+        installer_msg install_module_manual
+        installer_msg install_continuing
         sleep 3
         return 1
     fi
@@ -117,46 +127,43 @@ install_manager() {
 
 
 abort_api() {
-  echo ""
-  echo "! Installation Aborted"
-  echo "! Unsupported Android Version Detected"
-  echo "! AZenith requires Android 10 (API 29) or newer."
-  abort "! Your device is currently running API $API_LEVEL."
+  installer_msg installation_aborted
+  installer_msg unsupported_android
+  installer_msg android_required
+  abort "$(azenith_text android_current "$API_LEVEL")"
 }
 
 abort_corrupted() {
   clear
-  echo ""
-  echo "! Installation Aborted"
-  echo "! The AZenith package appears to be corrupted or incomplete."
-  echo "! Required installation files were not found."
-  echo ""
-  abort "! Please re-download the module and try again."
+  installer_msg installation_aborted
+  installer_msg corrupted_package
+  installer_msg required_files_missing
+  abort "$(azenith_text redownload_module)"
 }
 
 abort_arch() {
   clear
-  echo "! Installation Aborted"
-  echo "! Unsupported CPU Architecture Detected"
-  echo "! Your device architecture is not compatible with this build of AZenith."
-  echo "! Supported architectures:"
+  installer_msg installation_aborted
+  installer_msg unsupported_arch
+  installer_msg incompatible_arch
+  installer_msg supported_arch
   echo "  • arm64-v8a"
   abort "  • armeabi-v7a"
 }
 
 installation_complete() {
-  echo "- AZenith has been successfully installed"
-  echo "- Thank you for choosing AZenith!"
-  echo "- Please reboot your device."
-  echo "- Open Manager from Action"
-  echo "- Don't forget to grant root access."
+  installer_msg install_complete
+  installer_msg install_thanks
+  installer_msg reboot_device
+  installer_msg open_manager_action
+  installer_msg grant_root
 }
 
 # Displaybanner
 echo ""
 echo "              AZenith              "
 echo ""
-echo "- Installing AZenith..."
+installer_msg installing_azenith
 
 # API Level Check (Require API 29+)
 [ "$API_LEVEL" -lt 29 ] && abort_api
@@ -169,13 +176,24 @@ mkdir -p "$MODULE_CONFIG/preload"
 mkdir -p "$MODULE_CONFIG/bypasschgconfig"
 mkdir -p "$MODULE_CONFIG/gamelist"
 mkdir -p "$MODPATH/system/bin"
-echo "- Create module config"
+installer_msg create_config
 
 # Flashable integrity checkup
-echo "- Extracting verify.sh"
+installer_msg extracting_verify
 unzip -o "$ZIPFILE" 'verify.sh' -d "$TMPDIR" >&2
 [ ! -f "$TMPDIR/verify.sh" ] && abort_corrupted
 source "$TMPDIR/verify.sh"
+
+# Install and validate language data before using translated installer messages.
+installer_msg extracting_language
+extract "$ZIPFILE" installer-lang.sh "$MODPATH"
+for language_file in "$TMP_DIR"/translations/*/strings.sh; do
+    [ -f "$language_file" ] || continue
+    relative_file="${language_file#"$TMP_DIR"/}"
+    extract "$ZIPFILE" "$relative_file" "$MODPATH"
+done
+AZENITH_TRANSLATIONS_DIR="$MODPATH/translations"
+. "$MODPATH/installer-lang.sh"
 
 # Target architecture detection
 case $ARCH in
@@ -184,7 +202,7 @@ case $ARCH in
 *) abort_arch ;;
 esac
 
-echo "- Extracting binaries for $ARCH_TMP..."
+installer_msg extracting_binaries "$ARCH_TMP"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-profilesettings" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-rianixiathermalcore" "$TMPDIR"
@@ -194,27 +212,28 @@ extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-preloadbin" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-appmonitoring" "$TMPDIR"
 cp "$TMPDIR/libs/$ARCH_TMP/"* "$MODPATH/system/bin/"
 rm -rf "$TMPDIR/libs"
-echo "- All binaries installed successfully"
+installer_msg binaries_installed
 
 # Extract Module standard files
-echo "- Extracting service.sh..."
+installer_msg extracting_service
 extract "$ZIPFILE" service.sh "$MODPATH"
-echo "- Extracting post-fs-data.sh..."
+installer_msg extracting_post_fs_data
 extract "$ZIPFILE" post-fs-data.sh "$MODPATH"
-echo "- Extracting action.sh..."
+installer_msg extracting_action
 extract "$ZIPFILE" action.sh "$MODPATH"
-echo "- Extracting cleanup.sh..."
+installer_msg extracting_cleanup
 extract "$ZIPFILE" cleanup.sh "$MODPATH"
-echo "- Extracting module.prop..."
+installer_msg extracting_module_prop
 extract "$ZIPFILE" module.prop "$MODPATH"
+azenith_update_module_description "$MODPATH/module.prop"
 cp "$MODPATH/module.prop" "$MODPATH/module.prop.orig"
-echo "- Extracting uninstall.sh..."
+installer_msg extracting_uninstall
 extract "$ZIPFILE" uninstall.sh "$MODPATH"
 if [ ! -f "$MODULE_CONFIG/gamelist/azenithApplist.json" ]; then
-    echo "- Extracting Applist.json..."
+    installer_msg extracting_applist
     extract "$ZIPFILE" azenithApplist.json "$MODULE_CONFIG/gamelist"
 fi
-echo "- Extracting module banner..."
+installer_msg extracting_banner
 extract "$ZIPFILE" module.banner.jpg "$MODPATH"
 
 # Skip mountify
@@ -222,7 +241,7 @@ touch "$MODPATH/skip_mountify"
 
 # Skip hybrid mount
 if [ -f "$HM_CONFIG" ]; then
-    echo "- Hybrid Mount detected, configuring rules..."
+    installer_msg hybrid_detected
 
     HM_BIN=""
     if [ -x "/data/adb/modules/hybrid_mount/hybrid-mount" ]; then
@@ -232,34 +251,34 @@ if [ -f "$HM_CONFIG" ]; then
     fi
 
     if [ -n "$HM_BIN" ]; then
-        echo "- Found Hybrid Mount CLI at: $HM_BIN"
+        installer_msg hybrid_cli_found "$HM_BIN"
         $HM_BIN api config-patch --patch '{"rules":{"AZenith":{"default_mode":"ignore"}}}' --apply-runtime >/dev/null 2>&1
-        echo "- Runtime policy for AZenith updated to 'ignore'."
+        installer_msg hybrid_runtime_updated
     else
-        echo "- Warning: CLI binary not found in standard paths. Skipping live patch."
+        installer_msg hybrid_cli_missing
     fi
 
     if ! grep -q "\[rules\.AZenith\]" "$HM_CONFIG"; then
         echo "" >> "$HM_CONFIG"
         echo "[rules.AZenith]" >> "$HM_CONFIG"
         echo 'default_mode = "ignore"' >> "$HM_CONFIG"
-        echo "- Permanent rule added to config.toml."
+        installer_msg hybrid_rule_added
     fi
 else
-    echo "- Hybrid Mount is not installed. Skipping configuration."
+    installer_msg hybrid_not_installed
 fi
 
 # Use Symlink for APatch / KernelSU
 if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 	# skip mount on APatch / KernelSU
 	touch "$MODPATH/skip_mount"
-	echo "- KSU/AP Detected, skipping module mount (skip_mount)"
+	installer_msg ksu_skip_mount
 	# symlink ourselves on $PATH
 	manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
 	BIN_PATH="/data/adb/modules/AZenith/system/bin"
 	for dir in $manager_paths; do
 		[ -d "$dir" ] && {
-			echo "- Creating symlink in $dir"
+			installer_msg creating_symlink "$dir"
 			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service"
 			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/zx" # Binary calls for CLI
 			ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
@@ -273,38 +292,38 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 fi
 
 # Apply Tweaks Based on Chipset
-echo "- Checking device soc"
+installer_msg checking_soc
 chipset=$(grep -i 'hardware' /proc/cpuinfo | uniq | cut -d ':' -f2 | sed 's/^[ \t]*//')
 [ -z "$chipset" ] && chipset="$(getprop ro.board.platform) $(getprop ro.hardware)"
 case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
 *mt* | *MT*)
 	soc="MediaTek"
-	echo "- Applying Tweaks for $soc"
+	installer_msg applying_tweaks "$soc"
 	setprop persist.sys.azenith.soctype 1
 	;;
 *sm* | *qcom* | *SM* | *QCOM* | *Qualcomm* | *sdm* | *snapdragon*)
 	soc="Snapdragon"
-	echo "- Applying Tweaks for $soc"
+	installer_msg applying_tweaks "$soc"
 	setprop persist.sys.azenith.soctype 2
 	;;
 *exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
 	soc="Exynos"
-	echo "- Applying Tweaks for $soc"
+	installer_msg applying_tweaks "$soc"
 	setprop persist.sys.azenith.soctype 3
 	;;
 *Unisoc* | *unisoc* | *ums*)
 	soc="Unisoc"
-	echo "- Applying Tweaks for $soc"
+	installer_msg applying_tweaks "$soc"
 	setprop persist.sys.azenith.soctype 4
 	;;
 *gs* | *Tensor* | *tensor*)
 	soc="Tensor"
-	echo "- Applying Tweaks for $soc"
+	installer_msg applying_tweaks "$soc"
 	setprop persist.sys.azenith.soctype 5
 	;;
 *)
 	soc="Unknown"
-	echo "- Applying Tweaks for $chipset"
+	installer_msg applying_tweaks "$chipset"
 	setprop persist.sys.azenith.soctype 0
 	;;
 esac
@@ -380,16 +399,16 @@ if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
 fi
 
 if [ -z "$(getprop persist.sys.azenithconf.AIenabled)" ]; then
-    echo "- Enabling Auto Mode"
+    installer_msg enabling_auto
     setprop persist.sys.azenithconf.AIenabled 1
     echo 1 > "$MODULE_CONFIG/API/current_modes"
 fi
 
-echo "- Disable Debugmode"
+installer_msg disabling_debug
 setprop persist.sys.azenith.debugmode "false"
 
 # Set config properties to use
-echo "- Setting config properties..."
+installer_msg setting_properties
 props="
 persist.sys.azenithconf.logd
 persist.sys.azenithconf.DThermal
@@ -421,7 +440,7 @@ extract "$ZIPFILE" AZenith.apk "$MODPATH"
 APP_INSTALLED=false
 
 if ! _prepare_apk; then
-    echo "[!] Failed to prepare APK. Continuing without installing manager..." >&2
+    installer_msg prepare_apk_failed >&2
 else
     if install_manager "$TMP_APK" "AZenith Manager"; then
         APP_INSTALLED=true
@@ -431,14 +450,14 @@ fi
 
 # Enable Launcher and grant permissions ONLY if app installed successfully
 if [ "$APP_INSTALLED" = "true" ]; then
-    echo "- Enabling Launcher..."
+    installer_msg enabling_launcher
     pm enable --user 0 zx.azenith/.Launcher > /dev/null 2>&1
 
     # The module is not mounted yet, so the binary is staged to /data/local/tmp instead of
     # being run from $MODPATH; it is removed again as soon as the grants are done.
     # Without SYSTEM_ALERT_WINDOW Game Space cannot draw its overlay, and a fresh install
     # would show none until the device is rebooted.
-    echo "- Setting Permissions..."
+    installer_msg setting_permissions
     BIN_STAGE="$TMP_DIR/sys.azenith-service"
     if [ -f "$MODPATH/system/bin/sys.azenith-service" ]; then
         cp "$MODPATH/system/bin/sys.azenith-service" "$BIN_STAGE" && {
@@ -447,16 +466,16 @@ if [ "$APP_INSTALLED" = "true" ]; then
             rm -f "$BIN_STAGE"
         }
     else
-        echo "[!] Permission setup skipped: service binary missing"
+        installer_msg permission_setup_skipped
     fi
 
 fi
 
 # Remove old module files if available
-echo "- Cleaning old files..."
+installer_msg cleaning_old_files
 [ -f "/data/local/tmp/module.avatar.webp" ] && rm -f "/data/local/tmp/module.avatar.webp"
 if pm list packages | grep -q "azenith.toast"; then
-    echo "- Uninstalling old components"
+    installer_msg uninstalling_old_components
     pm uninstall --user 0 azenith.toast > /dev/null 2>&1
 fi
 
