@@ -28,24 +28,38 @@
 //
 // The flag is re-read while a source runs, so changing it takes effect without restarting the
 // daemon.
+//
+// Game gate: nothing runs and current_fps does not exist unless a game is running.
+//
+//   <cfg>/API/gameinfo   "<package> <pid> <uid>" on its first line while a game runs,
+//                        "NULL 0 0" (or no file at all) when there is none.
+//
+// The file is watched with inotify (see inotify.rs) and mirrored into `GAME`, so every check
+// below is a mutex read instead of file I/O, and sleeping code is woken the moment the game
+// goes away. When the game stops, the running source is stopped and current_fps is deleted;
+// when a game appears, the supervisor starts the source again.
 
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{self, BufRead, BufReader};
 use std::os::unix::fs::PermissionsExt;
 use std::process::{Command, Stdio};
+use std::sync::{Condvar, Mutex, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::codes::RESOLVER_APK;
+use crate::inotify;
 use crate::log::{error, info, warn};
 
 /// Staged copy of the dex the client runs from. The resolver's own copy under /data/local/tmp is
 /// deleted after every transaction-code refresh, so this one has to be separate.
 const FPS_CLIENT_APK: &str = "/data/adb/.config/AZenith/fpsclient.apk";
-/// "<fps> <epoch_ms>", read by the manager's live monitor.
+/// "<fps> <epoch_ms>", read by the manager's live monitor. Only exists while a game runs.
 pub(crate) const FPS_FILE: &str = "/data/adb/.config/AZenith/API/current_fps";
 /// Directory `FPS_FILE` lives in; the surfaceflinger source may be the first writer.
 const FPS_DIR: &str = "/data/adb/.config/AZenith/API";
+/// "<package> <pid> <uid>" while a game runs, "NULL 0 0" otherwise. Watched with inotify.
+const GAMEINFO_FILE: &str = "/data/adb/.config/AZenith/API/gameinfo";
 /// stdout/stderr of the client, so its diagnostics do not vanish with the daemon's stdio.
 const FPS_LOG: &str = "/data/adb/.config/AZenith/fpsclient.log";
 /// Source pin, see the module docs. Missing or empty means automatic.
@@ -54,9 +68,9 @@ const METHOD_FLAG: &str = "/data/adb/.config/AZenith/debug/explicit_fps_mthd";
 /// A source has to publish a reading within this window, otherwise it counts as broken and the
 /// fallback takes over.
 const CLIENT_STARTUP_TIMEOUT: Duration = Duration::from_secs(15);
-/// Pause before a source is started again after an ordinary exit.
+/// Pause before a source is started again after an ordinary exit. Cut short when the game ends.
 const RETRY_DELAY: Duration = Duration::from_secs(5);
-/// Poll cadence for the child process.
+/// Poll cadence for the child process. Cut short when the game ends.
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
 /// Re-read the pin at most this often while a source is running.
 const FLAG_CHECK_INTERVAL: Duration = Duration::from_secs(5);
@@ -69,6 +83,10 @@ const SF_TOTAL_FRAMES: &str = "totalFrames = ";
 
 /// Whether the uprobe source can be compiled in at all (aya is 64-bit only).
 const UPROBE_SUPPORTED: bool = cfg!(target_pointer_width = "64");
+
+/// Whether `GAMEINFO_FILE` currently names a game, and the condvar that wakes whoever sleeps on
+/// it. Written only by `sync_game`, which the inotify thread drives.
+static GAME: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new());
 
 /// Frame rate source.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -107,22 +125,108 @@ impl Method {
     }
 }
 
-/// Keep one fps source alive. Runs on its own thread: a dead source must never take the daemon
-/// down with it, and the daemon must not block waiting for it.
+// ---------------- game gate ----------------
+
+fn lock_game() -> MutexGuard<'static, bool> {
+    GAME.0.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Whether a game is running right now, as of the last gameinfo change.
+fn game_running() -> bool {
+    *lock_game()
+}
+
+fn set_game(running: bool) {
+    let changed = {
+        let mut state = lock_game();
+        let changed = *state != running;
+        *state = running;
+        changed
+    };
+    if changed {
+        GAME.1.notify_all();
+        if running {
+            info!("gameinfo: game running");
+        } else {
+            info!("gameinfo: no game running");
+        }
+    }
+}
+
+/// Block until a game is running.
+fn wait_for_game() {
+    let mut running = lock_game();
+    while !*running {
+        running = GAME.1.wait(running).unwrap_or_else(|e| e.into_inner());
+    }
+}
+
+/// Sleep for up to `dur`, but wake as soon as the game ends. Returns whether a game is still
+/// running afterwards; with no game it returns immediately.
+fn nap(dur: Duration) -> bool {
+    let guard = lock_game();
+    let (guard, _) = GAME
+        .1
+        .wait_timeout_while(guard, dur, |running| *running)
+        .unwrap_or_else(|e| e.into_inner());
+    *guard
+}
+
+/// Read gameinfo. `Some(true)` game running, `Some(false)` none (including a missing file),
+/// `None` when the file is empty or unreadable at this instant, e.g. caught mid-rewrite: the
+/// previous state is kept, a half-written file must not look like "game over".
+fn read_game() -> Option<bool> {
+    match fs::read_to_string(GAMEINFO_FILE) {
+        Ok(raw) => {
+            let package = raw.lines().next()?.split_whitespace().next()?;
+            Some(!package.eq_ignore_ascii_case("null"))
+        }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Some(false),
+        Err(_) => None,
+    }
+}
+
+/// Re-read gameinfo and publish the result to `GAME`. Cheap and idempotent, it is what the
+/// inotify thread calls on every event.
+fn sync_game() {
+    if let Some(running) = read_game() {
+        set_game(running);
+    }
+}
+
+fn clear_fps() {
+    let _ = fs::remove_file(FPS_FILE);
+}
+
+// ---------------- supervisor ----------------
+
+/// Keep one fps source alive while a game runs. Runs on its own thread: a dead source must never
+/// take the daemon down with it, and the daemon must not block waiting for it.
 pub(crate) fn start() {
+    // Initial state first, so the supervisor does not start from a blind `false`.
+    sync_game();
+    inotify::watch(GAMEINFO_FILE, sync_game);
     thread::spawn(supervise);
 }
 
 /// Run a source until it dies, then either restart it or hand over to the other one.
 ///
-/// `run_*` returns `true` when the source was publishing at some point (an ordinary exit, or a
-/// flag change) and `false` when it never produced a reading.
+/// `run_*` returns `true` when the source was publishing at some point (an ordinary exit, a flag
+/// change or the game ending) and `false` when it never produced a reading.
 fn supervise() {
     // Automatic mode starts with the preferred source and remembers the last working one, so a
     // fallback survives an ordinary restart instead of flapping back every cycle.
     let mut auto = Method::first_auto();
 
     loop {
+        // Gate: without a game there is no source and no current_fps.
+        if !game_running() {
+            clear_fps();
+            info!("no game running, fps source idle");
+            wait_for_game();
+            info!("game detected, starting fps source");
+        }
+
         let forced = explicit_method();
         let method = forced.unwrap_or(auto);
 
@@ -131,6 +235,13 @@ fn supervise() {
             Method::Uprobe => run_uprobe(forced),
             Method::SurfaceFlinger => run_surfaceflinger(forced),
         };
+
+        // The game ended: not a source failure, so no fallback and no retry delay. The source is
+        // fully stopped by now, nothing can write current_fps behind our back.
+        if !game_running() {
+            clear_fps();
+            continue;
+        }
 
         match forced {
             Some(_) => {
@@ -158,7 +269,7 @@ fn supervise() {
             }
         }
 
-        thread::sleep(RETRY_DELAY);
+        nap(RETRY_DELAY);
     }
 }
 
@@ -183,6 +294,8 @@ fn explicit_method() -> Option<Method> {
         }
     }
 }
+
+// ---------------- sources ----------------
 
 /// Run the root app_process client. Returns `false` when it never publishes anything.
 fn run_windmanager(forced: Option<Method>) -> bool {
@@ -222,6 +335,14 @@ fn run_windmanager(forced: Option<Method>) -> bool {
             }
         }
 
+        // Killed and reaped before returning, so it cannot recreate current_fps afterwards.
+        if !game_running() {
+            info!("no game running, stopping the fps client");
+            let _ = child.kill();
+            let _ = child.wait();
+            return true;
+        }
+
         if last_flag_check.elapsed() >= FLAG_CHECK_INTERVAL {
             last_flag_check = Instant::now();
             if explicit_method() != forced {
@@ -247,7 +368,7 @@ fn run_windmanager(forced: Option<Method>) -> bool {
             }
         }
 
-        thread::sleep(POLL_INTERVAL);
+        nap(POLL_INTERVAL);
     }
 }
 
@@ -265,6 +386,11 @@ fn run_surfaceflinger(forced: Option<Method>) -> bool {
     let mut last_flag_check = Instant::now();
 
     loop {
+        if !game_running() {
+            info!("no game running, stopping the fps source");
+            return true;
+        }
+
         if last_flag_check.elapsed() >= FLAG_CHECK_INTERVAL {
             last_flag_check = Instant::now();
             if explicit_method() != forced {
@@ -282,7 +408,9 @@ fn run_surfaceflinger(forced: Option<Method>) -> bool {
                     // total < prev_total means the counter was reset; skip this tick.
                     if total >= prev_total && dt > 0.0 {
                         let fps = (total - prev_total) as f32 / dt;
-                        if publish(fps.round() as i64) && !healthy {
+                        // The dumpsys above can take a while: do not publish for a game that
+                        // ended in the meantime, or the file would outlive the cleanup.
+                        if game_running() && publish(fps.round() as i64) && !healthy {
                             healthy = true;
                             info!("surfaceflinger fps source is publishing to {FPS_FILE}");
                         }
@@ -299,7 +427,7 @@ fn run_surfaceflinger(forced: Option<Method>) -> bool {
             }
         }
 
-        thread::sleep(SF_INTERVAL);
+        nap(SF_INTERVAL);
     }
 }
 
@@ -331,6 +459,11 @@ fn run_uprobe(forced: Option<Method>) -> bool {
     let mut last_flag_check = Instant::now();
 
     loop {
+        if !game_running() {
+            info!("no game running, stopping the fps source");
+            return true;
+        }
+
         if last_flag_check.elapsed() >= FLAG_CHECK_INTERVAL {
             last_flag_check = Instant::now();
             if explicit_method() != forced {
@@ -410,7 +543,7 @@ fn run_uprobe(forced: Option<Method>) -> bool {
 
         let elapsed = window.elapsed();
         if elapsed >= SF_INTERVAL {
-            if healthy {
+            if healthy && game_running() {
                 let fps = (frames as f32 / elapsed.as_secs_f32()).round() as i64;
                 let _ = publish(fps);
             }
@@ -635,6 +768,8 @@ mod uprobe {
         }
     }
 }
+
+// ---------------- helpers ----------------
 
 fn sf_timestats(flag: &str) {
     let _ = Command::new("dumpsys")

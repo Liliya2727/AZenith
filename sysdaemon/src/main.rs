@@ -33,6 +33,7 @@ mod procs;
 mod recent;
 mod state;
 mod status;
+mod inotify;
 
 use std::fs;
 
