@@ -1,3 +1,5 @@
+**English** | [Русский](README_ru.md)
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/a3ac7f35-ff7e-4d73-8952-0fcd985a6f26" alt="AZenith Banner" width="100%">
 </p>
