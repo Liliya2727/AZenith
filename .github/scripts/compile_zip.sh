@@ -22,6 +22,8 @@ need_integrity=(
 	"mainfiles/action.sh"
 	"mainfiles/cleanup.sh"
 	"mainfiles/uninstall.sh"
+	"mainfiles/installer-lang.sh"
+	"mainfiles/translations"
 	"mainfiles/module.prop"
     "mainfiles/module.banner.jpg"
 	"mainfiles/azenithApplist.json"
