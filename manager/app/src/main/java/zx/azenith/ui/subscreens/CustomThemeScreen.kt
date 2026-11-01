@@ -1321,10 +1321,10 @@ fun PaletteTopAppBar(
 /**
  * The mock preview.
  *
- * One transition drives the layout: collapsed, the mock is cut into two halves
- * that sit side by side -- so the navbar and the banner are each shown at a
- * readable size instead of a squeezed portrait phone; expanded, the halves join
- * back into the whole portrait screen.
+ * Expanded, the frame is a tall portrait phone showing the whole mock screen.
+ * Collapsed, the same frame shrinks to a small card: the mock keeps its full
+ * 190x396dp layout (see [MockScreen]) and is only scaled down, so nothing in it
+ * is squeezed or re-laid out when the preview collapses.
  */
 @Composable
 private fun PinnedPreviewHeader(
@@ -1399,8 +1399,11 @@ private fun PinnedPreviewHeader(
                 modifier = Modifier
                     .width(frameWidth)
                     .fillMaxHeight()
-                    .gamepadFocusOutline(shape = scaledShape, register = true)
-                    .clickable(onClick = onToggle)
+                    .gamepadFocusOutline(shape = scaledShape, register = true),
+                // Passed to the Surface itself rather than chained as .clickable() on the
+                // modifier: Surface(onClick) applies its click handling after its shape
+                // clip, so the ripple follows the rounded corners.
+                onClick = onToggle
             ) {
                 MockScreen(
                     scheme = scheme,
@@ -1416,23 +1419,43 @@ private fun PinnedPreviewHeader(
     }
 }
 
-/** The mock's own device frame: surface, shape ramp and hairline border. */
+/**
+ * The mock's own device frame: surface, shape ramp and hairline border.
+ *
+ * With [onClick] set the frame is a clickable Surface. That has to go through
+ * Surface's own onClick overload and not Modifier.clickable on [modifier]: a
+ * modifier chained from outside runs before the Surface's shape clip, so the
+ * ripple is drawn in the unclipped rectangular bounds.
+ */
 @Composable
 private fun MockCardFrame(
     scheme: ColorScheme,
     shape: Shape,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    Surface(
-        modifier = modifier,
-        color = scheme.surface,
-        // The frame follows the shape ramp, otherwise the corner controls change
-        // nothing the user can see.
-        shape = shape,
-        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.5f)),
-        shadowElevation = 8.dp
-    ) { content() }
+    // The frame follows the shape ramp, otherwise the corner controls change
+    // nothing the user can see.
+    val border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.5f))
+    if (onClick != null) {
+        Surface(
+            onClick = onClick,
+            modifier = modifier,
+            color = scheme.surface,
+            shape = shape,
+            border = border,
+            shadowElevation = 8.dp
+        ) { content() }
+    } else {
+        Surface(
+            modifier = modifier,
+            color = scheme.surface,
+            shape = shape,
+            border = border,
+            shadowElevation = 8.dp
+        ) { content() }
+    }
 }
 
 
@@ -1476,11 +1499,19 @@ private fun MockScreen(
         // The blur demo needs a shared parent for the content and the dialog that
         // covers it, so the two move together under the mock's scaling transform.
         // Nothing about the content itself changes; only the box it sits in.
+        //
+        // requiredWidth/requiredHeight, not width/height: plain width/height are
+        // clamped to the parent's constraints, so when the frame is small (collapsed)
+        // the mock was laid out squeezed into e.g. 70x140dp and then scaled down by
+        // graphicsLayer again -- shrunk twice and broken. required* ignores the
+        // incoming max, so layout is always the full MOCK_W x MOCK_H and graphicsLayer
+        // is the only thing that scales it. The box is centred in the slot, and the
+        // frame Surface's shape clip keeps the oversized layout from drawing outside.
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
-                .width(MOCK_W)
-                .height(MOCK_H)
+                .requiredWidth(MOCK_W)
+                .requiredHeight(MOCK_H)
                 .graphicsLayer(
                     scaleX = fit,
                     scaleY = fit,
@@ -1795,10 +1826,6 @@ private val AZENITH_NAV_WIDTH = 360.dp
  * the real dialog blurs, which is what makes the setting legible from the
  * Personalization page alone.
  */
-
-
-
-
 @Composable
 private fun MockBlurDialog(
     visible: Boolean,
