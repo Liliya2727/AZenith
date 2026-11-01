@@ -1,0 +1,156 @@
+name: AZenith Fork Debug Build
+
+on:
+  push:
+    paths:
+      - ".github/workflows/build-fork.yml"
+      - ".github/scripts/**"
+      - "manager/**"
+      - "archdaemon/**"
+      - "binprofiles/**"
+      - "binutils/**"
+      - "binpreferenced/**"
+      - "binder_resolver/**"
+      - "sysdaemon/**"
+      - "mainfiles/**"
+      - "preloadbin/**"
+      - "thermalcore/**"
+      - "azenithApplist.json"
+      - "version"
+      - "version_type"
+  pull_request:
+    paths:
+      - ".github/workflows/build-fork.yml"
+      - ".github/scripts/**"
+      - "manager/**"
+      - "archdaemon/**"
+      - "binprofiles/**"
+      - "binutils/**"
+      - "binpreferenced/**"
+      - "binder_resolver/**"
+      - "sysdaemon/**"
+      - "mainfiles/**"
+      - "preloadbin/**"
+      - "thermalcore/**"
+      - "azenithApplist.json"
+      - "version"
+      - "version_type"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: temurin
+
+      - name: Verify module and inject version
+        run: bash .github/scripts/verify.sh
+
+      - name: Copy changelog
+        run: bash .github/scripts/changelog.sh
+
+      - name: Determine build type
+        run: |
+          V_TYPE=$(tr -d '\n\r ' < version_type)
+          echo "V_TYPE=$V_TYPE" >> "$GITHUB_ENV"
+          echo "Build mode set to: $V_TYPE"
+
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1.6.0
+        with:
+          ndk-version: r30
+
+      - name: Build Binder Resolver APK
+        working-directory: ./binder_resolver
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon clean assembleRelease
+
+      - name: Stage Binder Resolver APK
+        run: |
+          APK=$(find binder_resolver/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "Binder Resolver APK not found" >&2
+            exit 1
+          fi
+          cp "$APK" sysdaemon/binder_resolver.apk
+
+      - name: Compile native daemon
+        working-directory: ./archdaemon
+        run: |
+          if [ "$V_TYPE" = "experimental" ]; then
+            ndk-build NDK_DEBUG=1
+          else
+            ndk-build
+          fi
+
+      - name: Compile preload binary
+        working-directory: ./preloadbin
+        run: |
+          if [ "$V_TYPE" = "experimental" ]; then
+            ndk-build NDK_DEBUG=1
+          else
+            ndk-build
+          fi
+
+      - name: Set up Rust Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Build Rust module binaries
+        run: |
+          set -e
+          for project in thermalcore binprofiles binutils binpreferenced sysdaemon; do
+            echo "Building $project"
+            cd "$GITHUB_WORKSPACE/$project"
+            if [ "$V_TYPE" = "experimental" ]; then
+              cargo ndk -t arm64-v8a -t armeabi-v7a build
+            else
+              cargo ndk -t arm64-v8a -t armeabi-v7a build --release
+            fi
+          done
+
+      - name: Build debug APK
+        working-directory: ./manager
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Package module ZIP
+        id: package_module
+        run: bash .github/scripts/compile_zip.sh
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: azenith-debug-apk
+          path: manager/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload module ZIP artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: azenith-module-zip
+          path: "*.zip"
+          if-no-files-found: error

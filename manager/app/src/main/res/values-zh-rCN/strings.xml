@@ -505,7 +505,7 @@
     <string name="nav_shape_soft">软</string>
     <string name="nav_shape_rounded">圆形</string>
     <string name="nav_shape_full">完整</string>
-    <string name="pers_nav_labesls">选项卡标签</string>
+    <string name="pers_nav_labels">选项卡标签</string>
     <string name="pers_nav_vibrant">导航栏色彩鲜艳</string>
     <string name="pers_nav_vibrant_blur_conflict">启用“表现力模糊”时，无法使用鲜艳的导航栏颜色。首先关闭模糊。</string>
     <string name="pers_nav_vibrant_summary">用强调色为栏着色</string>

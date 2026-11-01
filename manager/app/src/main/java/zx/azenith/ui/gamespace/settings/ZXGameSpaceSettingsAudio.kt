@@ -214,7 +214,11 @@ internal fun SettingsAudioPane(
                 try {
                     val count = BgmManager.addTracksFromUris(context, uris)
                     if (count > 0) {
-                        Toast.makeText(context, "Added $count track(s)", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            context.resources.getQuantityString(R.plurals.toast_tracks_added, count, count),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 } finally {
                     isImportingMusic = false

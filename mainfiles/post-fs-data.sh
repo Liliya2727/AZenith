@@ -17,6 +17,9 @@
 #
 
 readonly MODDIR="${0%/*}"
+if [ -f "$MODDIR/installer-lang.sh" ]; then
+    . "$MODDIR/installer-lang.sh"
+fi
 LOCK_FILE="/dev/.azenithSingleInstance"
 
 # Single Instance Lock
@@ -36,7 +39,11 @@ if [ ! -f "/data/adb/modules/AZenith/explicit_I_want_a_bootloop" ] && [ $BOOTCOU
     touch "$MODDIR/disable"
     rm "$MODDIR/count.sh"
     rm /data/adb/service.d/.azenith_cleanup.sh
-    string="description=anti-bootloop triggered. module disabled. enable to activate."
+    if [ -f "$MODDIR/installer-lang.sh" ]; then
+        string="description=$(azenith_text anti_bootloop_description)"
+    else
+        string="description=Anti-bootloop triggered. Module disabled; enable it to activate."
+    fi
     sed -i "s/^description=.*/$string/g" "$MODDIR/module.prop"
     exit 1
 else
@@ -44,6 +51,9 @@ else
 
     if [ -f "$MODDIR/module.prop.orig" ]; then
         cp -f "$MODDIR/module.prop.orig" "$MODDIR/module.prop"
+    fi
+    if [ -f "$MODDIR/installer-lang.sh" ]; then
+        azenith_update_module_description "$MODDIR/module.prop"
     fi
     
 fi

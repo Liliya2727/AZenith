@@ -61,7 +61,7 @@ class ZenithReceiver : BroadcastReceiver() {
                     manager.cancelAll()
                 }
                 intent.getStringExtra("toasttext")?.let {
-                    Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, localizeToast(context, it), Toast.LENGTH_LONG).show()
                 }
                 intent.getStringExtra("notifytext")?.let {
                     handleNotification(context, intent, manager)
@@ -112,15 +112,17 @@ class ZenithReceiver : BroadcastReceiver() {
     }
 
     private fun handleNotification(context: Context, intent: Intent, manager: NotificationManager) {
-        val title = intent.getStringExtra("notifytitle") ?: "AZenith"
-        val message = intent.getStringExtra("notifytext") ?: ""
+        val sourceTitle = intent.getStringExtra("notifytitle") ?: context.getString(R.string.app_name)
+        val sourceMessage = intent.getStringExtra("notifytext") ?: ""
+        val title = localizeNotificationTitle(context, sourceTitle)
+        val message = localizeNotificationMessage(context, sourceMessage)
         
         val chrono = intent.getBooleanExtra("chrono_bool", 
             intent.getStringExtra("chrono") == "true")
         
         val timeout = intent.getStringExtra("timeout")?.toLongOrNull() ?: 0L
     
-        val isProfile = title.lowercase(Locale.ROOT).let {
+        val isProfile = sourceTitle.lowercase(Locale.ROOT).let {
             it.contains("profile") || it.contains("mode") || it.contains("initializing...")
         }
     
@@ -173,8 +175,8 @@ class ZenithReceiver : BroadcastReceiver() {
             if (isProfile) {
                 val reshowIntent = Intent(context, ZenithReceiver::class.java).apply {
                     this.action = ACTION_RESHOW
-                    putExtra("notifytitle", title)
-                    putExtra("notifytext", message)
+                    putExtra("notifytitle", sourceTitle)
+                    putExtra("notifytext", sourceMessage)
                     putExtra("chrono_bool", chrono)
                 }
                 val deletePI = PendingIntent.getBroadcast(context, title.hashCode(), reshowIntent, pendingIntentFlags)
@@ -188,6 +190,59 @@ class ZenithReceiver : BroadcastReceiver() {
             }
         }
 
-        manager.notify(if (isProfile) PROFILE_ID else title.hashCode(), builder.build())
+        manager.notify(if (isProfile) PROFILE_ID else sourceTitle.hashCode(), builder.build())
+    }
+
+    private fun localizeToast(context: Context, message: String): String = when (message) {
+        "Applying Performance Profile" -> context.getString(R.string.toast_applying_performance_profile)
+        "Applying Balanced Profile" -> context.getString(R.string.toast_applying_balanced_profile)
+        "Applying Eco Mode" -> context.getString(R.string.toast_applying_eco_mode)
+        else -> message
+    }
+
+    private fun localizeNotificationTitle(context: Context, title: String): String = when (title) {
+        "Performance Profile" -> context.getString(R.string.notif_title_performance_profile)
+        "Balanced Profile" -> context.getString(R.string.notif_title_balanced_profile)
+        "ECO Mode" -> context.getString(R.string.notif_title_eco_mode)
+        "AZenith Preload" -> context.getString(R.string.notif_title_preload)
+        "Initializing..." -> context.getString(R.string.notif_title_initializing)
+        "Daemon Error" -> context.getString(R.string.notif_title_daemon_error)
+        "Module Update" -> context.getString(R.string.notif_title_module_update)
+        "Module Removed" -> context.getString(R.string.notif_title_module_removed)
+        "Daemon Info" -> context.getString(R.string.notif_title_daemon_info)
+        else -> title
+    }
+
+    private fun localizeNotificationMessage(context: Context, message: String): String = when {
+        message.startsWith("Running at ") ->
+            context.getString(R.string.notif_message_running_at, message.removePrefix("Running at ").trim())
+        message.startsWith("Preloading initiated for: ") ->
+            context.getString(
+                R.string.notif_message_preloading,
+                message.removePrefix("Preloading initiated for: ").trim()
+            )
+        else -> when (message) {
+            "System is now at Powerful state" -> context.getString(R.string.notif_message_performance_state)
+            "System is now at Optimal state" -> context.getString(R.string.notif_message_balanced_state)
+            "System is now at Endurance state" -> context.getString(R.string.notif_message_eco_state)
+            "Please reboot your device to complete module update." ->
+                context.getString(R.string.notif_message_module_update)
+            "Please reboot your device to complete module uninstallation." ->
+                context.getString(R.string.notif_message_module_removed)
+            "Configuration updated. Please reboot your device to take full effect." ->
+                context.getString(R.string.notif_message_reboot_config)
+            "Starting AZenith service..." -> context.getString(R.string.notif_message_starting_service)
+            "Trying to rename me?" -> context.getString(R.string.notif_message_daemon_renamed)
+            "AZenith version mismatch, please reinstall!" ->
+                context.getString(R.string.notif_message_version_mismatch)
+            "Java companion daemon crashed. Stopping AZenith." ->
+                context.getString(R.string.notif_message_daemon_crashed)
+            "Please remove your stupid kill logger module." ->
+                context.getString(R.string.notif_message_remove_kill_logger)
+            "Java companion daemon crashed or failed to start." ->
+                context.getString(R.string.notif_message_daemon_start_failed)
+            "AZenith is running successfully" -> context.getString(R.string.notif_message_running_successfully)
+            else -> message
+        }
     }
 }

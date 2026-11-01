@@ -1440,7 +1440,11 @@ private fun GameWallpaperSection(
                                     val pkgs = targetGames.map { it.packageName }
                                     if (pkgs.isNotEmpty()) {
                                         context.batchResetGameWallpapers(pkgs)
-                                        Toast.makeText(context, "Reset all game wallpapers to default", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.toast_game_wallpapers_reset),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 }
                         ) {
@@ -1487,7 +1491,11 @@ private fun GameWallpaperSection(
                     context.batchSetGameWallpaper(selectedPackages, pendingBatchUri!!)
                     Toast.makeText(
                         context,
-                        "Applied wallpaper to ${selectedPackages.size} game${if (selectedPackages.size > 1) "s" else ""}",
+                        context.resources.getQuantityString(
+                            R.plurals.toast_game_wallpaper_applied,
+                            selectedPackages.size,
+                            selectedPackages.size
+                        ),
                         Toast.LENGTH_SHORT
                     ).show()
                 }

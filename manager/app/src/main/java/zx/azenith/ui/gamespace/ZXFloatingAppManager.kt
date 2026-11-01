@@ -45,6 +45,7 @@ import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.Toast
+import zx.azenith.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -1084,22 +1085,22 @@ class ZXFloatingAppManager(
         session.hostView?.performHapticFeedback(hapticConstant)
 
         if (willMinimize) {
-            showModeToast("Minimized to icon")
+            showModeToast(context.getString(R.string.toast_minimized_to_icon))
             minimizeSessionToIcon(session)
         } else if (session.isFreeform) {
-            showModeToast("Freeform window")
+            showModeToast(context.getString(R.string.toast_freeform_window))
             commitFreeformDimensions(session)
         } else {
             val settledTier = resolveNearestSizeTier(session.heightPx)
             applySizePreset(session, settledTier)
             val label = when (settledTier) {
-                FloatingSizeState.MINI -> "Mini window"
-                FloatingSizeState.SMALL -> "Small window"
-                FloatingSizeState.NORMAL -> "Standard window"
-                FloatingSizeState.LARGE -> "Expanded window"
-                else -> "Floating window"
+                FloatingSizeState.MINI -> R.string.toast_mini_window
+                FloatingSizeState.SMALL -> R.string.toast_small_window
+                FloatingSizeState.NORMAL -> R.string.toast_standard_window
+                FloatingSizeState.LARGE -> R.string.toast_expanded_window
+                else -> R.string.toast_floating_window
             }
-            showModeToast(label)
+            showModeToast(context.getString(label))
         }
     }
 
@@ -1138,11 +1139,15 @@ class ZXFloatingAppManager(
         val density = context.resources.displayMetrics.density
 
         if (nextFreeform) {
-            showModeToast("Freeform enabled")
+            showModeToast(context.getString(R.string.toast_freeform_enabled))
             commitFreeformDimensions(session)
         } else {
             val landscape = session.prefersLandscape
-            showModeToast(if (landscape) "Landscape locked" else "Portrait locked")
+            showModeToast(
+                context.getString(
+                    if (landscape) R.string.toast_landscape_locked else R.string.toast_portrait_locked
+                )
+            )
             val dm = context.resources.displayMetrics
             val borderPx = (4f * density).roundToInt()
             val topBarPx = (34f * density).roundToInt()

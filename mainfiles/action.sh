@@ -22,6 +22,17 @@ readonly APK_COMP="$MODDIR/AZenith.apk"
 readonly TMP_DIR="/data/local/tmp"
 readonly TMP_APK="$TMP_DIR/AZenith_install.apk"
 
+if [ -f "$MODDIR/installer-lang.sh" ]; then
+	. "$MODDIR/installer-lang.sh"
+else
+	echo "[!] Installer language data is missing." >&2
+	exit 1
+fi
+
+module_action_msg() {
+	printf '%s\n' "$(azenith_text "$@")"
+}
+
 # Check if app is installed
 _app_installed() {
 	pm path zx.azenith >/dev/null 2>&1
@@ -35,7 +46,7 @@ _service_exists() {
 # Prepare app files safely
 _prepare_apk() {
 	if [ ! -f "$APK_COMP" ]; then
-		echo "[!] APK not found at $APK_COMP" >&2
+		module_action_msg module_action_apk_missing >&2
 		return 1
 	fi
 	cp "$APK_COMP" "$TMP_APK" || return 1
@@ -67,17 +78,17 @@ install_manager() {
 	while kill -0 $pid 2>/dev/null; do
 		clear
 		case $((i % 4)) in
-		0) echo "[-] Installing AZenith Manager..." ;;
-		1) echo "[/] Installing AZenith Manager..." ;;
-		2) echo "[|] Installing AZenith Manager..." ;;
-		3) echo "[\] Installing AZenith Manager..." ;;
+		0) module_action_msg installing_spinner - "AZenith Manager" ;;
+		1) module_action_msg installing_spinner / "AZenith Manager" ;;
+		2) module_action_msg installing_spinner '|' "AZenith Manager" ;;
+		3) module_action_msg installing_spinner '\' "AZenith Manager" ;;
 		esac
 		sleep 0.1
 		i=$((i + 1))
 		
 		# Pengecekan batas waktu
 		if [ $i -ge $MAX_TIMEOUT ]; then
-			echo "[!] Installation took too long. Stopping..."
+			module_action_msg install_timeout_stopping
 			kill -9 $pid 2>/dev/null
 			echo "Timeout: Installation exceeded 10 seconds" > "$tmp_log"
 			break
@@ -92,22 +103,22 @@ install_manager() {
 	rm -f "$tmp_log"
 
 	if echo "$result" | grep -iq "Success"; then
-		printf "[✓] AZenith Manager installed successfully\n"
+		module_action_msg install_success "AZenith Manager"
 
 		pm enable --user 0 zx.azenith/.Launcher >/dev/null 2>&1
 
-		echo "- Launching manager..."
+		module_action_msg launching_manager
 		sleep 1
 		return 0
 	else
-		echo "[!] Failed to install AZenith Manager"
+		module_action_msg module_action_failed
 		if echo "$result" | grep -iq "Timeout"; then
-			echo "  Error: Installation failed due to Timeout"
-            echo "  Possible reason: Your Rom blocking background install."
+			module_action_msg install_timeout
+			module_action_msg install_timeout_reason
 		else
-			echo "  Log: $result"
+			module_action_msg action_install_error_log "$result"
 		fi
-		echo "  Please install AZenith.apk manually."
+		module_action_msg module_action_install_manually
 		sleep 3
 		return 1
 	fi
@@ -116,7 +127,7 @@ install_manager() {
 clear
 
 if ! _app_installed; then
-	echo "[*] App not detected. Preparing installation..."
+	module_action_msg module_action_app_missing
 	sleep 1
 
 	if _prepare_apk; then
@@ -128,7 +139,7 @@ if ! _app_installed; then
 				"$BIN_SVC" --setup-access >/dev/null 2>&1
 				exec "$BIN_SVC" --appactivity >/dev/null 2>&1
 			else
-				echo "[!] Service binary not found at $BIN_SVC" >&2
+				module_action_msg module_action_binary_missing "$BIN_SVC" >&2
 				exit 1
 			fi
 		else
@@ -140,10 +151,10 @@ if ! _app_installed; then
 	fi
 else
 	if _service_exists; then
-		echo "[*] Launching AZenith Manager..."
+		module_action_msg module_action_launching_manager
 		exec "$BIN_SVC" --appactivity >/dev/null 2>&1
 	else
-		echo "[!] Service binary not found at $BIN_SVC" >&2
+		module_action_msg module_action_binary_missing "$BIN_SVC" >&2
 		exit 1
 	fi
 fi
