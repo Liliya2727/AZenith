@@ -169,6 +169,9 @@ mkdir -p "$MODULE_CONFIG/preload"
 mkdir -p "$MODULE_CONFIG/bypasschgconfig"
 mkdir -p "$MODULE_CONFIG/gamelist"
 mkdir -p "$MODPATH/system/bin"
+mkdir -p "$MODULE_CONFIG/debug"
+[ -f "$MODULE_CONFIG/debug/fps_counter_alwayson" ] || echo false > "$MODULE_CONFIG/debug/fps_counter_alwayson"
+[ -f "$MODULE_CONFIG/debug/explicit_fps_mthd" ] || echo use_default > "$MODULE_CONFIG/debug/explicit_fps_mthd"
 echo "- Create module config"
 
 # Flashable integrity checkup
