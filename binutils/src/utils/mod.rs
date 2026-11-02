@@ -6,8 +6,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use glob::glob;
 
-pub mod logger;
-use crate::utils::logger::{log_info, log_debug, log_warn, log_error};
+pub mod logging;
+use crate::utils::logging::{log_info, log_debug, log_warn, log_error};
 
 pub const MY_PATH: &str = "/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/data/data/com.termux/files/usr/bin";
 

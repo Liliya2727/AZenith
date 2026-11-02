@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+mod android_ffi;
 mod utils;
 
 use std::env;
