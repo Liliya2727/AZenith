@@ -58,7 +58,15 @@ class ZenithReceiver : BroadcastReceiver() {
                 val clearAll = intent.getBooleanExtra("clearall", false) || 
                               intent.getStringExtra("clearall") == "true"
                 if (clearAll) {
-                    manager.cancelAll()
+                    // Keep the overlay service notification alive; everything else this app
+                    // posted (profile cards, system logs) is safe to drop.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        manager.activeNotifications
+                            .filter { it.id != zx.azenith.ui.gamespace.ZXSidePanelService.NOTIFICATION_ID }
+                            .forEach { manager.cancel(it.tag, it.id) }
+                    } else {
+                        manager.cancelAll()
+                    }
                 }
                 intent.getStringExtra("toasttext")?.let {
                     Toast.makeText(context, it, Toast.LENGTH_LONG).show()
@@ -77,7 +85,7 @@ class ZenithReceiver : BroadcastReceiver() {
                     notifyTitle.contains("Balanced Profile", ignoreCase = true) ||
                     notifyMessage.contains("Manual", ignoreCase = true)
                 ) {
-                    zx.azenith.ui.gamespace.ZXSidePanelService.hide(context)
+                    zx.azenith.ui.gamespace.ZXSidePanelService.stop(context)
                 }
 
                 val openFloatingPkg = intent.getStringExtra("open_floating_app")

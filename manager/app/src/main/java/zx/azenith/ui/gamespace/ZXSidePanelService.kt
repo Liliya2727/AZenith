@@ -198,9 +198,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     companion object {
         const val ACTION_SHOW = "zx.azenith.action.SIDE_PANEL_SHOW"
         const val ACTION_HIDE = "zx.azenith.action.SIDE_PANEL_HIDE"
+        const val ACTION_STOP = "zx.azenith.action.SIDE_PANEL_STOP"
         const val ACTION_OPEN_FLOATING_APP = "zx.azenith.action.OPEN_FLOATING_APP"
         const val EXTRA_PACKAGE_NAME = "extra_package_name"
         const val EXTRA_APP_LABEL = "extra_app_label"
+
+        // Kept distinct from ZenithReceiver.PROFILE_ID (1001): foreground-service updates and
+        // profile posts used to share one slot, so each one silently replaced the other.
+        const val NOTIFICATION_ID = 1002
 
         private const val APPLIST_PATH = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
         private const val APP_STATUS_PATH = "/data/adb/.config/AZenith/app_status"
@@ -269,6 +274,27 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 android.util.Log.e("ZXSidePanelService", "Failed to hide service", e)
             }
         }
+
+        /**
+         * Hides the panel and tears the foreground service down once it is safe to do so.
+         *
+         * Unlike [hide], this is the game-exit path: without it the service stays alive with a
+         * non-dismissible foreground notification long after the game is gone.
+         */
+        fun stop(context: Context) {
+            if (!isServiceActive) return
+            try {
+                val intent = Intent(context, ZXSidePanelService::class.java).apply {
+                    action = ACTION_STOP
+                }
+                context.startService(intent)
+            } catch (e: Exception) {
+                android.util.Log.e("ZXSidePanelService", "Failed to stop service", e)
+                runCatching {
+                    context.stopService(Intent(context, ZXSidePanelService::class.java))
+                }
+            }
+        }
     }
 
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -292,6 +318,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var monitorJob: Job? = null
     private var telemetryJob: Job? = null
     private var windowTransitionJob: Job? = null
+    private var idleStopJob: Job? = null
     private var fpsTrackingActive = false
     private var fpsSamplerJob: Job? = null
 
@@ -430,8 +457,16 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForegroundNotification()
         val action = intent?.action ?: ACTION_SHOW
+        if (action == ACTION_STOP) {
+            if (stopServiceIfIdle()) return START_NOT_STICKY
+            // Floating windows (or the always-on sidepanel) still need this process: keep the
+            // foreground notification rather than leaving a live service without one.
+            startForegroundNotification()
+            return START_STICKY
+        }
+        startForegroundNotification()
+        cancelIdleStop()
         when (action) {
             ACTION_SHOW -> {
                 val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME)?.takeIf { it.isNotBlank() && it != packageName }
@@ -533,6 +568,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         monitorJob?.cancel()
         telemetryJob?.cancel()
         windowTransitionJob?.cancel()
+        idleStopJob?.cancel()
         floatingAppManager?.destroyAllSessions()
         floatingAppManager = null
         detachOverlay()
@@ -582,9 +618,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 } else {
                     0
                 }
-                startForeground(1001, notification, fgsType)
+                startForeground(NOTIFICATION_ID, notification, fgsType)
             } else {
-                startForeground(1001, notification)
+                startForeground(NOTIFICATION_ID, notification)
             }
         }.onFailure { e ->
             android.util.Log.w("ZXSidePanelService", "startForeground failed: ${e.message}")
@@ -705,6 +741,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun attachOverlayIfNeeded() {
+        cancelIdleStop()
         if (isViewAttached) return
         if (!Settings.canDrawOverlays(this)) return
 
@@ -1175,6 +1212,58 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    private fun hasFloatingWindows(): Boolean =
+        floatingAppManager?.sessions?.isNotEmpty() == true
+
+    private fun cancelIdleStop() {
+        idleStopJob?.cancel()
+        idleStopJob = null
+    }
+
+    /**
+     * Stops the service a few seconds after the overlay became idle. The delay covers game/app
+     * switches; any new [attachOverlayIfNeeded] cancels it. Force-sidepanel and floating windows
+     * keep the service alive because they still need the overlay host.
+     */
+    private fun scheduleIdleStop(delayMs: Long = 4_000L) {
+        if (isForceSidepanelEnabled() || hasFloatingWindows()) return
+        if (idleStopJob?.isActive == true) return
+        idleStopJob = serviceScope.launch {
+            delay(delayMs)
+            if (!isForceSidepanelEnabled() && !hasFloatingWindows() && !isViewAttached) {
+                stopServiceIfIdle()
+            }
+        }
+    }
+
+    /** @return true when the service was actually torn down. */
+    private fun stopServiceIfIdle(): Boolean {
+        if (isForceSidepanelEnabled() || hasFloatingWindows()) return false
+        if (System.currentTimeMillis() < pendingLaunchGraceUntilMs) return false
+
+        cancelIdleStop()
+        pendingLaunchPkg = null
+        pendingLaunchGraceUntilMs = 0L
+        activeGamePackage = null
+        panelState.activeGamePackage = null
+        activeGameLabel = null
+        stopFpsChoreographer()
+        isHandleVisible = false
+        isPanelExpanded = false
+        isWindowFullScreen = false
+        detachOverlay()
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        }
+        stopSelf()
+        return true
+    }
+
     private var backInvokedCallback: Any? = null
 
     private fun handleBackPress() {
@@ -1440,14 +1529,17 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                             activeGamePackage = null
                             panelState.activeGamePackage = null
                             activeGameLabel = null
-                            if (isHandleVisible || isViewAttached) {
-                                withContext(Dispatchers.Main) {
+                            withContext(Dispatchers.Main) {
+                                if (isHandleVisible || isViewAttached) {
                                     stopFpsChoreographer()
                                     isHandleVisible = false
                                     isPanelExpanded = false
                                     isWindowFullScreen = false
                                     detachOverlay()
                                 }
+                                // No game, no floating window, no forced sidepanel: let the
+                                // foreground notification go away with the overlay.
+                                scheduleIdleStop()
                             }
                         }
                     } else if (!screenAwake) {
