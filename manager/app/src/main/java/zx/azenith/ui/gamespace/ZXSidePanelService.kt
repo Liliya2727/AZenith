@@ -276,10 +276,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
 
         /**
-         * Hides the panel and tears the foreground service down once it is safe to do so.
+         * Hides the panel and asks the service to tear down once it is safe to do so.
          *
-         * Unlike [hide], this is the game-exit path: without it the service stays alive with a
-         * non-dismissible foreground notification long after the game is gone.
+         * The service only actually stops when the daemon's gameinfo reports no running game;
+         * home/recents/manager alone must not kill it while a game is still active.
          */
         fun stop(context: Context) {
             if (!isServiceActive) return
@@ -289,10 +289,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 }
                 context.startService(intent)
             } catch (e: Exception) {
+                // Never fall back to context.stopService(): that would bypass the gameinfo gate
+                // and kill the overlay while a game is still running.
                 android.util.Log.e("ZXSidePanelService", "Failed to stop service", e)
-                runCatching {
-                    context.stopService(Intent(context, ZXSidePanelService::class.java))
-                }
             }
         }
     }
@@ -318,7 +317,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var monitorJob: Job? = null
     private var telemetryJob: Job? = null
     private var windowTransitionJob: Job? = null
-    private var idleStopJob: Job? = null
     private var fpsTrackingActive = false
     private var fpsSamplerJob: Job? = null
 
@@ -466,7 +464,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             return START_STICKY
         }
         startForegroundNotification()
-        cancelIdleStop()
         when (action) {
             ACTION_SHOW -> {
                 val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME)?.takeIf { it.isNotBlank() && it != packageName }
@@ -568,7 +565,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         monitorJob?.cancel()
         telemetryJob?.cancel()
         windowTransitionJob?.cancel()
-        idleStopJob?.cancel()
         floatingAppManager?.destroyAllSessions()
         floatingAppManager = null
         detachOverlay()
@@ -741,7 +737,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun attachOverlayIfNeeded() {
-        cancelIdleStop()
         if (isViewAttached) return
         if (!Settings.canDrawOverlays(this)) return
 
@@ -1215,33 +1210,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun hasFloatingWindows(): Boolean =
         floatingAppManager?.sessions?.isNotEmpty() == true
 
-    private fun cancelIdleStop() {
-        idleStopJob?.cancel()
-        idleStopJob = null
-    }
-
-    /**
-     * Stops the service a few seconds after the overlay became idle. The delay covers game/app
-     * switches; any new [attachOverlayIfNeeded] cancels it. Force-sidepanel and floating windows
-     * keep the service alive because they still need the overlay host.
-     */
-    private fun scheduleIdleStop(delayMs: Long = 4_000L) {
-        if (isForceSidepanelEnabled() || hasFloatingWindows()) return
-        if (idleStopJob?.isActive == true) return
-        idleStopJob = serviceScope.launch {
-            delay(delayMs)
-            if (!isForceSidepanelEnabled() && !hasFloatingWindows() && !isViewAttached) {
-                stopServiceIfIdle()
-            }
-        }
-    }
-
     /** @return true when the service was actually torn down. */
-    private fun stopServiceIfIdle(): Boolean {
+    private fun stopServiceIfIdle(rootGranted: Boolean = checkRootGranted()): Boolean {
         if (isForceSidepanelEnabled() || hasFloatingWindows()) return false
         if (System.currentTimeMillis() < pendingLaunchGraceUntilMs) return false
+        // Home/recents/manager only detach the overlay. The service may only die once the daemon
+        // says there is no game left, not merely because the game lost foreground focus.
+        if (!isGameInfoIdle(rootGranted)) return false
 
-        cancelIdleStop()
         pendingLaunchPkg = null
         pendingLaunchGraceUntilMs = 0L
         activeGamePackage = null
@@ -1262,6 +1238,33 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
         stopSelf()
         return true
+    }
+
+    /**
+     * Whether gameinfo holds the daemon's exact idle record, "NULL 0 0".
+     *
+     * Both the app mirror and the daemon file are read, mirror first because it is written after
+     * the daemon file: a game start racing an older NULL then shows up as a mixed state instead
+     * of a false idle. An empty/partial file is unknown, never idle. If either source still names
+     * a package, the service stays alive.
+     */
+    private fun isGameInfoIdle(rootGranted: Boolean): Boolean {
+        val mirror = readGameInfoState(APP_GAMEINFO_PATH, false)
+        val daemon = readGameInfoState(DAEMON_GAMEINFO_PATH, rootGranted)
+        if (mirror == true || daemon == true) return false
+        return mirror == false || daemon == false
+    }
+
+    /** true = game package, false = exact "NULL 0 0", null = missing/empty/partial (unknown). */
+    private fun readGameInfoState(path: String, allowSuFallback: Boolean): Boolean? {
+        val raw = telemetryCollector.readFileTextDirectOrSu(path, allowSuFallback) ?: return null
+        val firstLine = raw.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: return null
+        val parts = firstLine.split(Regex("\\s+"))
+        val pkg = parts.getOrNull(0)?.takeIf { it.isNotEmpty() } ?: return null
+        if (!pkg.equals("NULL", ignoreCase = true)) return true
+        val pid = parts.getOrNull(1)?.toLongOrNull()
+        val uid = parts.getOrNull(2)?.toLongOrNull()
+        return if (pid == 0L && uid == 0L) false else null
     }
 
     private var backInvokedCallback: Any? = null
@@ -1524,11 +1527,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                             // Last floating window just closed: hold the panel until the game
                             // behind it is resumed, or it vanishes with the floating app.
                         } else {
-                            pendingLaunchPkg = null
-                            pendingLaunchGraceUntilMs = 0L
-                            activeGamePackage = null
-                            panelState.activeGamePackage = null
-                            activeGameLabel = null
                             withContext(Dispatchers.Main) {
                                 if (isHandleVisible || isViewAttached) {
                                     stopFpsChoreographer()
@@ -1537,9 +1535,19 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                     isWindowFullScreen = false
                                     detachOverlay()
                                 }
-                                // No game, no floating window, no forced sidepanel: let the
-                                // foreground notification go away with the overlay.
-                                scheduleIdleStop()
+                                // The overlay may stay detached while the game is in the
+                                // background, but only gameinfo can end the service. Keep the
+                                // launch grace intact until it expires so stopServiceIfIdle()
+                                // cannot tear down a service that is still within that window.
+                                if (!stopServiceIfIdle(rootGranted)) {
+                                    activeGamePackage = null
+                                    panelState.activeGamePackage = null
+                                    activeGameLabel = null
+                                    if (nowMs >= pendingLaunchGraceUntilMs) {
+                                        pendingLaunchPkg = null
+                                        pendingLaunchGraceUntilMs = 0L
+                                    }
+                                }
                             }
                         }
                     } else if (!screenAwake) {
