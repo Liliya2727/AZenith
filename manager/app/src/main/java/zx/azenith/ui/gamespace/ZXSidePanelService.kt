@@ -18,8 +18,10 @@
 
 package zx.azenith.ui.gamespace
 
+import android.app.ActivityManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
@@ -214,6 +216,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         const val ACTION_SHOW = "zx.azenith.action.SIDE_PANEL_SHOW"
         const val ACTION_HIDE = "zx.azenith.action.SIDE_PANEL_HIDE"
         const val ACTION_STOP = "zx.azenith.action.SIDE_PANEL_STOP"
+        const val ACTION_QUIT = "zx.azenith.action.SIDE_PANEL_QUIT"
         const val ACTION_OPEN_FLOATING_APP = "zx.azenith.action.OPEN_FLOATING_APP"
         const val EXTRA_PACKAGE_NAME = "extra_package_name"
         const val EXTRA_APP_LABEL = "extra_app_label"
@@ -307,6 +310,18 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 // Never fall back to context.stopService(): that would bypass the gameinfo gate
                 // and kill the overlay while a game is still running.
                 android.util.Log.e("ZXSidePanelService", "Failed to stop service", e)
+            }
+        }
+
+        fun quit(context: Context) {
+            if (!isServiceActive) return
+            try {
+                val intent = Intent(context, ZXSidePanelService::class.java).apply {
+                    action = ACTION_QUIT
+                }
+                context.startService(intent)
+            } catch (e: Exception) {
+                android.util.Log.e("ZXSidePanelService", "Failed to quit service", e)
             }
         }
     }
@@ -482,6 +497,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action ?: ACTION_SHOW
+        if (action == ACTION_QUIT) {
+            terminateServiceImmediately()
+            return START_NOT_STICKY
+        }
         if (action == ACTION_STOP) {
             if (stopServiceIfIdle()) return START_NOT_STICKY
             // Floating windows (or the always-on sidepanel) still need this process: keep the
@@ -570,6 +589,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 isPanelExpanded = false
                 isWindowFullScreen = false
                 detachOverlay()
+                stopServiceIfIdle()
             }
             ACTION_OPEN_FLOATING_APP -> {
                 val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME)
@@ -624,6 +644,15 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             }
             nm.createNotificationChannel(channel)
         }
+        val quitIntent = Intent(this, ZXSidePanelService::class.java).apply {
+            action = ACTION_QUIT
+        }
+        val quitPendingIntent = PendingIntent.getService(
+            this,
+            1001,
+            quitIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(zx.azenith.R.mipmap.ic_launcher)
             .setContentTitle("Game Space")
@@ -631,6 +660,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
             .setSilent(true)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Quit", quitPendingIntent)
             .build()
 
         runCatching {
@@ -1257,24 +1287,21 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun hasFloatingWindows(): Boolean =
         floatingAppManager?.sessions?.isNotEmpty() == true
 
-    /** @return true when the service was actually torn down. */
-    private fun stopServiceIfIdle(rootGranted: Boolean = checkRootGranted()): Boolean {
-        if (isForceSidepanelEnabled() || hasFloatingWindows()) return false
-        if (System.currentTimeMillis() < pendingLaunchGraceUntilMs) return false
-        // Home/recents/manager only detach the overlay. The service may only die once the daemon
-        // says there is no game left, not merely because the game lost foreground focus.
-        if (!isGameInfoIdle(rootGranted)) return false
-
+    private fun terminateServiceImmediately() {
         pendingLaunchPkg = null
         pendingLaunchGraceUntilMs = 0L
         activeGamePackage = null
         panelState.activeGamePackage = null
         activeGameLabel = null
+        synchronized(appsOpenedFromAzenith) {
+            appsOpenedFromAzenith.clear()
+        }
         stopFpsChoreographer()
         isHandleVisible = false
         isPanelExpanded = false
         isWindowFullScreen = false
         detachOverlay()
+        floatingAppManager?.destroyAllSessions()
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -1283,35 +1310,83 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 stopForeground(true)
             }
         }
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        nm?.cancel(NOTIFICATION_ID)
         stopSelf()
+    }
+
+    /** @return true when the service was actually torn down. */
+    private fun stopServiceIfIdle(rootGranted: Boolean = checkRootGranted()): Boolean {
+        if (isForceSidepanelEnabled() || hasFloatingWindows()) return false
+        if (System.currentTimeMillis() < pendingLaunchGraceUntilMs) return false
+
+        // Check if daemon/gameinfo has an active game whose process is alive
+        if (isGameActiveInGameInfo(rootGranted)) return false
+
+        // Check if currently recorded activeGamePackage is still running
+        val currentActive = activeGamePackage
+        if (!currentActive.isNullOrBlank() && isPackageRunning(currentActive, rootGranted)) {
+            return false
+        }
+
+        // Clean up closed games from appsOpenedFromAzenith and check if any remain
+        val anyLaunchedRunning = synchronized(appsOpenedFromAzenith) {
+            appsOpenedFromAzenith.removeAll { !isPackageRunning(it, rootGranted) }
+            appsOpenedFromAzenith.isNotEmpty()
+        }
+        if (anyLaunchedRunning) {
+            return false
+        }
+
+        terminateServiceImmediately()
         return true
     }
 
-    /**
-     * Whether gameinfo holds the daemon's exact idle record, "NULL 0 0".
-     *
-     * Both the app mirror and the daemon file are read, mirror first because it is written after
-     * the daemon file: a game start racing an older NULL then shows up as a mixed state instead
-     * of a false idle. An empty/partial file is unknown, never idle. If either source still names
-     * a package, the service stays alive.
-     */
-    private fun isGameInfoIdle(rootGranted: Boolean): Boolean {
-        val mirror = readGameInfoState(APP_GAMEINFO_PATH, false)
-        val daemon = readGameInfoState(DAEMON_GAMEINFO_PATH, rootGranted)
-        if (mirror == true || daemon == true) return false
-        return mirror == false || daemon == false
+    private fun isGameActiveInGameInfo(rootGranted: Boolean): Boolean {
+        return isGameInfoFileActive(APP_GAMEINFO_PATH, false) ||
+            isGameInfoFileActive(DAEMON_GAMEINFO_PATH, rootGranted)
     }
 
-    /** true = game package, false = exact "NULL 0 0", null = missing/empty/partial (unknown). */
-    private fun readGameInfoState(path: String, allowSuFallback: Boolean): Boolean? {
-        val raw = telemetryCollector.readFileTextDirectOrSu(path, allowSuFallback) ?: return null
-        val firstLine = raw.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: return null
+    private fun isGameInfoFileActive(path: String, allowSu: Boolean): Boolean {
+        val raw = telemetryCollector.readFileTextDirectOrSu(path, allowSu) ?: return false
+        val firstLine = raw.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: return false
         val parts = firstLine.split(Regex("\\s+"))
-        val pkg = parts.getOrNull(0)?.takeIf { it.isNotEmpty() } ?: return null
-        if (!pkg.equals("NULL", ignoreCase = true)) return true
+        val pkg = parts.getOrNull(0)?.takeIf { it.isNotEmpty() } ?: return false
+        if (pkg.equals("NULL", ignoreCase = true)) return false
+
         val pid = parts.getOrNull(1)?.toLongOrNull()
-        val uid = parts.getOrNull(2)?.toLongOrNull()
-        return if (pid == 0L && uid == 0L) false else null
+        if (pid != null && pid > 0) {
+            val procAlive = try {
+                File("/proc/$pid").exists()
+            } catch (_: Exception) {
+                false
+            }
+            if (procAlive) return true
+        }
+
+        return isPackageRunning(pkg, checkRootGranted())
+    }
+
+    private fun isPackageRunning(pkg: String, rootGranted: Boolean): Boolean {
+        if (pkg.isBlank() || pkg == packageName) return false
+        return try {
+            if (rootGranted) {
+                val res = Shell.cmd("pidof $pkg").exec()
+                res.isSuccess && res.out.any { it.trim().isNotEmpty() }
+            } else {
+                val am = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                val running = am?.runningAppProcesses?.any {
+                    it.processName == pkg || it.processName.startsWith("$pkg:")
+                } == true
+                if (running) return true
+                val p = Runtime.getRuntime().exec(arrayOf("pidof", pkg))
+                val line = p.inputStream.bufferedReader().readLine()
+                p.waitFor()
+                !line.isNullOrBlank()
+            }
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private var backInvokedCallback: Any? = null
@@ -1630,9 +1705,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 // launch grace intact until it expires so stopServiceIfIdle()
                                 // cannot tear down a service that is still within that window.
                                 if (!stopServiceIfIdle(rootGranted)) {
-                                    activeGamePackage = null
-                                    panelState.activeGamePackage = null
-                                    activeGameLabel = null
                                     if (nowMs >= pendingLaunchGraceUntilMs) {
                                         pendingLaunchPkg = null
                                         pendingLaunchGraceUntilMs = 0L

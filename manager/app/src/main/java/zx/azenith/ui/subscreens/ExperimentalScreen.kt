@@ -61,9 +61,9 @@ import zx.azenith.ui.gamespace.setGameSpaceLauncherEnabled
 import zx.azenith.ui.navigation.safePopBackStack
 
 /**
- * Game Space is the one experiment, and it has no page of its own: the mode switch and the way in
- * both sit here. The switch makes every launch open Game Space; the row enters it on demand,
- * which is what a switch that is off leaves you needing.
+ * Game Space is the one experiment, and it has no page of its own: the shortcut toggle and
+ * the entry row both sit here. The switch toggles the launcher alias in the app list; the row
+ * enters it directly on demand.
  */
 @Composable
 fun ExperimentalScreen(navController: NavController) {

@@ -133,8 +133,8 @@
     <string name="gamespace_boot_scan">Scanning the game library</string>
     <string name="gamespace_boot_tune">Applying the performance profile</string>
     <string name="gamespace_desc">A landscape, gamepad-first shell for AZenith</string>
-    <string name="gamespace_enable">Game Space mode</string>
-    <string name="gamespace_enable_desc">Fade to black and open Game Space whenever AZenith starts</string>
+    <string name="gamespace_enable">Game Space shortcut</string>
+    <string name="gamespace_enable_desc">Add Game Space shortcut to the app list if enabled</string>
     <string name="gamespace_enter">Enter Game Space</string>
     <string name="gamespace_enter_desc">Hand off to the shell right now</string>
     <string name="gamespace_hint">D-Pad Navigate · A Select · B Back</string>

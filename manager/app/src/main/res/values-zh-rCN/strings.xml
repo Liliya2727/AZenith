@@ -132,8 +132,8 @@
     <string name="gamespace_boot_scan">扫描游戏库</string>
     <string name="gamespace_boot_tune">应用性能概况</string>
     <string name="gamespace_desc">A landscape, gamepad-first shell for AZenith</string>
-    <string name="gamespace_enable">游戏空间模式</string>
-    <string name="gamespace_enable_desc">Fade to black and open Game Space whenever AZenith starts</string>
+    <string name="gamespace_enable">游戏空间快捷方式</string>
+    <string name="gamespace_enable_desc">启用后在应用列表中添加游戏空间快捷方式</string>
     <string name="gamespace_enter">进入游戏空间</string>
     <string name="gamespace_enter_desc">Hand off to the shell right now</string>
     <string name="gamespace_hint">D-Pad Navigate · A Select · B Back</string>
