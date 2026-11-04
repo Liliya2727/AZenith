@@ -81,6 +81,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -98,6 +99,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -105,10 +109,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -128,6 +135,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -358,15 +366,22 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         when (key) {
             "gamespace_sidepanel_side" -> {
                 sideSetting = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
+                panelState.panelSide = sideSetting
                 updateHandleWindowIfCollapsed()
             }
             "gamespace_sidepanel_sensitivity" -> {
                 barSensitivity = prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100)
+                panelState.panelSensitivity = barSensitivity
             }
             "gamespace_sidepanel_length" -> {
                 barLengthPref = prefs.getInt("gamespace_sidepanel_length", 50).coerceIn(20, 100)
+                panelState.panelBarLength = barLengthPref
                 updateHandleWindowIfCollapsed()
             }
+            "gamespace_sidepanel_thickness" -> updateHandleWindowIfCollapsed()
+            "gamespace_sidepanel_opacity", "gamespace_sidepanel_blur" -> updateExpandedWindowAppearance()
+            "color_mode" -> panelState.colorMode = prefs.getInt("color_mode", 3)
+            "key_color" -> panelState.keyColor = prefs.getInt("key_color", 0)
         }
     }
 
@@ -754,7 +769,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val barHeightDp = computeHandleBarHeightDp()
                     SidePanelRoot(
                         state = panelState,
-                        isLeft = sideSetting == "left",
+                        isLeft = panelState.panelSide == "left",
                         isHandleVisible = isHandleVisible,
                         isHandlePressed = isHandlePressed,
                         isExpanded = isPanelExpanded,
@@ -1311,6 +1326,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun expandPanel() {
         if (isPanelExpanded) return
         syncInitialAudioAndBrightness()
+        panelState.blurSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            windowManager?.isCrossWindowBlurEnabled == true
         val view = rootOverlayView ?: return
         val wm = windowManager ?: return
         windowTransitionJob?.cancel()
@@ -1376,7 +1393,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun createHandleLayoutParams(isLeft: Boolean, yPx: Int): WindowManager.LayoutParams {
         val density = resources.displayMetrics.density
         val barHeightDp = computeHandleBarHeightDp()
-        val targetWidth = (24 * density).roundToInt()
+        val targetWidth = ((panelState.panelBarThickness + 19) * density).roundToInt()
         val targetHeight = ((barHeightDp + 16f) * density).roundToInt()
 
         return WindowManager.LayoutParams(
@@ -1395,6 +1412,22 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    private fun updateExpandedWindowAppearance() {
+        if (!isWindowFullScreen) return
+        val view = rootOverlayView ?: return
+        val params = view.layoutParams as? WindowManager.LayoutParams ?: return
+        params.alpha = 1f
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            params.setBlurBehindRadius((panelState.panelBlur * resources.displayMetrics.density).roundToInt())
+            if (panelState.blurSupported && panelState.panelBlur > 0) {
+                params.flags = params.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+            } else {
+                params.flags = params.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+            }
+        }
+        runCatching { windowManager?.updateViewLayout(view, params) }
+    }
+
     private fun createExpandedLayoutParams(): WindowManager.LayoutParams {
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -1406,6 +1439,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.FILL
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && panelState.blurSupported && panelState.panelBlur > 0) {
+                flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+                setBlurBehindRadius((panelState.panelBlur * resources.displayMetrics.density).roundToInt())
+            }
             applyFullCutoutMode()
         }
     }
@@ -2490,6 +2527,7 @@ fun SidePanelRoot(
                 isLeft = isLeft,
                 isPressed = isHandlePressed,
                 barHeightDp = barHeightDp,
+                barWidthDp = state.panelBarThickness.toFloat(),
                 morphProgress = 1f - barVisibilityProgress,
                 modifier = Modifier
                     .align(if (isLeft) Alignment.TopStart else Alignment.TopEnd)
@@ -2513,9 +2551,10 @@ fun SidePanelRoot(
 
             Box(
                 modifier = Modifier
+                    .then(if (state.editMode) Modifier.fillMaxSize() else Modifier)
                     .align(if (isLeft) Alignment.CenterStart else Alignment.CenterEnd)
                     // Manual safe-area padding (system display cutout safe-area inset is disabled)
-                    .padding(horizontal = horizPad, vertical = 8.dp)
+                    .padding(horizontal = if (state.editMode) 0.dp else horizPad, vertical = if (state.editMode) 0.dp else 8.dp)
                     .graphicsLayer {
                         transformOrigin = TransformOrigin(
                             pivotFractionX = if (isLeft) 0f else 1f,
@@ -2577,13 +2616,14 @@ private fun SwipeEdgeHandle(
     isLeft: Boolean,
     isPressed: Boolean,
     barHeightDp: Float,
+    barWidthDp: Float,
     morphProgress: Float,
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
 
     val barWidth by animateDpAsState(
-        targetValue = if (isPressed || morphProgress > 0.05f) 7.dp else 4.5.dp,
+        targetValue = if (isPressed || morphProgress > 0.05f) (barWidthDp + 2f).dp else barWidthDp.dp,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioLowBouncy,
             stiffness = Spring.StiffnessMediumLow
@@ -2653,12 +2693,20 @@ private fun SidepanelWorkspaceRow(
     availableWidthDp: Dp,
     isCompactPortrait: Boolean
 ) {
+    val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
     val feedListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val feedBlocks by remember {
-        derivedStateOf { state.buildFeedBlocks() }
+        derivedStateOf {
+            val categories = when (state.activeDestination) {
+                "dashboard" -> setOf("overview")
+                "widgets" -> setOf("quickTools", "antiInterference", "addons")
+                else -> emptySet()
+            }
+            state.buildFeedBlocks().filter { it.category in categories }
+        }
     }
 
     var workspaceRootOrigin by remember { mutableStateOf(Offset.Zero) }
@@ -2777,33 +2825,24 @@ private fun SidepanelWorkspaceRow(
         }
     }
 
-    val onScrollToSection: (String) -> Unit = { categoryName ->
-        if (state.activeSubscreen != null) {
-            state.closeSubscreen()
-        }
-        state.activeScrollCategory = categoryName
-        coroutineScope.launch {
-            val idx = state.activeWidgets.indexOfFirst { wId ->
-                state.widgetCatalog[wId]?.category == categoryName
-            }
-            if (idx >= 0) {
-                feedListState.animateScrollToItem(idx)
-            }
-        }
+    val onSelectDestination: (String) -> Unit = { destination ->
+        if (state.activeSubscreen != null) state.closeSubscreen()
+        if (state.editMode) state.toggleEditMode(false)
+        state.activeDestination = destination
+        coroutineScope.launch { feedListState.scrollToItem(0) }
     }
 
     val railWidth = if (isCompactPortrait) 64.dp else 78.dp
     val rowSpacing = if (isCompactPortrait) 8.dp else 10.dp
     val targetMainWidth = if (isCompactPortrait) {
-        (availableWidthDp - railWidth - rowSpacing).coerceIn(252.dp, 354.dp)
+        (availableWidthDp - railWidth - rowSpacing).coerceAtMost(354.dp)
     } else {
         if (state.editMode) 332.dp else 354.dp
     }
 
     Box(
         modifier = Modifier
-            .fillMaxHeight(if (isCompactPortrait) 0.90f else 0.86f)
-            .heightIn(max = if (isCompactPortrait) 820.dp else 740.dp)
+            .then(if (state.editMode) Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface) else Modifier.fillMaxHeight(if (isCompactPortrait) 0.90f else 0.86f).heightIn(max = if (isCompactPortrait) 820.dp else 740.dp))
             .onGloballyPositioned { coords ->
                 workspaceRootOrigin = coords.positionInRoot()
             }
@@ -2941,7 +2980,85 @@ private fun SidepanelWorkspaceRow(
             libraryAddBtnBoundsMap[wId] = addBtnRect
         }
 
-        Row(
+        if (state.editMode) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = scheme.surfaceContainerLowest.copy(alpha = 0.98f),
+                shadowElevation = 24.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 18.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "Configure widgets",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = scheme.onSurface
+                            )
+                            Text(
+                                text = "Drag to reorder placed widgets or add from library",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                        Button(
+                            onClick = { state.toggleEditMode(false) },
+                            shape = MaterialTheme.shapes.medium,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = scheme.primary,
+                                contentColor = scheme.onPrimary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("check"),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Done", style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        MainSidepanelContent(
+                            state = state,
+                            clockTime = clockTime,
+                            panelWidth = availableWidthDp * 0.55f,
+                            feedBlocks = feedBlocks,
+                            feedListState = feedListState,
+                            onFeedBoundsChanged = { mainFeedRootBounds = it },
+                            onReportActiveCardBounds = reportActiveCardBounds,
+                            modifier = Modifier
+                                .weight(1.15f)
+                                .fillMaxHeight()
+                        )
+                        RightWidgetDrawer(
+                            state = state,
+                            drawerWidth = availableWidthDp * 0.45f,
+                            onDrawerBoundsChanged = { rightDrawerRootBounds = it },
+                            onReportLibraryCardBounds = reportLibraryCardBounds,
+                            modifier = Modifier
+                                .weight(0.85f)
+                                .fillMaxHeight()
+                        )
+                    }
+                }
+            }
+        } else Row(
             modifier = Modifier.fillMaxHeight(),
             horizontalArrangement = Arrangement.spacedBy(rowSpacing),
             verticalAlignment = Alignment.CenterVertically
@@ -2950,171 +3067,35 @@ private fun SidepanelWorkspaceRow(
                 DetachedLeftRail(
                     state = state,
                     railWidth = railWidth,
-                    onScrollToSection = onScrollToSection
+                    onDestinationSelected = onSelectDestination
                 )
 
-                if (isCompactPortrait) {
-                    Column(
-                        modifier = Modifier
-                            .width(targetMainWidth)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        MainSidepanelContent(
-                            state = state,
-                            clockTime = clockTime,
-                            panelWidth = targetMainWidth,
-                            feedBlocks = feedBlocks,
-                            feedListState = feedListState,
-                            onFeedBoundsChanged = { mainFeedRootBounds = it },
-                            onReportActiveCardBounds = reportActiveCardBounds,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        AnimatedVisibility(
-                            visible = state.editMode,
-                            enter = slideInVertically(
-                                initialOffsetY = { it / 2 },
-                                animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                            ) + expandVertically(
-                                animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                            ) + fadeIn(tween(180)),
-                            exit = slideOutVertically(
-                                targetOffsetY = { it / 2 },
-                                animationSpec = tween(180)
-                            ) + shrinkVertically(
-                                animationSpec = tween(180)
-                            ) + fadeOut(tween(140))
-                        ) {
-                            RightWidgetDrawer(
-                                state = state,
-                                drawerWidth = targetMainWidth,
-                                onDrawerBoundsChanged = { rightDrawerRootBounds = it },
-                                onReportLibraryCardBounds = reportLibraryCardBounds,
-                                modifier = Modifier.height(216.dp)
-                            )
-                        }
-                    }
-                } else {
-                    MainSidepanelContent(
-                        state = state,
-                        clockTime = clockTime,
-                        panelWidth = targetMainWidth,
-                        feedBlocks = feedBlocks,
-                        feedListState = feedListState,
-                        onFeedBoundsChanged = { mainFeedRootBounds = it },
-                        onReportActiveCardBounds = reportActiveCardBounds,
-                        modifier = Modifier.fillMaxHeight()
-                    )
-
-                    AnimatedVisibility(
-                        visible = state.editMode,
-                        enter = slideInHorizontally(
-                            initialOffsetX = { it / 2 },
-                            animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
-                        ) + expandHorizontally(
-                            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                        ) + fadeIn(tween(200)),
-                        exit = slideOutHorizontally(
-                            targetOffsetX = { it / 2 },
-                            animationSpec = tween(200)
-                        ) + shrinkHorizontally(
-                            animationSpec = tween(200)
-                        ) + fadeOut(tween(150))
-                    ) {
-                        RightWidgetDrawer(
-                            state = state,
-                            drawerWidth = 264.dp,
-                            onDrawerBoundsChanged = { rightDrawerRootBounds = it },
-                            onReportLibraryCardBounds = reportLibraryCardBounds,
-                            modifier = Modifier.fillMaxHeight()
-                        )
-                    }
-                }
+                MainSidepanelContent(
+                    state = state,
+                    clockTime = clockTime,
+                    panelWidth = targetMainWidth,
+                    feedBlocks = feedBlocks,
+                    feedListState = feedListState,
+                    onFeedBoundsChanged = { mainFeedRootBounds = it },
+                    onReportActiveCardBounds = reportActiveCardBounds,
+                    modifier = Modifier.fillMaxHeight()
+                )
             } else {
-                if (isCompactPortrait) {
-                    Column(
-                        modifier = Modifier
-                            .width(targetMainWidth)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        MainSidepanelContent(
-                            state = state,
-                            clockTime = clockTime,
-                            panelWidth = targetMainWidth,
-                            feedBlocks = feedBlocks,
-                            feedListState = feedListState,
-                            onFeedBoundsChanged = { mainFeedRootBounds = it },
-                            onReportActiveCardBounds = reportActiveCardBounds,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        AnimatedVisibility(
-                            visible = state.editMode,
-                            enter = slideInVertically(
-                                initialOffsetY = { it / 2 },
-                                animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                            ) + expandVertically(
-                                animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                            ) + fadeIn(tween(180)),
-                            exit = slideOutVertically(
-                                targetOffsetY = { it / 2 },
-                                animationSpec = tween(180)
-                            ) + shrinkVertically(
-                                animationSpec = tween(180)
-                            ) + fadeOut(tween(140))
-                        ) {
-                            RightWidgetDrawer(
-                                state = state,
-                                drawerWidth = targetMainWidth,
-                                onDrawerBoundsChanged = { rightDrawerRootBounds = it },
-                                onReportLibraryCardBounds = reportLibraryCardBounds,
-                                modifier = Modifier.height(216.dp)
-                            )
-                        }
-                    }
-                } else {
-                    AnimatedVisibility(
-                        visible = state.editMode,
-                        enter = slideInHorizontally(
-                            initialOffsetX = { -it / 2 },
-                            animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
-                        ) + expandHorizontally(
-                            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
-                        ) + fadeIn(tween(200)),
-                        exit = slideOutHorizontally(
-                            targetOffsetX = { -it / 2 },
-                            animationSpec = tween(200)
-                        ) + shrinkHorizontally(
-                            animationSpec = tween(200)
-                        ) + fadeOut(tween(150))
-                    ) {
-                        RightWidgetDrawer(
-                            state = state,
-                            drawerWidth = 264.dp,
-                            onDrawerBoundsChanged = { rightDrawerRootBounds = it },
-                            onReportLibraryCardBounds = reportLibraryCardBounds,
-                            modifier = Modifier.fillMaxHeight()
-                        )
-                    }
-
-                    MainSidepanelContent(
-                        state = state,
-                        clockTime = clockTime,
-                        panelWidth = targetMainWidth,
-                        feedBlocks = feedBlocks,
-                        feedListState = feedListState,
-                        onFeedBoundsChanged = { mainFeedRootBounds = it },
-                        onReportActiveCardBounds = reportActiveCardBounds,
-                        modifier = Modifier.fillMaxHeight()
-                    )
-                }
+                MainSidepanelContent(
+                    state = state,
+                    clockTime = clockTime,
+                    panelWidth = targetMainWidth,
+                    feedBlocks = feedBlocks,
+                    feedListState = feedListState,
+                    onFeedBoundsChanged = { mainFeedRootBounds = it },
+                    onReportActiveCardBounds = reportActiveCardBounds,
+                    modifier = Modifier.fillMaxHeight()
+                )
 
                 DetachedLeftRail(
                     state = state,
                     railWidth = railWidth,
-                    onScrollToSection = onScrollToSection
+                    onDestinationSelected = onSelectDestination
                 )
             }
         }
@@ -3156,21 +3137,20 @@ private fun SidepanelWorkspaceRow(
 private fun DetachedLeftRail(
     state: ZXSidePanelStateHolder,
     railWidth: Dp,
-    onScrollToSection: (String) -> Unit
+    onDestinationSelected: (String) -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
     val navItems = remember {
         listOf(
-            Triple("overview", "Basic", "speed"),
-            Triple("quickTools", "Tools", "grid_view"),
-            Triple("antiInterference", "DND", "do_not_disturb_on"),
-            Triple("addons", "Add-ons", "auto_fix_high")
+            Triple("dashboard", "Dashboard", "space_dashboard"),
+            Triple("widgets", "Widgets", "widgets"),
+            Triple("edit", "Edit", "edit")
         )
     }
 
     Surface(
-        shape = RoundedCornerShape(32.dp),
-        color = scheme.surfaceContainerLow,
+        shape = if (state.panelStyle == 0) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.small,
+        color = scheme.surfaceContainerLow.copy(alpha = state.panelOpacity / 100f),
         shadowElevation = 24.dp,
         modifier = Modifier
             .width(railWidth)
@@ -3179,7 +3159,6 @@ private fun DetachedLeftRail(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(vertical = 14.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -3189,8 +3168,8 @@ private fun DetachedLeftRail(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                navItems.forEach { (catId, label, iconName) ->
-                    val isActive = state.activeScrollCategory == catId
+                navItems.forEach { (destination, label, iconName) ->
+                    val isActive = state.activeDestination == destination
                     val pillScale by animateFloatAsState(
                         targetValue = if (isActive) 1.08f else 1f,
                         animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
@@ -3218,7 +3197,7 @@ private fun DetachedLeftRail(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = { onScrollToSection(catId) }
+                                onClick = { onDestinationSelected(destination) }
                             )
                             .padding(vertical = 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -3277,6 +3256,8 @@ private fun DetachedLeftRail(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
                     .padding(vertical = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -3547,12 +3528,12 @@ private fun MainSidepanelContent(
                 val item: NormalFeedItem = when (block) {
                     is SidePanelFeedBlock.Single -> NormalFeedItem.Single(
                         widgetId = block.widgetId,
-                        span = state.getWidgetSpan(block.widgetId)
+                        span = if (state.activeDestination == "widgets") 1 else state.getWidgetSpan(block.widgetId)
                     )
                     is SidePanelFeedBlock.Merged -> NormalFeedItem.Merged(
                         groupIds = block.groupIds,
                         mergeGroup = block.mergeGroup,
-                        span = state.getWidgetSpan(block.groupIds.first())
+                        span = if (state.activeDestination == "widgets") 1 else state.getWidgetSpan(block.groupIds.first())
                     )
                 }
 
@@ -3584,122 +3565,22 @@ private fun MainSidepanelContent(
     )
 
     Surface(
-        shape = RoundedCornerShape(32.dp),
-        color = scheme.surfaceContainerLow,
+        shape = if (state.panelStyle == 0) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.small,
+        color = scheme.surfaceContainerLow.copy(alpha = state.panelOpacity / 100f),
         shadowElevation = 24.dp,
-        modifier = modifier.width(mainPanelWidth)
+        modifier = modifier.then(if (state.editMode) Modifier else Modifier.width(mainPanelWidth))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp)
         ) {
-            // Header vs Sub-Screen Header
-            if (state.activeSubscreen == null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = scheme.primaryContainer,
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = ZXSidePanelIcons.get("sports_esports"),
-                                    contentDescription = null,
-                                    tint = scheme.onPrimaryContainer,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Game Space",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = scheme.onSurface,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
-                            ) {
-                                Icon(
-                                    imageVector = ZXSidePanelIcons.get("wifi"),
-                                    contentDescription = null,
-                                    tint = scheme.onSurfaceVariant,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "${state.batteryLevel}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = scheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                                Text(
-                                    text = "•",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = scheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                                Text(
-                                    text = clockTime,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = scheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
-                        }
-                    }
-
-                    // Toggle Edit Mode Button
-                    val editBtnContainer by animateColorAsState(
-                        targetValue = if (state.editMode) scheme.primary else scheme.surfaceContainerHigh,
-                        animationSpec = tween(250),
-                        label = "EditBtnContainer"
-                    )
-                    val editBtnContent by animateColorAsState(
-                        targetValue = if (state.editMode) scheme.onPrimary else scheme.onSurface,
-                        animationSpec = tween(250),
-                        label = "EditBtnContent"
-                    )
-                    Surface(
-                        shape = CircleShape,
-                        color = editBtnContainer,
-                        contentColor = editBtnContent,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .clickable { state.toggleEditMode() }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = ZXSidePanelIcons.get(if (state.editMode) "check" else "edit"),
-                                contentDescription = "Customize and reorder widgets",
-                                tint = editBtnContent,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-            } else {
-                // Subscreen Header
+            if (state.activeSubscreen != null) {
                 val subscreenTitle = when (state.activeSubscreen) {
+                    "quickTools" -> "Tools"
+                    "antiInterference" -> "Do not disturb"
+                    "networkPing" -> "Network"
+                    "thermalBattery" -> "Thermal & battery"
                     "liveMonitor" -> "Live Monitor"
                     "crosshair" -> "Crosshair settings"
                     "display" -> "Color Scheme"
@@ -3795,6 +3676,78 @@ private fun MainSidepanelContent(
                         }
                     }
                 }
+            } else if (!state.editMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = scheme.primaryContainer,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("sports_esports"),
+                                    contentDescription = null,
+                                    tint = scheme.onPrimaryContainer,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Game Space",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = scheme.onSurface,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("wifi"),
+                                    contentDescription = null,
+                                    tint = scheme.onSurfaceVariant,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "${state.batteryLevel}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                                Text(
+                                    text = "•",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                                Text(
+                                    text = clockTime,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Scrollable Widgets Feed / Subscreens
@@ -3819,6 +3772,11 @@ private fun MainSidepanelContent(
                 label = "MainFeedSubscreenTransition"
             ) { currentSubscreen ->
                 when (currentSubscreen) {
+                    "quickTools", "antiInterference", "networkPing", "thermalBattery" -> {
+                        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                            SidePanelWidgetContent(widgetId = currentSubscreen, state = state, span = 3)
+                        }
+                    }
                     "liveMonitor" -> {
                         Column(
                             modifier = Modifier
@@ -3860,7 +3818,15 @@ private fun MainSidepanelContent(
                         }
                     }
                     else -> {
-                        if (state.activeWidgets.isEmpty() && state.draggingWidgetId == null) {
+                        if (state.activeDestination == "edit" && !state.editMode) {
+                            PanelCustomizationContent(
+                                state = state,
+                                blurSupported = state.blurSupported,
+                                onConfigureWidgets = { state.toggleEditMode(true) }
+                            )
+                        } else if (state.activeDestination == "widgets" && !state.editMode) {
+                            CompactPanelWidgets(state)
+                        } else if (state.activeWidgets.isEmpty() && state.draggingWidgetId == null) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -4037,6 +4003,371 @@ private fun MainSidepanelContent(
 }
 
 @Composable
+private fun CompactPanelWidgets(state: ZXSidePanelStateHolder) {
+    val widgets = state.activeWidgets.filter { state.widgetCatalog[it]?.category != "overview" }
+    val scheme = MaterialTheme.colorScheme
+
+    if (widgets.isEmpty()) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = scheme.surfaceContainerHigh,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("widgets"),
+                    contentDescription = null,
+                    tint = scheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+                Text(
+                    text = "No additional widgets placed",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = scheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "Add widgets in the Edit menu",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            items(widgets, key = { it }) { id ->
+                val meta = state.widgetCatalog[id] ?: return@items
+                Surface(
+                    onClick = { state.openSubscreen(if (id == "displayTouch") "display" else id) },
+                    shape = MaterialTheme.shapes.large,
+                    color = scheme.surfaceContainerHigh,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(96.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = scheme.surfaceContainerHighest,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = ZXSidePanelIcons.get(meta.icon),
+                                        contentDescription = null,
+                                        tint = scheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("chevron_right"),
+                                contentDescription = null,
+                                tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = meta.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = scheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = meta.subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PanelCustomizationContent(
+    state: ZXSidePanelStateHolder,
+    blurSupported: Boolean,
+    onConfigureWidgets: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = scheme.primaryContainer,
+            contentColor = scheme.onPrimaryContainer,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.large)
+                .clickable(onClick = onConfigureWidgets)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = scheme.primary,
+                        contentColor = scheme.onPrimary,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("widgets"),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Configure widgets",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = scheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Rearrange, add, or remove widgets",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("chevron_right"),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = scheme.onPrimaryContainer
+                )
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Panel position", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("left" to "Left", "right" to "Right").forEach { (value, label) ->
+                    val isSelected = state.panelSide == value
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = if (isSelected) scheme.secondaryContainer else scheme.surfaceContainerHigh,
+                        contentColor = if (isSelected) scheme.onSecondaryContainer else scheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { state.updatePanelSide(value) }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(label, style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Corner style", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0 to "Rounded", 1 to "Compact").forEach { (value, label) ->
+                    val isSelected = state.panelStyle == value
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = if (isSelected) scheme.secondaryContainer else scheme.surfaceContainerHigh,
+                        contentColor = if (isSelected) scheme.onSecondaryContainer else scheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { state.updatePanelPreference("gamespace_sidepanel_style", value) }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(label, style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Appearance", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            PanelSettingSlider("Opacity", state.panelOpacity, 55..100, "%") {
+                state.updatePanelPreference("gamespace_sidepanel_opacity", it)
+            }
+            PanelSettingSlider("Background blur", state.panelBlur, 0..60, "dp", enabled = blurSupported) {
+                state.updatePanelPreference("gamespace_sidepanel_blur", it)
+            }
+            PanelSettingSlider("Collapsed bar thickness", state.panelBarThickness, 3..10, "dp") {
+                state.updatePanelPreference("gamespace_sidepanel_thickness", it)
+            }
+            PanelSettingSlider("Collapsed bar length", state.panelBarLength, 20..100, "%") {
+                state.updatePanelPreference("gamespace_sidepanel_length", it)
+            }
+            PanelSettingSlider("Gesture sensitivity", state.panelSensitivity, 20..100, "%") {
+                state.updatePanelPreference("gamespace_sidepanel_sensitivity", it)
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Theme mode", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(3 to "System", 4 to "Light", 5 to "Dark", 6 to "AMOLED").forEach { (value, label) ->
+                    val isSelected = state.colorMode == value
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = if (isSelected) scheme.secondaryContainer else scheme.surfaceContainerHigh,
+                        contentColor = if (isSelected) scheme.onSecondaryContainer else scheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { state.updatePanelPreference("color_mode", value) }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(label, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                        }
+                    }
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Accent color", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val colorOptions = listOf(
+                    0 to "Dynamic",
+                    0xFF3F51B5.toInt() to "Indigo",
+                    0xFF009688.toInt() to "Teal",
+                    0xFFFFC107.toInt() to "Amber",
+                    0xFFF44336.toInt() to "Crimson",
+                    0xFF2196F3.toInt() to "Azure",
+                    0xFF4FAF50.toInt() to "Emerald",
+                    0xFFFF9CA8.toInt() to "Blossom"
+                )
+                colorOptions.forEach { (value, label) ->
+                    val isSelected = state.keyColor == value
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = if (isSelected) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                        contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
+                        modifier = Modifier
+                            .height(42.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { state.updatePanelPreference("key_color", value) }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (value != 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(value))
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("palette"),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = if (isSelected) scheme.primary else scheme.onSurfaceVariant
+                                )
+                            }
+                            Text(label, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PanelSettingSlider(
+    label: String,
+    value: Int,
+    range: IntRange,
+    unit: String = "",
+    enabled: Boolean = true,
+    onValueChanged: (Int) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (enabled) scheme.onSurface else scheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+            Text(
+                text = if (unit.isEmpty()) "$value" else "$value$unit",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (enabled) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChanged(it.roundToInt()) },
+            valueRange = range.first.toFloat()..range.last.toFloat(),
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
 private fun RightWidgetDrawer(
     state: ZXSidePanelStateHolder,
     drawerWidth: Dp,
@@ -4063,7 +4394,7 @@ private fun RightWidgetDrawer(
         },
         shadowElevation = 24.dp,
         modifier = modifier
-            .width(drawerWidth)
+            .then(if (state.editMode) Modifier else Modifier.width(drawerWidth))
             .onGloballyPositioned { coords ->
                 onDrawerBoundsChanged(coords.boundsInRoot())
             }
@@ -4129,23 +4460,6 @@ private fun RightWidgetDrawer(
                         }
                     }
 
-                    Surface(
-                        shape = CircleShape,
-                        color = scheme.surfaceContainerHigh,
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .clickable { state.toggleEditMode(false) }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = ZXSidePanelIcons.get("close"),
-                                contentDescription = "Close widget library",
-                                tint = scheme.onSurface,
-                                modifier = Modifier.size(17.dp)
-                            )
-                        }
-                    }
                 }
             }
 

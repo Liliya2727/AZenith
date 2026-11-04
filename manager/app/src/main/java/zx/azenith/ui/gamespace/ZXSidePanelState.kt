@@ -156,10 +156,21 @@ class ZXSidePanelStateHolder {
         private set
 
     var editMode by mutableStateOf(false)
+    var activeDestination by mutableStateOf("dashboard")
     var activeSubscreen by mutableStateOf<String?>(null)
     var appsPickMode by mutableStateOf(false)
     var resetConfirm by mutableStateOf<ResetConfirmSpec?>(null)
     var activeScrollCategory by mutableStateOf("overview")
+    var panelSide by mutableStateOf("left")
+    var panelSensitivity by mutableIntStateOf(65)
+    var panelBarLength by mutableIntStateOf(50)
+    var panelBarThickness by mutableIntStateOf(5)
+    var panelOpacity by mutableIntStateOf(96)
+    var panelBlur by mutableIntStateOf(24)
+    var panelStyle by mutableIntStateOf(0)
+    var blurSupported by mutableStateOf(false)
+    var colorMode by mutableIntStateOf(3)
+    var keyColor by mutableIntStateOf(0)
 
     var liveMonitor by mutableStateOf(SidePanelLiveMonitorState())
     val floatingHudVisible: Boolean
@@ -405,8 +416,37 @@ class ZXSidePanelStateHolder {
 
     fun bindPreferences(prefs: SharedPreferences) {
         boundPrefs = prefs
+        panelSide = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
+        panelSensitivity = prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100)
+        panelBarLength = prefs.getInt("gamespace_sidepanel_length", 50).coerceIn(20, 100)
+        panelBarThickness = prefs.getInt("gamespace_sidepanel_thickness", 5).coerceIn(3, 10)
+        panelOpacity = prefs.getInt("gamespace_sidepanel_opacity", 96).coerceIn(55, 100)
+        panelBlur = prefs.getInt("gamespace_sidepanel_blur", 24).coerceIn(0, 60)
+        panelStyle = prefs.getInt("gamespace_sidepanel_style", 0).coerceIn(0, 1)
+        colorMode = prefs.getInt("color_mode", 3)
+        keyColor = prefs.getInt("key_color", 0)
         loadWidgetLayoutPreferences()
         loadForApp(currentAppPackage)
+    }
+
+    fun updatePanelPreference(key: String, value: Int) {
+        val prefs = boundPrefs ?: return
+        when (key) {
+            "gamespace_sidepanel_sensitivity" -> panelSensitivity = value.coerceIn(20, 100)
+            "gamespace_sidepanel_length" -> panelBarLength = value.coerceIn(20, 100)
+            "gamespace_sidepanel_thickness" -> panelBarThickness = value.coerceIn(3, 10)
+            "gamespace_sidepanel_opacity" -> panelOpacity = value.coerceIn(55, 100)
+            "gamespace_sidepanel_blur" -> panelBlur = value.coerceIn(0, 60)
+            "gamespace_sidepanel_style" -> panelStyle = value.coerceIn(0, 1)
+            "color_mode" -> colorMode = value.coerceIn(3, 6)
+            "key_color" -> keyColor = value
+        }
+        prefs.edit().putInt(key, value).apply()
+    }
+
+    fun updatePanelSide(side: String) {
+        panelSide = if (side == "right") "right" else "left"
+        boundPrefs?.edit()?.putString("gamespace_sidepanel_side", panelSide)?.apply()
     }
 
     fun loadWidgetLayoutPreferences() {
