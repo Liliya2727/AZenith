@@ -132,6 +132,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -1418,12 +1420,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         val params = view.layoutParams as? WindowManager.LayoutParams ?: return
         params.alpha = 1f
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            params.setBlurBehindRadius((panelState.panelBlur * resources.displayMetrics.density).roundToInt())
-            if (panelState.blurSupported && panelState.panelBlur > 0) {
-                params.flags = params.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-            } else {
-                params.flags = params.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
-            }
+            params.flags = params.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
         }
         runCatching { windowManager?.updateViewLayout(view, params) }
     }
@@ -1439,9 +1436,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.FILL
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && panelState.blurSupported && panelState.panelBlur > 0) {
-                flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-                setBlurBehindRadius((panelState.panelBlur * resources.displayMetrics.density).roundToInt())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                flags = flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
             }
             applyFullCutoutMode()
         }
@@ -3148,209 +3144,226 @@ private fun DetachedLeftRail(
         )
     }
 
+    val railShape = if (state.panelStyle == 0) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.small
+    val railScrollState = rememberScrollState()
+
     Surface(
-        shape = if (state.panelStyle == 0) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.small,
-        color = scheme.surfaceContainerLow.copy(alpha = state.panelOpacity / 100f),
+        shape = railShape,
+        color = Color.Transparent,
         shadowElevation = 24.dp,
         modifier = Modifier
             .width(railWidth)
             .fillMaxHeight()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(vertical = 14.dp, horizontal = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Top: Section Scroll Shortcuts
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                navItems.forEach { (destination, label, iconName) ->
-                    val isActive = state.activeDestination == destination
-                    val pillScale by animateFloatAsState(
-                        targetValue = if (isActive) 1.08f else 1f,
-                        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
-                        label = "NavRailPillScale"
-                    )
-                    val pillColor by animateColorAsState(
-                        targetValue = if (isActive) scheme.secondaryContainer else scheme.surfaceContainerLow.copy(alpha = 0f),
-                        animationSpec = tween(durationMillis = 250),
-                        label = "NavRailPillColor"
-                    )
-                    val iconColor by animateColorAsState(
-                        targetValue = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
-                        animationSpec = tween(durationMillis = 250),
-                        label = "NavRailIconColor"
-                    )
-                    val labelColor by animateColorAsState(
-                        targetValue = if (isActive) scheme.onSurface else scheme.onSurfaceVariant,
-                        animationSpec = tween(durationMillis = 250),
-                        label = "NavRailLabelColor"
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { onDestinationSelected(destination) }
-                            )
-                            .padding(vertical = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(48.dp)
-                                .height(30.dp)
-                                .graphicsLayer {
-                                    scaleX = pillScale
-                                    scaleY = pillScale
-                                }
-                                .clip(CircleShape)
-                                .background(pillColor),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = ZXSidePanelIcons.get(iconName),
-                                contentDescription = label,
-                                tint = iconColor,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = labelColor,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
-                }
-            }
-
-            // Tonal Divider
+        Box(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .width(36.dp)
-                    .height(2.dp)
-                    .clip(CircleShape)
-                    .background(scheme.surfaceContainerHighest)
-            )
-
-            // Below Divider: Real Installed Quick Launch Apps
-            Text(
-                text = "Apps",
-                style = MaterialTheme.typography.labelSmall,
-                color = scheme.onSurfaceVariant,
-                maxLines = 1,
-                modifier = Modifier.padding(bottom = 8.dp)
+                    .matchParentSize()
+                    .background(scheme.surfaceContainerLow.copy(alpha = (state.panelOpacity / 100f).coerceIn(0.1f, 1f)))
+                    .then(
+                        if (state.panelBlur > 0) {
+                            Modifier.blur(state.panelBlur.dp, BlurredEdgeTreatment.Unbounded)
+                        } else {
+                            Modifier
+                        }
+                    )
             )
 
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(vertical = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .fillMaxSize()
+                    .verticalScroll(railScrollState)
+                    .padding(vertical = 10.dp, horizontal = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                state.quickApps.forEach { pkgName ->
-                    val app = state.installedApps.find { it.packageName == pkgName } ?: return@forEach
-                    val shape = RoundedCornerShape(16.dp)
+                // Top: Section Scroll Shortcuts
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    navItems.forEach { (destination, label, iconName) ->
+                        val isActive = state.activeDestination == destination
+                        val pillScale by animateFloatAsState(
+                            targetValue = if (isActive) 1.08f else 1f,
+                            animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
+                            label = "NavRailPillScale"
+                        )
+                        val pillColor by animateColorAsState(
+                            targetValue = if (isActive) scheme.secondaryContainer else scheme.surfaceContainerLow.copy(alpha = 0f),
+                            animationSpec = tween(durationMillis = 250),
+                            label = "NavRailPillColor"
+                        )
+                        val iconColor by animateColorAsState(
+                            targetValue = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                            animationSpec = tween(durationMillis = 250),
+                            label = "NavRailIconColor"
+                        )
+                        val labelColor by animateColorAsState(
+                            targetValue = if (isActive) scheme.onSurface else scheme.onSurfaceVariant,
+                            animationSpec = tween(durationMillis = 250),
+                            label = "NavRailLabelColor"
+                        )
 
-                    Box(
-                        modifier = Modifier.size(46.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Surface(
-                            shape = shape,
-                            color = scheme.surfaceContainerHigh,
-                            contentColor = scheme.onSurface,
+                        Column(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .clip(shape)
-                                .clickable {
-                                    if (state.editMode) {
-                                        state.toggleQuickApp(app.packageName)
-                                    } else {
-                                        state.launchQuickApp(app.packageName)
-                                    }
-                                }
+                                .fillMaxWidth()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { onDestinationSelected(destination) }
+                                )
+                                .padding(vertical = 3.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (app.iconBitmap != null) {
-                                    Image(
-                                        bitmap = app.iconBitmap,
-                                        contentDescription = app.name,
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = ZXSidePanelIcons.get("grid_view"),
-                                        contentDescription = app.name,
-                                        tint = scheme.onSurface,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Top-Right '-' remove badge when sidepanel is in edit mode
-                        if (state.editMode) {
-                            Box(
                                 modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = 3.dp, y = (-3).dp)
-                                    .size(18.dp)
+                                    .width(46.dp)
+                                    .height(28.dp)
+                                    .graphicsLayer {
+                                        scaleX = pillScale
+                                        scaleY = pillScale
+                                    }
                                     .clip(CircleShape)
-                                    .background(scheme.error)
-                                    .clickable { state.toggleQuickApp(app.packageName) },
+                                    .background(pillColor),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = ZXSidePanelIcons.get("remove"),
-                                    contentDescription = "Remove shortcut",
-                                    tint = scheme.onError,
-                                    modifier = Modifier.size(11.dp)
+                                    imageVector = ZXSidePanelIcons.get(iconName),
+                                    contentDescription = label,
+                                    tint = iconColor,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = labelColor,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
                     }
                 }
 
-                // Add App (+) Button
-                val addShape = RoundedCornerShape(16.dp)
-                Surface(
-                    shape = addShape,
-                    color = if (state.editMode) scheme.primaryContainer else scheme.surfaceContainerHigh,
-                    contentColor = if (state.editMode) scheme.onPrimaryContainer else scheme.onSurface,
+                // Tonal Divider
+                Box(
                     modifier = Modifier
-                        .size(46.dp)
-                        .graphicsLayer { alpha = if (state.editMode) 1f else 0.85f }
-                        .clip(addShape)
-                        .clickable { state.openSubscreen("appsManager") }
+                        .padding(vertical = 10.dp)
+                        .width(32.dp)
+                        .height(2.dp)
+                        .clip(CircleShape)
+                        .background(scheme.surfaceContainerHighest)
+                )
+
+                // Below Divider: Real Installed Quick Launch Apps
+                Text(
+                    text = "Apps",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = ZXSidePanelIcons.get("add"),
-                            contentDescription = if (state.editMode) "Edit sidepanel shortcuts" else "More floating apps",
-                            tint = if (state.editMode) scheme.onPrimaryContainer else scheme.onSurface,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    state.quickApps.forEach { pkgName ->
+                        val app = state.installedApps.find { it.packageName == pkgName } ?: return@forEach
+                        val shape = RoundedCornerShape(16.dp)
+
+                        Box(
+                            modifier = Modifier.size(46.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                shape = shape,
+                                color = scheme.surfaceContainerHigh,
+                                contentColor = scheme.onSurface,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(shape)
+                                    .clickable {
+                                        if (state.editMode) {
+                                            state.toggleQuickApp(app.packageName)
+                                        } else {
+                                            state.launchQuickApp(app.packageName)
+                                        }
+                                    }
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (app.iconBitmap != null) {
+                                        Image(
+                                            bitmap = app.iconBitmap,
+                                            contentDescription = app.name,
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = ZXSidePanelIcons.get("grid_view"),
+                                            contentDescription = app.name,
+                                            tint = scheme.onSurface,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Top-Right '-' remove badge when sidepanel is in edit mode
+                            if (state.editMode) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 3.dp, y = (-3).dp)
+                                        .size(18.dp)
+                                        .clip(CircleShape)
+                                        .background(scheme.error)
+                                        .clickable { state.toggleQuickApp(app.packageName) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = ZXSidePanelIcons.get("remove"),
+                                        contentDescription = "Remove shortcut",
+                                        tint = scheme.onError,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Add App (+) Button
+                    val addShape = RoundedCornerShape(16.dp)
+                    Surface(
+                        shape = addShape,
+                        color = if (state.editMode) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                        contentColor = if (state.editMode) scheme.onPrimaryContainer else scheme.onSurface,
+                        modifier = Modifier
+                            .size(46.dp)
+                            .graphicsLayer { alpha = if (state.editMode) 1f else 0.85f }
+                            .clip(addShape)
+                            .clickable { state.openSubscreen("appsManager") }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("add"),
+                                contentDescription = if (state.editMode) "Edit sidepanel shortcuts" else "More floating apps",
+                                tint = if (state.editMode) scheme.onPrimaryContainer else scheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -3564,17 +3577,33 @@ private fun MainSidepanelContent(
         label = "MainSidepanelWidth"
     )
 
+    val panelShape = if (state.panelStyle == 0) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.small
+
     Surface(
-        shape = if (state.panelStyle == 0) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.small,
-        color = scheme.surfaceContainerLow.copy(alpha = state.panelOpacity / 100f),
+        shape = panelShape,
+        color = Color.Transparent,
         shadowElevation = 24.dp,
         modifier = modifier.then(if (state.editMode) Modifier else Modifier.width(mainPanelWidth))
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(scheme.surfaceContainerLow.copy(alpha = (state.panelOpacity / 100f).coerceIn(0.1f, 1f)))
+                    .then(
+                        if (state.panelBlur > 0) {
+                            Modifier.blur(state.panelBlur.dp, BlurredEdgeTreatment.Unbounded)
+                        } else {
+                            Modifier
+                        }
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp)
+            ) {
             if (state.activeSubscreen != null) {
                 val subscreenTitle = when (state.activeSubscreen) {
                     "quickTools" -> "Tools"
@@ -4001,6 +4030,7 @@ private fun MainSidepanelContent(
         }
     }
 }
+}
 
 @Composable
 private fun CompactPanelWidgets(state: ZXSidePanelStateHolder) {
@@ -4382,11 +4412,7 @@ private fun RightWidgetDrawer(
 
     Surface(
         shape = RoundedCornerShape(32.dp),
-        color = if (isDropTargetHighlighted) {
-            scheme.secondaryContainer.copy(alpha = 0.35f)
-        } else {
-            scheme.surfaceContainerLow
-        },
+        color = Color.Transparent,
         border = if (isDropTargetHighlighted) {
             BorderStroke(2.dp, scheme.primary)
         } else {
@@ -4399,11 +4425,31 @@ private fun RightWidgetDrawer(
                 onDrawerBoundsChanged(coords.boundsInRoot())
             }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        if (isDropTargetHighlighted) {
+                            scheme.secondaryContainer.copy(alpha = 0.35f)
+                        } else {
+                            scheme.surfaceContainerLow.copy(alpha = (state.panelOpacity / 100f).coerceIn(0.1f, 1f))
+                        }
+                    )
+                    .then(
+                        if (state.panelBlur > 0) {
+                            Modifier.blur(state.panelBlur.dp, BlurredEdgeTreatment.Unbounded)
+                        } else {
+                            Modifier
+                        }
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp)
+            ) {
             // Drawer Header
             Row(
                 modifier = Modifier
@@ -4607,4 +4653,5 @@ private fun RightWidgetDrawer(
             }
         }
     }
+}
 }
