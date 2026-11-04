@@ -100,6 +100,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -3194,8 +3196,7 @@ private fun DetachedLeftRail(
     val navItems = remember {
         listOf(
             Triple("dashboard", "Dashboard", "space_dashboard"),
-            Triple("widgets", "Widgets", "widgets"),
-            Triple("edit", "Edit", "edit")
+            Triple("widgets", "Widgets", "widgets")
         )
     }
 
@@ -3654,6 +3655,7 @@ private fun MainSidepanelContent(
                     "liveMonitor" -> "Live Monitor"
                     "crosshair" -> "Crosshair settings"
                     "display" -> "Color Scheme"
+                    "panelCustomization" -> "Panel Customization"
                     "appsManager" -> if (state.editMode) "Edit Sidepanel Apps" else "More Apps"
                     else -> "Settings"
                 }
@@ -3746,78 +3748,6 @@ private fun MainSidepanelContent(
                         }
                     }
                 }
-            } else if (!state.editMode) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = scheme.primaryContainer,
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = ZXSidePanelIcons.get("sports_esports"),
-                                    contentDescription = null,
-                                    tint = scheme.onPrimaryContainer,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Game Space",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = scheme.onSurface,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
-                            ) {
-                                Icon(
-                                    imageVector = ZXSidePanelIcons.get("wifi"),
-                                    contentDescription = null,
-                                    tint = scheme.onSurfaceVariant,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "${state.batteryLevel}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = scheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                                Text(
-                                    text = "•",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = scheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                                Text(
-                                    text = clockTime,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = scheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
-                        }
-                    }
-                }
             }
 
             // Scrollable Widgets Feed / Subscreens
@@ -3888,51 +3818,12 @@ private fun MainSidepanelContent(
                         }
                     }
                     else -> {
-                        if (state.activeDestination == "edit" && !state.editMode) {
+                        if (state.activeSubscreen == "panelCustomization" && !state.editMode) {
                             PanelCustomizationContent(
                                 state = state,
                                 blurSupported = state.blurSupported,
                                 onConfigureWidgets = { state.toggleEditMode(true) }
                             )
-                        } else if (state.activeDestination == "widgets" && !state.editMode) {
-                            CompactPanelWidgets(state)
-                        } else if (state.activeWidgets.isEmpty() && state.draggingWidgetId == null) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 4.dp),
-                                contentAlignment = Alignment.TopCenter
-                            ) {
-                                M3WidgetCard(
-                                    contentPadding = PaddingValues(32.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = ZXSidePanelIcons.get("widgets"),
-                                            contentDescription = null,
-                                            tint = scheme.primary,
-                                            modifier = Modifier.size(30.dp)
-                                        )
-                                        Text(
-                                            text = "No widgets on home screen",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = scheme.onSurface,
-                                            textAlign = TextAlign.Center
-                                        )
-                                        Text(
-                                            text = "Drag or add widgets from the widget library",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = scheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                            }
                         } else if (state.editMode) {
                             LazyColumn(
                                 state = feedListState,
@@ -4009,58 +3900,133 @@ private fun MainSidepanelContent(
                                 }
                             }
                         } else {
-                            LazyColumn(
-                                state = feedListState,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 4.dp),
-                                contentPadding = PaddingValues(bottom = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                items(
-                                    items = normalRows,
-                                    key = { it.key }
-                                ) { row ->
-                                    val rowSpanSum = row.items.sumOf { it.span }
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .animateItem(
-                                                placementSpec = spring(
-                                                    dampingRatio = 0.78f,
-                                                    stiffness = Spring.StiffnessMediumLow
-                                                )
-                                            ),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        row.items.forEach { item ->
+                            val pagerState = rememberPagerState(
+                                initialPage = if (state.activeDestination == "widgets") 1 else 0
+                            ) { 2 }
+
+                            LaunchedEffect(state.activeDestination) {
+                                val targetPage = if (state.activeDestination == "widgets") 1 else 0
+                                if (pagerState.currentPage != targetPage) {
+                                    pagerState.animateScrollToPage(targetPage)
+                                }
+                            }
+
+                            LaunchedEffect(pagerState.currentPage) {
+                                val targetDest = if (pagerState.currentPage == 1) "widgets" else "dashboard"
+                                if (state.activeDestination != targetDest) {
+                                    state.activeDestination = targetDest
+                                }
+                            }
+
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.fillMaxSize(),
+                                beyondViewportPageCount = 1
+                            ) { page ->
+                                when (page) {
+                                    0 -> {
+                                        if (state.activeWidgets.isEmpty() && state.draggingWidgetId == null) {
                                             Box(
-                                                modifier = Modifier.weight(item.span.toFloat())
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(horizontal = 4.dp),
+                                                contentAlignment = Alignment.TopCenter
                                             ) {
-                                                when (item) {
-                                                    is NormalFeedItem.Single -> {
-                                                        SidePanelWidgetContent(
-                                                            widgetId = item.widgetId,
-                                                            state = state,
-                                                            isMerged = false,
-                                                            span = item.span
+                                                M3WidgetCard(
+                                                    contentPadding = PaddingValues(32.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = ZXSidePanelIcons.get("widgets"),
+                                                            contentDescription = null,
+                                                            tint = scheme.primary,
+                                                            modifier = Modifier.size(30.dp)
                                                         )
-                                                    }
-                                                    is NormalFeedItem.Merged -> {
-                                                        MergedSidePanelWidgetContent(
-                                                            groupIds = item.groupIds,
-                                                            mergeGroup = item.mergeGroup,
-                                                            state = state,
-                                                            span = item.span
+                                                        Text(
+                                                            text = "No widgets on home screen",
+                                                            style = MaterialTheme.typography.titleSmall,
+                                                            color = scheme.onSurface,
+                                                            textAlign = TextAlign.Center
+                                                        )
+                                                        Text(
+                                                            text = "Drag or add widgets from the widget library",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = scheme.onSurfaceVariant,
+                                                            textAlign = TextAlign.Center
                                                         )
                                                     }
                                                 }
                                             }
+                                        } else {
+                                            LazyColumn(
+                                                state = feedListState,
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(horizontal = 4.dp),
+                                                contentPadding = PaddingValues(bottom = 16.dp),
+                                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                items(
+                                                    items = normalRows,
+                                                    key = { it.key }
+                                                ) { row ->
+                                                    val rowSpanSum = row.items.sumOf { it.span }
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .animateItem(
+                                                                placementSpec = spring(
+                                                                    dampingRatio = 0.78f,
+                                                                    stiffness = Spring.StiffnessMediumLow
+                                                                )
+                                                            ),
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        row.items.forEach { item ->
+                                                            Box(
+                                                                modifier = Modifier.weight(item.span.toFloat())
+                                                            ) {
+                                                                when (item) {
+                                                                    is NormalFeedItem.Single -> {
+                                                                        SidePanelWidgetContent(
+                                                                            widgetId = item.widgetId,
+                                                                            state = state,
+                                                                            isMerged = false,
+                                                                            span = item.span
+                                                                        )
+                                                                    }
+                                                                    is NormalFeedItem.Merged -> {
+                                                                        MergedSidePanelWidgetContent(
+                                                                            groupIds = item.groupIds,
+                                                                            mergeGroup = item.mergeGroup,
+                                                                            state = state,
+                                                                            span = item.span
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        if (rowSpanSum < 3) {
+                                                            Spacer(modifier = Modifier.weight((3 - rowSpanSum).toFloat()))
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
-                                        if (rowSpanSum < 3) {
-                                            Spacer(modifier = Modifier.weight((3 - rowSpanSum).toFloat()))
-                                        }
+                                    }
+                                    1 -> {
+                                        CompactPanelWidgets(
+                                            state = state,
+                                            onOpenCustomization = {
+                                                state.openSubscreen("panelCustomization")
+                                            }
+                                        )
                                     }
                                 }
                             }
@@ -4074,94 +4040,55 @@ private fun MainSidepanelContent(
 }
 
 @Composable
-private fun CompactPanelWidgets(state: ZXSidePanelStateHolder) {
+private fun CompactPanelWidgets(
+    state: ZXSidePanelStateHolder,
+    onOpenCustomization: () -> Unit
+) {
     val widgets = state.activeWidgets.filter { state.widgetCatalog[it]?.category != "overview" }
     val scheme = MaterialTheme.colorScheme
 
-    if (widgets.isEmpty()) {
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            color = scheme.surfaceContainerHigh,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp)
-        ) {
-            Column(
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(bottom = 24.dp)
+    ) {
+        items(widgets, key = { it }) { id ->
+            val meta = state.widgetCatalog[id] ?: return@items
+            Surface(
+                onClick = { state.openSubscreen(if (id == "displayTouch") "display" else id) },
+                shape = MaterialTheme.shapes.large,
+                color = scheme.surfaceContainerHigh,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .height(84.dp)
             ) {
-                Icon(
-                    imageVector = ZXSidePanelIcons.get("widgets"),
-                    contentDescription = null,
-                    tint = scheme.primary,
-                    modifier = Modifier.size(32.dp)
-                )
-                Text(
-                    text = "No additional widgets placed",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = scheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Add widgets in the Edit menu",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
-        ) {
-            items(widgets, key = { it }) { id ->
-                val meta = state.widgetCatalog[id] ?: return@items
-                Surface(
-                    onClick = { state.openSubscreen(if (id == "displayTouch") "display" else id) },
-                    shape = MaterialTheme.shapes.large,
-                    color = scheme.surfaceContainerHigh,
+                Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(96.dp)
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        Surface(
+                            shape = CircleShape,
+                            color = scheme.surfaceContainerHighest,
+                            modifier = Modifier.size(38.dp)
                         ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = scheme.surfaceContainerHighest,
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = ZXSidePanelIcons.get(meta.icon),
-                                        contentDescription = null,
-                                        tint = scheme.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(meta.icon),
+                                    contentDescription = null,
+                                    tint = scheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
-                            Icon(
-                                imageVector = ZXSidePanelIcons.get("chevron_right"),
-                                contentDescription = null,
-                                tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(16.dp)
-                            )
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
@@ -4180,6 +4107,73 @@ private fun CompactPanelWidgets(state: ZXSidePanelStateHolder) {
                             )
                         }
                     }
+                    Icon(
+                        imageVector = ZXSidePanelIcons.get("chevron_right"),
+                        contentDescription = null,
+                        tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+
+        // Permanent, pinned Customize Widget at the bottom that cannot be removed
+        item(key = "customize_permanent_widget") {
+            Surface(
+                onClick = onOpenCustomization,
+                shape = MaterialTheme.shapes.large,
+                color = scheme.primaryContainer,
+                contentColor = scheme.onPrimaryContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(84.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = scheme.primary,
+                            contentColor = scheme.onPrimary,
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("tune"),
+                                    contentDescription = null,
+                                    tint = scheme.onPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "Customize",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "Styles, blur, sliders & configure widgets",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = ZXSidePanelIcons.get("chevron_right"),
+                        contentDescription = null,
+                        tint = scheme.onPrimaryContainer,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
@@ -4392,6 +4386,54 @@ private fun PanelCustomizationContent(
                                     tint = if (isSelected) scheme.primary else scheme.onSurfaceVariant
                                 )
                             }
+                            Text(label, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Image widget photo", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            val hasCustomImage = !state.customImageUri.isNullOrEmpty()
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = if (hasCustomImage) scheme.secondaryContainer else scheme.surfaceContainerHigh,
+                contentColor = if (hasCustomImage) scheme.onSecondaryContainer else scheme.onSurface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable {
+                        if (hasCustomImage) {
+                            state.updateCustomImage(null)
+                        } else {
+                            state.updateCustomImage("android.resource://zx.azenith/drawable/ic_profile_icon")
+                        }
+                    }
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = if (hasCustomImage) "Remove Image (Use Default)" else "Load Sample Art",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0 to "Crop", 1 to "Fit", 2 to "Fill").forEach { (scale, label) ->
+                    val isSelected = state.customImageScaleType == scale
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = if (isSelected) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                        contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { state.updateCustomImageScale(scale) }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
                             Text(label, style = MaterialTheme.typography.labelSmall)
                         }
                     }

@@ -93,14 +93,21 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import zx.azenith.ui.component.ZenithSlider
@@ -126,6 +133,8 @@ fun SidePanelWidgetContent(
         "displayTouch" -> DisplayTouchWidget(state, span, overrideTier)
         "networkPing" -> NetworkPingWidget(state, span, overrideTier)
         "thermalBattery" -> ThermalBatteryWidget(state, span, overrideTier)
+        "networkClock" -> NetworkClockWidget(state, span, overrideTier)
+        "customImage" -> CustomImageWidget(state, span, overrideTier)
     }
 }
 
@@ -3566,6 +3575,226 @@ fun AppsManagerSubscreen(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NetworkClockWidget(
+    state: ZXSidePanelStateHolder,
+    span: Int = 3,
+    overrideTier: Int? = null
+) {
+    val scheme = MaterialTheme.colorScheme
+    var clockText by remember { mutableStateOf("00:00") }
+
+    LaunchedEffect(Unit) {
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        while (isActive) {
+            clockText = formatter.format(Date())
+            delay(1000L)
+        }
+    }
+
+    val networkIcon = if (state.isWifiNetwork) "wifi" else "signal_cellular_alt"
+    val networkLabel = if (state.isWifiNetwork) "Wi-Fi" else if (state.isCellularNetwork) "Cellular" else "Offline"
+    val pingColor = when {
+        state.pingMs < 50 -> scheme.primary
+        state.pingMs < 100 -> Color(0xFFFFB300)
+        else -> scheme.error
+    }
+
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = clockText,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.onSurface
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = ZXSidePanelIcons.get(networkIcon),
+                        contentDescription = null,
+                        tint = pingColor,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = "${state.pingMs}ms",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = pingColor
+                    )
+                }
+            }
+        }
+        return
+    }
+
+    M3WidgetCard(
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = scheme.primaryContainer,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get(networkIcon),
+                            contentDescription = null,
+                            tint = scheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = clockText,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = pingColor.copy(alpha = 0.16f),
+                            modifier = Modifier.padding(start = 2.dp)
+                        ) {
+                            Text(
+                                text = "${state.pingMs} ms",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = pingColor,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = "$networkLabel • Battery ${state.batteryLevel}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Surface(
+                shape = CircleShape,
+                color = scheme.surfaceContainerHigh,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable { state.openSubscreen("networkPing") }
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Network",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomImageWidget(
+    state: ZXSidePanelStateHolder,
+    span: Int = 3,
+    overrideTier: Int? = null
+) {
+    val scheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val imageUri = state.customImageUri
+    val heightTier = overrideTier ?: state.getWidgetHeightTier("customImage")
+    val cardHeight = when (heightTier) {
+        1 -> 96.dp
+        2 -> 148.dp
+        else -> 200.dp
+    }
+    val contentScale = when (state.customImageScaleType) {
+        1 -> ContentScale.Fit
+        2 -> ContentScale.FillBounds
+        else -> ContentScale.Crop
+    }
+
+    M3WidgetCard(
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(cardHeight)
+                .clip(MaterialTheme.shapes.large)
+                .background(scheme.surfaceContainerHigh)
+        ) {
+            if (!imageUri.isNullOrEmpty()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(imageUri)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Custom Image Widget",
+                    contentScale = contentScale,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = scheme.primaryContainer,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("image"),
+                                contentDescription = null,
+                                tint = scheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Image Widget",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = "Set photo in Customize menu",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onSurfaceVariant
+                    )
                 }
             }
         }

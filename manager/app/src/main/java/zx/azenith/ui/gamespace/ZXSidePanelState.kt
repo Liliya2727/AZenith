@@ -133,6 +133,7 @@ data class ResetConfirmSpec(
 class ZXSidePanelStateHolder {
     companion object {
         val DEFAULT_ACTIVE_WIDGETS = listOf(
+            "networkClock",
             "fpsHeader",
             "speedometers",
             "profileSwitch",
@@ -147,7 +148,8 @@ class ZXSidePanelStateHolder {
 
         val DEFAULT_LIBRARY_WIDGETS = listOf(
             "networkPing",
-            "thermalBattery"
+            "thermalBattery",
+            "customImage"
         )
     }
 
@@ -406,6 +408,21 @@ class ZXSidePanelStateHolder {
             subtitle = "Direct power delivery & core temp",
             icon = "thermostat",
             category = "addons"
+        ),
+        "networkClock" to SidePanelWidgetMeta(
+            id = "networkClock",
+            title = "Network & Clock",
+            subtitle = "Wi-Fi, cellular, latency & system time",
+            icon = "schedule",
+            category = "overview",
+            mergeGroup = "telemetry"
+        ),
+        "customImage" to SidePanelWidgetMeta(
+            id = "customImage",
+            title = "Image Widget",
+            subtitle = "Display customizable artwork or photo",
+            icon = "image",
+            category = "addons"
         )
     )
 
@@ -413,6 +430,9 @@ class ZXSidePanelStateHolder {
     var toastIcon by mutableStateOf("check_circle")
     var toastVisible by mutableStateOf(false)
     var toastSequence by mutableIntStateOf(0)
+
+    var customImageUri by mutableStateOf<String?>(null)
+    var customImageScaleType by mutableIntStateOf(0)
 
     fun bindPreferences(prefs: SharedPreferences) {
         boundPrefs = prefs
@@ -425,8 +445,20 @@ class ZXSidePanelStateHolder {
         panelStyle = prefs.getInt("gamespace_sidepanel_style", 0).coerceIn(0, 1)
         colorMode = prefs.getInt("color_mode", 3)
         keyColor = prefs.getInt("key_color", 0)
+        customImageUri = prefs.getString("gamespace_sidepanel_image_uri", null)
+        customImageScaleType = prefs.getInt("gamespace_sidepanel_image_scale", 0)
         loadWidgetLayoutPreferences()
         loadForApp(currentAppPackage)
+    }
+
+    fun updateCustomImage(uri: String?) {
+        customImageUri = uri
+        boundPrefs?.edit()?.putString("gamespace_sidepanel_image_uri", uri)?.apply()
+    }
+
+    fun updateCustomImageScale(scale: Int) {
+        customImageScaleType = scale
+        boundPrefs?.edit()?.putInt("gamespace_sidepanel_image_scale", scale)?.apply()
     }
 
     fun updatePanelPreference(key: String, value: Int) {
