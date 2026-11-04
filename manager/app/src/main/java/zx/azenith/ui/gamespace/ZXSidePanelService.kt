@@ -1676,13 +1676,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 delay(1_000L)
                 val pkg = activeGamePackage
                 if (pkg.isNullOrBlank()) {
-                    panelState.currentFps = 0
                     continue
                 }
                 val cap = panelState.fpsCap.coerceAtLeast(60)
                 val sampled = telemetryCollector.sampleFps(pkg, checkRootGranted(), cap)
                 withContext(Dispatchers.Main) {
-                    panelState.currentFps = sampled
+                    if (sampled > 0) panelState.currentFps = sampled
                 }
             }
         }
@@ -2422,6 +2421,7 @@ private class ZXRealTelemetryCollector {
         val fps = f[0].toIntOrNull() ?: return null
         val at = f[1].toLongOrNull() ?: return null
         if (System.currentTimeMillis() - at > 3_000L) return null
+        if (fps <= 0) return null
         return fps.coerceIn(1, cap)
     }
 

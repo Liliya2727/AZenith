@@ -70,8 +70,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -669,6 +671,19 @@ fun CrosshairReticleCanvas(
     }
 }
 
+/**
+ * Holds the last valid frame rate so a dropped reading (0) does not blank the HUD.
+ * The minimum shown is 1 FPS, so a stale value never renders as "0 FPS".
+ */
+@Composable
+fun heldFpsText(state: ZXSidePanelStateHolder): String {
+    var held by remember { mutableIntStateOf(state.currentFps.coerceAtLeast(1)) }
+    LaunchedEffect(state.currentFps) {
+        if (state.currentFps > 0) held = state.currentFps
+    }
+    return held.coerceAtLeast(1).toString()
+}
+
 @Composable
 fun FloatingMonitorPill(
     state: ZXSidePanelStateHolder,
@@ -680,6 +695,8 @@ fun FloatingMonitorPill(
     val cfg = state.liveMonitor
     val alphaVal = (cfg.opacity / 100f).coerceIn(0.2f, 1f)
     val scaleFactor = (cfg.scalePercent / 100f).coerceIn(0.75f, 1.4f)
+
+    val fpsText = heldFpsText(state)
 
     val currentDensity = LocalDensity.current
     val scaledDensity = remember(currentDensity, scaleFactor) {
@@ -725,7 +742,7 @@ fun FloatingMonitorPill(
         when (cfg.layoutStyle) {
             "stacked" -> {
                 val metrics = buildList<Triple<String, String, Color>> {
-                    if (cfg.showFps) add(Triple("FPS", "${state.currentFps}", scheme.primary))
+                    if (cfg.showFps) add(Triple("FPS", fpsText, scheme.primary))
                     if (cfg.showCpu) add(Triple("CPU", "${state.cpuLoad}%", scheme.primary))
                     if (cfg.showGpu) add(Triple("GPU", "${state.gpuLoad}%", scheme.tertiary))
                     val tempLabel = when (cfg.tempSource) {
@@ -796,7 +813,7 @@ fun FloatingMonitorPill(
             }
             "minimal" -> {
                 val segments = buildList<Pair<String, Color>> {
-                    if (cfg.showFps) add("${state.currentFps} FPS" to scheme.primary)
+                    if (cfg.showFps) add("$fpsText FPS" to scheme.primary)
                     if (cfg.showCpu) add("CPU ${state.cpuLoad}%" to scheme.onSurface)
                     if (cfg.showGpu) add("GPU ${state.gpuLoad}%" to scheme.tertiary)
                     val tempLabel = when (cfg.tempSource) {
@@ -868,7 +885,7 @@ fun FloatingMonitorPill(
                     ) {
                         if (cfg.showFps) {
                             Text(
-                                text = "${state.currentFps} FPS",
+                                text = "$fpsText FPS",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = scheme.primary,
                                 maxLines = 1,

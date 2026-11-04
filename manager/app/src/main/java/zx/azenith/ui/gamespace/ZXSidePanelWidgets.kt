@@ -583,6 +583,8 @@ private fun FpsMeterWidget(
     overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
+    val fpsText = heldFpsText(state)
+    val fpsValue = fpsText.toIntOrNull() ?: 1
     if (span == 1) {
         M3WidgetCard(
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
@@ -600,7 +602,7 @@ private fun FpsMeterWidget(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "${state.currentFps}",
+                    text = fpsText,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = scheme.primary
                 )
@@ -658,7 +660,7 @@ private fun FpsMeterWidget(
                         modifier = Modifier.padding(bottom = 3.dp)
                     )
                     Text(
-                        text = "${state.currentFps}",
+                        text = fpsText,
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                         color = scheme.primary
                     )
@@ -666,8 +668,8 @@ private fun FpsMeterWidget(
             }
 
             if (heightTier >= 2) {
-                val frameTimeMs = if (state.currentFps > 0) String.format(Locale.US, "%.1f ms", 1000f / state.currentFps) else "-- ms"
-                val onePercentLow = (state.currentFps * 0.88f).roundToInt().coerceAtLeast(0)
+                val frameTimeMs = String.format(Locale.US, "%.1f ms", 1000f / fpsValue)
+                val onePercentLow = (fpsValue * 0.88f).roundToInt().coerceAtLeast(1)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
