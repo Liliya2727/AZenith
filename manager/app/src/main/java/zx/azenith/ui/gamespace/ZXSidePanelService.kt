@@ -334,6 +334,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var windowTransitionJob: Job? = null
     private var fpsTrackingActive = false
     private var fpsSamplerJob: Job? = null
+    private var fpsHasReading = false
 
     private val telemetryCollector by lazy { ZXRealTelemetryCollector() }
 
@@ -1737,7 +1738,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 val cap = panelState.fpsCap.coerceAtLeast(60)
                 val sampled = telemetryCollector.sampleFps(pkg, checkRootGranted(), cap)
                 withContext(Dispatchers.Main) {
-                    if (sampled > 0) panelState.currentFps = sampled
+                    if (sampled > 0) {
+                        panelState.currentFps = sampled
+                        fpsHasReading = true
+                    }
                 }
             }
         }
@@ -1746,6 +1750,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun stopFpsChoreographer() {
         if (!fpsTrackingActive) return
         fpsTrackingActive = false
+        fpsHasReading = false
         fpsSamplerJob?.cancel()
         fpsSamplerJob = null
     }
@@ -1757,7 +1762,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             val currentRate = display.refreshRate.roundToInt().coerceAtLeast(60)
             val maxRate = display.supportedModes.maxOfOrNull { it.refreshRate.roundToInt() } ?: currentRate
             panelState.fpsCap = maxRate.coerceAtLeast(currentRate)
-            if (panelState.currentFps <= 0 || panelState.currentFps > panelState.fpsCap) {
+            // Without a real reading there is no frame rate to show, so fall back to the
+            // panel rate instead of leaving a stale number on screen.
+            if (!fpsHasReading || panelState.currentFps <= 0 || panelState.currentFps > panelState.fpsCap) {
                 panelState.currentFps = currentRate
             }
         }
