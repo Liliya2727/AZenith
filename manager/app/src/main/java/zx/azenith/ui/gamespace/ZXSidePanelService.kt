@@ -36,6 +36,7 @@ import android.os.Looper
 import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.graphics.drawable.Drawable
@@ -148,6 +149,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -157,6 +159,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlin.math.min
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -370,6 +373,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 sideSetting = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
                 panelState.panelSide = sideSetting
                 updateHandleWindowIfCollapsed()
+                if (isWindowFullScreen) {
+                    updateExpandedWindowAppearance()
+                }
             }
             "gamespace_sidepanel_sensitivity" -> {
                 barSensitivity = prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100)
@@ -657,9 +663,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+    override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         floatingAppManager?.onConfigurationChanged()
+        if (isWindowFullScreen && isViewAttached) {
+            updateExpandedWindowAppearance()
+        }
     }
 
     private fun launchExternalApp(pkg: String) {
@@ -855,6 +864,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             }
 
             override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+                if (ev.actionMasked == MotionEvent.ACTION_OUTSIDE) {
+                    if (isPanelExpanded && !panelState.editMode) {
+                        collapsePanel()
+                        return true
+                    }
+                }
                 if (isPanelExpanded) {
                     val dm = resources.displayMetrics
                     val edgeSlopPx = 32f * dm.density
@@ -1185,6 +1200,18 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             hudView = hView
             isViewAttached = true
 
+            // Dynamically update window layout when switching between sidepanel and full-screen edit mode
+            serviceScope.launch {
+                snapshotFlow { panelState.editMode }
+                    .collect { _ ->
+                        withContext(Dispatchers.Main) {
+                            if (isViewAttached && isWindowFullScreen) {
+                                updateExpandedWindowAppearance()
+                            }
+                        }
+                    }
+            }
+
             // Dynamically re-measure and update window layout when live monitor configuration or scale changes
             serviceScope.launch {
                 snapshotFlow { panelState.liveMonitor }
@@ -1364,6 +1391,15 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             panelState.editMode = false
         }
         isPanelExpanded = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val view = rootOverlayView
+            val params = view?.layoutParams as? WindowManager.LayoutParams
+            if (params != null && (params.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND) != 0) {
+                params.flags = params.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+                params.setBlurBehindRadius(0)
+                runCatching { windowManager?.updateViewLayout(view, params) }
+            }
+        }
         windowTransitionJob?.cancel()
         windowTransitionJob = serviceScope.launch {
             // Wait for the morph-to-bar spring animation to settle before shrinking window bounds
@@ -1417,27 +1453,45 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun updateExpandedWindowAppearance() {
         if (!isWindowFullScreen) return
         val view = rootOverlayView ?: return
-        val params = view.layoutParams as? WindowManager.LayoutParams ?: return
-        params.alpha = 1f
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            params.flags = params.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+        val wm = windowManager ?: return
+        runCatching {
+            wm.updateViewLayout(view, createExpandedLayoutParams())
         }
-        runCatching { windowManager?.updateViewLayout(view, params) }
     }
 
     private fun createExpandedLayoutParams(): WindowManager.LayoutParams {
+        val dm = resources.displayMetrics
+        val isLeft = sideSetting == "left"
+        val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+        val targetWidth = if (panelState.editMode || isPortrait) {
+            WindowManager.LayoutParams.MATCH_PARENT
+        } else {
+            val panelWidthDp = 468f
+            min((panelWidthDp * dm.density).roundToInt(), dm.widthPixels)
+        }
+
         return WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
+            targetWidth,
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.FILL
+            gravity = Gravity.TOP or (if (isLeft) Gravity.START else Gravity.END)
+            x = 0
+            y = 0
+            val shouldBlur = !panelState.editMode && panelState.blurSupported && panelState.panelBlur > 0
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                flags = flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+                if (shouldBlur) {
+                    flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+                    setBlurBehindRadius((panelState.panelBlur * dm.density).roundToInt())
+                } else {
+                    flags = flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND.inv()
+                    setBlurBehindRadius(0)
+                }
             }
             applyFullCutoutMode()
         }
@@ -2497,10 +2551,12 @@ fun SidePanelRoot(
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
     ) {
+        val configuration = LocalConfiguration.current
+        val isCompactPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
         val screenHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
 
-        // 1. Outside-tap dismiss scrim when expanded
-        if (openProgress > 0.02f) {
+        // 1. Outside-tap dismiss scrim when expanded (full screen in editMode or portrait)
+        if (openProgress > 0.02f && (state.editMode || isCompactPortrait)) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -2541,7 +2597,6 @@ fun SidePanelRoot(
             } else {
                 0.5f
             }
-            val isCompactPortrait = maxWidth < 520.dp
             val horizPad = if (isCompactPortrait) 8.dp else 12.dp
             val availableWidthDp = (maxWidth - horizPad * 2).coerceAtLeast(280.dp)
 
@@ -3160,13 +3215,6 @@ private fun DetachedLeftRail(
                 modifier = Modifier
                     .matchParentSize()
                     .background(scheme.surfaceContainerLow.copy(alpha = (state.panelOpacity / 100f).coerceIn(0.1f, 1f)))
-                    .then(
-                        if (state.panelBlur > 0) {
-                            Modifier.blur(state.panelBlur.dp, BlurredEdgeTreatment.Unbounded)
-                        } else {
-                            Modifier
-                        }
-                    )
             )
 
             Column(
@@ -3590,13 +3638,6 @@ private fun MainSidepanelContent(
                 modifier = Modifier
                     .matchParentSize()
                     .background(scheme.surfaceContainerLow.copy(alpha = (state.panelOpacity / 100f).coerceIn(0.1f, 1f)))
-                    .then(
-                        if (state.panelBlur > 0) {
-                            Modifier.blur(state.panelBlur.dp, BlurredEdgeTreatment.Unbounded)
-                        } else {
-                            Modifier
-                        }
-                    )
             )
 
             Column(
@@ -4434,13 +4475,6 @@ private fun RightWidgetDrawer(
                             scheme.secondaryContainer.copy(alpha = 0.35f)
                         } else {
                             scheme.surfaceContainerLow.copy(alpha = (state.panelOpacity / 100f).coerceIn(0.1f, 1f))
-                        }
-                    )
-                    .then(
-                        if (state.panelBlur > 0) {
-                            Modifier.blur(state.panelBlur.dp, BlurredEdgeTreatment.Unbounded)
-                        } else {
-                            Modifier
                         }
                     )
             )
