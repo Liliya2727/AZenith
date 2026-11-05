@@ -715,7 +715,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         // Keep the sidepanel handle at the same relative height per orientation
         // so it does not jump after rotating portrait <-> landscape.
         val dm = resources.displayMetrics
-        val posPct = prefs.getInt("gamespace_sidepanel_pos_${orientationKey()}", 50).coerceIn(10, 90)
+        val posPct = prefs.getInt("gamespace_sidepanel_pos_${orientationKey(newConfig)}", 50).coerceIn(10, 90)
         currentVerticalY = ((dm.heightPixels * (posPct / 100f))).roundToInt()
 
         runCatching {
@@ -730,7 +730,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
         // Restore live monitor HUD position for this orientation, then clamp
         // to the new screen bounds so it never goes off-screen after rotation.
-        val hudOrient = orientationKey()
+        val hudOrient = orientationKey(newConfig)
         val savedHudX = prefs.getFloat("gs_hud_offset_x_$hudOrient", -1f)
         val savedHudY = prefs.getFloat("gs_hud_offset_y_$hudOrient", -1f)
         if (savedHudX >= 0f) panelState.hudOffsetX = savedHudX
@@ -742,9 +742,11 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
-    /// "portrait" or "landscape" based on current device orientation.
-    private fun orientationKey(): String =
-        if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) "portrait" else "landscape"
+    /// "portrait" or "landscape" based on the given config, or current device orientation if null.
+    private fun orientationKey(config: Configuration? = null): String {
+        val orient = config?.orientation ?: resources.configuration.orientation
+        return if (orient == Configuration.ORIENTATION_PORTRAIT) "portrait" else "landscape"
+    }
 
     private fun launchExternalApp(pkg: String) {
         if (pkg == activeGamePackage) {
