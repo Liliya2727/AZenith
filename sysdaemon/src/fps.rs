@@ -20,7 +20,7 @@
 //
 // <cfg>/debug/explicit_fps_mthd pins the source:
 //
-//   missing / empty          automatic: try uprobe, then windowmanager, then surfaceflinger, and
+//   missing / empty          automatic: try windowmanager, then uprobe, then surfaceflinger, and
 //                            stay on the last one that published
 //   use_windmanager          windowmanager only, even when it keeps failing
 //   use_uprobe | use_ebpf    uprobe only, even when it keeps failing
@@ -118,18 +118,15 @@ impl Method {
 
     /// First source tried in automatic mode, in order of preference.
     fn first_auto() -> Self {
-        if UPROBE_SUPPORTED {
-            Method::Uprobe
-        } else {
-            Method::WindowManager
-        }
+        Method::WindowManager
     }
 
     /// Next source to try in automatic mode, in order of preference.
     fn next_auto(self) -> Self {
         match self {
-            Method::Uprobe => Method::WindowManager,
+            Method::WindowManager if UPROBE_SUPPORTED => Method::Uprobe,
             Method::WindowManager => Method::SurfaceFlinger,
+            Method::Uprobe => Method::SurfaceFlinger,
             Method::SurfaceFlinger if UPROBE_SUPPORTED => Method::Uprobe,
             Method::SurfaceFlinger => Method::WindowManager,
         }
