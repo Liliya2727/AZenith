@@ -22,6 +22,7 @@
 //   status    screen/battery saver/zen mode/battery level & charging
 //   state     the monitor state + atomic publishing of app_status/background_apps
 mod codes;
+mod focused;
 mod fps;
 mod label;
 mod lock;
@@ -103,6 +104,22 @@ fn main() {
             }
             None => {
                 eprintln!("failed {code}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+    // Self test: print the focused root task package and its live pid.
+    if args.iter().any(|a| a == "--focused") {
+        let Some(c) = load_codes() else {
+            eprintln!("load_codes_failed");
+            std::process::exit(1);
+        };
+        set_codes(c);
+        match focused::probe() {
+            Some((pkg, pid, uid)) => println!("{pkg} {pid} {uid}"),
+            None => {
+                eprintln!("focused_task_unavailable");
                 std::process::exit(1);
             }
         }
@@ -215,6 +232,7 @@ fn main() {
     unsafe { (n.ABinderProcess_startThreadPool)(); }
     init_status(); // display callback + screen/saver/zen/battery
     seed();        // process table + initial app_status/background_apps
+    focused::start(); // correct a foreground callback missed by AMS
     info!("ready, waiting for callbacks from AMS");
     unsafe { (n.ABinderProcess_joinThreadPool)(); }
 }

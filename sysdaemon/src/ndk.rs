@@ -61,7 +61,7 @@ ndk! {
     AIBinder_linkToDeath(P, P, P) -> i32;
     AParcel_delete(P);
     AParcel_getDataSize(P) -> i32;
-    AParcel_marshal(P, *mut u8, usize, usize) -> i32;
+    AParcel_getDataPosition(P) -> i32;
     AParcel_writeStrongBinder(P, P) -> i32;
     AParcel_writeInt32(P, i32) -> i32;
     AParcel_writeString(P, *const c_char) -> i32;
@@ -121,6 +121,30 @@ pub(crate) fn call_i32(b: P, code: u32) -> Option<i32> {
     let r = unsafe { (n().AParcel_readInt32)(o, &mut v) };
     unsafe { (n().AParcel_delete)(o); }
     (r == 0).then_some(v)
+}
+
+/// The bytes of the reply payload that are left after the status header.
+///
+/// `AParcel_marshal` cannot be used on a received parcel (it returns ENOSYS),
+/// so the payload is read word by word. A word is just four bytes, whatever
+/// AIDL type it belongs to: the UTF-16 text of a string, an int, a binder
+/// handle. Reassembling them gives the same blob that `AParcel_marshal` would
+/// have returned, which is all the task parcel scanner needs.
+pub(crate) fn parcel_words(parcel: P) -> Option<Vec<u8>> {
+    const MAX_BYTES: i32 = 10 * 1024 * 1024;
+    let n = n();
+    let (pos, size) = unsafe {
+        ((n.AParcel_getDataPosition)(parcel), (n.AParcel_getDataSize)(parcel))
+    };
+    if pos < 0 || size <= pos || size - pos > MAX_BYTES { return None; }
+    let words = ((size - pos) / 4) as usize;
+    let mut out = Vec::with_capacity(words * 4);
+    for _ in 0..words {
+        let mut v = 0i32;
+        if unsafe { (n.AParcel_readInt32)(parcel, &mut v) } != 0 { break; }
+        out.extend_from_slice(&v.to_le_bytes());
+    }
+    (!out.is_empty()).then_some(out)
 }
 
 unsafe extern "C" fn noop_create(a: P) -> P { a }

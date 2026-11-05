@@ -11,10 +11,8 @@
 // Android version), so the items are read as raw byte arrays and the package
 // name is searched in them: the base intent and the component names are plain
 // strings ("com.foo.bar", "com.foo.bar/.MainActivity").
-use std::io::Write as _;
-
-// use crate::log::debug;
-use crate::ndk::{call, n, P};
+use crate::log::debug;
+use crate::ndk::{call, n, parcel_words, P};
 
 /// Maximum number of tasks, same as the java companion.
 const MAX_TASKS: u32 = 30;
@@ -28,65 +26,36 @@ const USER_ID: u32 = 0;
 /// not one. A task whose app is not running is skipped, it has no pids to
 /// publish anyway.
 pub(crate) fn recent_packages(am: P, code: u32, known: &[String]) -> Option<Vec<String>> {
-    let _ = std::fs::create_dir_all("/data/adb/.config/AZenith");
-    let _ = std::fs::write("/data/adb/.config/AZenith/recents_debug.txt", format!("=== CALLING getRecentTasks code={code} ===\n"));
     let o = call(am, code, |i| unsafe {
         let n = n();
         (n.AParcel_writeInt32)(i, MAX_TASKS as i32);
         (n.AParcel_writeInt32)(i, 0); // flags
         (n.AParcel_writeInt32)(i, USER_ID as i32);
     })?;
-    if let Ok(mut f) = std::fs::OpenOptions::new().append(true).open("/data/adb/.config/AZenith/recents_debug.txt") {
-        let _ = writeln!(f, "CALL returned {:?}", o);
-    }
-    let Some(bytes) = parcel_bytes(o) else {
-        if let Ok(mut f) = std::fs::OpenOptions::new().append(true).open("/data/adb/.config/AZenith/recents_debug.txt") {
-            let _ = writeln!(f, "PARCEL BYTES FAILED");
-        }
-        unsafe { (n().AParcel_delete)(o) };
-        return None;
-    };
-    let mut line = format!("PARCEL:{} bytes\n", bytes.len());
-    let mut hx = String::new();
-    for b in bytes.iter().take(80) {
-        hx.push_str(&format!("{:02x}", b));
-    }
-    line.push_str(&format!("HEX:{hx}\n"));
-    let all = packages_in(&bytes);
-    line.push_str(&format!("CANDIDATES:{:?}\n", all));
+    let bytes = parcel_words(o);
+    unsafe { (n().AParcel_delete)(o) };
+    let bytes = bytes?;
+    debug!("getRecentTasks reply: {} bytes", bytes.len());
+
     let mut out: Vec<String> = Vec::new();
-    for p in &all {
-        if !known.iter().any(|k| k == p) {
+    for p in packages_in(&bytes) {
+        if !known.iter().any(|k| *k == p) {
             continue;
         }
-        if !out.contains(p) {
-            out.push(p.clone());
+        if !out.contains(&p) {
+            out.push(p);
         }
         if out.len() >= MAX_TASKS as usize {
             break;
         }
     }
-    unsafe { (n().AParcel_delete)(o) };
-    line.push_str(&format!("RESULT:{:?}\n", out));
-    if let Ok(mut f) = std::fs::OpenOptions::new().append(true).open("/data/adb/.config/AZenith/recents_debug.txt") {
-        let _ = write!(f, "{line}");
-    }
     Some(out)
 }
 
-/// The raw bytes of the reply parcel.
-fn parcel_bytes(parcel: P) -> Option<Vec<u8>> {
-    let n = n();
-    let sz = unsafe { (n.AParcel_getDataSize)(parcel) };
-    if sz <= 0 || sz > 10 * 1024 * 1024 {
-        return None;
-    }
-    let mut buf = vec![0u8; sz as usize];
-    let r = unsafe { (n.AParcel_marshal)(parcel, buf.as_mut_ptr(), 0, sz as usize) };
-    if r != 0 {
-        return None;
-    }
-    Some(buf)
+/// The first known (running) package in a task parcel. A RootTaskInfo writes
+/// the focused activity before the base intent, so this is the app on screen.
+pub(crate) fn first_known(bytes: &[u8], known: &[String]) -> Option<String> {
+    packages_in(bytes).into_iter().find(|p| known.iter().any(|k| k == p))
 }
 
 /// The package names inside the bytes of a task.
@@ -94,7 +63,7 @@ fn parcel_bytes(parcel: P) -> Option<Vec<u8>> {
 /// The strings of a parcel are UTF-16, so every character is followed by a zero
 /// byte. A package name is a sequence of ASCII letters, digits, dots and
 /// underscores with at least one dot.
-fn packages_in(blob: &[u8]) -> Vec<String> {
+pub(crate) fn packages_in(blob: &[u8]) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let mut i = 0;
     while i + 1 < blob.len() {

@@ -142,6 +142,22 @@ pub(crate) fn pkg_of_pid(pid: i32) -> Option<String> {
     st().procs.get(&pid).map(|(p, _)| p.clone())
 }
 
+/// Package of the app that is currently in the foreground.
+pub(crate) fn focused_pkg() -> Option<String> {
+    st().focused.as_ref().map(|(p, _, _)| p.clone())
+}
+
+/// A live pid/uid of an app, from the process table.
+pub(crate) fn proc_of_pkg(pkg: &str) -> Option<(i32, i32)> {
+    st().procs.iter().find(|(_, (p, _))| p == pkg)
+        .map(|(pid, (_, uid))| (*pid, *uid))
+}
+
+/// Screen on/off, as reported by IPowerManager.
+pub(crate) fn screen_awake() -> bool {
+    st().sys.screen_awake
+}
+
 // ---------------- writing ----------------
 
 /// Write a file atomically (tmp file + rename), so a reader never sees a half
