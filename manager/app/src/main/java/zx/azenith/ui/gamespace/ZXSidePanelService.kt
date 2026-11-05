@@ -699,9 +699,28 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         floatingAppManager?.onConfigurationChanged()
-        if (isWindowFullScreen && isViewAttached) {
-            updateExpandedWindowAppearance()
+        if (!isViewAttached) return
+        val wm = windowManager ?: return
+
+        // Keep the sidepanel handle at the same relative height across orientation
+        // changes (portrait <-> landscape) so it does not jump or go off-screen
+        // after the user rotates into a game.
+        val dm = resources.displayMetrics
+        val posPct = prefs.getInt("gamespace_sidepanel_pos", 50).coerceIn(10, 90)
+        currentVerticalY = ((dm.heightPixels * (posPct / 100f))).roundToInt()
+
+        runCatching {
+            if (isWindowFullScreen) {
+                updateExpandedWindowAppearance()
+            } else {
+                rootOverlayView?.let { view ->
+                    wm.updateViewLayout(view, createHandleLayoutParams(sideSetting == "left", currentVerticalY))
+                }
+            }
         }
+
+        // Re-clamp the live monitor HUD to the new screen bounds after rotation.
+        hudView?.requestLayout()
     }
 
     private fun launchExternalApp(pkg: String) {
