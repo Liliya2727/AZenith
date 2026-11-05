@@ -1,3 +1,15 @@
+<<<<<<< Updated upstream
+=======
+## AZenith 5.3
+### • Changelog
+- Fixed an issue where daemon use 100% of cpu usage
+- Fixed an issue where Profile failed to rotate in many A16 Roms
+- Rewrite Preferenced settings to rust
+- Added new Bypass charging path 
+- Small Optimization in backend flow
+
+
+>>>>>>> Stashed changes
 ## AZenith 5.2
 ### • Changelog
 - Minor UI Improvement: Implemented a scrollable page and simplified design
