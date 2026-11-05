@@ -227,8 +227,13 @@ fn refresh_rates(why: &str) {
     // Actual refresh rate from DisplayInfo binder (no shell fallback)
     let cur = display_info_refresh_rate().unwrap_or(prev_cur);
 
-    sys_update(why, |s| {
-        s.refresh_rate = cur;
-    });
-    info!("refresh rate: current {cur}Hz");
+    // Only publish & log when the rate actually changed; polling every 5s is
+    // cheap, but a refresh rate that stays at 120 Hz does not need a log line
+    // every tick.
+    if cur != prev_cur {
+        sys_update(why, |s| {
+            s.refresh_rate = cur;
+        });
+        info!("refresh rate: current {cur}Hz");
+    }
 }
