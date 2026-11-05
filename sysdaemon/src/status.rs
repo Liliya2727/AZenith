@@ -7,7 +7,7 @@ use std::{thread, time::Duration};
 
 use crate::codes::codes;
 use crate::log::{error, info, warn};
-use crate::ndk::{call, call_i32, class, n, service, service_try, P};
+use crate::ndk::{call, call_i32, class, n, parcel_words, service, service_try, P};
 use crate::state::sys_update;
 
 // Binder query cycle interval for zen/saver/battery (pure transact, no fork).
@@ -193,40 +193,29 @@ pub(crate) fn init_status() {
 //   peak_refresh_rate     -> maximum the user allows (= panel max by default)
 //   display_refresh_rate  -> current rate (kept up to date by the module)
 // The values of the previous run are used when a setting is missing/unknown.
-// Read the *actual* current refresh rate from SurfaceFlinger's vsync period.
-// This is more accurate than `settings display_refresh_rate`, which only holds
-// the user's preferred rate (e.g. 60 Hz) while an adaptive panel may actually
-// run at 90/120 Hz.
-fn surfaceflinger_refresh_rate() -> Option<i32> {
-    let out = std::process::Command::new("/system/bin/dumpsys")
-        .args(["SurfaceFlinger", "--display-id"])
-        .env("PATH", "/system/bin:/system/xbin")
-        .output()
-        .ok()?;
-    let text = String::from_utf8_lossy(&out.stdout);
-    for line in text.lines() {
-        // Look for vsync period: "vsync period: 8.333ms (120 Hz)" or nanoseconds
-        if let Some(rest) = line.strip_prefix("vsync period:") {
-            let rest = rest.trim();
-            // Try "(NNN Hz)" first
-            if let Some(hz_part) = rest.split('(').next_back() {
-                let hz_str = hz_part.trim_end_matches(" Hz)").trim();
-                if let Ok(hz) = hz_str.parse::<i32>() {
-                    if (20..=300).contains(&hz) {
-                        return Some(hz);
-                    }
-                }
-            }
-            // Try raw nanoseconds: "vsync period: 8333333 ns"
-            let ns_str = rest.trim_end_matches("ns").trim();
-            if let Ok(ns) = ns_str.parse::<u64>() {
-                if ns > 0 {
-                    let hz = (1_000_000_000.0 / ns as f32).round() as i32;
-                    if (20..=300).contains(&hz) {
-                        return Some(hz);
-                    }
-                }
-            }
+// Read the *actual* current refresh rate from DisplayInfo via binder (no shell).
+// Scans the parcel words as f32 looking for a plausible refresh rate (20-300 Hz).
+// Other int fields (width, height, density, displayId) reinterpreted as f32 won't
+// land in that range, so this mostly isolates refreshRate from the DisplayInfo parcel.
+fn display_info_refresh_rate() -> Option<i32> {
+    let disp = service(c"display", c"android.hardware.display.IDisplayManager");
+    if disp.is_null() { return None; }
+    let code = codes().get_display_info;
+    if code == 0 { return None; }
+
+    let o = call(disp, code, |i| unsafe {
+        (n().AParcel_writeInt32)(i, 0); // displayId = 0 (default)
+    })?;
+
+    let bytes = parcel_words(o);
+    unsafe { (n().AParcel_delete)(o); };
+    let bytes = bytes?;
+
+    for chunk in bytes.chunks_exact(4) {
+        let bits = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+        let f = f32::from_bits(bits);
+        if f.is_finite() && f >= 20.0 && f <= 300.0 {
+            return Some(f.round() as i32);
         }
     }
     None
@@ -234,34 +223,10 @@ fn surfaceflinger_refresh_rate() -> Option<i32> {
 
 fn refresh_rates(why: &str) {
     let (prev_cur, prev_max) = crate::state::previous_refresh();
-    let mut max = prev_max.max(60);
+    let max = prev_max.max(60);
 
-    // Try actual SurfaceFlinger rate first (most accurate)
-    let actual_cur = surfaceflinger_refresh_rate();
-
-    // Read settings for peak_refresh_rate and display_refresh_rate (fallback)
-    let mut settings_cur = prev_cur;
-    let out = std::process::Command::new("/system/bin/cmd")
-        .args(["settings", "list", "system"])
-        .env("PATH", "/system/bin:/system/xbin")
-        .output();
-    if let Ok(o) = out {
-        let text = String::from_utf8_lossy(&o.stdout);
-        for line in text.lines() {
-            let Some((k, v)) = line.split_once('=') else { continue };
-            let Ok(f) = v.trim().parse::<f32>() else { continue };
-            let hz = f.round() as i32;
-            if !(20..=300).contains(&hz) { continue; }
-            match k.trim() {
-                "peak_refresh_rate" => max = hz,
-                "display_refresh_rate" => settings_cur = hz,
-                "min_refresh_rate" if settings_cur <= 0 => settings_cur = hz,
-                _ => {}
-            }
-        }
-    }
-
-    let cur = actual_cur.unwrap_or(settings_cur);
+    // Actual refresh rate from DisplayInfo binder (no shell fallback)
+    let cur = display_info_refresh_rate().unwrap_or(prev_cur);
 
     sys_update(why, |s| {
         s.refresh_rate = cur;

@@ -17,6 +17,8 @@ pub(crate) struct Codes {
     pub(crate) died: u32, pub(crate) pm_name: u32,
     pub(crate) is_interactive: u32, pub(crate) is_saver: u32, pub(crate) get_zen: u32,
     pub(crate) disp_reg: u32, pub(crate) bat_prop: u32,
+    /// IHardwareDisplay.IDisplayManager.getDisplayInfo -> actual refresh rate
+    pub(crate) get_display_info: u32,
     /// optional
     pub(crate) proc_started: u32, pub(crate) app_label: u32,
     /// IActivityManager.getRecentTasks (the recents of the task manager)
@@ -32,7 +34,7 @@ pub(crate) fn codes() -> &'static Codes { CODES.get().unwrap() }
 pub(crate) fn codes_opt() -> Option<&'static Codes> { CODES.get() }
 pub(crate) fn set_codes(c: Codes) { let _ = CODES.set(c); }
 
-const Q: [&str; 14] = [
+const Q: [&str; 15] = [
     "android.app.IActivityManager.Stub::TRANSACTION_registerProcessObserver",
     "android.app.IProcessObserver.Stub::TRANSACTION_onForegroundActivitiesChanged",
     "android.app.IProcessObserver.Stub::TRANSACTION_onForegroundServicesChanged",
@@ -43,6 +45,7 @@ const Q: [&str; 14] = [
     "android.app.INotificationManager.Stub::TRANSACTION_getZenMode",
     "android.hardware.display.IDisplayManager.Stub::TRANSACTION_registerCallback",
     "android.os.IBatteryPropertiesRegistrar.Stub::TRANSACTION_getProperty",
+    "android.hardware.display.IDisplayManager.Stub::TRANSACTION_getDisplayInfo",
     "android.app.IProcessObserver.Stub::TRANSACTION_onProcessStarted",
     "android.app.IActivityManager.Stub::TRANSACTION_getRecentTasks",
     "android.app.IActivityTaskManager.Stub::TRANSACTION_getTasks",
@@ -95,11 +98,12 @@ fn parse_codes(text: &str, with_label: bool) -> Option<Codes> {
         is_interactive: get(Q[5]), is_saver: get(Q[6]), get_zen: get(Q[7]),
         disp_reg: get(Q[8]),
         bat_prop: get(Q[9]),
-        proc_started: get(Q[10]),
+        get_display_info: get(Q[10]),
+        proc_started: get(Q[11]),
         app_label: if with_label { get(LABEL_Q) } else { 0 },
-        recent_tasks: get(Q[11]),
-        tasks: get(Q[12]),
-        focused_task: get(Q[13]),
+        recent_tasks: get(Q[12]),
+        tasks: get(Q[13]),
+        focused_task: get(Q[14]),
     };
     // bat_prop is optional (the battery field becomes "unknown" if it is missing)
     let req = [c.reg, c.fg_act, c.died, c.pm_name,
@@ -110,8 +114,8 @@ fn parse_codes(text: &str, with_label: bool) -> Option<Codes> {
 fn log_codes(c: &Codes) {
     info!("transaction codes: registerProcessObserver={} fgActivities={} fgServices={} processDied={} getNameForUid={}",
           c.reg, c.fg_act, c.fg_svc, c.died, c.pm_name);
-    info!("transaction codes: isInteractive={} isPowerSaveMode={} getZenMode={} registerDisplayCallback={} getProperty={}",
-          c.is_interactive, c.is_saver, c.get_zen, c.disp_reg, c.bat_prop);
+    info!("transaction codes: isInteractive={} isPowerSaveMode={} getZenMode={} registerDisplayCallback={} getProperty={} getDisplayInfo={}",
+          c.is_interactive, c.is_saver, c.get_zen, c.disp_reg, c.bat_prop, c.get_display_info);
     info!("transaction codes: processStarted={} getApplicationLabel={} getRecentTasks={} getTasks={} getFocusedRootTaskInfo={}",
           c.proc_started, c.app_label, c.recent_tasks, c.tasks, c.focused_task);
 }
