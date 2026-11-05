@@ -343,6 +343,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var rootOverlayView: View? = null
     private var crosshairView: ComposeView? = null
     private var hudView: View? = null
+    private var hudLayoutParams: WindowManager.LayoutParams? = null
     private var isViewAttached = false
     private var monitorJob: Job? = null
     private var telemetryJob: Job? = null
@@ -727,8 +728,18 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             }
         }
 
-        // Re-clamp the live monitor HUD to the new screen bounds after rotation.
-        hudView?.requestLayout()
+        // Restore live monitor HUD position for this orientation, then clamp
+        // to the new screen bounds so it never goes off-screen after rotation.
+        val hudOrient = orientationKey()
+        val savedHudX = prefs.getFloat("gs_hud_offset_x_$hudOrient", -1f)
+        val savedHudY = prefs.getFloat("gs_hud_offset_y_$hudOrient", -1f)
+        if (savedHudX >= 0f) panelState.hudOffsetX = savedHudX
+        if (savedHudY >= 0f) panelState.hudOffsetY = savedHudY
+        hudLayoutParams?.let { params ->
+            params.x = panelState.hudOffsetX.roundToInt().coerceIn(0, (dm.widthPixels - 100).coerceAtLeast(0))
+            params.y = panelState.hudOffsetY.roundToInt().coerceIn(0, (dm.heightPixels - 40).coerceAtLeast(0))
+            wm.updateViewLayout(hudView, params)
+        }
     }
 
     /// "portrait" or "landscape" based on current device orientation.
@@ -1120,6 +1131,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             alpha = (panelState.liveMonitor.opacity / 100f).coerceIn(0.2f, 1f)
             applyFullCutoutMode()
         }
+        hudLayoutParams = hudParams
         val hudComposeView = ComposeView(this).apply {
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
             setViewTreeLifecycleOwner(this@ZXSidePanelService)
@@ -1315,6 +1327,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         } finally {
             crosshairView = null
             hudView = null
+            hudLayoutParams = null
             rootOverlayView = null
             isViewAttached = false
             isWindowFullScreen = false
