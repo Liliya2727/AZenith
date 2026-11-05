@@ -1,6 +1,7 @@
 // ---------------- system status (screen, battery saver, zen, battery level & charging) ----------------
 // Adapted from BinderMonitor.cpp in encore, but with no shell forking at all.
 use std::ptr::null_mut;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::OnceLock;
 use std::{thread, time::Duration};
 
@@ -106,6 +107,7 @@ fn refresh_battery(why: &str) {
 // It is just a "display changed" marker -> re-query isInteractive over binder.
 unsafe extern "C" fn on_display(_b: P, _code: u32, _inp: P, _o: P) -> i32 {
     refresh_screen("display event");
+    refresh_rates("display event");
     0
 }
 
@@ -119,11 +121,20 @@ unsafe extern "C" fn on_display(_b: P, _code: u32, _inp: P, _o: P) -> i32 {
 // IPowerManager & INotificationManager themselves have no register-listener method at
 // all for power-save / zen, so this light binder polling is the only way to get these
 // three values. A 500ms cycle is plenty: these values change very rarely.
+//
+// Refresh rate is polled less often (every 5s): it changes only when the user or a
+// game switches the panel mode, and reading it forks `cmd settings`, which is too
+// expensive for every 500ms cycle. It is also re-read on every display event.
 fn watch_status() {
     thread::spawn(|| loop {
         refresh_saver("status cycle");
         refresh_zen("status cycle");
         refresh_battery("status cycle");
+        static RATE_TICKS: AtomicU32 = AtomicU32::new(0);
+        let ticks = RATE_TICKS.fetch_add(1, Ordering::Relaxed);
+        if ticks % 10 == 0 {
+            refresh_rates("status cycle");
+        }
         thread::sleep(STATUS_POLL);
     });
 }
@@ -182,33 +193,76 @@ pub(crate) fn init_status() {
 //   peak_refresh_rate     -> maximum the user allows (= panel max by default)
 //   display_refresh_rate  -> current rate (kept up to date by the module)
 // The values of the previous run are used when a setting is missing/unknown.
+// Read the *actual* current refresh rate from SurfaceFlinger's vsync period.
+// This is more accurate than `settings display_refresh_rate`, which only holds
+// the user's preferred rate (e.g. 60 Hz) while an adaptive panel may actually
+// run at 90/120 Hz.
+fn surfaceflinger_refresh_rate() -> Option<i32> {
+    let out = std::process::Command::new("/system/bin/dumpsys")
+        .args(["SurfaceFlinger", "--display-id"])
+        .env("PATH", "/system/bin:/system/xbin")
+        .output()
+        .ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    for line in text.lines() {
+        // Look for vsync period: "vsync period: 8.333ms (120 Hz)" or nanoseconds
+        if let Some(rest) = line.strip_prefix("vsync period:") {
+            let rest = rest.trim();
+            // Try "(NNN Hz)" first
+            if let Some(hz_part) = rest.split('(').next_back() {
+                let hz_str = hz_part.trim_end_matches(" Hz)").trim();
+                if let Ok(hz) = hz_str.parse::<i32>() {
+                    if (20..=300).contains(&hz) {
+                        return Some(hz);
+                    }
+                }
+            }
+            // Try raw nanoseconds: "vsync period: 8333333 ns"
+            let ns_str = rest.trim_end_matches("ns").trim();
+            if let Ok(ns) = ns_str.parse::<u64>() {
+                if ns > 0 {
+                    let hz = (1_000_000_000.0 / ns as f32).round() as i32;
+                    if (20..=300).contains(&hz) {
+                        return Some(hz);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 fn refresh_rates(why: &str) {
     let (prev_cur, prev_max) = crate::state::previous_refresh();
-    let (mut cur, mut max) = (prev_cur, prev_max.max(60));
+    let mut max = prev_max.max(60);
 
+    // Try actual SurfaceFlinger rate first (most accurate)
+    let actual_cur = surfaceflinger_refresh_rate();
+
+    // Read settings for peak_refresh_rate and display_refresh_rate (fallback)
+    let mut settings_cur = prev_cur;
     let out = std::process::Command::new("/system/bin/cmd")
         .args(["settings", "list", "system"])
         .env("PATH", "/system/bin:/system/xbin")
         .output();
-    match out {
-        Ok(o) => {
-            let text = String::from_utf8_lossy(&o.stdout);
-            for line in text.lines() {
-                let Some((k, v)) = line.split_once('=') else { continue };
-                let Ok(f) = v.trim().parse::<f32>() else { continue };
-                let hz = f.round() as i32;
-                if !(20..=300).contains(&hz) { continue; }
-                match k.trim() {
-                    "peak_refresh_rate" => max = hz,
-                    "display_refresh_rate" => cur = hz,
-                    "min_refresh_rate" if cur <= 0 => cur = hz,
-                    _ => {}
-                }
+    if let Ok(o) = out {
+        let text = String::from_utf8_lossy(&o.stdout);
+        for line in text.lines() {
+            let Some((k, v)) = line.split_once('=') else { continue };
+            let Ok(f) = v.trim().parse::<f32>() else { continue };
+            let hz = f.round() as i32;
+            if !(20..=300).contains(&hz) { continue; }
+            match k.trim() {
+                "peak_refresh_rate" => max = hz,
+                "display_refresh_rate" => settings_cur = hz,
+                "min_refresh_rate" if settings_cur <= 0 => settings_cur = hz,
+                _ => {}
             }
         }
-        Err(e) => warn!("cannot read the refresh rate settings: {e}"),
     }
-    if cur <= 0 { cur = max; }
+
+    let cur = actual_cur.unwrap_or(settings_cur);
+
     sys_update(why, |s| {
         s.refresh_rate = cur;
         s.max_refresh_rate = max;
