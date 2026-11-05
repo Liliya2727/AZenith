@@ -1287,6 +1287,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
 
         try {
+            // Fade in sidepanel, crosshair, and live monitor when they appear
+            val fadeDuration = 450L
+            mainContainer.alpha = 0f
+            chView.alpha = 0f
+            hView.alpha = 0f
+
             wm.addView(mainContainer, handleParams)
             wm.addView(chView, chParams)
             wm.addView(hView, hudParams)
@@ -1294,6 +1300,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             crosshairView = chView
             hudView = hView
             isViewAttached = true
+
+            mainContainer.animate().alpha(1f).setDuration(fadeDuration).start()
+            chView.animate().alpha(1f).setDuration(fadeDuration).start()
+            hView.animate().alpha(1f).setDuration(fadeDuration).start()
 
             // Dynamically update window layout when switching between sidepanel and full-screen edit mode
             serviceScope.launch {
