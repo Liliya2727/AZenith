@@ -539,6 +539,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     activeGameLabel = label ?: resolveAppLabel(pkg)
                     panelState.loadForApp(pkg)
                     attachOverlayIfNeeded()
+                    // Restore HUD position for current device orientation when switching
+                    // directly between games (no rotation, so onConfigurationChanged won't fire).
+                    windowManager?.let { restoreHudPositionForCurrentOrientation(it) }
                     isHandleVisible = true
                     startFpsChoreographer()
                 } else if (!label.isNullOrBlank()) {
@@ -728,13 +731,21 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             }
         }
 
-        // Restore live monitor HUD position for this orientation, then clamp
-        // to the new screen bounds so it never goes off-screen after rotation.
-        val hudOrient = orientationKey(newConfig)
+        restoreHudPositionForCurrentOrientation(wm)
+    }
+
+    /// Restore the live monitor HUD position for the current device orientation,
+    /// then clamp to the new screen bounds so it never goes off-screen.
+    /// Called both on rotation (onConfigurationChanged) and when a new game is
+    /// shown (onStartCommand ACTION_SHOW), so switching directly between games
+    /// of different orientations also updates the HUD position.
+    private fun restoreHudPositionForCurrentOrientation(wm: WindowManager) {
+        val hudOrient = orientationKey(null)
         val savedHudX = prefs.getFloat("gs_hud_offset_x_$hudOrient", -1f)
         val savedHudY = prefs.getFloat("gs_hud_offset_y_$hudOrient", -1f)
         if (savedHudX >= 0f) panelState.hudOffsetX = savedHudX
         if (savedHudY >= 0f) panelState.hudOffsetY = savedHudY
+        val dm = resources.displayMetrics
         hudLayoutParams?.let { params ->
             params.x = panelState.hudOffsetX.roundToInt().coerceIn(0, (dm.widthPixels - 100).coerceAtLeast(0))
             params.y = panelState.hudOffsetY.roundToInt().coerceIn(0, (dm.heightPixels - 40).coerceAtLeast(0))
