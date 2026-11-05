@@ -86,16 +86,27 @@ fn main() {
             std::process::exit(1);
         };
         set_codes(c);
-        let am = service(c"activity", c"android.app.IActivityManager");
-        if am.is_null() {
-            eprintln!("am_null");
-            std::process::exit(1);
-        }
-        let code = codes().recent_tasks;
-        eprintln!("code={code}");
         let known: Vec<String> = procs::scan_apps().iter().map(|a| a.pkg.clone()).collect();
         eprintln!("known={}", known.len());
-        match recent::recent_packages(am, code, &known) {
+        let task = service(c"activity_task", c"android.app.IActivityTaskManager");
+        let code = codes().tasks;
+        eprintln!("getTasks code={code}");
+        let list = if !task.is_null() && code != 0 {
+            recent::task_packages(task, code, &known)
+        } else {
+            None
+        };
+        let list = list.or_else(|| {
+            let am = service(c"activity", c"android.app.IActivityManager");
+            if am.is_null() {
+                eprintln!("am_null");
+                std::process::exit(1);
+            }
+            let code = codes().recent_tasks;
+            eprintln!("getRecentTasks code={code}");
+            recent::recent_packages(am, code, &known)
+        });
+        match list {
             Some(list) => {
                 eprintln!("OK_LIST={}", list.len());
                 for p in &list {
@@ -103,7 +114,7 @@ fn main() {
                 }
             }
             None => {
-                eprintln!("failed {code}");
+                eprintln!("recents_unavailable");
                 std::process::exit(1);
             }
         }
@@ -191,16 +202,26 @@ fn main() {
 
     // Keep the recent list in sync with the task manager's recents.
     thread::spawn(move || {
+        // getTasks returns the complete task list; getRecentTasks only returns
+        // the focused task on Android 16 and is kept as the fallback.
+        let task = service(c"activity_task", c"android.app.IActivityTaskManager");
+        let am = service(c"activity", c"android.app.IActivityManager");
         loop {
             thread::sleep(std::time::Duration::from_secs(2));
             state::cleanup_stale();
-            let am = service(c"activity", c"android.app.IActivityManager");
-            if am.is_null() {
-                continue;
-            }
-            let known = state::known_packages();
-            if let Some(list) = recent::recent_packages(am, codes().recent_tasks, &known) {
-                let list = list.into_iter().filter(|p| known.contains(p)).collect();
+            let known = state::known_apps();
+            let list = if !task.is_null() && codes().tasks != 0 {
+                recent::task_packages(task, codes().tasks, &known)
+            } else {
+                None
+            };
+            let list = list.or_else(|| {
+                if am.is_null() || codes().recent_tasks == 0 {
+                    return None;
+                }
+                recent::recent_packages(am, codes().recent_tasks, &known)
+            });
+            if let Some(list) = list {
                 state::set_recent(list);
             }
         }

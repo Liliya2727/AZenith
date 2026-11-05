@@ -1,16 +1,18 @@
 // ---------------- recent tasks (the recents of the task manager) ----------------
 //
-// The task manager keeps a list of the tasks the user opened. The java
-// companion used ActivityManager.getRecentTasks(30) for it, so an app that is
+// The task manager keeps a list of the tasks the user opened. An app that is
 // swiped away from the recents disappears from background_apps.
 //
-// Android 16 changed the AIDL to
-//     ParceledListSlice getRecentTasks(int maxNum, int flags, int userId)
-// The reply is a list of RunningTaskInfo. Reading the whole struct would need
-// the exact field order of TaskInfo/RunningTaskInfo (it changes with every
-// Android version), so the items are read as raw byte arrays and the package
-// name is searched in them: the base intent and the component names are plain
-// strings ("com.foo.bar", "com.foo.bar/.MainActivity").
+// getRecentTasks is not usable for that on Android 16: the task manager only
+// returns the focused task (or the caller's own tasks), so replacing the list
+// with its reply drops every background app. getTasks returns the full list of
+// running/recent tasks and is used first; getRecentTasks stays as the fallback
+// for ROMs that do not expose it.
+//
+// Reading the whole struct would need the exact field order of
+// TaskInfo/RunningTaskInfo (it changes with every Android version), so the
+// reply is scanned as raw bytes: the base intent and the component names are
+// plain strings ("com.foo.bar", "com.foo.bar/.MainActivity").
 use crate::log::debug;
 use crate::ndk::{call, n, parcel_words, P};
 
@@ -19,12 +21,32 @@ const MAX_TASKS: u32 = 30;
 /// User 0 (the owner), the daemon runs as root and reads the owner recents.
 const USER_ID: u32 = 0;
 
-/// The packages of the recent tasks, most recent first.
+/// The packages of the recent tasks, most recent first (getTasks).
 ///
-/// `known` are the packages of the running apps: a task also contains strings
-/// like "android.intent.action.MAIN", which look like a package name but are
-/// not one. A task whose app is not running is skipped, it has no pids to
-/// publish anyway.
+/// `known` are the packages of the apps the daemon has seen: a task also
+/// contains strings like "android.intent.action.MAIN", which look like a
+/// package name but are not one.
+pub(crate) fn task_packages(task: P, code: u32, known: &[String]) -> Option<Vec<String>> {
+    let o = call(task, code, |i| unsafe {
+        let n = n();
+        (n.AParcel_writeInt32)(i, MAX_TASKS as i32);
+        (n.AParcel_writeInt32)(i, 1); // filterOnlyVisibleRecents
+        (n.AParcel_writeInt32)(i, 0); // keepIntentExtra
+        (n.AParcel_writeInt32)(i, 0); // displayId (default display)
+    })?;
+    let bytes = parcel_words(o);
+    unsafe { (n().AParcel_delete)(o) };
+    let bytes = bytes?;
+    if std::env::var_os("AZ_DEBUG_RECENTS").is_some() {
+        eprintln!("getTasks reply: {} bytes", bytes.len());
+        eprintln!("candidates: {:?}", packages_in(&bytes));
+        eprintln!("known: {known:?}");
+    }
+    debug!("getTasks reply: {} bytes", bytes.len());
+    Some(known_packages_in(&bytes, known))
+}
+
+/// Fallback for older ROMs / ROMs without the getTasks transaction code.
 pub(crate) fn recent_packages(am: P, code: u32, known: &[String]) -> Option<Vec<String>> {
     let o = call(am, code, |i| unsafe {
         let n = n();
@@ -36,9 +58,13 @@ pub(crate) fn recent_packages(am: P, code: u32, known: &[String]) -> Option<Vec<
     unsafe { (n().AParcel_delete)(o) };
     let bytes = bytes?;
     debug!("getRecentTasks reply: {} bytes", bytes.len());
+    Some(known_packages_in(&bytes, known))
+}
 
+/// The package names of a task parcel that are in `known`, in parcel order.
+fn known_packages_in(bytes: &[u8], known: &[String]) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
-    for p in packages_in(&bytes) {
+    for p in packages_in(bytes) {
         if !known.iter().any(|k| *k == p) {
             continue;
         }
@@ -49,7 +75,7 @@ pub(crate) fn recent_packages(am: P, code: u32, known: &[String]) -> Option<Vec<
             break;
         }
     }
-    Some(out)
+    out
 }
 
 /// The first known (running) package in a task parcel. A RootTaskInfo writes

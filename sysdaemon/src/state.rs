@@ -53,6 +53,12 @@ pub(crate) struct St {
     recent: Vec<String>,
     /// pid -> (package, uid) of every known app process
     procs: BTreeMap<i32, (String, i32)>,
+    /// package -> last seen (pid, uid). Kept when the process dies so a task
+    /// that is still in the recents stays in background_apps.
+    apps: BTreeMap<String, (i32, i32)>,
+    /// true once the task manager returned its task list; from then on the
+    /// task list, not process death, decides what leaves background_apps.
+    recents_seen: bool,
     sys: SysStat,
     last_status: String,
     last_background: String,
@@ -63,6 +69,8 @@ static ST: LazyLock<Mutex<St>> = LazyLock::new(|| {
         focused: None,
         recent: Vec::new(),
         procs: BTreeMap::new(),
+        apps: BTreeMap::new(),
+        recents_seen: false,
         sys: SysStat::default(),
         last_status: String::new(),
         last_background: String::new(),
@@ -71,7 +79,7 @@ static ST: LazyLock<Mutex<St>> = LazyLock::new(|| {
 
 pub(crate) fn st() -> MutexGuard<'static, St> { ST.lock().unwrap_or_else(|e| e.into_inner()) }
 
-/// The packages of the known app processes.
+/// The packages of the known app processes (currently alive).
 pub(crate) fn known_packages() -> Vec<String> {
     let s = st();
     let mut v: Vec<String> = s.procs.values().map(|(p, _)| p.clone()).collect();
@@ -80,17 +88,30 @@ pub(crate) fn known_packages() -> Vec<String> {
     v
 }
 
+/// Every package the daemon has seen as a user app, alive or not. Used to
+/// recognise the package names inside a task parcel.
+pub(crate) fn known_apps() -> Vec<String> {
+    st().apps.keys().cloned().collect()
+}
+
 /// Drop recent entries whose processes are all gone.
+///
+/// This is only the fallback for ROMs without a usable task list. When the
+/// task manager works, a cached process may be killed while its task stays in
+/// the recents; removing it here would drop background_apps before the user
+/// actually clears the task.
 pub(crate) fn cleanup_stale() {
     let mut s = st();
     let mut changed = false;
     let live: std::collections::HashSet<String> = s.procs.values().map(|(p, _)| p.clone()).collect();
     let focused = s.focused.as_ref().map(|(p, _, _)| p.clone());
-    s.recent.retain(|p| {
-        let keep = live.contains(p) || focused.as_ref().is_some_and(|f| f == p);
-        if !keep { changed = true; }
-        keep
-    });
+    if !s.recents_seen {
+        s.recent.retain(|p| {
+            let keep = live.contains(p) || focused.as_ref().is_some_and(|f| f == p);
+            if !keep { changed = true; }
+            keep
+        });
+    }
     if let Some(ref f) = focused {
         if !live.contains(f) {
             s.focused = None;
@@ -103,21 +124,33 @@ pub(crate) fn cleanup_stale() {
     }
 }
 
-/// Replace the recent list with the AMS recents (the task manager recents).
+/// Replace the recent list with the task manager list. A package is removed
+/// only when its task is gone from the recents, not when its process dies.
+///
+/// The task-manager reply is only trusted as a full recents snapshot when it
+/// actually contains more than the focused app. On Android 16 (and several
+/// ROMs) getRecentTasks / getTasks return only the focused task, so blindly
+/// replacing `recent` with that reply would drop every background app the
+/// moment the user switches focus — instead of waiting until the user clears
+/// the task from the recents. An empty or focused-only reply is therefore
+/// treated as "no useful recents data" and `recent` is left untouched.
 pub(crate) fn set_recent(list: Vec<String>) {
     let focused = st().focused.as_ref().map(|(p, _, _)| p.clone());
     let live: std::collections::HashSet<String> = st().procs.values().map(|(p, _)| p.clone()).collect();
     let mut s = st();
-    s.recent.clear();
-    for p in list {
-        if !live.contains(&p) {
-            continue;
-        }
-        if s.recent.len() >= MAX_RECENT {
-            break;
-        }
-        if !s.recent.contains(&p) {
-            s.recent.push(p);
+    s.recents_seen = true;
+    // Only replace `recent` when we have a real multi-task snapshot. A focused-
+    // only (or empty) reply is not a full recents list; wiping on it would
+    // remove background apps on every focus change.
+    if list.len() > 1 {
+        s.recent.clear();
+        for p in list {
+            if s.recent.len() >= MAX_RECENT {
+                break;
+            }
+            if !s.recent.contains(&p) {
+                s.recent.push(p);
+            }
         }
     }
     if let Some(ref f) = focused {
@@ -189,6 +222,7 @@ struct Snapshot {
     focused: Option<(String, i32, i32)>,
     recent: Vec<String>,
     procs: BTreeMap<i32, (String, i32)>,
+    apps: BTreeMap<String, (i32, i32)>,
     sys: SysStat,
 }
 
@@ -199,6 +233,7 @@ impl Snapshot {
             focused: s.focused.clone(),
             recent: s.recent.clone(),
             procs: s.procs.clone(),
+            apps: s.apps.clone(),
             sys: s.sys,
         }
     }
@@ -261,7 +296,17 @@ impl Snapshot {
                     continue;
                 }
             }
+            // A live process is preferred. If the app's cached process was
+            // killed but its task is still in the recents, keep the last known
+            // pid so the task does not disappear from background_apps.
             if let Some((pid, (_p, uid))) = self.procs.iter().find(|(_pid, (p, _uid))| p == pkg) {
+                out.push_str(pkg);
+                out.push(' ');
+                out.push_str(&pid.to_string());
+                out.push(' ');
+                out.push_str(&uid.to_string());
+                out.push('\n');
+            } else if let Some(&(pid, uid)) = self.apps.get(pkg) {
                 out.push_str(pkg);
                 out.push(' ');
                 out.push_str(&pid.to_string());
@@ -350,6 +395,7 @@ pub(crate) fn set_focused(pkg: &str, pid: i32, uid: i32, why: &str) {
         // The focused app must always be known in the process table, even when
         // its onProcessStarted event was missed.
         s.procs.insert(pid, (pkg.to_string(), uid));
+        s.apps.insert(pkg, (pid, uid));
     }
     publish(why);
 }
@@ -361,6 +407,7 @@ pub(crate) fn add_proc(pid: i32, pkg: &str, uid: i32) {
         let mut s = st();
         let e = s.procs.entry(pid).or_insert_with(|| (pkg.to_string(), uid));
         if e.0 != pkg || e.1 != uid { *e = (pkg.to_string(), uid); }
+        s.apps.insert(pkg, (pid, uid));
     }
     publish("process started");
 }
@@ -372,14 +419,14 @@ pub(crate) fn remove_proc(pid: i32, why: &str) {
         let mut s = st();
         let removed = s.procs.remove(&pid).map(|(p, _)| p);
         if let Some(ref pkg) = removed {
-            // The process that was just listed died -> remove the package
-            // from background_apps entirely (no fallback to other pids).
-            if !s.focused.as_ref().is_some_and(|(f, _, _)| f == pkg) {
+            // The app's process died. When it was the last process of the app,
+            // remove it from background_apps immediately instead of waiting for
+            // the user to clear the task from the recents: Android kills cached
+            // processes while their task is still in recents, but a destroyed
+            // app should not linger in background_apps.
+            if !s.procs.values().any(|(p, _)| p == pkg) {
                 s.recent.retain(|x| x != pkg);
-            } else {
-                if !s.procs.values().any(|(p, _)| p == pkg) {
-                    s.focused = None;
-                }
+                s.apps.remove(pkg);
             }
         }
         let existed = removed.is_some();
@@ -464,7 +511,10 @@ pub(crate) fn seed() {
     let apps = crate::procs::scan_apps();
     {
         let mut s = st();
-        for a in &apps { s.procs.insert(a.pid, (a.pkg.clone(), a.uid)); }
+        for a in &apps {
+            s.procs.insert(a.pid, (a.pkg.clone(), a.uid));
+            s.apps.insert(a.pkg.clone(), (a.pid, a.uid));
+        }
 
         // The "recently used" list starts empty on purpose: it is filled by the
         // apps the user really opens (the foreground events). It is NOT restored
@@ -520,6 +570,11 @@ mod tests {
                 .iter()
                 .map(|(pid, pkg)| (*pid, (pkg.to_string(), 10000 + pid)))
                 .collect(),
+            apps: procs
+                .iter()
+                .map(|(pid, pkg)| (pkg.to_string(), (*pid, 10000 + pid)))
+                .collect(),
+            recents_seen: false,
             sys: SysStat::default(),
             last_status: String::new(),
             last_background: String::new(),
@@ -532,6 +587,7 @@ mod tests {
             focused: s.focused,
             recent: s.recent,
             procs: s.procs,
+            apps: s.apps,
             sys: s.sys,
         }
     }
@@ -556,9 +612,25 @@ mod tests {
     }
 
     #[test]
-    fn a_dead_app_is_not_listed() {
+    fn an_app_that_was_never_seen_is_not_listed() {
         let s = snap(Some("com.a"), &["com.a", "com.b"], &[(1, "com.a")]);
         assert_eq!(s.background(), "com.a 1 10001\n");
+    }
+
+    #[test]
+    fn a_task_without_a_live_process_keeps_its_last_pid() {
+        let mut state = st(Some("com.a"), &["com.a", "com.b"], &[(1, "com.a")]);
+        // com.b was seen before, its process is gone but its task is still in
+        // the recents.
+        state.apps.insert("com.b".to_string(), (2, 10002));
+        let s = Snapshot {
+            focused: state.focused,
+            recent: state.recent,
+            procs: state.procs,
+            apps: state.apps,
+            sys: state.sys,
+        };
+        assert_eq!(s.background(), "com.a 1 10001\ncom.b 2 10002\n");
     }
 
     #[test]
@@ -576,6 +648,7 @@ mod tests {
             focused: s.focused.clone(),
             recent: s.recent.clone(),
             procs: s.procs.clone(),
+            apps: s.apps.clone(),
             sys: s.sys,
         };
         assert!(snap.valid_for(&s));

@@ -21,6 +21,8 @@ pub(crate) struct Codes {
     pub(crate) proc_started: u32, pub(crate) app_label: u32,
     /// IActivityManager.getRecentTasks (the recents of the task manager)
     pub(crate) recent_tasks: u32,
+    /// IActivityTaskManager.getTasks (all tasks, the full recents list)
+    pub(crate) tasks: u32,
     /// IActivityTaskManager.getFocusedRootTaskInfo (the task on screen)
     pub(crate) focused_task: u32,
 }
@@ -30,7 +32,7 @@ pub(crate) fn codes() -> &'static Codes { CODES.get().unwrap() }
 pub(crate) fn codes_opt() -> Option<&'static Codes> { CODES.get() }
 pub(crate) fn set_codes(c: Codes) { let _ = CODES.set(c); }
 
-const Q: [&str; 13] = [
+const Q: [&str; 14] = [
     "android.app.IActivityManager.Stub::TRANSACTION_registerProcessObserver",
     "android.app.IProcessObserver.Stub::TRANSACTION_onForegroundActivitiesChanged",
     "android.app.IProcessObserver.Stub::TRANSACTION_onForegroundServicesChanged",
@@ -43,6 +45,7 @@ const Q: [&str; 13] = [
     "android.os.IBatteryPropertiesRegistrar.Stub::TRANSACTION_getProperty",
     "android.app.IProcessObserver.Stub::TRANSACTION_onProcessStarted",
     "android.app.IActivityManager.Stub::TRANSACTION_getRecentTasks",
+    "android.app.IActivityTaskManager.Stub::TRANSACTION_getTasks",
     "android.app.IActivityTaskManager.Stub::TRANSACTION_getFocusedRootTaskInfo",
 ];
 
@@ -95,7 +98,8 @@ fn parse_codes(text: &str, with_label: bool) -> Option<Codes> {
         proc_started: get(Q[10]),
         app_label: if with_label { get(LABEL_Q) } else { 0 },
         recent_tasks: get(Q[11]),
-        focused_task: get(Q[12]),
+        tasks: get(Q[12]),
+        focused_task: get(Q[13]),
     };
     // bat_prop is optional (the battery field becomes "unknown" if it is missing)
     let req = [c.reg, c.fg_act, c.died, c.pm_name,
@@ -108,8 +112,8 @@ fn log_codes(c: &Codes) {
           c.reg, c.fg_act, c.fg_svc, c.died, c.pm_name);
     info!("transaction codes: isInteractive={} isPowerSaveMode={} getZenMode={} registerDisplayCallback={} getProperty={}",
           c.is_interactive, c.is_saver, c.get_zen, c.disp_reg, c.bat_prop);
-    info!("transaction codes: processStarted={} getApplicationLabel={} getRecentTasks={} getFocusedRootTaskInfo={}",
-          c.proc_started, c.app_label, c.recent_tasks, c.focused_task);
+    info!("transaction codes: processStarted={} getApplicationLabel={} getRecentTasks={} getTasks={} getFocusedRootTaskInfo={}",
+          c.proc_started, c.app_label, c.recent_tasks, c.tasks, c.focused_task);
 }
 
 /// Marker of the cache file: the hash of the query list. A new query (a new
