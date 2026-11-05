@@ -222,15 +222,13 @@ fn display_info_refresh_rate() -> Option<i32> {
 }
 
 fn refresh_rates(why: &str) {
-    let (prev_cur, prev_max) = crate::state::previous_refresh();
-    let max = prev_max.max(60);
+    let prev_cur = crate::state::previous_refresh();
 
     // Actual refresh rate from DisplayInfo binder (no shell fallback)
     let cur = display_info_refresh_rate().unwrap_or(prev_cur);
 
     sys_update(why, |s| {
         s.refresh_rate = cur;
-        s.max_refresh_rate = max;
     });
-    info!("refresh rate: current {cur}Hz, maximum {max}Hz");
+    info!("refresh rate: current {cur}Hz");
 }

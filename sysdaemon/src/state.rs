@@ -28,8 +28,6 @@ pub(crate) struct SysStat {
     pub(crate) is_charging: bool,
     /// current display refresh rate, -1 = unknown
     pub(crate) refresh_rate: i32,
-    /// highest usable display refresh rate (used by the service as a cap)
-    pub(crate) max_refresh_rate: i32,
 }
 
 impl Default for SysStat {
@@ -41,7 +39,6 @@ impl Default for SysStat {
             battery_level: -1,
             is_charging: false,
             refresh_rate: -1,
-            max_refresh_rate: 60,
         }
     }
 }
@@ -257,15 +254,13 @@ impl Snapshot {
              battery_level {}\n\
              is_charging {}\n\
              app_name {name}\n\
-             refresh_rate {}\n\
-             max_refresh_rate {}\n",
+             refresh_rate {}\n",
             self.sys.screen_awake as u8,
             self.sys.battery_saver as u8,
             self.sys.zen_mode,
             self.sys.battery_level,
             self.sys.is_charging as u8,
             self.sys.refresh_rate,
-            self.sys.max_refresh_rate,
         )
     }
 
@@ -466,7 +461,7 @@ pub(crate) fn sys_update(why: &str, f: impl FnOnce(&mut SysStat)) {
 }
 
 static PREV: OnceLock<Option<(String, i32, i32)>> = OnceLock::new();
-static PREV_REFRESH: OnceLock<(i32, i32)> = OnceLock::new();
+static PREV_REFRESH: OnceLock<i32> = OnceLock::new();
 
 /// Remember the focused app, the recent list and the refresh rates of the
 /// previous run. Must be called before the first publish, otherwise the files
@@ -476,20 +471,18 @@ pub(crate) fn capture_previous() {
     let _ = PREV_REFRESH.set(previous_refresh());
 }
 
-/// (refresh_rate, max_refresh_rate) of the previous run, (-1, 60) if unknown.
-pub(crate) fn previous_refresh() -> (i32, i32) {
+/// refresh_rate of the previous run, -1 if unknown.
+pub(crate) fn previous_refresh() -> i32 {
     let mut cur = -1;
-    let mut max = 60;
-    let Ok(text) = fs::read_to_string(STATUS_FILE) else { return (cur, max) };
+    let Ok(text) = fs::read_to_string(STATUS_FILE) else { return cur };
     for line in text.lines() {
         let mut it = line.split_whitespace();
         match (it.next(), it.next()) {
             (Some("refresh_rate"), Some(v)) => cur = v.parse().unwrap_or(-1),
-            (Some("max_refresh_rate"), Some(v)) => max = v.parse().unwrap_or(60),
             _ => {}
         }
     }
-    (cur, max)
+    cur
 }
 
 /// Focused app of the previous run (written by us or by the java companion), so
