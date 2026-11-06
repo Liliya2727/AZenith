@@ -56,9 +56,9 @@ class ZenithReceiver : BroadcastReceiver() {
 
         when (action) {
             ACTION_SHOW_SIDEPANEL -> {
-                val pkg = intent.getStringExtra("sidepanel_pkg") ?: ""
-                if (pkg.isNotBlank()) {
-                    zx.azenith.ui.gamespace.ZXSidePanelService.show(context, null, pkg)
+                val appLabel = intent.getStringExtra("sidepanel_pkg") ?: ""
+                if (appLabel.isNotBlank()) {
+                    zx.azenith.ui.gamespace.ZXSidePanelService.show(context, null, appLabel)
                 }
             }
             ACTION_MANAGE -> {
@@ -86,13 +86,6 @@ class ZenithReceiver : BroadcastReceiver() {
                 if (notifyTitle.contains("Performance Profile", ignoreCase = true) &&
                     notifyMessage.startsWith("Running at ", ignoreCase = true)
                 ) {
-                    val appName = notifyMessage.removePrefix("Running at ").trim()
-                    zx.azenith.ui.gamespace.ZXSidePanelService.show(context, null, appName)
-                } else if (notifyTitle.contains("SidePanelShow", ignoreCase = true) &&
-                           notifyMessage.startsWith("Running at ", ignoreCase = true)
-                ) {
-                    // Manual mode: archdaemon detected a game but did not apply a profile.
-                    // Show the sidepanel overlay so the user still gets the floating UI.
                     val appName = notifyMessage.removePrefix("Running at ").trim()
                     zx.azenith.ui.gamespace.ZXSidePanelService.show(context, null, appName)
                 } else if (notifyTitle.contains("ECO Mode", ignoreCase = true) ||

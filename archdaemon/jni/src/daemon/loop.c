@@ -73,7 +73,8 @@ int main_daemon(void) {
     validateprop();
     log_debug("integrity", "module integrity passed");
 
-    log_info("daemon", "daemon ready pid=%d mode=%s", getpid(), profile_mode_name(ctx.cur_mode));
+    log_info("daemon", "daemon ready pid=%d mode=%s profile=%s", getpid(),
+             is_manual_mode() ? "manual" : "auto", profile_mode_name(ctx.cur_mode));
     ctx.need_profile_checkup = true;
     bool need_loop = true;
     runthermalcore();
@@ -136,9 +137,6 @@ int main_daemon(void) {
 
         handle_dynamic_bypass(&ctx);
 
-        if (ctx.is_initialize_complete && strcmp(ctx.prev_ai_state, "0") == 0)
-            continue;
-
         if (ctx.need_profile_checkup) {
             char* current_focused_game = get_gamestart(&opts, &current_system_cache);
             if (current_focused_game) {
@@ -161,10 +159,11 @@ int main_daemon(void) {
                     game_pid_count = 0;
                     ctx.pid_retries = 0;
                     ctx.has_applied_renderer = false;
+                    ctx.manual_sidepanel_shown = false;
                     ctx.need_profile_checkup = true;
                     handle_dynamic_bypass(&ctx);
                 }
-            } else if (!is_manual_mode() && ctx.cur_mode != BALANCED_PROFILE && ctx.cur_mode != ECO_MODE) {
+            } else if (is_manual_mode() || (ctx.cur_mode != BALANCED_PROFILE && ctx.cur_mode != ECO_MODE)) {
                 ctx.need_profile_checkup = false;
             }
         }
@@ -219,6 +218,7 @@ int main_daemon(void) {
                                  active_app_name ? active_app_name : gamestart);
                         ctx.fg_away_active = false;
                         ctx.fg_away_timer = 0;
+                        ctx.manual_sidepanel_shown = false;
                         restore_resolution_target(&ctx, gamestart);
                         free(gamestart);
                         gamestart = NULL;
@@ -238,7 +238,8 @@ int main_daemon(void) {
             }
         }
 
-        if (ctx.is_initialize_complete && ctx.cur_mode != PERFORMANCE_PROFILE && gamestart == NULL && !ctx.need_profile_checkup) {
+        if (ctx.is_initialize_complete && !is_manual_mode() && ctx.cur_mode != PERFORMANCE_PROFILE &&
+            gamestart == NULL && !ctx.need_profile_checkup) {
             
             bool is_low_power = get_low_power_state(&current_system_cache);
             
@@ -286,13 +287,13 @@ int main_daemon(void) {
                 if (game_pid_count == 0) {
                     if (ctx.pid_retries < 5) {
                         ctx.pid_retries++;
-                        log_warn("profile", "game pkg=%s not spawned yet retry=%d/5",
+                        log_warn("profile", "game app=%s not spawned yet retry=%d/5",
                                  active_app_name ? active_app_name : gamestart, ctx.pid_retries);
                         usleep(200000);
                         need_loop = true;
                         continue;
                     } else {
-                        log_error("profile", "no pid found pkg=%s after retries=5 action=drop",
+                        log_error("profile", "no pid found app=%s after retries=5 action=drop",
                                   active_app_name ? active_app_name : gamestart);
                         free(gamestart);
                         gamestart = NULL;
@@ -301,6 +302,7 @@ int main_daemon(void) {
                             active_app_name = NULL;
                         }
                         ctx.pid_retries = 0;
+                        ctx.manual_sidepanel_shown = false;
                         ctx.need_profile_checkup = true;
                         continue;
                     }
@@ -318,17 +320,23 @@ int main_daemon(void) {
             }
             if (!is_manual_mode()) {
                 apply_performance_profile(&ctx);
-            } else {
-                // Manual mode: detect game but do not apply profile.
-                // Notify ZenithReceiver to show the sidepanel overlay instead.
+            } else if (!ctx.manual_sidepanel_shown) {
+                // Manual mode: detect the game and show the sidepanel directly.
+                // Do not apply a profile and do not post a profile notification.
                 show_sidepanel(active_app_name ? active_app_name : gamestart);
+                ctx.manual_sidepanel_shown = true;
             }
-        } else if (ctx.is_initialize_complete && get_low_power_state(&current_system_cache)) {
+        } else if (!is_manual_mode() && ctx.is_initialize_complete &&
+                   get_low_power_state(&current_system_cache)) {
             apply_mode_eco:
                 apply_eco_profile(&ctx);
-        } else {
+        } else if (!is_manual_mode() || !ctx.is_initialize_complete) {
             apply_mode_balanced:
                 apply_balanced_profile(&ctx);
+        } else if (!gamestart) {
+            // Manual mode idle: never auto-execute a profile. Only make sure any
+            // per-game renderer left behind by a previous session is restored.
+            restore_saved_renderer(&ctx);
         }
     }
 

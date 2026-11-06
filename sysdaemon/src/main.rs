@@ -258,13 +258,12 @@ fn main() {
     unsafe { (n.ABinderProcess_joinThreadPool)(); }
 }
 
-/// The C daemon (sys.azenith-service) skips the whole game detection when
-/// API/current_modes is missing or "0" (jni/src/daemon/loop.c:139), so it
-/// stays idle forever. The file is written by the manager app, but
-/// customize.sh only creates it when persist.sys.azenithconf.AIenabled is
-/// still empty - after a re-install the property is set but the file is
-/// gone, and nothing recreates it. Mirror the property, the app writes both
-/// together.
+/// API/current_modes mirrors persist.sys.azenithconf.AIenabled for the manager
+/// app, which polls it to tell Auto Mode from Manual Mode. The file is written
+/// by the manager app, but customize.sh only creates it when the property is
+/// still empty - after a re-install the property is set but the file is gone,
+/// and nothing recreates it. Mirror the property so the UI has a consistent
+/// state, the app writes both together afterwards.
 fn ensure_current_modes() {
     let dir = format!("{CFG_DIR}/API");
     let path = format!("{dir}/current_modes");
@@ -276,7 +275,7 @@ fn ensure_current_modes() {
     let prop = label::prop_str("persist.sys.azenithconf.AIenabled");
     let state = if prop.is_empty() { "1" } else { prop.as_str() };
     if state::write_atomic(&path, &format!("{state}\n")) {
-        info!("created API/current_modes = {state} (the service needs it to detect games)");
+        info!("created API/current_modes = {state}");
     } else {
         warn!("failed to create API/current_modes");
     }

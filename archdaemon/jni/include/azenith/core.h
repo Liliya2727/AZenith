@@ -157,6 +157,7 @@ typedef struct {
     bool resolution_applied;
     bool used_legacy_fallback;
     bool fg_away_active;
+    bool manual_sidepanel_shown;
     time_t fg_away_timer;
 } DaemonContext;
 

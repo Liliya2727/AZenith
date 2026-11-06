@@ -6,7 +6,7 @@
 int get_current_refresh_rate(void);
 void apply_dynamic_refresh_rate(int target_rr);
 int is_manual_mode(void);
-void show_sidepanel(const char* pkg);
+void show_sidepanel(const char* app_label);
 bool apply_smart_renderer(const char* target_type, char* saved_ref, char* saved_sys);
 bool apply_resolution_target(DaemonContext* ctx, const char* pkg, const char* downscale, const char* fps);
 void restore_resolution_target(DaemonContext* ctx, const char* pkg);
