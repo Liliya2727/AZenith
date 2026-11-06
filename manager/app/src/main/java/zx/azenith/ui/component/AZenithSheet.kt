@@ -210,20 +210,16 @@ private fun AZenithSheet(
     // scrim/drag hide has completed, so that callback must not try to hide again.
     // This helper is only for in-content dismissals (Done and option selection).
     val hideSheet: (() -> Unit) -> Unit = { afterHide ->
-        if (!sheetState.isVisible) {
-            currentOnDismiss()
-            afterHide()
-        } else if (sheetState.currentValue != SheetValue.Hidden) {
-            scope.launch {
-                try {
-                    sheetState.hide()
-                    if (!sheetState.isVisible) {
-                        currentOnDismiss()
-                        afterHide()
-                    }
-                } catch (_: CancellationException) {
-                    // Hide was cancelled (scope disposed, etc.); do not run callbacks.
-                }
+        scope.launch {
+            try {
+                sheetState.hide()
+            } catch (_: CancellationException) {
+                // Hide was cancelled (scope disposed, etc.); do not run callbacks.
+                return@launch
+            }
+            if (!sheetState.isVisible) {
+                currentOnDismiss()
+                afterHide()
             }
         }
     }
@@ -351,12 +347,11 @@ private fun AZenithSheet(
                             first = index == 0,
                             last = index == items.lastIndex,
                             onClick = {
-                                // Fire the action immediately so the user gets instant
-                                // feedback, then hide the sheet in the background.
-                                // Multi-select rows are toggles and stay open.
                                 if (style != SheetRowStyle.MultiSelect) {
-                                    onItemClick(index)
+                                    // Start hide animation immediately for instant close feel,
+                                    // then run the action in parallel (don't wait for animation).
                                     hideSheet {}
+                                    onItemClick(index)
                                 } else {
                                     onItemClick(index)
                                 }
