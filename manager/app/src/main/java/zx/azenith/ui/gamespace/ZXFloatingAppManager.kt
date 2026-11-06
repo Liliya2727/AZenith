@@ -520,6 +520,18 @@ class ZXFloatingAppManager(
         }
         minimizedStackHostView = null
         minimizedStackParams = null
+        // Release the root service binding so the root process (zx.azenith:root:0)
+        // does not linger in the background after the overlay service is torn down.
+        unbindRootService()
+    }
+
+    /// Unbind from ZXFloatingAppRootService so the root process can be reclaimed.
+    fun unbindRootService() {
+        rootBindingInFlight = false
+        rootClient = null
+        runCatching {
+            context.unbindService(rootConnection)
+        }
     }
 
     fun onConfigurationChanged() {
