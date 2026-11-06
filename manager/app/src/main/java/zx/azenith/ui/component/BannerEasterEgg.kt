@@ -130,7 +130,7 @@ fun BannerWithEasterEgg(
                 scaleX = pressScale
                 scaleY = pressScale
             }
-            .clip(RoundedCornerShape(percent = (currentPersonalization().bannerRadius * 100).toInt()))
+            .clip(currentPersonalization().bannerCorner())
             .gamepadFocusOutline(register = true)
             .combinedClickable(
                 interactionSource = interactionSource,
@@ -262,12 +262,9 @@ private fun EasterEggCard(compact: Boolean, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            // Same percent-based shape as BannerCard, so swapping the banner for
-            // the easter egg does not change the silhouette. A fixed dp radius
-            // here read as a different corner from the one it replaces.
-            .clip(
-                RoundedCornerShape(percent = (currentPersonalization().bannerRadius * 100).toInt())
-            )
+            // Same banner dial as BannerCard, so swapping the banner for the
+            // easter egg does not change the silhouette.
+            .clip(currentPersonalization().bannerCorner())
             .background(
                 Brush.linearGradient(
                     0f to start,

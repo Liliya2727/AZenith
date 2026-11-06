@@ -194,6 +194,17 @@ data class Personalization(
     fun widgetCorner(base: Dp, height: Dp): Shape =
         RoundedCornerShape((base * cornerMultiplier).coerceAtMost(height / 2))
 
+    /**
+     * The banner's own corner at its current dial position.
+     *
+     * The banner dial is not tied to the widget ramp, so it stays at
+     * [BANNER_CORNER_DP] at rest regardless of whether an image makes the
+     * banner taller. Reading the dial as a fraction of the banner height used
+     * to draw a ~40dp corner on the 20:9 image layout while the cards stayed at
+     * 26dp.
+     */
+    fun bannerCorner(): Shape = bannerCornerShape(bannerRadius)
+
     companion object {
         const val PREF_ROUNDNESS = "pers_roundness"
         const val PREF_TEXT = "pers_text_scale"
@@ -436,21 +447,28 @@ enum class NavStyle(val labelRes: Int) {
 /** Radius the cards in the UI are authored against, in dp. */
 private const val BANNER_CORNER_DP = 26f
 
-/** Height of the banner with no image, in dp: the shorter of its two layouts. */
-private const val BANNER_MIN_HEIGHT = 100f
+/**
+ * Far end of the banner corner dial, in dp. The dial is a plain fraction of this
+ * radius rather than of the surface height, because the banner changes height
+ * when an image is enabled while the cards around it do not.
+ */
+private const val BANNER_MAX_CORNER_DP = 100f
 
 /**
  * The stock value each corner slider rests at, so the UI can snap to the same point.
  *
- * The banner rests on the same corner geometry as the rest of the UI: the cards
- * are authored at a 26dp radius (see [Personalization.widgetCorner]) and the
- * banner is laid out at `BANNER_MIN_HEIGHT` without an image, so 26 / 100 is
- * the fraction that draws that same corner. The radius stays a fraction of the
- * surface's height, the unit the slider reads, rather than a flat dp value: the
- * banner is taller once an image is on, and a pinned 26dp would stop reading as
- * the same corner there and in the preview.
+ * The banner rests on the same corner geometry as the rest of the UI: its dial
+ * is read as a fraction of [BANNER_MAX_CORNER_DP], so this value draws exactly
+ * [BANNER_CORNER_DP] -- the radius the cards are authored against. Keeping the
+ * rest point in dp rather than as a fraction of the banner's height means the
+ * default stays 26dp when the image layout makes the banner taller, instead of
+ * growing with it.
  */
-const val BANNER_CENTER = BANNER_CORNER_DP / BANNER_MIN_HEIGHT
+const val BANNER_CENTER = BANNER_CORNER_DP / BANNER_MAX_CORNER_DP
+
+/** Banner corner for a raw dial value; the preview and the card use the same mapping. */
+fun bannerCornerShape(radius: Float): Shape =
+    RoundedCornerShape((radius.coerceIn(0f, 1f) * BANNER_MAX_CORNER_DP).dp)
 
 // Rest point of the bar-corners dial: fully rounded, which is the Material
 // capsule the stock floating bar uses.

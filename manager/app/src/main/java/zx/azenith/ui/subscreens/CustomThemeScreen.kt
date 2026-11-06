@@ -103,6 +103,7 @@ import zx.azenith.AZENITH_NAV_ITEMS
 import zx.azenith.BottomNavBar
 import zx.azenith.R
 import zx.azenith.ui.theme.BANNER_CENTER
+import zx.azenith.ui.theme.bannerCornerShape
 import zx.azenith.ui.theme.CENTER
 import zx.azenith.ui.theme.NAV_CENTER
 import zx.azenith.ui.component.*
@@ -1587,7 +1588,7 @@ private fun BannerGradientPreview(
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val bannerShape = RoundedCornerShape(percent = (bannerRadius * 100).toInt())
+    val bannerShape = bannerCornerShape(bannerRadius)
 
     if (!isBannerEnabled) {
         // Mirrors BannerCard's image-off branch: a solid secondaryContainer row with a

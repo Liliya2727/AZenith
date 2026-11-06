@@ -308,11 +308,10 @@ fun BannerCard(
     val gradientAlpha = remember { context.getBannerGradientAlpha() }
     
     val bannerHazeState = remember { HazeState() }
-    // Percent-based so Pill reads as a capsule regardless of the banner's height,
-    // which a fixed dp radius cannot do once the aspect ratio changes.
-    val bannerShape = RoundedCornerShape(
-        percent = (currentPersonalization().bannerRadius * 100).toInt()
-    )
+    // The banner's own dial, not a fraction of its height: the 20:9 image
+    // layout is taller than the 100dp status row, and a height fraction made
+    // the default corner grow with it while the cards stayed at 26dp.
+    val bannerShape = currentPersonalization().bannerCorner()
 
     val statusBgColor = when (tone) {
         BannerTone.Good -> colorScheme.secondaryContainer
@@ -429,8 +428,9 @@ fun BannerCard(
     } else {
 
         // The banner carries its own corner control, so the widget ramp does not
-        // touch it.
-        val bannerShape = currentPersonalization().widgetCorner(26.dp)
+        // touch it. Using the same dial in both layouts keeps the corner steady
+        // when the banner image is toggled on or off.
+        val bannerShape = currentPersonalization().bannerCorner()
         Surface(
             modifier = modifier
                 .clip(bannerShape)
