@@ -132,7 +132,7 @@ fun AppFilterSheet(
         title = stringResource(R.string.filter_sheet_title),
         subtitle = stringResource(R.string.filter_sheet_subtitle),
         titleBlurBoxed = true,
-    ) {
+    ) { dismissSheet ->
         val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         // Gate mirrors the sheet's own read: solid split sections exist only
         // over the blurred body, and the sections are never haze themselves.
@@ -201,10 +201,10 @@ fun AppFilterSheet(
             Spacer(modifier = Modifier.height(if (isBlurEnabled) 2.dp else 24.dp))
             if (isBlurEnabled) {
                 SolidSectionBox(shape = bottomShape) {
-                    FilterActions(onReset = onReset, onDismiss = onDismiss)
+                    FilterActions(onReset = onReset, onDismiss = dismissSheet)
                 }
             } else {
-                FilterActions(onReset = onReset, onDismiss = onDismiss)
+                FilterActions(onReset = onReset, onDismiss = dismissSheet)
             }
         }
     }

@@ -65,7 +65,6 @@ fun BackupRestoreBottomSheet(
             ),
         ),
         onItemClick = { index ->
-            onDismiss()
             if (index == 0) onBackup() else onRestore()
         },
     )

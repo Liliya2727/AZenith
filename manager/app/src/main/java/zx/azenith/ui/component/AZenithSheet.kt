@@ -54,6 +54,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -204,24 +206,29 @@ private fun AZenithSheet(
     val hazeState = LocalAppHazeState.current
     val sheetState = rememberModalBottomSheetState()
     val currentOnDismiss by rememberUpdatedState(onDismiss)
+    var hideInProgress by remember(show) { mutableStateOf(false) }
 
-    // Hides the sheet with an animation, then calls the caller's onDismiss and the
-    // afterHide callback. The CancellationException guard keeps a cancelled hide
-    // (e.g. scope disposed while the sheet is mid-animation) from running onDismiss
-    // or afterHide. No sticky guard state is used, so a cancelled hide can never
-    // leave the sheet permanently blocked from being dismissed again.
+    // Leaves the sheet the way a swipe-down does: the state animates to hidden
+    // and the caller's `show` flips only once it has actually left the screen.
+    // Calling onDismiss straight away used to unmount the sheet on the same
+    // frame, which is why picking an option made it vanish with no animation.
+    // The guard keeps a double tap from starting a second hide.
     val hideSheet: (() -> Unit) -> Unit = { afterHide ->
-        if (sheetState.currentValue != SheetValue.Hidden) {
+        if (!hideInProgress && sheetState.currentValue != SheetValue.Hidden) {
+            hideInProgress = true
             scope.launch {
                 try {
                     sheetState.hide()
-                    if (!sheetState.isVisible) {
-                        currentOnDismiss()
-                        afterHide()
-                    }
                 } catch (_: CancellationException) {
-                    // Hide was cancelled (scope disposed, etc.); do not run callbacks.
+                    // A cancelled hide must not unmount the sheet halfway through.
+                    hideInProgress = false
+                    return@launch
                 }
+                if (!sheetState.isVisible) {
+                    currentOnDismiss()
+                    afterHide()
+                }
+                hideInProgress = false
             }
         }
     }
