@@ -46,6 +46,7 @@ class ZenithReceiver : BroadcastReceiver() {
         private const val GROUP_SYSTEM_LOGS = "zx.azenith.GROUP_SYSTEM"
         
         const val ACTION_MANAGE = "zx.azenith.ACTION_MANAGE"
+        const val ACTION_SHOW_SIDEPANEL = "zx.azenith.ACTION_SHOW_SIDEPANEL"
         private const val ACTION_RESHOW = "zx.azenith.ACTION_RESHOW"
     }
 
@@ -54,6 +55,12 @@ class ZenithReceiver : BroadcastReceiver() {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         when (action) {
+            ACTION_SHOW_SIDEPANEL -> {
+                val pkg = intent.getStringExtra("sidepanel_pkg") ?: ""
+                if (pkg.isNotBlank()) {
+                    zx.azenith.ui.gamespace.ZXSidePanelService.show(context, null, pkg)
+                }
+            }
             ACTION_MANAGE -> {
                 val clearAll = intent.getBooleanExtra("clearall", false) || 
                               intent.getStringExtra("clearall") == "true"
@@ -79,6 +86,13 @@ class ZenithReceiver : BroadcastReceiver() {
                 if (notifyTitle.contains("Performance Profile", ignoreCase = true) &&
                     notifyMessage.startsWith("Running at ", ignoreCase = true)
                 ) {
+                    val appName = notifyMessage.removePrefix("Running at ").trim()
+                    zx.azenith.ui.gamespace.ZXSidePanelService.show(context, null, appName)
+                } else if (notifyTitle.contains("SidePanelShow", ignoreCase = true) &&
+                           notifyMessage.startsWith("Running at ", ignoreCase = true)
+                ) {
+                    // Manual mode: archdaemon detected a game but did not apply a profile.
+                    // Show the sidepanel overlay so the user still gets the floating UI.
                     val appName = notifyMessage.removePrefix("Running at ").trim()
                     zx.azenith.ui.gamespace.ZXSidePanelService.show(context, null, appName)
                 } else if (notifyTitle.contains("ECO Mode", ignoreCase = true) ||

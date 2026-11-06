@@ -316,7 +316,13 @@ int main_daemon(void) {
                     }
                 }
             }
-            apply_performance_profile(&ctx);
+            if (!is_manual_mode()) {
+                apply_performance_profile(&ctx);
+            } else {
+                // Manual mode: detect game but do not apply profile.
+                // Notify ZenithReceiver to show the sidepanel overlay instead.
+                show_sidepanel(active_app_name ? active_app_name : gamestart);
+            }
         } else if (ctx.is_initialize_complete && get_low_power_state(&current_system_cache)) {
             apply_mode_eco:
                 apply_eco_profile(&ctx);

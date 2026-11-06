@@ -29,6 +29,32 @@ void* async_preload_worker(void* arg) {
 }
 
 /**
+ * @brief Checks if Manual Mode is enabled via persist property.
+ * @return 1 when AIenabled == "1" (manual mode), 0 otherwise.
+ */
+int is_manual_mode(void) {
+    char ai_state[PROP_VALUE_MAX] = {0};
+    __system_property_get("persist.sys.azenithconf.AIenabled", ai_state);
+    return strcmp(ai_state, "1") == 0;
+}
+
+/**
+ * @brief Broadcasts a dedicated intent so ZenithReceiver can show the sidepanel overlay
+ *        for the given package, without applying any profile.
+ * @param pkg Package name of the detected game.
+ */
+void show_sidepanel(const char* pkg) {
+    char safe_pkg[256] = {0};
+    escape_shell_string(safe_pkg, pkg, sizeof(safe_pkg));
+    systemv("su -c \"am broadcast -a zx.azenith.ACTION_SHOW_SIDEPANEL -n "
+            "zx.azenith/.receiver.ZenithReceiver "
+            "--es sidepanel_pkg '%s' "
+            ">/dev/null 2>&1\"",
+            safe_pkg);
+    log_info("profile", "sidepanel broadcast for pkg=%s", pkg);
+}
+
+/**
  * @brief Applies system tuning parameters specifically for Performance Mode.
  * @param ctx Pointer to DaemonContext structure.
  */
