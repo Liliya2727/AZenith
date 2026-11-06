@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 ## AZenith 5.3
 ### • Changelog
 - Fixed an issue where daemon use 100% of cpu usage
@@ -9,7 +7,6 @@
 - Small Optimization in backend flow
 
 
->>>>>>> Stashed changes
 ## AZenith 5.2
 ### • Changelog
 - Minor UI Improvement: Implemented a scrollable page and simplified design
