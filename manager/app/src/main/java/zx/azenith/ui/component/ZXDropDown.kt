@@ -226,7 +226,8 @@ fun <T> ZXDropDownMenu(
     val menuWidthPx = with(density) { menuWidth.toPx() }
 
     // Decided from the option count, never from the measured height: the enter spec would
-    // otherwise be rebuilt mid-animation and restart every time the panel settles.
+    // otherwise be rebuilt mid-animation and restart every time the panel settles. Capped
+    // at the panel's own heightIn so the estimate is never larger than what it can render.
     val estimatedHeight = with(density) {
         (options.size * 52.dp.toPx() + 16.dp.toPx()).coerceAtMost(344.dp.toPx())
     }
@@ -248,12 +249,20 @@ fun <T> ZXDropDownMenu(
             (overlayWidth - menuWidthPx).coerceAtLeast(0f)
         )
     }
-    val menuTop = if (anchor == null) {
+    // The top is clamped to the overlay on both ends: a row near the bottom whose panel
+    // does not fit above it either used to be placed past the edge, where it could not be
+    // tapped at all. Clamping keeps it on screen even when it has to overlap its anchor.
+    val rawMenuTop = if (anchor == null) {
         0f
     } else if (flipsUp) {
         anchor.top - overlayOrigin.y - gapPx - estimatedHeight
     } else {
         anchor.bottom - overlayOrigin.y + gapPx
+    }
+    val menuTop = if (overlayHeight > 0f) {
+        rawMenuTop.coerceIn(0f, (overlayHeight - estimatedHeight).coerceAtLeast(0f))
+    } else {
+        rawMenuTop
     }
 
     // The panel grows and scales out of the row that opened it: the pivot is that row's
