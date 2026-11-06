@@ -164,7 +164,7 @@ int main_daemon(void) {
                     ctx.need_profile_checkup = true;
                     handle_dynamic_bypass(&ctx);
                 }
-            } else if (ctx.cur_mode != BALANCED_PROFILE && ctx.cur_mode != ECO_MODE) {
+            } else if (!is_manual_mode() && ctx.cur_mode != BALANCED_PROFILE && ctx.cur_mode != ECO_MODE) {
                 ctx.need_profile_checkup = false;
             }
         }
