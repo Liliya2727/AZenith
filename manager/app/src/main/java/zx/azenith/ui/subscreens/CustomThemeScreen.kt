@@ -1471,12 +1471,11 @@ private fun MockScreen(
         // Fit both axes: scaling by width alone overflowed the slot vertically and
         // cropped the bottom rows -- the navbar -- away.
         val fit = minOf(maxWidth / MOCK_W, maxHeight / MOCK_H)
-        // Clamp to half the widget's own height: past that a rectangle IS a circle.
-        // The same helper the real widgets use, so the preview cannot drift from
-        // what Home renders. The clamp bounds are the mock's own tile heights.
+        // The mock's two upper cards stand in for Home's profile/root InfoTiles,
+        // and the lower card stands in for its device-info card. All use the
+        // same authored 26dp widget corner on Home, scaled by roundness.
         val k = personalization.cornerMultiplier
-        val mediumShape = personalization.widgetCorner(12.dp, 55.dp)
-        val largeShape = personalization.widgetCorner(26.dp, 86.dp)
+        val homeCardShape = personalization.widgetCorner(26.dp)
         // Real blur on the content the mock dialog covers, so the toggle changes
         // something measurable instead of tinting a rectangle. Animated so the
         // reveal reads as the dialog arriving rather than a setting flipping.
@@ -1528,11 +1527,14 @@ private fun MockScreen(
 
             // The banner sits exactly where Home's does: below the app name,
             // filling the width, with the status/pid pills at the bottom start.
+            // The mock is rendered at a narrower design width than Home. Keep
+            // its banner corner proportional to that width so the preview's
+            // visible radius matches the 26dp Home corner after the mock scale.
             BannerGradientPreview(
                 gradientAlpha = gradientAlpha,
                 customBannerUri = customBannerUri,
                 isBannerEnabled = isBannerEnabled,
-                bannerRadius = personalization.bannerRadius,
+                bannerRadius = personalization.bannerRadius * (MOCK_W / 420.dp),
                 modifier = Modifier.height(76.dp)
             )
 
@@ -1543,20 +1545,20 @@ private fun MockScreen(
                 Surface(
                     modifier = Modifier.weight(1f).height(55.dp),
                     color = scheme.secondaryContainer,
-                    shape = mediumShape
+                    shape = homeCardShape
                 ) {}
 
                 Surface(
                     modifier = Modifier.weight(1f).height(55.dp),
                     color = scheme.surfaceColorAtElevation(1.dp),
-                    shape = mediumShape
+                    shape = homeCardShape
                 ) {}
             }
 
             Surface(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 color = scheme.surfaceColorAtElevation(1.dp),
-                shape = largeShape
+                shape = homeCardShape
             ) {}
 
             NavBarMock(
