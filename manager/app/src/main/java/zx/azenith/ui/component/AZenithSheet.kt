@@ -53,10 +53,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,7 +60,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -165,7 +160,7 @@ fun AZenithSheetContent(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     titleBlurBoxed: Boolean = false,
-    content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     AZenithSheet(
         show = show,
@@ -193,7 +188,7 @@ private fun AZenithSheet(
     style: SheetRowStyle,
     onItemClick: (Int) -> Unit,
     items: List<SheetItem>,
-    content: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)?,
+    content: (@Composable ColumnScope.() -> Unit)?,
 ) {
     if (!show) return
 
@@ -205,41 +200,24 @@ private fun AZenithSheet(
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val hazeState = LocalAppHazeState.current
     val sheetState = rememberModalBottomSheetState()
-    val currentOnDismiss by rememberUpdatedState(onDismiss)
-    var hideInProgress by remember(show) { mutableStateOf(false) }
 
     // Leaves the sheet the way a swipe-down does: the state animates to hidden
     // and the caller's `show` flips only once it has actually left the screen.
     // Calling onDismiss straight away used to unmount the sheet on the same
     // frame, which is why picking an option made it vanish with no animation.
     // The guard keeps a double tap from starting a second hide.
-    val hideSheet: (() -> Unit) -> Unit = { afterHide ->
-        if (!hideInProgress && sheetState.currentValue != SheetValue.Hidden) {
-            hideInProgress = true
-            scope.launch {
-                try {
-                    sheetState.hide()
-                } catch (_: CancellationException) {
-                    // A cancelled hide must not unmount the sheet halfway through.
-                    hideInProgress = false
-                    return@launch
-                }
-                if (!sheetState.isVisible) {
-                    currentOnDismiss()
-                    afterHide()
-                }
-                hideInProgress = false
-            }
+    val hideSheet: () -> Unit = {
+        if (sheetState.currentValue != SheetValue.Hidden) {
+            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
         }
     }
-    val dismissSheet: () -> Unit = { hideSheet {} }
 
     val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     val sheetSurface = rememberSheetSurface(style)
     val scheme = MaterialTheme.colorScheme
 
     ModalBottomSheet(
-        onDismissRequest = dismissSheet,
+        onDismissRequest = hideSheet,
         sheetState = sheetState,
         containerColor = Color.Transparent,
         scrimColor = if (scheme.surfaceContainerLowest == Color.Black) Color.Black.copy(alpha = 0.5f) else scheme.scrim.copy(alpha = 0.32f),
@@ -321,7 +299,7 @@ private fun AZenithSheet(
             }
 
             if (content != null) {
-                content(dismissSheet)
+                content()
             } else {
                 // A long governor or scheduler list is taller than the sheet, so
                 // the rows live in a lazy column rather than a Column that
@@ -353,13 +331,10 @@ private fun AZenithSheet(
                             first = index == 0,
                             last = index == items.lastIndex,
                             onClick = {
-                                // Begin the exit before the action can trigger expensive
-                                // work or navigation. Multi-select rows are toggles and stay open.
-                                if (style != SheetRowStyle.MultiSelect) {
-                                    hideSheet { onItemClick(index) }
-                                } else {
-                                    onItemClick(index)
-                                }
+                                // Rows that close themselves animate like a swipe-down;
+                                // a row that opens another sheet leaves this one open.
+                                onItemClick(index)
+                                if (style != SheetRowStyle.MultiSelect) hideSheet()
                             },
                         )
                     }
