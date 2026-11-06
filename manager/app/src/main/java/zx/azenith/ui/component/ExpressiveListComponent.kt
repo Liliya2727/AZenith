@@ -590,7 +590,8 @@ private fun OptionPickerSheet(
         },
         onItemClick = { index ->
             if (index in items.indices) onSelect(index)
-            onDismiss()
+            // The sheet hides itself; calling onDismiss here too would unmount it
+            // on the same frame and cancel the slide-down.
         },
     )
 }

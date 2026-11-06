@@ -46,11 +46,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -58,6 +60,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBars
@@ -189,6 +192,7 @@ private fun AZenithSheet(
 ) {
     if (!show) return
 
+    val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
     val settingsPrefs = remember(context) {
         context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
@@ -196,12 +200,24 @@ private fun AZenithSheet(
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val hazeState = LocalAppHazeState.current
     val sheetState = rememberModalBottomSheetState()
+
+    // Leaves the sheet the way a swipe-down does: the state animates to hidden
+    // and the caller's `show` flips only once it has actually left the screen.
+    // Calling onDismiss straight away used to unmount the sheet on the same
+    // frame, which is why picking an option made it vanish with no animation.
+    // The guard keeps a double tap from starting a second hide.
+    val hideSheet: () -> Unit = {
+        if (sheetState.currentValue != SheetValue.Hidden) {
+            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+        }
+    }
+
     val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     val sheetSurface = rememberSheetSurface(style)
     val scheme = MaterialTheme.colorScheme
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = hideSheet,
         sheetState = sheetState,
         containerColor = Color.Transparent,
         scrimColor = if (scheme.surfaceContainerLowest == Color.Black) Color.Black.copy(alpha = 0.5f) else scheme.scrim.copy(alpha = 0.32f),
@@ -314,7 +330,12 @@ private fun AZenithSheet(
                             paintsGroupFill = true,
                             first = index == 0,
                             last = index == items.lastIndex,
-                            onClick = { onItemClick(index) },
+                            onClick = {
+                                // Rows that close themselves animate like a swipe-down;
+                                // a row that opens another sheet leaves this one open.
+                                onItemClick(index)
+                                if (style != SheetRowStyle.MultiSelect) hideSheet()
+                            },
                         )
                     }
                 }
