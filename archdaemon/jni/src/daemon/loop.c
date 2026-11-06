@@ -79,6 +79,7 @@ int main_daemon(void) {
     bool need_loop = true;
     runthermalcore();
     run_profiler(PERFCOMMON);
+    update_game_info();
     update_module_description(getpid());
     systemv("rm -rf /dev/.azenithSingleInstance");
 
@@ -161,6 +162,7 @@ int main_daemon(void) {
                     ctx.has_applied_renderer = false;
                     ctx.manual_sidepanel_shown = false;
                     ctx.need_profile_checkup = true;
+                    update_game_info();
                     handle_dynamic_bypass(&ctx);
                 }
             } else if (is_manual_mode() || (ctx.cur_mode != BALANCED_PROFILE && ctx.cur_mode != ECO_MODE)) {
@@ -226,6 +228,7 @@ int main_daemon(void) {
                             free(active_app_name);
                             active_app_name = NULL;
                         }
+                        update_game_info();
                         ctx.need_profile_checkup = true;
                     }
                 } else if (ctx.fg_away_active) {
@@ -303,10 +306,12 @@ int main_daemon(void) {
                         }
                         ctx.pid_retries = 0;
                         ctx.manual_sidepanel_shown = false;
+                        update_game_info();
                         ctx.need_profile_checkup = true;
                         continue;
                     }
                 }
+                update_game_info();
                 ctx.pid_retries = 0;
                 for (int i = 0; i < game_pid_count; i++) {
                     if (IS_TRUE(opts.app_priority))

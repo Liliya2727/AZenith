@@ -9,6 +9,7 @@ const char* profile_mode_name(int mode);
 bool get_screenstate_normal(SystemStateCache* cache);
 bool get_low_power_state_normal(SystemStateCache* cache);
 void run_profiler(const int profile);
+void update_game_info(void);
 void restore_saved_renderer(DaemonContext* ctx);
 void apply_performance_profile(DaemonContext* ctx);
 void apply_eco_profile(DaemonContext* ctx);

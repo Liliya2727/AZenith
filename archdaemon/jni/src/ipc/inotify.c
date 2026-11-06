@@ -99,6 +99,8 @@ static void handle_background_apps_event(DaemonContext* ctx) {
                 ctx->fg_away_timer = 0;
             }
         }
+
+        update_game_info();
     }
 }
 
@@ -202,6 +204,7 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
                                                 active_app_name = NULL;
                                             }
                                             game_pid_count = 0;
+                                            update_game_info();
                                             ctx->need_profile_checkup = true;
                                         }
                                     }
