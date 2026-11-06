@@ -265,9 +265,10 @@ data class Personalization(
                 // install upgrading across that change would throw on every
                 // launch; read the stored Object and coerce instead.
                 bannerRadius = p.floatOr(PREF_BANNER_SHAPE, BANNER_CENTER_RADIUS),
-                navStyle = NavStyle.fromValue(
-                    p.getString(PREF_NAV_STYLE, null)?.toIntOrNull() ?: NavStyle.Floating.ordinal
-                ),
+                // The style is no longer user-selectable: the floating bar is the
+                // only one shipped. Read as a constant so an install that saved
+                // Pinned comes back on the floating bar instead of an orphan mode.
+                navStyle = NavStyle.Floating,
                 navRadius = p.floatOr(PREF_NAV_SHAPE, NAV_CENTER_RADIUS),
                 navLabels = NavLabelMode.fromValue(
                     p.getString(PREF_NAV_LABELS, null)?.toIntOrNull() ?: NavLabelMode.SelectedOnly.ordinal
@@ -414,8 +415,9 @@ private fun <T> FiniteAnimationSpec<T>.stretched(factor: Float): FiniteAnimation
  *
  * [Pinned] is the pre-M3 bar: full width, edge to edge, icons only.
  * [Floating] is the current pill that floats clear of the screen edges.
- * Surfaced in the UI as one "Floating Navigation Bar" toggle, so these two are
- * the only states worth carrying.
+ * The app always uses [Floating]; the toggle that used to choose between them
+ * has been removed, so [Pinned] is retained only for the bar's layout code
+ * path and is never selected from the UI or from saved settings.
  */
 enum class NavStyle(val labelRes: Int) {
     Floating(R.string.nav_style_floating),

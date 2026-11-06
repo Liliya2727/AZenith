@@ -746,15 +746,6 @@ object SearchIndex {
             target = SearchTarget.Route("color_palette")
         ),
         SearchEntry(
-            id = "pers.nav_floating",
-            titleRes = R.string.pers_nav_floating,
-            summaryRes = R.string.pers_navbar_summary,
-            icon = Icons.Rounded.Smartphone,
-            group = SearchGroup.Personalization,
-            target = SearchTarget.Route("color_palette"),
-            keywordsRes = listOf(R.string.nav_style_floating, R.string.nav_style_pinned)
-        ),
-        SearchEntry(
             id = "pers.nav_shape",
             titleRes = R.string.pers_nav_shape,
             icon = Icons.Filled.HorizontalRule,

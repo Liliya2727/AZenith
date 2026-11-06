@@ -122,7 +122,6 @@ import zx.azenith.ui.theme.Personalization
 import zx.azenith.ui.theme.withAccentIntensity
 import zx.azenith.ui.component.LookAndFeelSection
 import zx.azenith.ui.theme.ColorEngine
-import zx.azenith.ui.theme.NavStyle
 import zx.azenith.ui.theme.NavLabelMode
 import androidx.compose.ui.graphics.Shape
 import zx.azenith.ui.theme.NAV_SCALE_MAX
@@ -210,7 +209,6 @@ fun ColorPaletteScreen(navController: NavController) {
             .putFloat(Personalization.PREF_ROUNDNESS, next.roundness)
             .putString(Personalization.PREF_ACCENT, next.accentIntensity.ordinal.toString())
             .putFloat(Personalization.PREF_BANNER_SHAPE, next.bannerRadius)
-            .putString(Personalization.PREF_NAV_STYLE, next.navStyle.ordinal.toString())
             .putFloat(Personalization.PREF_NAV_SHAPE, next.navRadius)
             .putString(Personalization.PREF_NAV_LABELS, next.navLabels.ordinal.toString())
             .putBoolean(Personalization.PREF_NAV_VIBRANT, next.vibrantNav)
@@ -681,7 +679,6 @@ private val PERS_ROW_ITEMS: Map<String, Int> = mapOf(
     "pers.roundness" to 1,
     "pers.text_scale" to 1,
     "pers.section_interface" to 2,
-    "pers.nav_floating" to 2,
     "pers.nav_shape" to 2,
     "pers.nav_spacing" to 2,
     "pers.nav_size" to 2,
@@ -889,17 +886,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
         ) {
             ExpressiveColumn(
                 content = buildList {
-                    add {
-                        JumpRow(activeId = jumpPulse, entryId = "pers.nav_floating") {
-                            ExpressiveSwitchItem(
-                                                        icon = Icons.Filled.ViewAgenda,
-                                                        title = stringResource(R.string.pers_nav_floating),
-                                                        summary = stringResource(R.string.pers_navbar_summary),
-                                                        checked = personalization.navStyle == NavStyle.Floating,
-                                                        onCheckedChange = { onPersonalizationChange(personalization.copy(navStyle = if (it) NavStyle.Floating else NavStyle.Pinned)) }
-                                                    )
-                        }
-                    }
+                    // The bar style is no longer user-selectable: the floating pill is
+                    // the only style, so there is no toggle here.
                     add {
                         CardItem {
                             JumpRow(activeId = jumpPulse, entryId = "pers.nav_shape") {
@@ -1571,7 +1559,6 @@ private fun MockScreen(
             ) {}
 
             NavBarMock(
-                navStyle = personalization.navStyle,
                 navShape = personalization.navRadius,
                 labelMode = personalization.navLabels,
                 vibrantNav = personalization.vibrantNav,
@@ -1766,7 +1753,6 @@ private fun mockColorScheme(
  */
 @Composable
 private fun NavBarMock(
-    navStyle: NavStyle,
     navShape: Float,
     labelMode: NavLabelMode,
     vibrantNav: Boolean,
@@ -1803,7 +1789,6 @@ private fun NavBarMock(
                 isBlurEnabled = isBlurEnabled,
                 hazeState = mockHaze,
                 pagerState = null,
-                navStyle = navStyle,
                 vibrantNav = vibrantNav,
                 navScale = navScale,
                 navSpacing = navSpacing,

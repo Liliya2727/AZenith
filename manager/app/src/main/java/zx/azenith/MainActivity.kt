@@ -933,6 +933,11 @@ fun BottomNavBar(
     // surface colour, whether a shadow is right -- while every dimension above
     // interpolates on pinnedProgress.
     val pinned = navStyle == NavStyle.Pinned
+    // The bar only ever ships floating, so the pinned end of the switch never
+    // runs: freezing both values at the floating end keeps every dimension below
+    // on the path it actually renders, without deleting the interpolation.
+    val pinnedProgressNow = 0f
+    val floatingAmount = 1f - pinnedProgressNow
     // Whether a real blur is drawn. A transparent surface is only correct when
     // there is a haze source to sample behind it; without one the bar would be
     // an invisible hole, which is why the mock has to opt in differently.
@@ -982,7 +987,7 @@ fun BottomNavBar(
     // clears the gesture area, none when pinned so its surface reaches the edge.
     // Padded directly rather than via windowInsetsPadding, which would apply the
     // inset a second time and leave the bar too high in both states.
-    val insetPadding = Modifier.padding(bottom = navInset * (1f - pinnedProgress))
+    val insetPadding = Modifier.padding(bottom = navInset * floatingAmount)
 
     Box(
         modifier = modifier
@@ -995,7 +1000,7 @@ fun BottomNavBar(
             // padding on this Box is dead space that just narrows the bar. The
             // margin lives on the row inside the surface instead, which is what
             // keeps it equal on both sides.
-            .padding(vertical = NAV_FLOATING_OUTER_PAD * navScale * (1f - pinnedProgress)),
+            .padding(vertical = NAV_FLOATING_OUTER_PAD * navScale * floatingAmount),
         contentAlignment = Alignment.Center
     ) {
         Surface(
@@ -1065,7 +1070,7 @@ fun BottomNavBar(
                         labelWidth = labelWidths[index] + 5.dp,
                         isBlurEnabled = isBlurEnabled,
                         labelMode = navLabels,
-                        pinnedProgress = pinnedProgress,
+                        pinnedProgress = pinnedProgressNow,
                         accentBar = accentBar,
                         sizeScale = navScale,
                         interactive = interactive,
@@ -1096,15 +1101,15 @@ fun BottomNavBar(
                             // interpolate with the style so the row does not jump
                             // as the bar pins.
                             horizontal = NAV_FLOATING_MIN_MARGIN * navScale * navSpacing *
-                                (1f - pinnedProgress),
-                            vertical = NAV_BAR_VERTICAL_PAD * navScale * (1f - pinnedProgress)
+                                floatingAmount,
+                            vertical = NAV_BAR_VERTICAL_PAD * navScale * floatingAmount
                         )
                         // Extend the pinned row past the gesture bar so the surface
                         // fills to the bottom edge instead of stopping above it.
                         .padding(bottom = navInset * pinnedProgress),
                     horizontalArrangement = Arrangement.spacedBy(
                         if (navLabels == NavLabelMode.Never) 0.dp
-                        else NAV_PILL_GAP * navScale * navSpacing * (1f - pinnedProgress),
+                        else NAV_PILL_GAP * navScale * navSpacing * floatingAmount,
                         Alignment.CenterHorizontally
                     ),
                     verticalAlignment = Alignment.CenterVertically
@@ -1145,6 +1150,7 @@ private fun NavPill(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val progress = selectionProgress.coerceIn(0f, 1f)
+    // Floating only; a non-zero progress is never handed in, so this stays false.
     val isPinned = pinnedProgress > 0.5f
     // Boolean only for the colour targets; the width below is continuous.
     val isSelected = progress > 0.5f
