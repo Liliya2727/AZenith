@@ -54,8 +54,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -206,29 +204,26 @@ private fun AZenithSheet(
     val hazeState = LocalAppHazeState.current
     val sheetState = rememberModalBottomSheetState()
     val currentOnDismiss by rememberUpdatedState(onDismiss)
-    var hideInProgress by remember(show) { mutableStateOf(false) }
 
-    // Leaves the sheet the way a swipe-down does: the state animates to hidden
-    // and the caller's `show` flips only once it has actually left the screen.
-    // Calling onDismiss straight away used to unmount the sheet on the same
-    // frame, which is why picking an option made it vanish with no animation.
-    // The guard keeps a double tap from starting a second hide.
+    // Hides the sheet with an animation, then calls the caller's onDismiss and the
+    // afterHide callback. Material invokes onDismissRequest only after its own
+    // scrim/drag hide has completed, so that callback must not try to hide again.
+    // This helper is only for in-content dismissals (Done and option selection).
     val hideSheet: (() -> Unit) -> Unit = { afterHide ->
-        if (!hideInProgress && sheetState.currentValue != SheetValue.Hidden) {
-            hideInProgress = true
+        if (!sheetState.isVisible) {
+            currentOnDismiss()
+            afterHide()
+        } else if (sheetState.currentValue != SheetValue.Hidden) {
             scope.launch {
                 try {
                     sheetState.hide()
+                    if (!sheetState.isVisible) {
+                        currentOnDismiss()
+                        afterHide()
+                    }
                 } catch (_: CancellationException) {
-                    // A cancelled hide must not unmount the sheet halfway through.
-                    hideInProgress = false
-                    return@launch
+                    // Hide was cancelled (scope disposed, etc.); do not run callbacks.
                 }
-                if (!sheetState.isVisible) {
-                    currentOnDismiss()
-                    afterHide()
-                }
-                hideInProgress = false
             }
         }
     }
@@ -239,7 +234,10 @@ private fun AZenithSheet(
     val scheme = MaterialTheme.colorScheme
 
     ModalBottomSheet(
-        onDismissRequest = dismissSheet,
+        // ModalBottomSheet already animates itself to Hidden before invoking this
+        // callback for scrim taps, drag dismissal, and back. Hiding again here
+        // races the dialog teardown and can leave the app window non-interactive.
+        onDismissRequest = currentOnDismiss,
         sheetState = sheetState,
         containerColor = Color.Transparent,
         scrimColor = if (scheme.surfaceContainerLowest == Color.Black) Color.Black.copy(alpha = 0.5f) else scheme.scrim.copy(alpha = 0.32f),
