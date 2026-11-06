@@ -1583,7 +1583,7 @@ private fun BannerGradientPreview(
     gradientAlpha: Float,
     customBannerUri: String?,
     isBannerEnabled: Boolean = true,
-    bannerRadius: Float = 0.12f,
+    bannerRadius: Float = BANNER_CENTER,
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme

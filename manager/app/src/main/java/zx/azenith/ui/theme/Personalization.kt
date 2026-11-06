@@ -429,19 +429,29 @@ enum class NavStyle(val labelRes: Int) {
 }
 
 /**
- * Corner treatment for the navigation bar surface. Percent-based so a fully
- * rounded bar stays a capsule at any bar height, which a fixed dp radius cannot
- * guarantee once the user changes [NavStyle].
+ * Corner treatment for the navigation bar surface, as a fraction of the
+ * surface's own height so a fully rounded bar stays a capsule at any bar height,
+ * which a fixed dp radius cannot guarantee.
  */
+/** Radius the cards in the UI are authored against, in dp. */
+private const val BANNER_CORNER_DP = 26f
+
+/** Height of the banner with no image, in dp: the shorter of its two layouts. */
+private const val BANNER_MIN_HEIGHT = 100f
+
 /**
- * Corner radius as a fraction of the surface's own height, so a fully rounded
- * bar stays a capsule whatever the bar's height is.
+ * The stock value each corner slider rests at, so the UI can snap to the same point.
  *
- * Both corner sliders run the same dial as [CENTER]: boxed at one end, pill at
- * the other, stock in the middle.
+ * The banner rests on the same corner geometry as the rest of the UI: the cards
+ * are authored at a 26dp radius (see [Personalization.widgetCorner]) and the
+ * banner is laid out at `BANNER_MIN_HEIGHT` without an image, so 26 / 100 is
+ * the fraction that draws that same corner. The radius stays a fraction of the
+ * surface's height, the unit the slider reads, rather than a flat dp value: the
+ * banner is taller once an image is on, and a pinned 26dp would stop reading as
+ * the same corner there and in the preview.
  */
-/** The stock value each corner slider rests at, so the UI can snap to the same point. */
-const val BANNER_CENTER = 0.12f
+const val BANNER_CENTER = BANNER_CORNER_DP / BANNER_MIN_HEIGHT
+
 // Rest point of the bar-corners dial: fully rounded, which is the Material
 // capsule the stock floating bar uses.
 const val NAV_CENTER = 1f
