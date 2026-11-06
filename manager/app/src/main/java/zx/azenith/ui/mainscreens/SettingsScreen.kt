@@ -528,7 +528,6 @@ fun SettingsScreen(
                     ),
                 ),
                 onItemClick = { index ->
-                    showLogBottomSheet = false
                     if (index == 0) {
                         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                         val fileName = "AZenith_Logs_$timeStamp.tar.gz"

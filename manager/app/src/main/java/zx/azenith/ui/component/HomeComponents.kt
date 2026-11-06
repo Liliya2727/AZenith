@@ -974,7 +974,6 @@ fun RebootBottomSheet(
         },
         onItemClick = { index ->
             val reason = options.getOrNull(index)?.second ?: return@AZenithSheet
-            onDismiss()
             onReboot(reason)
         },
     )
