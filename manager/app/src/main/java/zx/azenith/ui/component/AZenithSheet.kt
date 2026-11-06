@@ -351,10 +351,12 @@ private fun AZenithSheet(
                             first = index == 0,
                             last = index == items.lastIndex,
                             onClick = {
-                                // Begin the exit before the action can trigger expensive
-                                // work or navigation. Multi-select rows are toggles and stay open.
+                                // Fire the action immediately so the user gets instant
+                                // feedback, then hide the sheet in the background.
+                                // Multi-select rows are toggles and stay open.
                                 if (style != SheetRowStyle.MultiSelect) {
-                                    hideSheet { onItemClick(index) }
+                                    onItemClick(index)
+                                    hideSheet {}
                                 } else {
                                     onItemClick(index)
                                 }
