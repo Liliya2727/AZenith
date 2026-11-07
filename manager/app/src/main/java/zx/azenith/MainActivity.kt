@@ -307,6 +307,23 @@ fun MainScreen(fromTileType: String? = null) {
     // animation is just the UI catching up to it.
     val highlightRoute = rememberSaveable { mutableStateOf("home") }
 
+    // Set while a navbar tap is driving the pager, and cleared when that
+    // navigation settles. It is the single source of truth for the bar during
+    // a programmatic switch: the pager's currentPage still walks through every
+    // intermediate page on a long jump (and targetPage only helps while the
+    // scroll reports itself in progress), so reading the pager here would make
+    // the pill re-animate once per page crossed. A manual swipe leaves this
+    // null so the pill keeps following the drag.
+    var navSelectionPage by remember { mutableStateOf<Int?>(null) }
+
+    // Scroll Animation off: a long jump is a direct cross-fade between the old
+    // page and the destination instead of an animated scroll through the pages
+    // between them. The pager jumps to the target first, so only these two
+    // pages are ever visible. -1 means no direct transition is running.
+    val directFromPage = remember { mutableIntStateOf(-1) }
+    val directToPage = remember { mutableIntStateOf(-1) }
+    val directPageProgress = remember { Animatable(0f) }
+
     val currentRoute = if (isOnMainPager) {
         // On swipes there is no tap to record, so take the destination from the
         // pager itself. targetPage is the page the in-flight gesture is heading
@@ -315,7 +332,10 @@ fun MainScreen(fromTileType: String? = null) {
         // lag this replaces. The offset fraction is deliberately not read here:
         // it is @FrequentlyChangingValue and would recompose the whole screen
         // on every frame. The pill animates from it in a graphicsLayer below.
-        if (!pagerState.isScrollInProgress) {
+        val tappedPage = navSelectionPage
+        if (tappedPage != null) {
+            highlightRoute.value = pagerRoutes[tappedPage]
+        } else if (!pagerState.isScrollInProgress) {
             highlightRoute.value = pagerRoutes[pagerState.settledPage]
         } else {
             highlightRoute.value = pagerRoutes[pagerState.targetPage]
@@ -519,6 +539,22 @@ fun MainScreen(fromTileType: String? = null) {
                             val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                             val absOffset = kotlin.math.abs(pageOffset)
 
+                            // Scroll Animation off and a tab two or more pages away:
+                            // the pager has already jumped to the destination, so draw
+                            // only the page it came from and the destination and cross-
+                            // fade between them. Every other page is hidden, which is
+                            // what keeps the intermediate pages from flashing past.
+                            val directFrom = directFromPage.intValue
+                            val directTo = directToPage.intValue
+                            val directProgress = directPageProgress.value
+                            val directSource = directFrom >= 0 && page == directFrom
+                            val directTarget = directFrom >= 0 && page == directTo
+                            val directZIndex = when {
+                                directSource -> if (directProgress < 0.5f) 1f else 0f
+                                directTarget -> if (directProgress >= 0.5f) 1f else 0f
+                                else -> if (absOffset < 0.5f) 1f else 0f
+                            }
+
                             // One entry point per page: the bar jumps to the page on
                             // screen so a d-pad can leave the bottom bar.
                             val pageEntry = remember(page) { androidx.compose.ui.focus.FocusRequester() }
@@ -531,16 +567,39 @@ fun MainScreen(fromTileType: String? = null) {
                             
                             val pageModifier = if (!useScrollAnimation) {
                                 Modifier.graphicsLayer {
-                                    if (absOffset < 1f) {
-                                        translationX = pageOffset * size.width
-                                        alpha = 1f - absOffset
-                                        val scale = 1f - (absOffset * 0.05f)
-                                        scaleX = scale
-                                        scaleY = scale
-                                    } else {
-                                        alpha = 0f
+                                    when {
+                                        directSource -> {
+                                            // The pager sits on the destination, so the
+                                            // old page has to be brought back from its
+                                            // off-screen slot; it stays centred while it
+                                            // fades out, matching the adjacent page style.
+                                            translationX = (directTo - directFrom) * size.width
+                                            alpha = 1f - directProgress
+                                            val scale = 1f - (directProgress * 0.05f)
+                                            scaleX = scale
+                                            scaleY = scale
+                                        }
+                                        directTarget -> {
+                                            alpha = directProgress
+                                            val scale = 1f - ((1f - directProgress) * 0.05f)
+                                            scaleX = scale
+                                            scaleY = scale
+                                        }
+                                        directFrom >= 0 -> {
+                                            alpha = 0f
+                                        }
+                                        absOffset < 1f -> {
+                                            translationX = pageOffset * size.width
+                                            alpha = 1f - absOffset
+                                            val scale = 1f - (absOffset * 0.05f)
+                                            scaleX = scale
+                                            scaleY = scale
+                                        }
+                                        else -> {
+                                            alpha = 0f
+                                        }
                                     }
-                                }.zIndex(if (absOffset < 0.5f) 1f else 0f)
+                                }.zIndex(directZIndex)
                             } else {
                                 Modifier
                             }
@@ -700,6 +759,11 @@ fun MainScreen(fromTileType: String? = null) {
                     val targetIndex = pagerRoutes.indexOf(route)
                     if (isOnMainPager) {
                         if (pagerState.currentPage != targetIndex) {
+                            // Commit the bar to the destination before the pager
+                            // moves. The pager reports every page it crosses during
+                            // a long scroll, so without this the pill would animate
+                            // through them too. Cleared once the switch settles.
+                            navSelectionPage = targetIndex
                             coroutineScope.launch {
                                 // Instrumentation only -- these traces are
                                 // read with `adb shell atrace` / Perfetto on a
@@ -708,19 +772,45 @@ fun MainScreen(fromTileType: String? = null) {
                                 // duration is the tab-switch cost.
                                 Trace.beginSection("AZenith:tabScrollTo")
                                 try {
-                                    // One call for every distance. A jump of two
-                                    // or three scrolls straight through the
-                                    // pages in between at the same rate, which
-                                    // reads as one continuous slide instead of
-                                    // the hard cut scrollToPage produced.
-                                    pagerState.animateScrollToPage(
-                                        targetIndex,
-                                        animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = if (Math.abs(targetIndex - pagerState.currentPage) > 1) 320 else 500,
-                                            easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                                    val fromIndex = pagerState.currentPage
+                                    val distance = kotlin.math.abs(targetIndex - fromIndex)
+                                    if (!useScrollAnimation && distance > 1) {
+                                        // Scroll Animation off: go straight to the
+                                        // destination, then play the same scale/fade
+                                        // the adjacent pages use, once, between the
+                                        // old page and the new one. The pager jumps
+                                        // first, so no intermediate page is shown.
+                                        directFromPage.intValue = fromIndex
+                                        directToPage.intValue = targetIndex
+                                        directPageProgress.snapTo(0f)
+                                        pagerState.scrollToPage(targetIndex)
+                                        directPageProgress.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = androidx.compose.animation.core.tween(
+                                                durationMillis = 320,
+                                                easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                                            )
                                         )
-                                    )
+                                    } else {
+                                        // One call for every distance. A jump of two
+                                        // or three scrolls straight through the
+                                        // pages in between at the same rate, which
+                                        // reads as one continuous slide instead of
+                                        // the hard cut scrollToPage produced.
+                                        pagerState.animateScrollToPage(
+                                            targetIndex,
+                                            animationSpec = androidx.compose.animation.core.tween(
+                                                durationMillis = if (distance > 1) 320 else 500,
+                                                easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                                            )
+                                        )
+                                    }
                                 } finally {
+                                    directFromPage.intValue = -1
+                                    directToPage.intValue = -1
+                                    if (navSelectionPage == targetIndex) {
+                                        navSelectionPage = null
+                                    }
                                     Trace.endSection()
                                 }
                             }
@@ -791,6 +881,11 @@ fun MainScreen(fromTileType: String? = null) {
                             items = navItems,
                             selectedRoute = currentRoute ?: "home",
                             pagerState = pagerState,
+                            // Target committed on a tap, so the pill animates once
+                            // to the destination instead of following the pager
+                            // through every page a long scroll crosses. Null during
+                            // a manual swipe, where the offset drives the pill.
+                            selectionPageOverride = navSelectionPage?.toFloat(),
                             isBlurEnabled = isBlurEnabled,
                             hazeState = hazeState,
                             navStyle = currentPersonalization().navStyle,
@@ -898,6 +993,11 @@ fun BottomNavBar(
     isBlurEnabled: Boolean = false,
     hazeState: HazeState? = null,
     pagerState: PagerState? = null,
+    // When non-null, the selected position the pills should reflect instead of
+    // the pager's continuous offset. Used for a tap-driven switch so a long
+    // programmatic scroll does not drag the highlight through every page it
+    // crosses. Null during a manual swipe, where the pager offset is correct.
+    selectionPageOverride: Float? = null,
     navStyle: NavStyle = NavStyle.Floating,
     vibrantNav: Boolean = false,
     navScale: Float = 1f,
@@ -1056,10 +1156,15 @@ fun BottomNavBar(
                     // snapping when the selection flips. The pager offset is a
                     // frequently-changing value, so it is confined to this
                     // derivedStateOf: only the four pills below re-read it.
-                    val progress by remember(index) {
+                    // A tap-driven switch supplies its destination instead, so
+                    // the pager walking through the pages in between does not
+                    // move the highlight with it.
+                    val progress by remember(index, selectionPageOverride) {
                         pagerState?.let { state ->
                             derivedStateOf {
-                                val distance = (state.currentPage - index) + state.currentPageOffsetFraction
+                                val selectedPosition = selectionPageOverride
+                                    ?: (state.currentPage + state.currentPageOffsetFraction)
+                                val distance = selectedPosition - index
                                 1f - kotlin.math.abs(distance).coerceIn(0f, 1f)
                             }
                         } ?: derivedStateOf { if (selectedRoute == item.route) 1f else 0f }
@@ -1080,7 +1185,9 @@ fun BottomNavBar(
                         // and never reach its end value. Snap to the drag instead
                         // and let the pager's own curve provide the motion; taps
                         // and other discrete changes still get the tween.
-                        animationSpec = if (pagerState?.isScrollInProgress == true) snap() else NAV_PILL_SPEC,
+                        animationSpec = if (
+                            selectionPageOverride == null && pagerState?.isScrollInProgress == true
+                        ) snap() else NAV_PILL_SPEC,
                         onClick = { onItemSelected(item.route) }
                     )
                 }
