@@ -95,8 +95,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
@@ -322,7 +321,8 @@ fun MainScreen(fromTileType: String? = null) {
     // the pill re-animate once per page crossed. A manual swipe leaves this
     // null so the pill keeps following the drag.
     var navSelectionPage by remember { mutableStateOf<Int?>(null) }
-    val navSwitchMutex = remember { Mutex() }
+    val navSwitchJob = remember { mutableStateOf<Job?>(null) }
+    val navSwitchGeneration = remember { mutableIntStateOf(0) }
 
     // Scroll Animation off: a long jump is a direct cross-fade between the old
     // page and the destination instead of an animated scroll through the pages
@@ -776,8 +776,9 @@ fun MainScreen(fromTileType: String? = null) {
                             // a long scroll, so without this the pill would animate
                             // through them too. Cleared once the switch settles.
                             navSelectionPage = targetIndex
-                            coroutineScope.launch {
-                                navSwitchMutex.withLock {
+                            navSwitchJob.value?.cancel()
+                            val generation = ++navSwitchGeneration.intValue
+                            navSwitchJob.value = coroutineScope.launch {
                                 // Instrumentation only -- these traces are
                                 // read with `adb shell atrace` / Perfetto on a
                                 // device, so no timing is asserted here.
@@ -785,6 +786,12 @@ fun MainScreen(fromTileType: String? = null) {
                                 // duration is the tab-switch cost.
                                 Trace.beginSection("AZenith:tabScrollTo")
                                 try {
+                                    // A new click takes over immediately instead
+                                    // of waiting for the previous transition. Clear
+                                    // any interrupted direct-page overlay before
+                                    // installing the latest transition state.
+                                    directFromPage.intValue = -1
+                                    directToPage.intValue = -1
                                     val fromIndex = pagerState.currentPage
                                     val distance = kotlin.math.abs(targetIndex - fromIndex)
                                     val useDirectNavbarMotion = distance > 1
@@ -820,13 +827,15 @@ fun MainScreen(fromTileType: String? = null) {
                                         )
                                     }
                                 } finally {
-                                    directFromPage.intValue = -1
-                                    directToPage.intValue = -1
-                                    if (navSelectionPage == targetIndex) {
-                                        navSelectionPage = null
+                                    if (navSwitchGeneration.intValue == generation) {
+                                        directFromPage.intValue = -1
+                                        directToPage.intValue = -1
+                                        if (navSelectionPage == targetIndex) {
+                                            navSelectionPage = null
+                                        }
+                                        navSwitchJob.value = null
                                     }
                                     Trace.endSection()
-                                }
                                 }
                             }
                         }
