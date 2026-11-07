@@ -1,6 +1,6 @@
 # sysdaemon — AZenith app monitor
 
-A pure-binder native replacement for the Java companion daemon (`AppMonitor.kt`). It observes Android system state through binder transactions only — no shell forking, no `cmd`/`dumpsys` parsing in the hot path, no profile logic. It only observes and publishes:
+A pure-binder native daemon. It observes Android system state through binder transactions only — no shell forking, no `cmd`/`dumpsys` parsing in the hot path, no profile logic. It only observes and publishes:
 
 *   `app_status` — focused app (package/pid/uid) + screen/battery/zen/refresh-rate state
 *   `background_apps` — recently used user apps + their live pids
@@ -11,7 +11,7 @@ It runs as root (forks into the background), talks to `system_server` via `libbi
 
 ---
 
-## What this is (and isn't)
+## What this is 
 
 **It is:** a root daemon that registers an `IProcessObserver` with ActivityManager, polls `IPowerManager`/`INotificationManager`/`IBatteryPropertiesRegistrar` over binder (500 ms cycle, pure transacts), reads the task manager's recents list via `getTasks`/`getRecentTasks`, and atomically publishes `app_status` / `background_apps` whenever something actually changes. An idle daemon does not touch the disk.
 
@@ -176,7 +176,7 @@ adb shell cat /data/adb/.config/AZenith/sysmon.log | tail
 
 Watch logs:
 ```bash
-adb logcat -s sysmon  # or however the daemon tag is configured
+adb logcat -s AZenith
 ```
 
 Typical `app_status`:
@@ -229,4 +229,25 @@ Open an issue or PR if you find a bug or have a focused improvement.
 
 ## License
 
-Licensed under the **Apache License, Version 2.0** — see [LICENSE](LICENSE) for the full text.
+Licensed under the **GNU General Public License v3.0 only** (GPL-3.0-only) — see [LICENSE](LICENSE) for the full text.
+
+This is **copyleft**: if you redistribute the daemon (in source or binary form), you must also make the Corresponding Source available under the same GPL v3 terms. You may not re-license it as proprietary or under a weaker permissive license without replacing all copyrighted contributions.
+
+## Access
+
+`sysdaemon` runs as **root** and talks to `system_server` over libbinder. Treat it as privileged system software:
+
+*   **Source access.** Because this is GPL v3, recipients of the binary are entitled to request the Corresponding Source. If you build and distribute modified binaries, you must offer the source under GPL v3 as well.
+
+## Contributing
+
+This project is licensed under **GPL v3 only**. All contributions are accepted under the same license — by submitting code, you agree to license your contribution under GPL v3 and affirm that you have the right to do so.
+
+1.  **Test on real hardware** — binder transaction codes and parcel layouts vary by ROM; the resolver handles code differences, but parcel scanning (`getDisplayInfo`, task parcels) is version-sensitive.
+2.  **Keep dependency tree lean** — `aya` is 64-bit only and scoped accordingly; avoid adding heavy async runtimes.
+3.  **Preserve the release profile** — LTO + single codegen unit + strip is non-negotiable for binary size and cold-start latency.
+4.  **Never add shell forks to observation paths** — if a value can't be read over binder, read it from `/proc` or sysfs, not `cmd`/`dumpsys`.
+5.  **Run `cargo check`** — both the default target and `aarch64-linux-android` must pass.
+6.  **Add the GPL copyright header** to every new source file (see the header in `src/main.rs`).
+
+Open an issue or PR if you find a bug or have a focused improvement.

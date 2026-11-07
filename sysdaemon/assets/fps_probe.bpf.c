@@ -1,8 +1,22 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-only
-//
-// Kernel side of the fps uprobe. The daemon loads this object, attaches
-// `fps_probe` to the Surface::queueBuffer* family in libgui for the focused
-// pid and counts the ring records to derive the frame rate.
+/* SPDX-License-Identifier: GPL-3.0-only */
+/*
+ * Copyright (C) 2026 Zexshia
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Kernel side of the fps uprobe. The daemon loads this object, attaches
+ * `fps_probe` to the Surface::queueBuffer* family in libgui for the focused
+ * pid and counts the ring records to derive the frame rate.
 //
 // Rebuild after editing (the object is committed, consumers need no clang):
 //

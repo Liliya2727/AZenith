@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Stable-green?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/License-Apache%202.0-orange?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/License-GPLv3-blue?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/Android-11+-blue?style=for-the-badge&logo=android" alt="Android Version">
 </p>
 
@@ -123,10 +123,10 @@ Get the latest news, updates, and support by following our official channels.
 
 ## ⚖️ License / 许可证
 
-This project is licensed under the **Apache License 2.0**.
+This project is licensed under the **GNU General Public License v3.0 only** (GPL-3.0-only).
 
-本项目采用 **Apache License 2.0** 许可证。
+本项目采用 **GNU 通用公共许可证第 3.0 版（仅限）** (GPL-3.0-only)。
 
-> Licensed under the Apache License, Version 2.0 (the "License");
-> you may not use this file except in compliance with the License.
-> You may obtain a copy of the License at <http://www.apache.org/licenses/LICENSE-2.0>
+This is **copyleft**: if you redistribute the project (in source or binary form), you must also make the Corresponding Source available under the same GPL v3 terms. You may not re-license it as proprietary or under a weaker permissive license without replacing all copyrighted contributions.
+
+See [LICENSE](LICENSE) for the full text.
