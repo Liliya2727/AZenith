@@ -95,6 +95,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
@@ -315,8 +317,7 @@ fun MainScreen(fromTileType: String? = null) {
     // the pill re-animate once per page crossed. A manual swipe leaves this
     // null so the pill keeps following the drag.
     var navSelectionPage by remember { mutableStateOf<Int?>(null) }
-    val navSelectionPosition = remember { Animatable(0f) }
-    var navSelectionUsesPosition by remember { mutableStateOf(false) }
+    val navSwitchMutex = remember { Mutex() }
 
     // Scroll Animation off: a long jump is a direct cross-fade between the old
     // page and the destination instead of an animated scroll through the pages
@@ -760,13 +761,18 @@ fun MainScreen(fromTileType: String? = null) {
                 val onNavSelected: (String) -> Unit = { route ->
                     val targetIndex = pagerRoutes.indexOf(route)
                     if (isOnMainPager) {
-                        if (pagerState.currentPage != targetIndex) {
+                        if (
+                            pagerState.currentPage != targetIndex ||
+                            pagerState.isScrollInProgress ||
+                            navSelectionPage != null
+                        ) {
                             // Commit the bar to the destination before the pager
                             // moves. The pager reports every page it crosses during
                             // a long scroll, so without this the pill would animate
                             // through them too. Cleared once the switch settles.
                             navSelectionPage = targetIndex
                             coroutineScope.launch {
+                                navSwitchMutex.withLock {
                                 // Instrumentation only -- these traces are
                                 // read with `adb shell atrace` / Perfetto on a
                                 // device, so no timing is asserted here.
@@ -777,10 +783,6 @@ fun MainScreen(fromTileType: String? = null) {
                                     val fromIndex = pagerState.currentPage
                                     val distance = kotlin.math.abs(targetIndex - fromIndex)
                                     val useDirectNavbarMotion = distance > 1
-                                    navSelectionUsesPosition = useDirectNavbarMotion
-                                    if (useDirectNavbarMotion) {
-                                        navSelectionPosition.snapTo(fromIndex.toFloat())
-                                    }
                                     if (!useScrollAnimation && distance > 1) {
                                         // Scroll Animation off: go straight to the
                                         // destination, then play the same scale/fade
@@ -791,15 +793,6 @@ fun MainScreen(fromTileType: String? = null) {
                                         directToPage.intValue = targetIndex
                                         directPageProgress.snapTo(0f)
                                         pagerState.scrollToPage(targetIndex)
-                                        val navAnimation = launch {
-                                            navSelectionPosition.animateTo(
-                                                targetIndex.toFloat(),
-                                                animationSpec = androidx.compose.animation.core.tween(
-                                                    durationMillis = 320,
-                                                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
-                                                )
-                                            )
-                                        }
                                         directPageProgress.animateTo(
                                             targetValue = 1f,
                                             animationSpec = androidx.compose.animation.core.tween(
@@ -807,40 +800,19 @@ fun MainScreen(fromTileType: String? = null) {
                                                 easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
                                             )
                                         )
-                                        navAnimation.join()
                                     } else {
                                         // One call for every distance. A jump of two
                                         // or three scrolls straight through the
                                         // pages in between at the same rate, which
                                         // reads as one continuous slide instead of
                                         // the hard cut scrollToPage produced.
-                                        if (useDirectNavbarMotion) {
-                                            val navAnimation = launch {
-                                                navSelectionPosition.animateTo(
-                                                    targetIndex.toFloat(),
-                                                    animationSpec = androidx.compose.animation.core.tween(
-                                                        durationMillis = 320,
-                                                        easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
-                                                    )
-                                                )
-                                            }
-                                            pagerState.animateScrollToPage(
-                                                targetIndex,
-                                                animationSpec = androidx.compose.animation.core.tween(
-                                                    durationMillis = 320,
-                                                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
-                                                )
+                                        pagerState.animateScrollToPage(
+                                            targetIndex,
+                                            animationSpec = androidx.compose.animation.core.tween(
+                                                durationMillis = if (useDirectNavbarMotion) 320 else 500,
+                                                easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
                                             )
-                                            navAnimation.join()
-                                        } else {
-                                            pagerState.animateScrollToPage(
-                                                targetIndex,
-                                                animationSpec = androidx.compose.animation.core.tween(
-                                                    durationMillis = 500,
-                                                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
-                                                )
-                                            )
-                                        }
+                                        )
                                     }
                                 } finally {
                                     directFromPage.intValue = -1
@@ -848,8 +820,8 @@ fun MainScreen(fromTileType: String? = null) {
                                     if (navSelectionPage == targetIndex) {
                                         navSelectionPage = null
                                     }
-                                    navSelectionUsesPosition = false
                                     Trace.endSection()
+                                }
                                 }
                             }
                         }
@@ -923,9 +895,7 @@ fun MainScreen(fromTileType: String? = null) {
                             // to the destination instead of following the pager
                             // through every page a long scroll crosses. Null during
                             // a manual swipe, where the offset drives the pill.
-                            selectionPageOverride = navSelectionPosition.value.takeIf {
-                                navSelectionPage != null && navSelectionUsesPosition
-                            },
+                            selectionRouteOverride = navSelectionPage?.let { pagerRoutes[it] },
                             isBlurEnabled = isBlurEnabled,
                             hazeState = hazeState,
                             navStyle = currentPersonalization().navStyle,
@@ -1037,7 +1007,7 @@ fun BottomNavBar(
     // the pager's continuous offset. Used for a tap-driven switch so a long
     // programmatic scroll does not drag the highlight through every page it
     // crosses. Null during a manual swipe, where the pager offset is correct.
-    selectionPageOverride: Float? = null,
+    selectionRouteOverride: String? = null,
     navStyle: NavStyle = NavStyle.Floating,
     vibrantNav: Boolean = false,
     navScale: Float = 1f,
@@ -1199,13 +1169,15 @@ fun BottomNavBar(
                     // A tap-driven switch supplies its destination instead, so
                     // the pager walking through the pages in between does not
                     // move the highlight with it.
-                    val progress by remember(index, selectionPageOverride) {
+                    val progress by remember(index, selectionRouteOverride) {
                         pagerState?.let { state ->
                             derivedStateOf {
-                                val selectedPosition = selectionPageOverride
-                                    ?: (state.currentPage + state.currentPageOffsetFraction)
-                                val distance = selectedPosition - index
-                                1f - kotlin.math.abs(distance).coerceIn(0f, 1f)
+                                if (selectionRouteOverride != null) {
+                                    if (selectionRouteOverride == item.route) 1f else 0f
+                                } else {
+                                    val distance = (state.currentPage - index) + state.currentPageOffsetFraction
+                                    1f - kotlin.math.abs(distance).coerceIn(0f, 1f)
+                                }
                             }
                         } ?: derivedStateOf { if (selectedRoute == item.route) 1f else 0f }
                     }
@@ -1226,7 +1198,7 @@ fun BottomNavBar(
                         // and let the pager's own curve provide the motion; taps
                         // and other discrete changes still get the tween.
                         animationSpec = if (
-                            selectionPageOverride == null && pagerState?.isScrollInProgress == true
+                            selectionRouteOverride == null && pagerState?.isScrollInProgress == true
                         ) snap() else NAV_PILL_SPEC,
                         onClick = { onItemSelected(item.route) }
                     )
