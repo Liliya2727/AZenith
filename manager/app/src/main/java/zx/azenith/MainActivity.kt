@@ -259,6 +259,11 @@ data class NavItem(
 // because a composable default argument cannot see a local of the other scope.
 private val NAV_PILL_SPEC: FiniteAnimationSpec<Color> =
     androidx.compose.material3.MotionScheme.Companion.expressive().defaultEffectsSpec()
+private val NAV_PILL_PROGRESS_SPEC: FiniteAnimationSpec<Float> =
+    androidx.compose.animation.core.tween(
+        durationMillis = 320,
+        easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+    )
 
 
 
@@ -1200,6 +1205,9 @@ fun BottomNavBar(
                         animationSpec = if (
                             selectionRouteOverride == null && pagerState?.isScrollInProgress == true
                         ) snap() else NAV_PILL_SPEC,
+                        selectionProgressAnimationSpec = if (
+                            selectionRouteOverride == null && pagerState?.isScrollInProgress == true
+                        ) snap() else NAV_PILL_PROGRESS_SPEC,
                         onClick = { onItemSelected(item.route) }
                     )
                 }
@@ -1263,12 +1271,21 @@ private fun NavPill(
     sizeScale: Float = 1f,
     interactive: Boolean = true,
     animationSpec: FiniteAnimationSpec<Color> = NAV_PILL_SPEC,
+    selectionProgressAnimationSpec: FiniteAnimationSpec<Float> = NAV_PILL_PROGRESS_SPEC,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val progress = selectionProgress.coerceIn(0f, 1f)
+    // Animate the pill's continuous visual extent from the previous tab to the
+    // requested tab. The selected route itself is still committed directly, so
+    // a long jump never selects/interpolates through intermediate tabs. For a
+    // manual drag this uses snap(), letting the pager offset drive the motion.
+    val progress by animateFloatAsState(
+        targetValue = selectionProgress.coerceIn(0f, 1f),
+        animationSpec = selectionProgressAnimationSpec,
+        label = "selectionProgress"
+    )
     // Floating only; a non-zero progress is never handed in, so this stays false.
     val isPinned = pinnedProgress > 0.5f
     // Boolean only for the colour targets; the width below is continuous.
