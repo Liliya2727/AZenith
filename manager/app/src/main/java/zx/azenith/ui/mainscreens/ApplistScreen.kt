@@ -168,14 +168,6 @@ fun ApplistScreen(navController: NavController) {
                         icon = Icons.Default.Search,
                         contentDescription = stringResource(R.string.cd_search),
                         onClick = { isSearchMode = true }
-                    ),
-                    NavDockAction(
-                        icon = Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.menu_refresh),
-                        onClick = {
-                            AppIconCache.clear()
-                            viewModel.loadApps(context, forceRefresh = true)
-                        }
                     )
                 )
             )
@@ -324,7 +316,6 @@ fun ApplistTopAppBar(
     onRefresh: () -> Unit,
     focusRequester: FocusRequester
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
     val motionScheme = MaterialTheme.motionScheme
 
@@ -448,34 +439,6 @@ fun ApplistTopAppBar(
                         }
                         IconButton(onClick = { onSearchModeChange(true) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                             Icon(Icons.Default.Search, stringResource(R.string.cd_search))
-                        }
-                        IconButton(onClick = { menuExpanded = true }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
-                            Icon(Icons.Default.MoreVert, stringResource(R.string.cd_menu))
-                        }
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false },
-                            modifier = Modifier.gamepadKeyWatch()
-                        ) {
-                            val itemRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-                            LaunchedEffect(menuExpanded) {
-                                if (menuExpanded) {
-                                    delay(80)
-                                    itemRequester.requestFocus()
-                                }
-                            }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_refresh)) },
-                                onClick = {
-                                    AppIconCache.clear()
-                                    onRefresh()
-                                    menuExpanded = false
-                                },
-                                modifier = Modifier
-                                    .focusRequester(itemRequester)
-                                    .gamepadFocusOutline(),
-                                leadingIcon = { Icon(Icons.Default.Refresh, null) }
-                            )
                         }
                     }
                 )
