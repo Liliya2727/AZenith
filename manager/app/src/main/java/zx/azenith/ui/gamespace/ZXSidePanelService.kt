@@ -271,8 +271,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             private set
 
         fun show(context: Context, packageName: String? = null, appLabel: String? = null) {
-            // Master gate: when disabled (default), no caller may show the panel.
-            if (!isSidepanelEnabled(context)) return
+            // Master gate: when disabled (default), only the force check may show it.
+            if (!isSidepanelEnabled(context) && !isForceSidepanelEnabled()) return
             try {
                 if (!packageName.isNullOrBlank()) {
                     registerAppOpenedFromAzenith(packageName)
@@ -533,7 +533,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         startForegroundNotification()
         when (action) {
             ACTION_SHOW -> {
-                if (!isSidepanelEnabled(this)) {
+                if (!isSidepanelEnabled(this) && !isForceSidepanelEnabled()) {
                     isHandleVisible = false
                     detachOverlay()
                     return START_STICKY
@@ -622,7 +622,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 stopServiceIfIdle()
             }
             ACTION_OPEN_FLOATING_APP -> {
-                if (!isSidepanelEnabled(this)) {
+                if (!isSidepanelEnabled(this) && !isForceSidepanelEnabled()) {
                     isHandleVisible = false
                     detachOverlay()
                     return START_STICKY
@@ -1752,14 +1752,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
 
                     if (!focusedPkg.isNullOrBlank()) {
-                        // Master gate: disabled (default) => never auto-show,
-                        // even for configured games / floating sessions.
-                        val sidepanelEnabled = prefs.getBoolean(PREF_SIDEPANEL_ENABLED, false)
+                        // Master gate: disabled (default) blocks auto-show,
+                        // except when the force check explicitly allows it.
+                        val forceSidepanel = isForceSidepanelEnabled()
+                        val sidepanelEnabled = prefs.getBoolean(PREF_SIDEPANEL_ENABLED, false) || forceSidepanel
                         val isHostedFloatingApp = sidepanelEnabled &&
                             (floatingAppManager?.isPackageHosted(focusedPkg) == true ||
                                 floatingAppManager?.sessions?.any { it.packageName == focusedPkg } == true)
                         val isHomeLauncher = isLauncherPackage(focusedPkg)
-                        val forceSidepanel = isForceSidepanelEnabled()
                         val isConfiguredGame = focusedPkg != packageName &&
                             !isHomeLauncher &&
                             (isConfiguredAzGame(focusedPkg, rootGranted) || appsOpenedFromAzenith.contains(focusedPkg) || (inLaunchGrace && focusedPkg == pendingLaunchPkg))
