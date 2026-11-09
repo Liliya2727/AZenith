@@ -767,20 +767,19 @@ private fun FpsMeterWidget(
                 ) {
                     Row(
                         verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
                             text = "FPS",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onSurfaceVariant
+                            color = scheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 4.dp)
                         )
                         Text(
                             text = fpsText,
                             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                             color = scheme.primary,
-                            modifier = Modifier
-                                .width(52.dp)
-                                .semantics { contentDescription = "Frame rate $fpsText" },
+                            modifier = Modifier.semantics { contentDescription = "Frame rate $fpsText" },
                             textAlign = TextAlign.End,
                             maxLines = 1,
                             softWrap = false
