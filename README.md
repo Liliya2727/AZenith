@@ -10,7 +10,7 @@
 
 ---
 
-## ⚡ Overview
+## Overview
 
 **AZenith** is an All-In-One (AIO) system-optimization Magisk module for
 Android. It pairs three Rust daemons with a Material 3 Expressive
@@ -23,9 +23,9 @@ overlay on screen — without shell-forking in the hot path.
 
 ---
 
-## ✨ Features
+## Features
 
-### 🎮 Game Space
+### Game Space
 
 A landscape, gamepad-first shell — launched from the manager, then
 handed over to the overlay service (`ZXSidePanelService`) for the
@@ -44,7 +44,7 @@ rest of the session:
 - Floating app windows on top of the game (open from inside the shell)
 - Crosshair reticle overlay
 
-### 📊 Sidepanel + FPS Monitor
+### Sidepanel + FPS Monitor
 
 Edge-bar + expandable Material 3 Expressive dock (`ZXSidePanelService`):
 
@@ -61,7 +61,7 @@ Edge-bar + expandable Material 3 Expressive dock (`ZXSidePanelService`):
 - Quick Apps row, brightness/volume sliders, auto-mode toggle,
   profile switcher, toasts
 
-### 🔧 Per-App Tuning
+### Per-App Tuning
 
 Per detected game (`ZXGameSpaceAppSettings`), switching on game focus:
 
@@ -75,7 +75,7 @@ Per detected game (`ZXGameSpaceAppSettings`), switching on game focus:
 - Game Preload (libs + page-cache preload, with budget)
 - Resolution downscale badge always shows the live divider
 
-### ⚙️ Profiles & Governor Tweaks
+### Profiles & Governor Tweaks
 
 Auto profiles (Performance / Balanced / ECO) switch on game focus;
 manual mode in Settings disables Auto Mode:
@@ -88,21 +88,21 @@ manual mode in Settings disables Auto Mode:
 - Custom governor, custom I/O, custom Mali overrides per profile
 - `disabletweak` master switch
 
-### 🌡️ Thermalcore
+### Thermalcore
 
 Intelligent thermal throttling management (separate Rust crate
 `thermalcore`): watches thermal zones, adapts limits to keep a stable
 FPS floor instead of a thermal crash, with `persist.sys.rynx.*` props
 (threshold floor, audit logs, actuator mode, gradient alerts).
 
-### 🔥 Bypass Charging
+### Bypass Charging
 
 78 sysfs nodes (common / MediaTek / Oplus / QCOM) for bypass charging,
 with charging-state dynamic bypass, compatibility diagnosis
 node-by-node, custom threshold (`bypasschgthreshold`) and custom node
 path.
 
-### 📈 FPS Sources & Frametime
+### FPS Sources & Frametime
 
 `sysdaemon` supervises three sources in automatic fallback order
 (frametime-capable first):
@@ -120,7 +120,7 @@ source restart) — consumed by archdaemon for the recorder's
 `low1` / `low01` / `jank`. `current_fps` format stays
 `"<fps> <epoch_ms>"` (frozen for the manager + archdaemon).
 
-### 🎛️ Preference Tweaks
+### Preference Tweaks
 
 `binpreferenced` (toggles under `persist.sys.azenithconf.*`):
 
@@ -129,7 +129,7 @@ source restart) — consumed by archdaemon for the recorder's
 - SFL latency, DThermal (thermal engine), trace/logd kill-switches
 - Fstrim, custom thermal, display colour presets
 
-### 🎨 Cosmetic & UX
+### Cosmetic & UX
 
 - Display colour schemes, custom themes, accent colors, Material You
 - Sound effects (tap/scroll/notice/cancel volume), haptic feedback
@@ -138,7 +138,7 @@ source restart) — consumed by archdaemon for the recorder's
 
 ---
 
-## 📦 Installation
+## Installation
 
 Magisk module — install through your root manager (KernelSU /
 Magisk):
@@ -149,7 +149,7 @@ Magisk):
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 archdaemon/    Core daemon: profiles, bypass, recorder, CLI (Rust, cargo-ndk)
@@ -172,7 +172,7 @@ injects the real values at CI build time.
 
 ---
 
-## 👨‍💻 For Developers (ROM Integration)
+## ‍ For Developers (ROM Integration)
 
 **ROM-Integrated AZenith**: system-level service for custom ROMs —
 single `vendor.azenith-service` binary, AIDL interface, init rc,
@@ -182,7 +182,7 @@ repository.
 
 ---
 
-## 🛠️ Contributing & Bug Reports
+## Contributing & Bug Reports
 
 We welcome contributions!
 
@@ -194,7 +194,7 @@ We welcome contributions!
 
 ---
 
-## 🙏 Credits & Acknowledgements
+## Credits & Acknowledgements
 
 | Role | Developer |
 | :--- | :--- |
@@ -209,7 +209,7 @@ We welcome contributions!
 
 ---
 
-## 📢 Stay Updated
+## Stay Updated
 
 <p align="left">
   <a href="https://t.me/ZeshArch">
@@ -222,7 +222,7 @@ We welcome contributions!
 
 ---
 
-## ⚖️ License
+## License
 
 This project is licensed under the **GNU General Public License v3.0
 only** (GPL-3.0-only) — see [LICENSE](LICENSE) for the full text.
