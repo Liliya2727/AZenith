@@ -240,6 +240,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         private const val LITE_PROP = "persist.sys.azenithconf.litemode"
         private const val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
         private const val PREF_QUICK_APPS = "gamespace_sidepanel_quick_apps"
+        const val PREF_SIDEPANEL_ENABLED = "gamespace_sidepanel_enabled"
 
         const val PROP_FORCE_SIDEPANEL = "persist.sys.azenith.force_sidepanel"
         const val PROP_FORCE_SIDEPANEL_DEBUG = "debug.azenith.force_sidepanel"
@@ -260,11 +261,18 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             return p2 == "1" || p2.equals("true", ignoreCase = true)
         }
 
+        /** Experimental master gate for the overlay. Default OFF: no source may show it. */
+        fun isSidepanelEnabled(context: Context): Boolean =
+            context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                .getBoolean(PREF_SIDEPANEL_ENABLED, false)
+
         @Volatile
         var isServiceActive = false
             private set
 
         fun show(context: Context, packageName: String? = null, appLabel: String? = null) {
+            // Master gate: when disabled (default), no caller may show the panel.
+            if (!isSidepanelEnabled(context)) return
             try {
                 if (!packageName.isNullOrBlank()) {
                     registerAppOpenedFromAzenith(packageName)
@@ -525,6 +533,11 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         startForegroundNotification()
         when (action) {
             ACTION_SHOW -> {
+                if (!isSidepanelEnabled(this)) {
+                    isHandleVisible = false
+                    detachOverlay()
+                    return START_STICKY
+                }
                 val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME)?.takeIf { it.isNotBlank() && it != packageName }
                 val label = intent?.getStringExtra(EXTRA_APP_LABEL)
                 sideSetting = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
@@ -609,6 +622,11 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 stopServiceIfIdle()
             }
             ACTION_OPEN_FLOATING_APP -> {
+                if (!isSidepanelEnabled(this)) {
+                    isHandleVisible = false
+                    detachOverlay()
+                    return START_STICKY
+                }
                 val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME)
                 if (!pkg.isNullOrBlank()) {
                     launchExternalApp(pkg)
@@ -1734,15 +1752,20 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
 
                     if (!focusedPkg.isNullOrBlank()) {
-                        val isHostedFloatingApp = floatingAppManager?.isPackageHosted(focusedPkg) == true ||
-                            floatingAppManager?.sessions?.any { it.packageName == focusedPkg } == true
+                        // Master gate: disabled (default) => never auto-show,
+                        // even for configured games / floating sessions.
+                        val sidepanelEnabled = prefs.getBoolean(PREF_SIDEPANEL_ENABLED, false)
+                        val isHostedFloatingApp = sidepanelEnabled &&
+                            (floatingAppManager?.isPackageHosted(focusedPkg) == true ||
+                                floatingAppManager?.sessions?.any { it.packageName == focusedPkg } == true)
                         val isHomeLauncher = isLauncherPackage(focusedPkg)
                         val forceSidepanel = isForceSidepanelEnabled()
                         val isConfiguredGame = focusedPkg != packageName &&
                             !isHomeLauncher &&
                             (isConfiguredAzGame(focusedPkg, rootGranted) || appsOpenedFromAzenith.contains(focusedPkg) || (inLaunchGrace && focusedPkg == pendingLaunchPkg))
 
-                        val shouldShowForForeground = isConfiguredGame || (forceSidepanel && !isHomeLauncher && focusedPkg != packageName)
+                        val shouldShowForForeground = sidepanelEnabled &&
+                            (isConfiguredGame || (forceSidepanel && !isHomeLauncher && focusedPkg != packageName))
 
                         if (screenAwake && (isHostedFloatingApp || hasFloatingWindows)) {
                             withContext(Dispatchers.Main) {
