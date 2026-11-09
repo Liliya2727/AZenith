@@ -112,13 +112,13 @@ On Android 16 (and several ROMs), `getRecentTasks`/`getTasks` return only the fo
 
 ## FPS client (`fps.rs`)
 
-A separate frame-rate source for the focused task, publishing `<fps> <epoch_ms>` to `<cfg>/API/current_fps`. Three sources, tried in order:
+A separate frame-rate source for the focused task, publishing `<fps> <epoch_ms>` to `<cfg>/API/current_fps`. Three sources, tried in order (frametime-capable first):
 
 | Source | Mechanism | Notes |
 |--------|-----------|-------|
-| `windowmanager` | Root `app_process` hosting `WindowManager.registerTaskFpsCallback` | Needs `ACCESS_FPS_COUNTER` (granted to uid 0); framework pushes ~2 Hz |
-| `uprobe` | eBPF uprobe on `libgui`'s `Surface::queueBuffer` family (aya) | 64-bit only; per-process, independent of SurfaceFlinger |
-| `surfaceflinger` | `dumpsys SurfaceFlinger --timestats -dump`, differentiated `totalFrames` | 1 s poll; works where TaskFpsCallback is unavailable |
+| `uprobe` | eBPF uprobe on `libgui`'s `Surface::queueBuffer` family (aya) | 64-bit only; per-process, independent of SurfaceFlinger; 100 µs per-surface intervals |
+| `surfaceflinger` | `dumpsys SurfaceFlinger --timestats -dump`, differentiated `totalFrames` + `presentToPresent` histogram | 1 s poll; 1 ms global intervals; works where TaskFpsCallback is unavailable |
+| `windowmanager` | Root `app_process` hosting `WindowManager.registerTaskFpsCallback` | Needs `ACCESS_FPS_COUNTER` (granted to uid 0); framework pushes ~2 Hz; rate only (`current_frametime` publishes `none`) |
 
 The source only runs while a game is active (`<cfg>/API/gameinfo`) or `always-on` is set (`<cfg>/debug/fps_counter_alwayson == "true"`). Both are watched with `inotify`. A method can be pinned via `<cfg>/debug/explicit_fps_mthd` (`use_windmanager`, `use_uprobe`, `use_sf`, or empty for automatic). While the gate is closed, `current_fps` holds `NO_ACTIVE_GAME` so the manager can tell "no game" from "daemon dead".
 

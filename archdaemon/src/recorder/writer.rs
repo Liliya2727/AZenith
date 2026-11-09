@@ -1,6 +1,6 @@
 //! CSV/JSON writers + summary computation.
 
-use super::{Sample, Session, StopReason};
+use super::{frametime, Sample, Session, StopReason};
 use std::path::Path;
 
 /// Split "<pkg>_<yyyymmdd>_<hhmmss>.csv" into (pkg, start-epoch) by parsing the
@@ -34,8 +34,12 @@ pub fn write_json_atomic(path: &Path, content: &str) -> std::io::Result<()> {
 
 pub fn build_summary_json(sess: &Session, reason: StopReason, incomplete: bool) -> String {
     let st = stats(&sess.samples);
+    // low1/low01/jank come from the merged session histogram. fps.avg /
+    // fps.min stay per-second FPS based and are untouched by frametime.
+    let ft = frametime::summarize(&sess.session_hist, sess.session_frames, sess.session_jank,
+        sess.has_frametime, sess.session_jank_known);
     format!(
-        "{{\n  \"version\": 2,\n  \"pkg\": {},\n  \"profile\": {},\n  \"start\": {},\n  \"duration\": {},\n  \"stop_reason\": {},\n  \"incomplete\": {},\n  \"fps\": {{\"avg\": {}, \"min\": {}, \"low1\": null, \"low01\": null}},\n  \"fps_active\": {{\"avg\": {}, \"min\": {}}},\n  \"temp\": {{\"cpu_max\": {}, \"gpu_max\": {}, \"bat_max\": {}}},\n  \"power\": {{\"avg_mw\": {}}},\n  \"jank\": null,\n  \"units\": {{\"temp\": \"C\", \"freq\": \"kHz\", \"power\": \"mW\"}}\n}}",
+        "{{\n  \"version\": 2,\n  \"pkg\": {},\n  \"profile\": {},\n  \"start\": {},\n  \"duration\": {},\n  \"stop_reason\": {},\n  \"incomplete\": {},\n  \"fps\": {{\"avg\": {}, \"min\": {}, \"low1\": {}, \"low01\": {}}},\n  \"fps_active\": {{\"avg\": {}, \"min\": {}}},\n  \"temp\": {{\"cpu_max\": {}, \"gpu_max\": {}, \"bat_max\": {}}},\n  \"power\": {{\"avg_mw\": {}}},\n  \"jank\": {},\n  \"units\": {{\"temp\": \"C\", \"freq\": \"kHz\", \"power\": \"mW\"}}\n}}",
         json_str(&sess.pkg),
         json_str(&sess.profile),
         sess.start_epoch,
@@ -44,16 +48,24 @@ pub fn build_summary_json(sess: &Session, reason: StopReason, incomplete: bool) 
         incomplete,
         st.fps_avg,
         st.fps_min,
+        frametime::low_json(ft.low1),
+        frametime::low_json(ft.low01),
         st.fps_active_avg,
         st.fps_active_min,
         temp_json(st.cpu_max),
         temp_json(st.gpu_max),
         temp_json(st.bat_max),
-        st.avg_mw
+        st.avg_mw,
+        frametime::jank_json(ft.jank)
     )
 }
 
 pub fn build_summary_json_rows(csv: &str, pkg: &str, profile: &str, start_epoch: u64, duration: u64, reason: StopReason, incomplete: bool) -> String {
+    // Recovery path (daemon died mid-session): the CSV holds only
+    // per-second ft_avg/ft_max, not the per-frame histograms, so
+    // low1/low01/jank stay null here. Only the live session path can
+    // merge delta histograms. Keys/values otherwise identical to
+    // build_summary_json.
     let samples = parse_csv_rows(csv);
     let st = stats(&samples);
     format!(
@@ -171,6 +183,10 @@ pub fn parse_csv_rows(content: &str) -> Vec<Sample> {
             t: get(0),
             fps: get(1),
             refresh_hz: if has_refresh { get(2) } else { -1 },
+            // Per-second frametime is only needed for the live path;
+            // the recovery summary cannot rebuild histograms from it.
+            ft_avg_tenths: frametime::FT_MISSING,
+            ft_max_tenths: frametime::FT_MISSING,
             cpu_temp: parse_temp(cols[idx(4)]),
             gpu_temp: parse_temp(cols[idx(5)]),
             bat_temp: parse_temp(cols[idx(6)]),
@@ -205,7 +221,38 @@ mod tests {
     use super::*;
 
     fn sample(fps: i64, cpu: i64, ma: i64, mv: i64) -> Sample {
-        Sample { t: 0, fps, refresh_hz: 120, cpu_temp: cpu, gpu_temp: -1, bat_temp: 400, gpu_freq: -1, gpu_load: -1, cpu_freq_l: 2_000_000, cpu_freq_b: 2_500_000, cpu_load: 50, ma, mv, bat_lvl: 50 }
+        Sample { t: 0, fps, refresh_hz: 120, ft_avg_tenths: -1, ft_max_tenths: -1, cpu_temp: cpu, gpu_temp: -1, bat_temp: 400, gpu_freq: -1, gpu_load: -1, cpu_freq_l: 2_000_000, cpu_freq_b: 2_500_000, cpu_load: 50, ma, mv, bat_lvl: 50 }
+    }
+
+    #[test]
+    fn csv_row_frametime_render() {
+        let mut s = sample(120, 500, 1000, 4000);
+        s.t = 7;
+        s.ft_avg_tenths = 167; // 16.7 ms
+        s.ft_max_tenths = 335; // 33.5 ms
+        let line = s.to_csv();
+        let cols: Vec<&str> = line.split(',').collect();
+        assert_eq!(cols.len(), 16);
+        assert_eq!(cols[3], "16.7");
+        assert_eq!(cols[4], "33.5");
+        // Order preserved: t,fps,refresh_hz,ft_avg,ft_max,...
+        assert_eq!(s.to_csv().split(',').take(5).collect::<Vec<_>>(),
+            vec!["7", "120", "120", "16.7", "33.5"]);
+        // Overflow max renders as >=500.0 and keeps 16 columns.
+        let mut o = sample(60, 500, 1000, 4000);
+        o.ft_max_tenths = frametime::FT_OVERFLOW;
+        let ol = o.to_csv();
+        assert!(ol.split(',').nth(4).unwrap() == ">=500.0", "{}", ol);
+        assert_eq!(ol.split(',').count(), 16);
+        // Missing values stay -1.
+        let m = sample(60, 500, 1000, 4000).to_csv();
+        let mc: Vec<&str> = m.split(',').collect();
+        assert_eq!(mc[3], "-1");
+        assert_eq!(mc[4], "-1");
+        // Recovery still parses a row with >=500.0 in ft_max.
+        let csv = format!("{}\n{}", crate::recorder::SESSION_CSV_HEADER, ol);
+        let back = parse_csv_rows(&csv);
+        assert_eq!(back.len(), 1);
     }
 
     #[test]

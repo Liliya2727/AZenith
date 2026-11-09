@@ -11,8 +11,9 @@
 //! CSV column units (header is fixed; unavailable values are always -1):
 //!   t        seconds since session start
 //!   fps      frames/second (from API/current_fps, stale >3s reads -1)
-//!   ft_avg   ms — no per-frame source on the daemon; always -1
-//!   ft_max   ms — always -1 (see above)
+//!   ft_avg   ms, 1 decimal (from API/current_frametime delta; -1 if invalid)
+//!   ft_max   ms, 1 decimal — upper edge of worst bucket; ">=500.0" for
+//!            the >= 500 ms overflow bucket; -1 if invalid
 //!   cpu_temp °C (thermal zone matched by type name; milli-°C / 100, 1 decimal)
 //!   gpu_temp °C (thermal zone *gpu*/*mali*/*adreno; -1 if absent)
 //!   bat_temp °C (thermal zone *battery*, else supply temp)
@@ -28,13 +29,20 @@
 //! the JSON summary repeats them under its `units` object.
 //!
 //! Sampling performs no shell forks — every input is a direct file read.
-//! Frame-time metrics (low1/low01/jank) can only be computed from frame
-//! times; the current fps sources publish one fps value per second, so
-//! low1/low01/jank are null and fps_min is the only percentile.
+//! Frame-time metrics (low1/low01/jank) are computed from the per-frame
+//! histogram in API/current_frametime (see the `frametime` submodule):
+//! delta histograms are merged into one session histogram and the worst
+//! 1% / 0.1% means are taken at stop. `fps.avg`/`fps.min` stay per-second
+//! FPS based. jank counts frames over twice the refresh period; low1
+//! needs >= 100 valid frames and low01 >= 1000, otherwise null — never
+//! a fabricated value. The recovery path (summary rebuilt from a leftover
+//! CSV) has no histograms, so its low1/low01/jank stay null.
 //!
-//! Submodules: `sampler` (sysfs reads), `writer` (CSV/JSON output +
+//! Submodules: `sampler` (sysfs reads), `frametime` (current_frametime
+//! diff + session histogram + lows), `writer` (CSV/JSON output +
 //! summary math), `retention` (session cleanup).
 
+pub mod frametime;
 pub mod retention;
 pub mod sampler;
 pub mod writer;
@@ -50,6 +58,7 @@ pub const RECORD_STATE_PATH: &str = "/data/adb/.config/AZenith/API/record_state"
 pub const FRAMERATEDATA_DIR: &str = "/data/adb/.config/AZenith/frameratedata";
 pub const GAME_INFO_PATH: &str = "/data/adb/.config/AZenith/API/gameinfo";
 pub const CURRENT_FPS_PATH: &str = "/data/adb/.config/AZenith/API/current_fps";
+pub const CURRENT_FRAMETIME_PATH: &str = "/data/adb/.config/AZenith/API/current_frametime";
 
 pub const SESSION_CSV_HEADER: &str =
     "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,gpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl";
@@ -96,6 +105,12 @@ pub struct Sample {
     pub t: i64,
     pub fps: i64,
     pub refresh_hz: i64,
+    /// Per-second mean frame time in tenths of a ms; -1 = no valid delta.
+    pub ft_avg_tenths: i64,
+    /// Per-second worst frame time in tenths of a ms (upper edge of the
+    /// highest non-empty bucket); -1 = no valid delta, -2 = >= 500 ms
+    /// overflow bucket (rendered ">=500.0").
+    pub ft_max_tenths: i64,
     pub cpu_temp: i64,
     pub gpu_temp: i64,
     pub bat_temp: i64,
@@ -115,6 +130,8 @@ impl Sample {
             t,
             fps: -1,
             refresh_hz: -1,
+            ft_avg_tenths: frametime::FT_MISSING,
+            ft_max_tenths: frametime::FT_MISSING,
             cpu_temp: -1,
             gpu_temp: -1,
             bat_temp: -1,
@@ -134,7 +151,9 @@ impl Sample {
     pub fn to_csv(&self) -> String {
         format!(
             "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
-            self.t, self.fps, self.refresh_hz, -1, -1,
+            self.t, self.fps, self.refresh_hz,
+            frametime::ft_avg_csv(self.ft_avg_tenths),
+            frametime::ft_max_csv(self.ft_max_tenths),
             temp_csv(self.cpu_temp), temp_csv(self.gpu_temp), temp_csv(self.bat_temp),
             self.gpu_freq, self.gpu_load, self.cpu_freq_l, self.cpu_freq_b,
             self.cpu_load, self.ma, self.mv, self.bat_lvl
@@ -175,6 +194,18 @@ pub struct Session {
     cpu_freq_l: Option<PathBuf>,
     cpu_freq_b: Option<PathBuf>,
     prev_stat: Option<(u64, u64)>,
+    /// Last `current_frametime` snapshot; the next tick diffs against it.
+    pub prev_frametime: Option<frametime::FrametimeSnapshot>,
+    /// Merged delta histograms (bounded: exactly `frametime::HIST_LEN` u64s).
+    pub session_hist: Vec<u64>,
+    /// Total valid frames in `session_hist` (low1/low01 gates on this).
+    pub session_frames: u64,
+    /// Accumulated jank frames (see `frametime::count_jank`).
+    pub session_jank: u64,
+    /// Whether any tick ever had a usable refresh rate for jank counting.
+    pub session_jank_known: bool,
+    /// Whether any valid frametime delta was seen at all.
+    pub has_frametime: bool,
 }
 
 pub struct Recorder {
@@ -182,7 +213,7 @@ pub struct Recorder {
     last_cmd_millis: i64,
 }
 
-fn now_ms() -> i64 {
+pub(crate) fn now_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| (d.as_secs() * 1000 + d.subsec_millis() as u64) as i64)
@@ -334,6 +365,12 @@ impl Recorder {
             cpu_freq_l: nodes.cpu_freq_l,
             cpu_freq_b: nodes.cpu_freq_b,
             prev_stat: None,
+            prev_frametime: None,
+            session_hist: vec![0u64; frametime::HIST_LEN],
+            session_frames: 0,
+            session_jank: 0,
+            session_jank_known: false,
+            has_frametime: false,
         });
         // First sample at t=0 immediately, then one per second via deadlines.
         if let Some(sess) = self.active.as_mut() {

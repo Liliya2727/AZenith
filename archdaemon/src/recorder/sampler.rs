@@ -1,6 +1,6 @@
 //! Sampler: sysfs reads every ~1s, no shell forks.
 
-use super::{Sample, Session, now_epoch_sec, read_int};
+use super::{frametime, now_ms, now_epoch_sec, Sample, Session, read_int};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -8,6 +8,11 @@ pub fn sample_once(sess: &mut Session, t: i64) {
     let mut row = Sample::new(t);
     row.fps = read_fps().unwrap_or(-1);
     row.refresh_hz = read_refresh_hz().unwrap_or(-1);
+    // Frametime delta for this tick (needs this tick's refresh_hz for
+    // jank). -1/-1 on missing/stale/unparsable/none/gen-reset ticks.
+    let (ft_avg, ft_max) = frametime::update_session(sess, row.refresh_hz, now_ms());
+    row.ft_avg_tenths = ft_avg;
+    row.ft_max_tenths = ft_max;
 
     row.cpu_temp = sess.cpu_temp_path.as_ref().and_then(read_int).filter(|v| *v != 0).map(mc_to_deg_tenths).unwrap_or(-1);
     row.gpu_temp = max_temp(&sess.gpu_temps).map(mc_to_deg_tenths).unwrap_or(-1);
