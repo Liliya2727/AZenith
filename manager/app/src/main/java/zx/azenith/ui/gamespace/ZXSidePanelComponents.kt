@@ -689,7 +689,8 @@ fun FloatingMonitorPill(
     state: ZXSidePanelStateHolder,
     modifier: Modifier = Modifier,
     applyAlpha: Boolean = false,
-    onDragDelta: ((Float, Float) -> Unit)? = null
+    onDragDelta: ((Float, Float) -> Unit)? = null,
+    onTap: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     val cfg = state.liveMonitor
@@ -728,6 +729,14 @@ fun FloatingMonitorPill(
         Modifier
     }
 
+    val tapMod = if (onTap != null) {
+        Modifier.pointerInput(onTap) {
+            detectTapGestures { onTap() }
+        }
+    } else {
+        Modifier
+    }
+
     val alphaMod = if (applyAlpha) {
         Modifier.graphicsLayer { alpha = alphaVal }
     } else {
@@ -742,6 +751,7 @@ fun FloatingMonitorPill(
         when (cfg.layoutStyle) {
             "stacked" -> {
                 val metrics = buildList<Triple<String, String, Color>> {
+                    if (state.recordState.startsWith("recording")) add(Triple("REC", "●", Color.Red))
                     if (cfg.showFps) add(Triple("FPS", fpsText, scheme.primary))
                     if (cfg.showCpu) add(Triple("CPU", "${state.cpuLoad}%", scheme.primary))
                     if (cfg.showGpu) add(Triple("GPU", "${state.gpuLoad}%", scheme.tertiary))
@@ -813,6 +823,7 @@ fun FloatingMonitorPill(
             }
             "minimal" -> {
                 val segments = buildList<Pair<String, Color>> {
+                    if (state.recordState.startsWith("recording")) add("REC ●" to Color.Red)
                     if (cfg.showFps) add("$fpsText FPS" to scheme.primary)
                     if (cfg.showCpu) add("CPU ${state.cpuLoad}%" to scheme.onSurface)
                     if (cfg.showGpu) add("GPU ${state.gpuLoad}%" to scheme.tertiary)

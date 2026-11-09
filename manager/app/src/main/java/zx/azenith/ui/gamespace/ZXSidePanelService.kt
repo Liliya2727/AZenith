@@ -233,6 +233,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         private const val DAEMON_GAMEINFO_PATH = "/data/adb/.config/AZenith/API/gameinfo"
         private const val APP_GAMEINFO_PATH = "/data/data/zx.azenith/API/gameinfo"
         private const val DAEMON_MODES_PATH = "/data/adb/.config/AZenith/API/current_modes"
+        private const val DAEMON_RECORD_CMD_PATH = "/data/adb/.config/AZenith/API/record_cmd"
+        private const val DAEMON_RECORD_STATE_PATH = "/data/adb/.config/AZenith/API/record_state"
         private const val AI_PROP = "persist.sys.azenithconf.AIenabled"
         private const val LITE_PROP = "persist.sys.azenithconf.litemode"
         private const val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
@@ -1152,7 +1154,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
             setContent {
                 AZenithTheme {
-                    FloatingMonitorPill(state = panelState, applyAlpha = false)
+                    FloatingMonitorPill(state = panelState, applyAlpha = false, onTap = { onMonitorTap() })
                 }
             }
         }
@@ -2043,6 +2045,25 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    // FPS Recorder trigger (tap the floating monitor pill to toggle). The
+    // daemon owns the state, sampling and file writing; the overlay only
+    // writes start|stop to record_cmd and displays the daemon's record_state.
+    private var lastRecordTapMs: Long = 0L
+
+    private fun onMonitorTap() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastRecordTapMs < 500L) return
+        lastRecordTapMs = now
+        serviceScope.launch(Dispatchers.IO) {
+            val rootGranted = checkRootGranted()
+            val stateText = telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted)?.trim().orEmpty()
+            val cmd = if (stateText.startsWith("recording")) "stop\n" else "start\n"
+            if (rootGranted) {
+                RootUtils.writeRootFile(DAEMON_RECORD_CMD_PATH, cmd)
+            }
+        }
+    }
+
     private fun startRealTelemetryMonitor() {
         telemetryJob?.cancel()
         telemetryJob = serviceScope.launch(Dispatchers.IO) {
@@ -2083,6 +2104,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
                     val liteEnabled = PropertyUtils.get(LITE_PROP, "0") == "1"
                     val bypassActive = PropertyUtils.get(BYPASS_PROP, "0") == "1"
+
+                    // FPS Recorder status (daemon-owned state file, for the overlay).
+                    val recordStateText = telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted)?.trim()
+                    if (!recordStateText.isNullOrEmpty()) {
+                        panelState.recordState = recordStateText
+                    }
 
                     val rawProfileCode = if (daemonRunning) {
                         telemetryCollector.readFileTextDirectOrSu(APP_PROFILE_PATH, false)?.trim()

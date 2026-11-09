@@ -202,6 +202,10 @@ class ZXSidePanelStateHolder {
     var isBypassChargingActive by mutableStateOf(false)
     var isRootAvailable by mutableStateOf(false)
 
+    // FPS recorder status, mirrored from the daemon's API/record_state file:
+    // "idle" | "recording <csv file>".
+    var recordState by mutableStateOf("idle")
+
     val currentProfileDisplayName: String
         get() = when (currentProfileCode) {
             "0" -> "Initializing"
