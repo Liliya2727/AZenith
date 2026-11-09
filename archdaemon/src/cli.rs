@@ -1,4 +1,4 @@
-//! CLI command handlers, mirroring `jni/src/cli/`.
+//! CLI command handlers.
 
 use crate::android_ffi::stdout;
 use crate::core::BypassNode;
@@ -141,14 +141,14 @@ pub fn handle_verboselog(argc: i32, argv: &[&str]) -> c_int {
 // printversion
 // ---------------------------------------------------------------------------
 pub fn printversion() {
-    println!("{}", env!("CARGO_PKG_VERSION"));
+    println!("{}", crate::module::full_version());
 }
 
 // ---------------------------------------------------------------------------
 // print_help
 // ---------------------------------------------------------------------------
 pub fn print_help() {
-    let ver = env!("CARGO_PKG_VERSION");
+    let ver = crate::module::full_version();
     println!("AZenith Daemon CLI (by @Zexshia)");
     println!("Version: {}", ver);
     println!();

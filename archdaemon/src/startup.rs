@@ -1,4 +1,4 @@
-//! Startup logic, mirroring `jni/src/startup/`.
+//! Startup logic.
 
 use crate::android_ffi::__system_property_foreach;
 use crate::core::{

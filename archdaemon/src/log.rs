@@ -1,4 +1,4 @@
-//! Logging, mirroring `jni/src/log/logger.c`.
+//! Logging.
 
 use crate::sysprop::get_or_default;
 use crate::android_ffi::{ANDROID_LOG_DEBUG, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL, ANDROID_LOG_INFO, ANDROID_LOG_WARN, logcat};

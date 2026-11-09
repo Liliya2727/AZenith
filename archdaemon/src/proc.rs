@@ -1,4 +1,4 @@
-//! Process utilities, mirroring `jni/src/proc/`.
+//! Process utilities.
 use crate::sysprop::set;
 use std::io::BufRead;
 

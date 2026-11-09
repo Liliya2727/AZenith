@@ -1,4 +1,4 @@
-//! Resolution / game-mode, mirroring `jni/src/config/resolution.c`.
+//! Resolution / game-mode.
 
 use crate::core::DaemonContext;
 use crate::IS_DEFAULT;

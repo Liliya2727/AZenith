@@ -1,4 +1,4 @@
-//! Profile application, mirroring `jni/src/profile/`.
+//! Profile application.
 
 use crate::sysprop::{get_or_default, get_into, set};
 use crate::fileops;

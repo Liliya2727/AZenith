@@ -1,4 +1,4 @@
-//! Daemon state persistence, mirroring `jni/src/config/state.c`.
+//! Daemon state persistence.
 
 use crate::core::{GameConfig, 
     DAEMON_STATE_FILE, ProfileMode,

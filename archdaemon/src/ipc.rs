@@ -1,4 +1,4 @@
-//! IPC / inotify watchers, mirroring `jni/src/ipc/inotify.c`.
+//! IPC / inotify watchers.
 //! Uses raw inotify syscalls via libc (same as the C implementation).
 
 use crate::android_ffi::{

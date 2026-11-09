@@ -1,4 +1,4 @@
-//! Main daemon loop, mirroring `jni/src/daemon/loop.c`.
+//! Main daemon loop.
 
 use crate::sysprop::{get_into, set};
 use crate::fileops;use crate::bypass::handle_dynamic_bypass;

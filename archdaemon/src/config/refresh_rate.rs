@@ -1,4 +1,4 @@
-//! Refresh rate helpers, mirroring `jni/src/config/refresh_rate.c`.
+//! Refresh rate helpers.
 use std::io::BufRead;
 
 use crate::core::APP_MONITOR_FILE;

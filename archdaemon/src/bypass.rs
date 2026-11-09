@@ -1,4 +1,4 @@
-//! Bypass charging logic, mirroring `jni/src/bypass/`.
+//! Bypass charging logic.
 
 use crate::android_ffi::{stdout, PROP_VALUE_MAX};
 use crate::config::resolution::restore_resolution_target;

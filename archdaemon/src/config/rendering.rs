@@ -1,4 +1,4 @@
-//! Rendering / HWUI, mirroring `jni/src/config/rendering.c`.
+//! Rendering / HWUI.
 
 use crate::{log_debug, log_info};
 use crate::shell::systemv;

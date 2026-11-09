@@ -1,6 +1,6 @@
 [package]
 name = "azenith-preferencedtweaks"
-version = "1.0.0"
+version = "5.6.0"
 edition = "2024"
 description = "AZenith Preference tweaks binary"
 

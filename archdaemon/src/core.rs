@@ -1,4 +1,4 @@
-//! Core types shared across the daemon, mirroring `include/azenith/core.h`.
+//! Core types shared across the daemon.
 
 use std::os::raw::c_int;
 

@@ -1,4 +1,4 @@
-//! Module integrity, mirroring `jni/src/module/`.
+//! Module integrity.
 
 use crate::core::{MODULE_PROP};
 use crate::log_fatal;
@@ -42,8 +42,18 @@ fn doorprize() -> ! {
 // ---------------------------------------------------------------------------
 // check_module_version
 // ---------------------------------------------------------------------------
+// module.prop's `version=` carries the full build version
+// ("5.6.0 (123-abc-MoonShot-Beta)"), written by CI from `version` +
+// git count/hash/type. The daemon embeds the identical string from
+// `archdaemon/full_version.txt` (overwritten by .github/scripts/verify.sh
+// at build time), so an exact match is possible instead of comparing
+// the bare semver.
+pub fn full_version() -> &'static str {
+    include_str!("../full_version.txt").trim()
+}
+
 pub fn check_module_version() {
-    let daemon_version = env!("CARGO_PKG_VERSION");
+    let daemon_version = full_version();
     let expected = format!("version={daemon_version}");
 
     let lines = read_module_prop_lines();

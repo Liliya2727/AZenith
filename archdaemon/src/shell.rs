@@ -1,4 +1,4 @@
-//! Shell execution, mirroring `jni/src/shell/`.
+//! Shell execution.
 
 use crate::core::MY_PATH;
 use crate::log_error;

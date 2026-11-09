@@ -1,5 +1,5 @@
 //! AZenith Service Daemon — Rust rewrite of archdaemon.
-//! CLI entry point mirroring `jni/Main.c`.
+//! CLI entry point.
 //!
 //! Many functions/constants are part of the public API surface but not
 //! directly referenced within the crate itself (they are called from main or

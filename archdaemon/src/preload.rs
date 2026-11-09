@@ -1,4 +1,4 @@
-//! Game preload, mirroring `jni/src/preload/preload.c`.
+//! Game preload.
 
 use crate::sysprop::get_or_default;
 use crate::{log_debug, log_preload, log_warn};

@@ -1,4 +1,4 @@
-//! Monitor: app status + gamelist, mirroring `jni/src/monitor/`.
+//! Monitor: app status + gamelist.
 
 use crate::core::{
     GameConfig, SystemStateCache, APP_MONITOR_FILE, GAMELIST,

@@ -1,4 +1,4 @@
-//! File IO and locking, mirroring `jni/src/io/`.
+//! File IO and locking.
 
 use crate::core::LOCK_FILE;
 

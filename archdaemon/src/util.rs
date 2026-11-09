@@ -1,4 +1,4 @@
-//! Utilities, mirroring `jni/src/core/util.c`.
+//! Utilities.
 
 use crate::sysprop::{get_or_default, set};
 use crate::core::MODULE_PROP;
