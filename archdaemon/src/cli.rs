@@ -192,7 +192,7 @@ pub fn print_help() {
 // check_bypass_compatibility
 // ---------------------------------------------------------------------------
 pub fn check_bypass_compatibility() -> i32 {
-    unsafe { libc::setvbuf(stdout() as *mut libc::FILE, std::ptr::null_mut(), 0, 0) };
+    unsafe { libc::setvbuf(stdout as *mut libc::FILE, std::ptr::null_mut(), 0, 0) };
 
     println!("\u{1b}[36m[Bypass Charge Compatibility Check]\u{1b}[0m Initializing...");
 
@@ -285,7 +285,7 @@ pub fn test_bypass_node_by_name(name: &str) -> i32 {
 }
 
 fn test_single_node(node: &BypassNode) -> i32 {
-    unsafe { libc::setvbuf(stdout() as *mut libc::FILE, std::ptr::null_mut(), 0, 0) };
+    unsafe { libc::setvbuf(stdout as *mut libc::FILE, std::ptr::null_mut(), 0, 0) };
 
     println!("\n\u{1b}[36m[Bypass Charge Test - Single Node]\u{1b}[0m Initializing...");
 
@@ -542,7 +542,7 @@ struct RrMode {
 }
 
 pub fn dump_refresh_rate_modes() -> c_int {
-    let stdout = match crate::shell::execute_command("dumpsys SurfaceFlinger") {
+    let sf_out = match crate::shell::execute_command("dumpsys SurfaceFlinger") {
         Some(o) => o,
         None => {
             log_error!("cli", "rr_modes popen failed");
@@ -552,7 +552,7 @@ pub fn dump_refresh_rate_modes() -> c_int {
     let mut modes: Vec<RrMode> = Vec::new();
 
     // Pattern 1: "id=X, ... vsyncRate=Y" within same {...} block
-    for line in stdout.lines() {
+    for line in sf_out.lines() {
         let mut search_from = line;
         while let Some(pos) = search_from.find("id=") {
             if pos > 0 {
@@ -611,7 +611,7 @@ pub fn dump_refresh_rate_modes() -> c_int {
 
     // Pattern 2: Look for standalone vsyncRate values if Pattern 1 found nothing
     if modes.is_empty() {
-        for line in stdout.lines() {
+        for line in sf_out.lines() {
             for pattern in &["vsyncRate=", "refreshRate="] {
                 if let Some(pos) = line.find(pattern) {
                     let hz_str = &line[pos + pattern.len()..];
@@ -632,7 +632,7 @@ pub fn dump_refresh_rate_modes() -> c_int {
         log_warn!("cli", "rr_modes no display modes found");
         // Debug: search for vsyncRate anywhere in output
         let mut found_vsync = 0;
-        for line in stdout.lines() {
+        for line in sf_out.lines() {
             if line.contains("vsyncRate=") || line.contains("refreshRate=") || line.contains("Hz=") {
                 found_vsync += 1;
                 if found_vsync <= 3 {
@@ -641,10 +641,10 @@ pub fn dump_refresh_rate_modes() -> c_int {
             }
         }
         if found_vsync == 0 {
-            log_warn!("cli", "rr_modes: no vsyncRate/refreshRate/Hz patterns found in {} lines", stdout.lines().count());
+            log_warn!("cli", "rr_modes: no vsyncRate/refreshRate/Hz patterns found in {} lines", sf_out.lines().count());
         }
         // Debug: log lines containing "Display" or "refresh" or "rate"
-        for (i, line) in stdout.lines().enumerate() {
+        for (i, line) in sf_out.lines().enumerate() {
             if (line.contains("Display") || line.contains("refresh") || line.contains("Rate")) && i < 20 {
                 log_warn!("cli", "rr_modes line {}: {}", i, line.chars().take(150).collect::<String>());
             }

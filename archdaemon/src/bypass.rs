@@ -258,7 +258,7 @@ pub fn enable_bypass() -> i32 {
 // check_bypass_compatibility
 // ---------------------------------------------------------------------------
 pub fn check_bypass_compatibility() -> i32 {
-    unsafe { libc::setvbuf(stdout() as *mut _, null_mut(), 0, 0) };
+    unsafe { libc::setvbuf(stdout as *mut _, null_mut(), 0, 0) };
 
     println!("\u{1b}[36m[Bypass Charge Compatibility Check]\u{1b}[0m Initializing...");
 
@@ -342,7 +342,7 @@ pub fn test_bypass_node_by_name(name: &str) -> i32 {
 }
 
 fn test_single_node(node: &BypassNode) -> i32 {
-    unsafe { libc::setvbuf(stdout() as *mut _, null_mut(), 0, 0) };
+    unsafe { libc::setvbuf(stdout as *mut _, null_mut(), 0, 0) };
 
     println!("\n\u{1b}[36m[Bypass Charge Test - Single Node]\u{1b}[0m Initializing...");
 
