@@ -186,8 +186,7 @@ repository.
 
 We welcome contributions!
 
-- **Report Bugs:** open an [Issue](https://github.com/Liliya2727/AZenith/issues)
-  with detailed logs (`sysmon.log`, `AZenith.log`).
+- **Report Bugs:** open an issue with a log.
 - **Feature Requests:** open an issue to discuss.
 - **Pull Requests:** fork, create a branch, submit a PR with a clear
   description.
