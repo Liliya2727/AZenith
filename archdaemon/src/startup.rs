@@ -24,7 +24,7 @@ use std::time::Duration;
 
 const AZENITH_PROPERTIES: &str = "persist.sys.azenith";
 
-const VALID_AZENITH_PROPS: [&str; 46] = [
+const VALID_AZENITH_PROPS: [&str; 48] = [
     "persist.sys.azenith.custom_default_balanced_IO",
     "persist.sys.azenith.custom_default_cpu_gov",
     "persist.sys.azenith.custom_default_maligpu_gov",
@@ -44,6 +44,7 @@ const VALID_AZENITH_PROPS: [&str; 46] = [
     "persist.sys.azenith.state",
     "persist.sys.azenith.profilenotifications",
     "persist.sys.azenith.dropforeground",
+    "persist.sys.azenith.force_sidepanel",
     "persist.sys.azenithconf.AIenabled",
     "persist.sys.azenithconf.APreload",
     "persist.sys.azenithconf.DThermal",
@@ -71,6 +72,7 @@ const VALID_AZENITH_PROPS: [&str; 46] = [
     "persist.sys.azenithconf.thermalcore",
     "persist.sys.azenithconf.usefpsgo",
     "persist.sys.azenithconf.walttunes",
+    "persist.sys.azenithdebug.soctype",
 ];
 
 const LEGACY_STALE_PROPS: [&str; 2] = [
@@ -89,11 +91,18 @@ pub fn validateprop() {
         }
     }
 
-    // Iterate all system properties via __system_property_foreach
+    // Iterate all system properties via __system_property_foreach.
+    // Bionic signature: cb(prop_info*, cookie*, name*, value*, source*, serial).
+    // The old 4-arg callback (cookie, name, value, serial) never matched, so
+    // `cookie` actually received the prop_info pointer and the real cookie
+    // was read as a CStr -- garbage that never starts with the AZenith
+    // prefix, hence no stale prop was ever flagged.
     extern "C" fn validateprop_foreach_cb(
+        _pi: *const c_void,
         cookie: *mut c_void,
         name: *const c_uchar,
         _value: *const c_uchar,
+        _source: *const c_uchar,
         _serial: u32,
     ) {
         if cookie.is_null() {
@@ -103,10 +112,7 @@ pub fn validateprop() {
         let c_name = unsafe { CStr::from_ptr(name as *const c_char) };
         let name_str = c_name.to_string_lossy();
 
-        if !name_str.starts_with(AZENITH_PROPERTIES) {
-            return;
-        }
-        if VALID_AZENITH_PROPS.iter().any(|&p| name_str == p) {
+        if !is_stale_azenith_prop(&name_str) {
             return;
         }
         pending.push(name_str.to_string());
@@ -254,6 +260,34 @@ pub fn load_initial_config_files(ctx: &mut DaemonContext) {
 
     log_info!("config", "initial configs loaded freqoffset={} bypasspath={}",
         ctx.config_freqoffset_str(), ctx.config_bypasspath_str());
+}
+
+fn is_stale_azenith_prop(name: &str) -> bool {
+    name.starts_with(AZENITH_PROPERTIES)
+        && !VALID_AZENITH_PROPS.iter().any(|&p| name == p)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stale_detection_catches_old_and_new_names() {
+        assert!(is_stale_azenith_prop("persist.sys.azenith.old_removed_key"));
+        assert!(is_stale_azenith_prop("persist.sys.azenithconf.old_key"));
+        assert!(!is_stale_azenith_prop("persist.sys.azenith.state"));
+        assert!(!is_stale_azenith_prop("persist.sys.azenith.force_sidepanel"));
+        assert!(!is_stale_azenith_prop("persist.sys.azenithdebug.soctype"));
+        assert!(!is_stale_azenith_prop("persist.sys.other"));
+        assert!(!is_stale_azenith_prop("ro.build.version"));
+    }
+
+    #[test]
+    fn valid_list_size_matches_entries() {
+        assert_eq!(VALID_AZENITH_PROPS.len(), 48);
+        assert!(VALID_AZENITH_PROPS.contains(&"persist.sys.azenith.force_sidepanel"));
+        assert!(VALID_AZENITH_PROPS.contains(&"persist.sys.azenith.state"));
+    }
 }
 
 // ---------------------------------------------------------------------------
