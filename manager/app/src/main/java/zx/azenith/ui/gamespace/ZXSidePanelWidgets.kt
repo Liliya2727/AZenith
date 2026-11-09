@@ -53,6 +53,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
 import androidx.compose.material.icons.automirrored.rounded.VolumeMute
@@ -70,16 +79,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -96,6 +106,9 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import java.text.SimpleDateFormat
@@ -626,11 +639,97 @@ private fun FpsMeterWidget(
     }
 
     val heightTier = overrideTier ?: state.getWidgetHeightTier("fpsHeader")
+    val isRecording = state.recordState.startsWith("recording")
+    val finished = !isRecording &&
+        state.recordFinishedOutcome != null &&
+        android.os.SystemClock.elapsedRealtime() < state.recordFinishedUntilMs
+
+    val recordingFile = if (isRecording) state.recordState.removePrefix("recording ").trim() else ""
+    val sessionStartMs = remember(recordingFile) { parseFpsSessionStartMs(recordingFile) }
+    var elapsedSec by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(sessionStartMs, isRecording) {
+        if (isRecording && sessionStartMs != null) {
+            while (isActive) {
+                elapsedSec = ((System.currentTimeMillis() - sessionStartMs) / 1000L).coerceAtLeast(0L)
+                delay(1000L)
+            }
+        } else {
+            elapsedSec = 0L
+        }
+    }
+    val elapsedText = String.format(Locale.US, "%02d:%02d", elapsedSec / 60, elapsedSec % 60)
+    val lastTap = if (isRecording) "Stop recording" else "Start recording"
+
     val inner: @Composable () -> Unit = {
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            AnimatedContent(
+                targetState = finished,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(200)) togetherWith
+                        fadeOut(animationSpec = tween(200))
+                },
+                label = "FrameRateRow"
+            ) { isFinishedState ->
+                if (isFinishedState) {
+                    val outcome = state.recordFinishedOutcome
+                    val (container, content, label) = when (outcome) {
+                        "too_short" -> Triple(
+                            scheme.surfaceContainerHighest,
+                            scheme.onSurfaceVariant,
+                            "Too short, not saved"
+                        )
+                        "incomplete" -> Triple(
+                            scheme.tertiaryContainer,
+                            scheme.onTertiaryContainer,
+                            "Saved (incomplete)"
+                        )
+                        else -> Triple(
+                            scheme.primaryContainer,
+                            scheme.onPrimaryContainer,
+                            "Saved"
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (isMerged) Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp)
+                                else Modifier
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Recording finished",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = content,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("check"),
+                                contentDescription = null,
+                                tint = content,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = content,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
+                } else {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -643,7 +742,8 @@ private fun FpsMeterWidget(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Icon(
                         imageVector = ZXSidePanelIcons.get("speed"),
@@ -654,12 +754,14 @@ private fun FpsMeterWidget(
                     Text(
                         text = "Frame rate",
                         style = MaterialTheme.typography.titleSmall,
-                        color = scheme.onSurfaceVariant
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 Row(
-                    verticalAlignment = Alignment.Bottom,
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
@@ -671,11 +773,29 @@ private fun FpsMeterWidget(
                     Text(
                         text = fpsText,
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.primary
+                        color = scheme.primary,
+                        modifier = Modifier
+                            .width(52.dp)
+                            .semantics { contentDescription = "Frame rate $fpsText" },
+                        textAlign = TextAlign.End
+                    )
+                    FpsRecordPill(
+                        isRecording = isRecording,
+                        isDisabled = !state.recordGameActive,
+                        elapsedText = elapsedText,
+                        contentDescription = lastTap,
+                        onTap = {
+                            if (!state.recordGameActive && !isRecording) {
+                                state.showToast("No active game")
+                            } else {
+                                state.onToggleRecord?.invoke()
+                            }
+                        }
                     )
                 }
             }
-
+                }
+            }
             if (heightTier >= 2) {
                 val frameTimeMs = String.format(Locale.US, "%.1f ms", 1000f / fpsValue)
                 val onePercentLow = (fpsValue * 0.88f).roundToInt().coerceAtLeast(1)
@@ -747,6 +867,125 @@ private fun FpsMeterWidget(
         ) {
             inner()
         }
+    }
+}
+
+@Composable
+private fun FpsRecordPill(
+    isRecording: Boolean,
+    isDisabled: Boolean,
+    elapsedText: String,
+    contentDescription: String,
+    onTap: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val container: Color
+    val content: Color
+    if (isRecording) {
+        container = scheme.error
+        content = scheme.onError
+    } else if (isDisabled) {
+        container = scheme.surfaceContainerHighest
+        content = scheme.onSurfaceVariant
+    } else {
+        container = scheme.errorContainer
+        content = scheme.onErrorContainer
+    }
+    val containerAnim by animateColorAsState(
+        targetValue = container,
+        animationSpec = tween(200),
+        label = "RecordPillContainer"
+    )
+    val contentAnim by animateColorAsState(
+        targetValue = content,
+        animationSpec = tween(200),
+        label = "RecordPillContent"
+    )
+
+    val pulse = rememberInfiniteTransition(label = "RecordPulse")
+    val pulseAlpha by pulse.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.35f,
+        animationSpec = infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "RecordDotAlpha"
+    )
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .height(48.dp)
+            .alpha(if (isDisabled) 0.55f else 1f)
+            .semantics {
+                this.contentDescription = contentDescription
+            }
+            .clickable(
+                role = Role.Button,
+                onClickLabel = contentDescription
+            ) { onTap() }
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = containerAnim,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                if (isRecording) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .alpha(pulseAlpha)
+                            .clip(CircleShape)
+                            .background(contentAnim)
+                    )
+                    Text(
+                        text = elapsedText,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = contentAnim,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                } else {
+                    val ringWidth = 1.5.dp
+                    Canvas(modifier = Modifier.size(10.dp)) {
+                        drawCircle(
+                            color = contentAnim,
+                            style = Stroke(width = ringWidth.toPx())
+                        )
+                        drawCircle(
+                            color = contentAnim,
+                            radius = 2.5.dp.toPx()
+                        )
+                    }
+                    Text(
+                        text = "Record",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = contentAnim,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun parseFpsSessionStartMs(recordingValue: String): Long? {
+    val fileName = recordingValue.removePrefix("recording ").trim().removeSuffix(".csv")
+    val suffixMatch = Regex("_([0-9]{8}_[0-9]{6})$").find(fileName) ?: return null
+    val stamp = suffixMatch.groupValues[1]
+    return try {
+        val sdf = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
+        sdf.parse(stamp)?.time
+    } catch (_: Exception) {
+        null
     }
 }
 

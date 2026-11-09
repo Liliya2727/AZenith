@@ -235,6 +235,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         private const val DAEMON_MODES_PATH = "/data/adb/.config/AZenith/API/current_modes"
         private const val DAEMON_RECORD_CMD_PATH = "/data/adb/.config/AZenith/API/record_cmd"
         private const val DAEMON_RECORD_STATE_PATH = "/data/adb/.config/AZenith/API/record_state"
+        private const val FRAMERATEDATA_DIR = "/data/adb/.config/AZenith/frameratedata"
         private const val AI_PROP = "persist.sys.azenithconf.AIenabled"
         private const val LITE_PROP = "persist.sys.azenithconf.litemode"
         private const val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
@@ -496,6 +497,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         panelState.onToggleAutoModeRequest = { enableAuto ->
             applyAutoModeToggle(enableAuto)
         }
+        panelState.onToggleRecord = { onMonitorTap() }
         panelState.onSelectProfileRequest = { profileCode ->
             applyDaemonProfile(profileCode)
         }
@@ -2052,15 +2054,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
-    // FPS Recorder trigger (tap the floating monitor pill to toggle). The
-    // daemon owns the state, sampling and file writing; the overlay only
-    // writes start|stop to record_cmd and displays the daemon's record_state.
-    private var lastRecordTapMs: Long = 0L
+    private var onRecordLastTapMs: Long = 0L
 
     private fun onMonitorTap() {
         val now = android.os.SystemClock.elapsedRealtime()
-        if (now - lastRecordTapMs < 500L) return
-        lastRecordTapMs = now
+        if (now - onRecordLastTapMs < 500L) return
+        onRecordLastTapMs = now
         serviceScope.launch(Dispatchers.IO) {
             val rootGranted = checkRootGranted()
             val stateText = telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted)?.trim().orEmpty()
@@ -2069,6 +2068,30 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 RootUtils.writeRootFile(DAEMON_RECORD_CMD_PATH, cmd)
             }
         }
+    }
+
+    /**
+     * Outcome check for a just-stopped session: backed by the daemon's files.
+     * - session <30s → CSV discarded, no JSON → "too_short"
+     * - JSON exists → parse incomplete; if ok → "saved", if incomplete → "incomplete"
+     * - JSON missing but CSV exists → "incomplete" (crash path)
+     */
+    private fun readRecordOutcomeFor(sessionBase: String): String {
+        val jsonName = "$sessionBase.json"
+        val csvName = "$sessionBase.csv"
+        val jsonText = telemetryCollector.readFileTextDirectOrSu("$FRAMERATEDATA_DIR/$jsonName", checkRootGranted())
+        if (jsonText != null) {
+            val incomplete = runCatching {
+                val o = JSONObject(jsonText)
+                o.optBoolean("incomplete", false)
+            }.getOrDefault(false)
+            return if (incomplete) "incomplete" else "saved"
+        }
+        val csvExists = runCatching {
+            val f = SuFile("$FRAMERATEDATA_DIR/$csvName")
+            f.exists()
+        }.getOrDefault(false)
+        return if (csvExists) "incomplete" else "too_short"
     }
 
     private fun startRealTelemetryMonitor() {
@@ -2115,8 +2138,24 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     // FPS Recorder status (daemon-owned state file, for the overlay).
                     val recordStateText = telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted)?.trim()
                     if (!recordStateText.isNullOrEmpty()) {
+                        val previous = panelState.recordState
+                        val isRecording = recordStateText.startsWith("recording")
+                        if (previous.startsWith("recording") && !isRecording) {
+                            val lastFile = previous.removePrefix("recording ").trim()
+                            if (lastFile.isNotEmpty()) {
+                                val base = lastFile.removeSuffix(".csv")
+                                val outcome = readRecordOutcomeFor(base)
+                                panelState.recordFinishedOutcome = outcome
+                                panelState.recordFinishedUntilMs =
+                                    android.os.SystemClock.elapsedRealtime() + 3000L
+                            }
+                        } else if (isRecording) {
+                            panelState.recordFinishedOutcome = null
+                            panelState.recordFinishedUntilMs = 0L
+                        }
                         panelState.recordState = recordStateText
                     }
+                    panelState.recordGameActive = isGameInfoFileActive(DAEMON_GAMEINFO_PATH, rootGranted)
 
                     val rawProfileCode = if (daemonRunning) {
                         telemetryCollector.readFileTextDirectOrSu(APP_PROFILE_PATH, false)?.trim()
