@@ -767,13 +767,12 @@ private fun FpsMeterWidget(
                 ) {
                     Row(
                         verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
                         Text(
                             text = "FPS",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 4.dp)
+                            color = scheme.onSurfaceVariant
                         )
                         Text(
                             text = fpsText,
@@ -929,7 +928,6 @@ private fun FpsRecordPill(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         modifier = Modifier
-            .height(48.dp)
             .alpha(if (isDisabled) 0.55f else 1f)
             .clip(CircleShape)
             .semantics {
