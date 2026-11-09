@@ -13,8 +13,8 @@ cd "$GITHUB_WORKSPACE" || {
 }
 
 readonly GRADLE_FILE="manager/app/build.gradle.kts"
-# Full version (semver + build suffix) written for the daemon to embed.
-readonly FULL_VERSION_FILE="archdaemon/full_version.txt"
+# Full-version define (à la C #define MODULE_VERSION), rewritten at build time.
+readonly VERSION_RS_FILE="archdaemon/src/version.rs"
 # All Rust binary projects except thermalcore (kept independent).
 readonly CARGO_TOMLS=(
 	"archdaemon/Cargo.toml"
@@ -43,12 +43,13 @@ sed -i "s/versionCode =.*/versionCode = $VERSION_CODE/" "$GRADLE_FILE"
 sed -i "s/versionName =.*/versionName = \"$FULL_VERSION\"/" "$GRADLE_FILE"
 
 # Every Rust binary crate (except thermalcore): semver from ./version.
+# Checked-in default is 1.0.0; CI injects the real release version here.
 for cargo_toml in "${CARGO_TOMLS[@]}"; do
 	sed -i "s/^version = .*/version = \"$VERSION\"/" "$cargo_toml"
 done
 
-# archdaemon: full version the daemon embeds for the module.prop check.
-printf '%s\n' "$FULL_VERSION" > "$FULL_VERSION_FILE"
+# archdaemon: full version embedded for the module.prop check.
+sed -i "s|pub const FULL_VERSION: &str = \".*\";|pub const FULL_VERSION: \&str = \"$FULL_VERSION\";|" "$VERSION_RS_FILE"
 
 echo "✅ Injection complete! Verifying changes:"
 echo "---------------------------------------------------"
@@ -58,5 +59,5 @@ grep -H "versionName" "$GRADLE_FILE"
 for cargo_toml in "${CARGO_TOMLS[@]}"; do
 	grep -H "^version" "$cargo_toml"
 done
-echo "archdaemon/full_version.txt: $(cat "$FULL_VERSION_FILE")"
+grep -H "FULL_VERSION" "$VERSION_RS_FILE"
 echo "---------------------------------------------------"

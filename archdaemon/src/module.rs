@@ -44,12 +44,11 @@ fn doorprize() -> ! {
 // ---------------------------------------------------------------------------
 // module.prop's `version=` carries the full build version
 // ("5.6.0 (123-abc-MoonShot-Beta)"), written by CI from `version` +
-// git count/hash/type. The daemon embeds the identical string from
-// `archdaemon/full_version.txt` (overwritten by .github/scripts/verify.sh
-// at build time), so an exact match is possible instead of comparing
-// the bare semver.
+// git count/hash/type into `src/version.rs` (like the old C
+// `#define MODULE_VERSION`), so an exact match is possible instead of
+// comparing the bare semver.
 pub fn full_version() -> &'static str {
-    include_str!("../full_version.txt").trim()
+    crate::version::FULL_VERSION
 }
 
 pub fn check_module_version() {

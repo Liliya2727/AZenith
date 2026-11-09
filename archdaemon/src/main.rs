@@ -26,6 +26,7 @@ mod shell;
 mod startup;
 mod sysprop;
 mod util;
+mod version;
 
 use crate::core::init_globals;
 use crate::cli::{
