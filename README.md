@@ -13,12 +13,11 @@
 ## Overview
 
 **AZenith** is an All-In-One (AIO) system-optimization Magisk module for
-Android. It pairs three Rust daemons with a Material 3 Expressive
-manager app: **archdaemon** (profiles, bypass charging, FPS Recorder),
-**sysdaemon** (pure-binder app monitor + FPS client), and
-**thermalcore** (thermal telemetry). Together they auto-switch
-performance profiles when a game runs, tune kernel scheduling and
-thermals, record real frametime stats, and put an in-game Game Space
+Android. It pairs two Rust daemons with a Material 3 Expressive
+manager app: **archdaemon** (profiles, bypass charging, FPS Recorder)
+and **sysdaemon** (pure-binder app monitor + FPS client). Together they
+auto-switch performance profiles when a game runs, tune kernel
+scheduling, record real frametime stats, and put an in-game Game Space
 overlay on screen — without shell-forking in the hot path.
 
 ---
@@ -149,30 +148,7 @@ Magisk):
 
 ---
 
-## Architecture
-
-```
-archdaemon/    Core daemon: profiles, bypass, recorder, CLI (Rust, cargo-ndk)
-sysdaemon/     App monitor + FPS supervisor (Rust, pure binder)
-thermalcore/   Thermal telemetry (Rust)
-binprofiles/   Profile engine helpers (Rust)
-binpreferenced/ Preference tweaks (Rust)
-binutils/      Utility helpers (Rust)
-preloadbin/    Game preload (C)
-binder_resolver/ Transaction-code resolver APK (embedded in sysdaemon)
-manager/       Manager app — Game Space, sidepanel, FPS monitor (Kotlin/Compose)
-mainfiles/     Module packaging (service.sh, module.prop, uninstall)
-```
-
-Versioning: `version` + `version_type` (root) + git count/hash →
-`FULL_VERSION` define in `archdaemon/src/version.rs` (à la C
-`#define MODULE_VERSION`) and `version = "1.0.0"` defaults in every
-binary `Cargo.toml` (except `thermalcore`); `.github/scripts/verify.sh`
-injects the real values at CI build time.
-
----
-
-## ‍ For Developers (ROM Integration)
+## For Developers (ROM Integration)
 
 **ROM-Integrated AZenith**: system-level service for custom ROMs —
 single `vendor.azenith-service` binary, AIDL interface, init rc,
