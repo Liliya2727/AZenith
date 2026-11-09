@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Stable-green?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/License-GPLv3-blue?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/Android-11+-blue?style=for-the-badge&logo=android" alt="Android Version">
 </p>
 
@@ -224,5 +224,6 @@ We welcome contributions!
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0
-only** (GPL-3.0-only) — see [LICENSE](LICENSE) for the full text.
+This project is licensed under the **Apache License, Version 2.0** —
+see [LICENSE](LICENSE) for the full text and [NOTICE.md](NOTICE.md)
+for third-party notices.
