@@ -37,6 +37,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -762,23 +763,30 @@ private fun FpsMeterWidget(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "FPS",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = scheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 3.dp)
-                    )
-                    Text(
-                        text = fpsText,
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.primary,
-                        modifier = Modifier
-                            .width(52.dp)
-                            .semantics { contentDescription = "Frame rate $fpsText" },
-                        textAlign = TextAlign.End
-                    )
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "FPS",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Text(
+                            text = fpsText,
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary,
+                            modifier = Modifier
+                                .width(52.dp)
+                                .semantics { contentDescription = "Frame rate $fpsText" },
+                            textAlign = TextAlign.End,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                     FpsRecordPill(
                         isRecording = isRecording,
                         isDisabled = !state.recordGameActive,
@@ -913,65 +921,66 @@ private fun FpsRecordPill(
         label = "RecordDotAlpha"
     )
 
-    Box(
-        contentAlignment = Alignment.Center,
+    // Clickable lives on the Surface itself so the ripple is clipped to the
+    // pill shape instead of drawing a rectangle around a 48dp Box.
+    Surface(
+        shape = CircleShape,
+        color = containerAnim,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         modifier = Modifier
             .height(48.dp)
             .alpha(if (isDisabled) 0.55f else 1f)
+            .clip(CircleShape)
             .semantics {
                 this.contentDescription = contentDescription
             }
             .clickable(
                 role = Role.Button,
-                onClickLabel = contentDescription
+                onClickLabel = contentDescription,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = LocalIndication.current
             ) { onTap() }
     ) {
-        Surface(
-            shape = CircleShape,
-            color = containerAnim,
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                if (isRecording) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .alpha(pulseAlpha)
-                            .clip(CircleShape)
-                            .background(contentAnim)
-                    )
-                    Text(
-                        text = elapsedText,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            if (isRecording) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .alpha(pulseAlpha)
+                        .clip(CircleShape)
+                        .background(contentAnim)
+                )
+                Text(
+                    text = elapsedText,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = contentAnim,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            } else {
+                val ringWidth = 1.5.dp
+                Canvas(modifier = Modifier.size(10.dp)) {
+                    drawCircle(
                         color = contentAnim,
-                        maxLines = 1,
-                        softWrap = false
+                        style = Stroke(width = ringWidth.toPx())
                     )
-                } else {
-                    val ringWidth = 1.5.dp
-                    Canvas(modifier = Modifier.size(10.dp)) {
-                        drawCircle(
-                            color = contentAnim,
-                            style = Stroke(width = ringWidth.toPx())
-                        )
-                        drawCircle(
-                            color = contentAnim,
-                            radius = 2.5.dp.toPx()
-                        )
-                    }
-                    Text(
-                        text = "Record",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    drawCircle(
                         color = contentAnim,
-                        maxLines = 1,
-                        softWrap = false
+                        radius = 2.5.dp.toPx()
                     )
                 }
+                Text(
+                    text = "Record",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = contentAnim,
+                    maxLines = 1,
+                    softWrap = false
+                )
             }
         }
     }
