@@ -1,6 +1,5 @@
 //! CLI command handlers.
 
-use crate::android_ffi::stdout;
 use crate::core::BypassNode;
 use crate::core::{
     LogLevel, ProfileMode, PROFILE_MODE,
@@ -192,8 +191,6 @@ pub fn print_help() {
 // check_bypass_compatibility
 // ---------------------------------------------------------------------------
 pub fn check_bypass_compatibility() -> i32 {
-    unsafe { libc::setvbuf(stdout as *mut libc::FILE, std::ptr::null_mut(), 0, 0) };
-
     println!("\u{1b}[36m[Bypass Charge Compatibility Check]\u{1b}[0m Initializing...");
 
     std::thread::sleep(std::time::Duration::from_secs(5));
@@ -285,8 +282,6 @@ pub fn test_bypass_node_by_name(name: &str) -> i32 {
 }
 
 fn test_single_node(node: &BypassNode) -> i32 {
-    unsafe { libc::setvbuf(stdout as *mut libc::FILE, std::ptr::null_mut(), 0, 0) };
-
     println!("\n\u{1b}[36m[Bypass Charge Test - Single Node]\u{1b}[0m Initializing...");
 
     std::thread::sleep(std::time::Duration::from_secs(2));

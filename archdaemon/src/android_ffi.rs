@@ -205,9 +205,6 @@ unsafe extern "C" {
     pub fn memcpy(dest: *mut c_void, src: *const c_void, n: usize) -> *mut c_void;
     pub fn memset(s: *mut c_void, c: c_int, n: usize) -> *mut c_void;
     pub fn setvbuf(stream: *mut c_void, buf: *mut c_char, mode: c_int, size: usize) -> c_int;
-    /// C standard stream globals (variables, not functions).
-    pub static mut stdout: *mut c_void;
-    pub static mut stderr: *mut c_void;
     pub fn fprintf(stream: *mut c_void, fmt: *const c_char, ...) -> c_int;
     pub fn printf(fmt: *const c_char, ...) -> c_int;
     pub fn fgets(buf: *mut c_char, size: c_int, stream: *mut c_void) -> *mut c_char;

@@ -1,6 +1,6 @@
 //! Bypass charging logic.
 
-use crate::android_ffi::{stdout, PROP_VALUE_MAX};
+use crate::android_ffi::PROP_VALUE_MAX;
 use crate::config::resolution::restore_resolution_target;
 use crate::core::{BypassNode, ProfileMode, DaemonContext};
 use crate::proc::{get_pids_of_at, set_priority};
@@ -8,7 +8,6 @@ use crate::sysprop::{get_or_default, get_into, set};
 use crate::fileops;
 use crate::{IS_FALSE, IS_TRUE, log_info, log_warn};
 use std::os::raw::c_int;
-use std::ptr::null_mut;
 
 // ---------------------------------------------------------------------------
 // bypass_list
@@ -258,8 +257,6 @@ pub fn enable_bypass() -> i32 {
 // check_bypass_compatibility
 // ---------------------------------------------------------------------------
 pub fn check_bypass_compatibility() -> i32 {
-    unsafe { libc::setvbuf(stdout as *mut _, null_mut(), 0, 0) };
-
     println!("\u{1b}[36m[Bypass Charge Compatibility Check]\u{1b}[0m Initializing...");
 
     std::thread::sleep(std::time::Duration::from_secs(5));
@@ -342,8 +339,6 @@ pub fn test_bypass_node_by_name(name: &str) -> i32 {
 }
 
 fn test_single_node(node: &BypassNode) -> i32 {
-    unsafe { libc::setvbuf(stdout as *mut _, null_mut(), 0, 0) };
-
     println!("\n\u{1b}[36m[Bypass Charge Test - Single Node]\u{1b}[0m Initializing...");
 
     std::thread::sleep(std::time::Duration::from_secs(2));
