@@ -10,102 +10,206 @@
 
 ---
 
-## ⚡ Overview / 概述
+## ⚡ Overview
 
-**AZenith** is an All-In-One (AIO) system optimization module designed to enhance Android performance. By utilizing dynamic resource management and a dedicated app dashboard, it balances high-end gaming performance with daily battery efficiency and system stability.
-
-**AZenith** 是一款旨在提升 Android 性能的一体化（AIO）系统优化模块。通过动态资源管理和专属 APP 仪表盘，它在高端游戏性能、日常电池效率和系统稳定性之间取得了平衡。
-
----
-
-## 📖 Quick Guide / 快速指南
-
-### 🤖 Optimization / 优化
-
-* **Process Priority:** Prioritizes foreground games while intelligently freezing unnecessary background bloatware to free up resources.<br>
-  **进程优先级：** 优先处理前台游戏，同时智能冻结不必要的后台冗余软件以释放资源。
-* **Auto Profiles:** Seamlessly switches performance profiles when a game is detected.<br>
-  **自动模式：** 检测到游戏时无缝切换性能配置文件。
-
-### 🌐 Core Features / 核心功能
-
-* **Custom Profiles:** Manually toggle between **Performance**, **Balanced**, or **ECO Mode**. To use manual profiles, go to `AZenith Settings > Disable Auto Mode`.<br>
-  **自定义配置文件：** 手动在**性能**、**均衡**或**节能模式**之间切换。要使用手动配置文件，请前往 `AZenith 设置 > 禁用自动模式`。
-* **Game Preload:** Preloads game libs right after a game opens.<br>
-  **游戏预加载：** 游戏打开后立即预加载游戏库（libs）。
-* **Custom CPU Governor:** Set the default CPU governor based on your preference.<br>
-  **自定义 CPU 调速器：** 根据您的偏好设置默认 CPU 调速器。
-* **Custom I/O Scheduler:** Set the default I/O scheduler based on your preference.<br>
-  **自定义 I/O 调度器：** 根据您的偏好设置默认 I/O 调度器。
-* **CPU Freq Limiter:** Prevents device heating by limiting CPU frequency by percentage.<br>
-  **CPU 频率限制器：** 通过按百分比限制 CPU 频率，防止设备发热。
-* **Thermalcore Service:** Intelligent throttling management that prevents overheating while maintaining a stable FPS floor.<br>
-  **Thermalcore 服务：** 智能温控管理，在防止过热的同时保持稳定的帧率底线。
+**AZenith** is an All-In-One (AIO) system-optimization Magisk module for
+Android. It pairs three Rust daemons with a Material 3 Expressive
+manager app: **archdaemon** (profiles, bypass charging, FPS Recorder),
+**sysdaemon** (pure-binder app monitor + FPS client), and
+**thermalcore** (thermal telemetry). Together they auto-switch
+performance profiles when a game runs, tune kernel scheduling and
+thermals, record real frametime stats, and put an in-game Game Space
+overlay on screen — without shell-forking in the hot path.
 
 ---
 
-## 📦 Installation / 安装
+## ✨ Features
 
-This is a **Magisk Module**, so you must install it through your preferred root manager.
+### 🎮 Game Space
 
-这是一个 **Magisk 模块**，因此您必须通过您首选的 Root 管理器进行安装。
+A landscape, gamepad-first shell — launched from the manager, then
+handed over to the overlay service (`ZXSidePanelService`) for the
+rest of the session:
+
+- Focused game library (installed-game tiles) and app tiles, with
+  search, count, game/app filters and read-only status trophies
+- Games / Media (System) tabs, Spotlight, BGM playlist with
+  now-playing + playback controls, wallpapers per game
+- Perf / Thermal rail: live profile, battery, service PID, games
+  tracked, FPS, CPU/GPU load, temps, thermals
+- Settings: appearance (sidepanel side/sensitivity/length/thickness/
+  opacity/blur, custom images), audio, general (boost on launch,
+  renderer, refresh rate, frame-rate target, resolution downscale),
+  tweaks (FPSGO, GED, WAL, SFL, thermal, scheduler), and About
+- Floating app windows on top of the game (open from inside the shell)
+- Crosshair reticle overlay
+
+### 📊 Sidepanel + FPS Monitor
+
+Edge-bar + expandable Material 3 Expressive dock (`ZXSidePanelService`):
+
+- Handle bar (swipe-in to expand, vertical drag to reposition,
+  configurable length/thickness/side) — shown only for games in your
+  configured list, app-lunch list, or when force-sidepanel is on
+- **FPS Meter** with small `FPS` badge flush left of the number,
+  frame time (`1000 / fps` ms) and estimated 1% Low
+- **FPS Recorder** — one-tap Start / Stop (record pill with ripple,
+  session timer); writes CSV + JSON summaries with real `ft_avg` /
+  `ft_max` / `low1` / `low01` / `jank` from the frametime histogram
+- Widgets: FPS, CPU, GPU, temp, ping, battery, profile (customizable
+  layout, HUD offsets, global + per-app layouts)
+- Quick Apps row, brightness/volume sliders, auto-mode toggle,
+  profile switcher, toasts
+
+### 🔧 Per-App Tuning
+
+Per detected game (`ZXGameSpaceAppSettings`), switching on game focus:
+
+- Refresh rate target (per app, from the device's mode list)
+- Resolution downscale (per app, `resolution_downscale` 0–100%)
+- Target FPS (`resolution_fps` slider)
+- Renderer override (default / SkiaVulkan / SkiaGLES / software)
+- Display filter / colour scheme (preset, per app)
+- Lite Mode (cap at ~90% CPU freq, mid-frequency ladder)
+- DND during gaming, App Priority (process priority boost)
+- Game Preload (libs + page-cache preload, with budget)
+- Resolution downscale badge always shows the live divider
+
+### ⚙️ Profiles & Governor Tweaks
+
+Auto profiles (Performance / Balanced / ECO) switch on game focus;
+manual mode in Settings disables Auto Mode:
+
+- Per-profile CPU governor (default / performance / powersave),
+  I/O scheduler (per profile), Mali GPU governor (per profile)
+- CPU frequency limiter (`freqoffset` % ceiling) and CPU limit
+- Lite mode, Clear background apps, Fstrim, DND on gaming,
+  App Priority, Game Preload + budget
+- Custom governor, custom I/O, custom Mali overrides per profile
+- `disabletweak` master switch
+
+### 🌡️ Thermalcore
+
+Intelligent thermal throttling management (separate Rust crate
+`thermalcore`): watches thermal zones, adapts limits to keep a stable
+FPS floor instead of a thermal crash, with `persist.sys.rynx.*` props
+(threshold floor, audit logs, actuator mode, gradient alerts).
+
+### 🔥 Bypass Charging
+
+78 sysfs nodes (common / MediaTek / Oplus / QCOM) for bypass charging,
+with charging-state dynamic bypass, compatibility diagnosis
+node-by-node, custom threshold (`bypasschgthreshold`) and custom node
+path.
+
+### 📈 FPS Sources & Frametime
+
+`sysdaemon` supervises three sources in automatic fallback order
+(frametime-capable first):
+
+1. **uprobe** — eBPF on `libgui` `queueBuffer` family; 100 µs
+   per-surface intervals (64-bit only, `aya`)
+2. **surfaceflinger** — `timestats -dump` (`totalFrames` diff for fps
+   + `presentToPresent` histogram, 1 ms bins, when `--latency` is
+   period-only on the ROM)
+3. **windowmanager** — `TaskFpsCallback` (~2 Hz, rate only)
+
+Publishes cumulative frametime histograms to
+`API/current_frametime` (`hist-sum == frames`, gen bumps on every
+source restart) — consumed by archdaemon for the recorder's
+`low1` / `low01` / `jank`. `current_fps` format stays
+`"<fps> <epoch_ms>"` (frozen for the manager + archdaemon).
+
+### 🎛️ Preference Tweaks
+
+`binpreferenced` (toggles under `persist.sys.azenithconf.*`):
+
+- JIT (speed-profile compile), schedtunes, WALT tunes
+- FPSGO & GED parameters (MediaTek), Mali scheduler
+- SFL latency, DThermal (thermal engine), trace/logd kill-switches
+- Fstrim, custom thermal, display colour presets
+
+### 🎨 Cosmetic & UX
+
+- Display colour schemes, custom themes, accent colors, Material You
+- Sound effects (tap/scroll/notice/cancel volume), haptic feedback
+- App icon (shortcut / launcher alias), banner / boot jingle
+- BGM playlist, custom sidepanel images, blur/opacity controls
 
 ---
 
-## 👨‍💻 For Developers (ROM Integration) / 开发者专区（ROM 集成）
+## 📦 Installation
 
-**ROM-Integrated AZenith** is designed for ROM developers and maintainers to integrate directly into their port ROMs or custom ROMs.
+Magisk module — install through your root manager (KernelSU /
+Magisk):
 
-**ROM 集成版 AZenith** 专为 ROM 开发者和维护者设计，可直接集成到他们的移植 ROM 或定制 ROM 中。
-
-* **Repository / 仓库:** [RomIntegratedAZenith](https://github.com/Liliya2727/RomIntegratedAZenith)
-
----
-
-## 🛠️ Contributing & Bug Reports / 贡献与错误报告
-
-We welcome contributions to make **AZenith** even better!
-
-我们欢迎任何形式的贡献，让 **AZenith** 变得更好！
-
-* **Report Bugs:** If you find any issues, please open an [Issue](https://github.com/Liliya2727/AZenith/issues) and provide detailed logs.<br>
-  **报告错误：** 如果您发现任何问题，请提交一个 [Issue](https://github.com/Liliya2727/AZenith/issues) 并提供详细的日志。
-* **Feature Requests:** Have an idea? Feel free to open an issue to discuss it.<br>
-  **功能请求：** 有新想法？欢迎提交 Issue 共同讨论。
-* **Pull Requests:** Want to contribute to development?<br>
-  **拉取请求（PR）：** 想要参与开发？
-
-  1. Fork the repository. / Fork 本仓库。
-  2. Create a new branch for your feature or fix. / 为您的功能或修复创建一个新分支。
-  3. Submit a **Pull Request** with a clear description of your changes. / 提交 **Pull Request** 并附上您更改的清晰说明。
+1. Flash the release zip.
+2. Reboot.
+3. Open AZenith, grant overlay permission, tap **Enter Game Space**.
 
 ---
 
-## 🙏 Credits & Acknowledgements / 贡献人员与鸣谢
+## 🏗️ Architecture
 
-### Core Developers / 核心开发者
+```
+archdaemon/    Core daemon: profiles, bypass, recorder, CLI (Rust, cargo-ndk)
+sysdaemon/     App monitor + FPS supervisor (Rust, pure binder)
+thermalcore/   Thermal telemetry (Rust)
+binprofiles/   Profile engine helpers (Rust)
+binpreferenced/ Preference tweaks (Rust)
+binutils/      Utility helpers (Rust)
+preloadbin/    Game preload (C)
+binder_resolver/ Transaction-code resolver APK (embedded in sysdaemon)
+manager/       Manager app — Game Space, sidepanel, FPS monitor (Kotlin/Compose)
+mainfiles/     Module packaging (service.sh, module.prop, uninstall)
+```
 
-| Role / 角色 | Developer / 开发者 |
+Versioning: `version` + `version_type` (root) + git count/hash →
+`FULL_VERSION` define in `archdaemon/src/version.rs` (à la C
+`#define MODULE_VERSION`) and `version = "1.0.0"` defaults in every
+binary `Cargo.toml` (except `thermalcore`); `.github/scripts/verify.sh`
+injects the real values at CI build time.
+
+---
+
+## 👨‍💻 For Developers (ROM Integration)
+
+**ROM-Integrated AZenith**: system-level service for custom ROMs —
+single `vendor.azenith-service` binary, AIDL interface, init rc,
+sepolicy. See the
+[RomIntegratedAZenith](https://github.com/Liliya2727/RomIntegratedAZenith)
+repository.
+
+---
+
+## 🛠️ Contributing & Bug Reports
+
+We welcome contributions!
+
+- **Report Bugs:** open an [Issue](https://github.com/Liliya2727/AZenith/issues)
+  with detailed logs (`sysmon.log`, `AZenith.log`).
+- **Feature Requests:** open an issue to discuss.
+- **Pull Requests:** fork, create a branch, submit a PR with a clear
+  description.
+
+---
+
+## 🙏 Credits & Acknowledgements
+
+| Role | Developer |
 | :--- | :--- |
-| **Author / 作者** | [@Zexshia](https://github.com/Liliya2727) |
-| **Collaborator / 合作者** | [@rianixia](https://github.com/ryanistr) |
-| **Collaborator / 合作者** | [@kanaochar](https://github.com/kanaodnd) |
+| **Author** | [@Zexshia](https://github.com/Liliya2727) |
+| **Collaborators** | [@rianixia](https://github.com/ryanistr), [@kanaochar](https://github.com/kanaodnd) |
 
-### Sources & References / 来源与参考
-
-| Area / 领域 | Credits / 鸣谢 |
+| Area | Credits |
 | :--- | :--- |
-| **App Translation and Internationalization / 应用翻译与国际化** | @YIDYIF |
-| **Tweak Sources / 优化来源** | @Rem01Gaming, @MiAzami, @KanagawaYamadaVTeacher, @ShiraXblood, @Laynsb, @Koneko_dev |
-| **Game Preload / 游戏预加载** | @HoyoSlave, @KutuMoba, @Feravolt, @iamlooper |
+| App Translation & Internationalization | @YIDYIF |
+| Tweak Sources | @Rem01Gaming, @MiAzami, @KanagawaYamadaVTeacher, @ShiraXblood, @Laynsb, @Koneko_dev |
+| Game Preload | @HoyoSlave, @KutuMoba, @Feravolt, @iamlooper |
 
 ---
 
-## 📢 Stay Updated / 保持关注
-
-Get the latest news, updates, and support by following our official channels.
-
-通过关注我们的官方频道，获取最新消息、更新和技术支持。
+## 📢 Stay Updated
 
 <p align="left">
   <a href="https://t.me/ZeshArch">
@@ -116,17 +220,9 @@ Get the latest news, updates, and support by following our official channels.
   </a>
 </p>
 
-*Feel free to report bugs or give suggestions via our Telegram community!*<br>
-*欢迎通过我们的 Telegram 社区报告错误或提出建议！*
-
 ---
 
-## ⚖️ License / 许可证
+## ⚖️ License
 
-This project is licensed under the **GNU General Public License v3.0 only** (GPL-3.0-only).
-
-本项目采用 **GNU 通用公共许可证第 3.0 版（仅限）** (GPL-3.0-only)。
-
-This is **copyleft**: if you redistribute the project (in source or binary form), you must also make the Corresponding Source available under the same GPL v3 terms. You may not re-license it as proprietary or under a weaker permissive license without replacing all copyrighted contributions.
-
-See [LICENSE](LICENSE) for the full text.
+This project is licensed under the **GNU General Public License v3.0
+only** (GPL-3.0-only) — see [LICENSE](LICENSE) for the full text.
