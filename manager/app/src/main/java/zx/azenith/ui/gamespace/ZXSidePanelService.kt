@@ -1156,7 +1156,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
             setContent {
                 AZenithTheme {
-                    FloatingMonitorPill(state = panelState, applyAlpha = false, onTap = { onMonitorTap() })
+                    FloatingMonitorPill(state = panelState, applyAlpha = false)
                 }
             }
         }
@@ -1264,13 +1264,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         }
                         panelState.hudOffsetX = hudParams.x.toFloat()
                         panelState.hudOffsetY = hudParams.y.toFloat()
-                        // Tap (tiny movement) on the floating monitor toggles the recorder.
-                        if (ev.actionMasked == MotionEvent.ACTION_UP &&
-                            abs(ev.rawX - startRawX) < 12f * resources.displayMetrics.density &&
-                            abs(ev.rawY - startRawY) < 12f * resources.displayMetrics.density
-                        ) {
-                            onMonitorTap()
-                        }
                         // Save HUD position per-orientation so it survives rotation.
                         val hudKey = orientationKey()
                         prefs.edit()
