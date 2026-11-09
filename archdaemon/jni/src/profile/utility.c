@@ -64,20 +64,20 @@ bool get_low_power_state_normal(SystemStateCache* cache) {
 }
 
 /**
- * @brief Writes the active game to gameinfo, independent of the applied profile.
- *
- * gameinfo describes whether a game is running and which process owns it. It must
- * never be derived from the profile number: the CLI applies profiles from a
- * separate process that has no game state, and Manual Mode can be inside a game
- * without applying a profile at all.
+ * @brief Switch to specified performance profile.
+ * @param profile 0 for perfcommon, 1 for performance, 2 for balanced, 3 for powersave.
  */
-void update_game_info(void) {
+void run_profiler(const int profile) {
+    is_kanged();
+
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
     char time_str[64];
+
     snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
 
-    if (gamestart) {
+    if (profile == 1) {
+        // Assuming game_pids and gamestart are still managed globally or passed correctly
         pid_t main_pid = (game_pid_count > 0) ? game_pids[0] : 0;
         write2file(GAME_INFO, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
         write2file(GAME_INFO_APP, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
@@ -85,14 +85,6 @@ void update_game_info(void) {
         write2file(GAME_INFO, false, false, "NULL 0 0\nTime: %s\n", time_str);
         write2file(GAME_INFO_APP, false, false, "NULL 0 0\nTime: %s\n", time_str);
     }
-}
-
-/**
- * @brief Switch to specified performance profile.
- * @param profile 0 for perfcommon, 1 for performance, 2 for balanced, 3 for powersave.
- */
-void run_profiler(const int profile) {
-    is_kanged();
 
     write2file(PROFILE_MODE, false, false, "%d\n", profile);
     write2file(PROFILE_MODE_APP, false, false, "%d\n", profile);

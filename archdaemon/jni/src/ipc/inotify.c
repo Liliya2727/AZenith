@@ -59,7 +59,8 @@ static void handle_background_apps_event(DaemonContext* ctx) {
         if (new_count > 0) {
             log_info("inotify", "tracking pids count=%d game=%s", new_count, active_app_name ? active_app_name : gamestart);
         } else {
-            log_info("inotify", "game pids cleared game=%s", active_app_name ? active_app_name : gamestart);
+            log_info("inotify", "game pids updated game=%s count=%d", active_app_name ? active_app_name : gamestart,
+                       new_count);
         }
 
         game_pid_count = new_count;
@@ -77,17 +78,12 @@ static void handle_background_apps_event(DaemonContext* ctx) {
 
         if (new_count == 0) {
             if (strcmp(current_system_cache.focused_app, gamestart) == 0 || is_restarting_renderer) {
-                log_info("inotify", "game pids dropped reason=%s game=%s",
-                           is_restarting_renderer ? "renderer_restart" : "still_focused",
+                log_info("inotify", "game pids dropped reason=restarting game=%s",
                            active_app_name ? active_app_name : gamestart);
             } else {
-                bool manual = is_manual_mode();
-                log_info("inotify", "game closed action=%s game=%s",
-                           manual ? "manual_close" : "exit_performance",
+                log_info("inotify", "game closed action=exit_performance game=%s",
                            active_app_name ? active_app_name : gamestart);
                 restore_resolution_target(ctx, gamestart);
-                if (manual)
-                    restore_saved_renderer(ctx);
                 free(gamestart);
                 gamestart = NULL;
                 if (active_app_name) {
@@ -95,12 +91,9 @@ static void handle_background_apps_event(DaemonContext* ctx) {
                     active_app_name = NULL;
                 }
                 ctx->fg_away_active = false;
-                ctx->manual_sidepanel_shown = false;
                 ctx->fg_away_timer = 0;
             }
         }
-
-        update_game_info();
     }
 }
 
@@ -193,7 +186,6 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
                                         ctx->cur_mode = PERFCOMMON;
                                         apply_balanced_profile(ctx);
                                         strcpy(ctx->prev_ai_state, ai_state);
-                                        ctx->manual_sidepanel_shown = false;
                                         if (strcmp(ai_state, "1") == 0) {
                                             if (gamestart) {
                                                 free(gamestart);
@@ -204,7 +196,6 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
                                                 active_app_name = NULL;
                                             }
                                             game_pid_count = 0;
-                                            update_game_info();
                                             ctx->need_profile_checkup = true;
                                         }
                                     }

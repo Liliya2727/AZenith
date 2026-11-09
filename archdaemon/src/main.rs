@@ -21,6 +21,7 @@ mod monitor;
 mod profile;
 mod preload;
 mod proc;
+mod recorder;
 mod shell;
 mod startup;
 mod sysprop;

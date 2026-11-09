@@ -29,60 +29,6 @@ void* async_preload_worker(void* arg) {
 }
 
 /**
- * @brief Checks if Manual Mode is enabled via persist property.
- * @return 1 when AIenabled == "0" (manual mode), 0 otherwise.
- */
-int is_manual_mode(void) {
-    char ai_state[PROP_VALUE_MAX] = {0};
-    __system_property_get("persist.sys.azenithconf.AIenabled", ai_state);
-    return strcmp(ai_state, "0") == 0;
-}
-
-/**
- * @brief Broadcasts a dedicated intent so ZenithReceiver can show the sidepanel overlay
- *        for the detected game, without applying a profile or posting a notification.
- * @param app_label Display name of the detected game.
- */
-void show_sidepanel(const char* app_label) {
-    char safe_label[256] = {0};
-    escape_shell_string(safe_label, app_label, sizeof(safe_label));
-    systemv("su -c \"am broadcast -a zx.azenith.ACTION_SHOW_SIDEPANEL -n "
-            "zx.azenith/.receiver.ZenithReceiver "
-            "--es sidepanel_pkg '%s' "
-            ">/dev/null 2>&1\"",
-            safe_label);
-    log_info("sidepanel", "broadcast action=show app=%s", app_label);
-}
-
-/**
- * @brief Restores the renderer saved before a per-game override was applied.
- * @param ctx Pointer to DaemonContext structure.
- */
-void restore_saved_renderer(DaemonContext* ctx) {
-    if (strlen(ctx->saved_renderer) == 0)
-        return;
-
-    char current_now[PROP_VALUE_MAX] = {0};
-    __system_property_get("debug.hwui.renderer", current_now);
-
-    if (strlen(current_now) == 0)
-        strcpy(current_now, "default");
-
-    if (strcmp(current_now, ctx->saved_renderer) != 0) {
-        log_info("render", "renderer restored value=%s", ctx->saved_renderer);
-        if (strcmp(ctx->saved_renderer, "default") == 0) {
-            systemv("sys.azenith-utilityconf setrender default");
-            __system_property_set("persist.sys.azenithconf.renderer", "default");
-        } else {
-            systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
-            __system_property_set("persist.sys.azenithconf.renderer", ctx->saved_sys_renderer);
-        }
-    }
-    memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
-    memset(ctx->saved_sys_renderer, 0, sizeof(ctx->saved_sys_renderer));
-}
-
-/**
  * @brief Applies system tuning parameters specifically for Performance Mode.
  * @param ctx Pointer to DaemonContext structure.
  */
@@ -202,8 +148,27 @@ void apply_eco_profile(DaemonContext* ctx) {
     }
     ctx->saved_zen_mode = -1;
 
-    restore_saved_renderer(ctx);
+    if (strlen(ctx->saved_renderer) > 0) {
+        char current_now[PROP_VALUE_MAX] = {0};
+        __system_property_get("debug.hwui.renderer", current_now);
 
+        if (strlen(current_now) == 0)
+            strcpy(current_now, "default");
+
+        if (strcmp(current_now, ctx->saved_renderer) != 0) {
+            log_info("render", "renderer restored value=%s", ctx->saved_renderer);
+            if (strcmp(ctx->saved_renderer, "default") == 0) {
+                systemv("sys.azenith-utilityconf setrender default");
+                __system_property_set("persist.sys.azenithconf.renderer", "default");
+            } else {
+                systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
+                __system_property_set("persist.sys.azenithconf.renderer", ctx->saved_sys_renderer);
+            }
+        }
+        memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
+        memset(ctx->saved_sys_renderer, 0, sizeof(ctx->saved_sys_renderer));
+    }
+    
     EXECUTE("ECO Mode", run_profiler(ECO_MODE));
     
     systemv("rm -rf /data/adb/.config/AZenith/daemon_state");
@@ -241,7 +206,26 @@ void apply_balanced_profile(DaemonContext* ctx) {
     }
     ctx->saved_zen_mode = -1;
 
-    restore_saved_renderer(ctx);
+    if (strlen(ctx->saved_renderer) > 0) {
+        char current_now[PROP_VALUE_MAX] = {0};
+        __system_property_get("debug.hwui.renderer", current_now);
+
+        if (strlen(current_now) == 0)
+            strcpy(current_now, "default");
+
+        if (strcmp(current_now, ctx->saved_renderer) != 0) {
+            log_info("render", "renderer restored value=%s", ctx->saved_renderer);
+            if (strcmp(ctx->saved_renderer, "default") == 0) {
+                systemv("sys.azenith-utilityconf setrender default");
+                __system_property_set("persist.sys.azenithconf.renderer", "default");
+            } else {
+                systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
+                __system_property_set("persist.sys.azenithconf.renderer", ctx->saved_sys_renderer);
+            }
+        }
+        memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
+        memset(ctx->saved_sys_renderer, 0, sizeof(ctx->saved_sys_renderer));
+    }
 
     EXECUTE("Balanced Profile", run_profiler(BALANCED_PROFILE));
 

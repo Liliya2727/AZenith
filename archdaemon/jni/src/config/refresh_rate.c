@@ -44,10 +44,45 @@ int get_current_refresh_rate(void) {
 }
 
 /**
- * @brief Applies the refresh rate mode directly without hardware cap.
+ * @brief Detects the maximum supported hardware refresh rate from the app monitor file.
+ * @return The maximum refresh rate in Hz, defaulting to 60Hz if undetected or on error.
+ */
+int get_max_refresh_rate(void) {
+    FILE* fp = fopen(APP_MONITOR_FILE, "r");
+    if (!fp) {
+        log_warn("refresh", "app monitor file missing path=%s default_max=%dHz", APP_MONITOR_FILE, 60);
+        return 60;
+    }
+
+    char line[256];
+    int max_rr = 60;
+
+    while (fgets(line, sizeof(line), fp)) {
+        if (strncmp(line, "max_refresh_rate ", 17) == 0) {
+            if (sscanf(line, "max_refresh_rate %d", &max_rr) == 1) {
+                break;
+            }
+        }
+    }
+
+    fclose(fp);
+    return max_rr > 0 ? max_rr : 60;
+}
+
+/**
+ * @brief Calculates and applies the refresh rate mode, capping it to the hardware maximum if
+ * needed.
  * @param target_rr The desired target refresh rate in Hz.
  */
 void apply_dynamic_refresh_rate(int target_rr) {
-    log_info("refresh", "refresh rate changed applied=%dHz", target_rr);
-    systemv("sys.azenith-utilityconf setrefreshrates %d", target_rr);
+    int max_hw = get_max_refresh_rate();
+    int final_rr = target_rr;
+
+    if (final_rr > max_hw) {
+        log_warn("refresh", "requested %dHz exceeds hardware max %dHz, capping", target_rr, max_hw);
+        final_rr = max_hw;
+    }
+
+    log_info("refresh", "refresh rate changed target=%dHz applied=%dHz max=%dHz", target_rr, final_rr, max_hw);
+    systemv("sys.azenith-utilityconf setrefreshrates %d", final_rr);
 }

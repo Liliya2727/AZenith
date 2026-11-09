@@ -56,6 +56,5 @@ void init_daemon_context(DaemonContext* ctx) {
     ctx->resolution_applied = false;
     ctx->used_legacy_fallback = false;
     ctx->fg_away_active = false;
-    ctx->manual_sidepanel_shown = false;
     ctx->fg_away_timer = 0;
 }
