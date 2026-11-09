@@ -26,20 +26,28 @@ overlay on screen — without shell-forking in the hot path.
 
 ### Game Space
 
-A landscape, gamepad-first shell — launched from the manager, then
-handed over to the overlay service (`ZXSidePanelService`) for the
-rest of the session:
+A landscape, gamepad-first shell built on Material 3 Expressive —
+smooth, playful UI with spring animations, dynamic colors and
+notification-style cards. Launched from the manager, then handed over
+to the overlay service (`ZXSidePanelService`) for the rest of the
+session. Designed for gamepad users: D-Pad / joystick navigation,
+A select, B back, L1/R1 switch tab, no touch required.
 
-- Focused game library (installed-game tiles) and app tiles, with
-  search, count, game/app filters and read-only status trophies
-- Games / Media (System) tabs, Spotlight, BGM playlist with
-  now-playing + playback controls, wallpapers per game
-- Perf / Thermal rail: live profile, battery, service PID, games
-  tracked, FPS, CPU/GPU load, temps, thermals
-- Settings: appearance (sidepanel side/sensitivity/length/thickness/
-  opacity/blur, custom images), audio, general (boost on launch,
-  renderer, refresh rate, frame-rate target, resolution downscale),
-  tweaks (FPSGO, GED, WAL, SFL, thermal, scheduler), and About
+- **Perfect dashboard in one place** — game library tiles, app tiles,
+  spotlight, BGM playlist with now-playing controls, wallpapers,
+  status trophies, battery, service PID, games tracked, FPS, CPU/GPU
+  load and temps all on one landscape screen
+- **Ambient music** — customizable BGM playlist (shuffle / repeat /
+  sequential) with volume control and long-press quick actions
+- **Fun interface** — expressive shapes, dynamic Material You
+  theming, spring micro-animations, boot hand-off sequence
+  (linking, scan, tune, ready), quick toggles for profile,
+  refresh rate and tweaks
+- Settings: appearance (sidepanel side / sensitivity / length /
+  thickness / opacity / blur, custom images), audio, general (boost
+  on launch, renderer, refresh rate, frame-rate target, resolution
+  downscale), tweaks (FPSGO, GED, WAL, SFL, thermal, scheduler),
+  and About
 - Floating app windows on top of the game (open from inside the shell)
 - Crosshair reticle overlay
 
