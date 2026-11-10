@@ -12,10 +12,14 @@
 
 ## Overview
 
-**AZenith** is an All-In-One (AIO) system-optimization Magisk module for
-Android. It pairs two Rust daemons with a Material 3 Expressive
-manager app: **archdaemon** (profiles, bypass charging, FPS Recorder)
-and **sysdaemon** (pure-binder app monitor + FPS client). Together they
+**AZenith** is an All-In-One (AIO) Universal Performance module for
+Android — built to work across devices and ROMs, and designed to
+respect your preferences: nothing is forced, every tweak is opt-in and
+stays fully under your control.
+
+It pairs two Rust daemons with a Material 3 Expressive manager app:
+**archdaemon** (profiles, bypass charging, FPS Recorder) and
+**sysdaemon** (pure-binder app monitor + FPS client). Together they
 auto-switch performance profiles when a game runs, tune kernel
 scheduling, record real frametime stats, and put an in-game Game Space
 overlay on screen — without shell-forking in the hot path.
@@ -29,9 +33,9 @@ overlay on screen — without shell-forking in the hot path.
 A landscape, gamepad-first shell built on Material 3 Expressive —
 smooth, playful UI with spring animations, dynamic colors and
 notification-style cards. Launched from the manager, then handed over
-to the overlay service (`ZXSidePanelService`) for the rest of the
-session. Designed for gamepad users: D-Pad / joystick navigation,
-A select, B back, L1/R1 switch tab, no touch required.
+to the overlay service for the rest of the session. Designed for
+gamepad users: D-Pad / joystick navigation, A select, B back, L1/R1
+switch tab, no touch required.
 
 - **Perfect dashboard in one place** — game library tiles, app tiles,
   spotlight, BGM playlist with now-playing controls, wallpapers,
@@ -53,95 +57,92 @@ A select, B back, L1/R1 switch tab, no touch required.
 
 ### Sidepanel + FPS Monitor
 
-Edge-bar + expandable Material 3 Expressive dock (`ZXSidePanelService`):
+Edge-bar + expandable Material 3 Expressive dock — every control
+you need lives right inside the game: profile switch, battery, temps
+and framerate without ever leaving the session.
 
 - Handle bar (swipe-in to expand, vertical drag to reposition,
   configurable length/thickness/side) — shown only for games in your
   configured list, app-lunch list, or when force-sidepanel is on
+- **In-game access control** — switch profile, check battery and
+  temps, and watch framerate live, all from the dock
 - **FPS Meter** with small `FPS` badge flush left of the number,
   frame time (`1000 / fps` ms) and estimated 1% Low
 - **FPS Recorder** — one-tap Start / Stop (record pill with ripple,
   session timer); writes CSV + JSON summaries with real `ft_avg` /
   `ft_max` / `low1` / `low01` / `jank` from the frametime histogram
-- Widgets: FPS, CPU, GPU, temp, ping, battery, profile (customizable
-  layout, HUD offsets, global + per-app layouts)
+- **Customizable layout** — widgets (FPS, CPU, GPU, temp, ping,
+  battery, profile) with HUD offsets, global + per-app layouts
+- **Floating apps** — open other apps in floating windows on top of
+  the game from inside the dock
 - Quick Apps row, brightness/volume sliders, auto-mode toggle,
   profile switcher, toasts
 
 ### Per-App Tuning
 
-Per detected game (`ZXGameSpaceAppSettings`), switching on game focus:
+Per-app tweaks override every global setting for the selected game —
+set each parameter once per game and it applies on game focus,
+falling back to the global values otherwise:
 
-- Refresh rate target (per app, from the device's mode list)
-- Resolution downscale (per app, `resolution_downscale` 0–100%)
-- Target FPS (`resolution_fps` slider)
-- Renderer override (default / SkiaVulkan / SkiaGLES / software)
-- Display filter / colour scheme (preset, per app)
-- Lite Mode (cap at ~90% CPU freq, mid-frequency ladder)
-- DND during gaming, App Priority (process priority boost)
+- Per-app Lite Mode (cap at ~90% CPU freq, mid-frequency ladder)
+- Per-app rendering (renderer override: default / SkiaVulkan /
+  SkiaGLES / software)
+- Per-app refresh rate (target from the device's mode list)
+- Per-app downscaler (resolution downscale 0–100% + target FPS slider)
+- Per-app DND (do-not-disturb during gaming)
+- App Priority (process priority boost)
 - Game Preload (libs + page-cache preload, with budget)
 - Resolution downscale badge always shows the live divider
 
-### Profiles & Governor Tweaks
+_(Display config is not per-app — there is no per-app display filter.)_
 
-Auto profiles (Performance / Balanced / ECO) switch on game focus;
-manual mode in Settings disables Auto Mode:
+### Profiles
 
-- Per-profile CPU governor (default / performance / powersave),
-  I/O scheduler (per profile), Mali GPU governor (per profile)
-- CPU frequency limiter (`freqoffset` % ceiling) and CPU limit
-- Lite mode, Clear background apps, Fstrim, DND on gaming,
-  App Priority, Game Preload + budget
-- Custom governor, custom I/O, custom Mali overrides per profile
+AZenith switches profile automatically depending on what you need —
+gaming in foreground → Performance, battery saver on → ECO,
+everything else → Balanced (with a 10 s screen-off grace and 30 s
+foreground-away grace before dropping back).
+
+You can also take manual control: turn off **Auto Mode** in Settings
+and pick **Performance**, **Balanced** or **ECO** yourself whenever
+you want.
+
+### Custom Governor
+
+AZenith lets you set a custom CPU governor **per profile** — pick
+your own governor for Performance, Balanced and ECO instead of the
+stock defaults:
+
+- Custom CPU governor per profile (`custom_*_cpu_gov`)
+- Custom I/O scheduler per profile (`custom_*_IO`)
+- Custom Mali GPU governor per profile (`custom_*_maligpu_gov`)
+- Stock defaults stay untouched unless you override them; `balanced`
+  can also restore the saved baseline governor
 - `disabletweak` master switch
 
 ### Thermalcore
 
-Intelligent thermal throttling management (separate Rust crate
-`thermalcore`): watches thermal zones, adapts limits to keep a stable
-FPS floor instead of a thermal crash, with `persist.sys.rynx.*` props
-(threshold floor, audit logs, actuator mode, gradient alerts).
+Intelligent thermal throttling — watches CPU/GPU temps and adapts
+limits so you hold a stable FPS floor instead of thermal-crashing.
 
 ### Bypass Charging
 
-78 sysfs nodes (common / MediaTek / Oplus / QCOM) for bypass charging,
-with charging-state dynamic bypass, compatibility diagnosis
-node-by-node, custom threshold (`bypasschgthreshold`) and custom node
-path.
+Built-in bypass charging for supported devices:
 
-### FPS Sources & Frametime
-
-`sysdaemon` supervises three sources in automatic fallback order
-(frametime-capable first):
-
-1. **uprobe** — eBPF on `libgui` `queueBuffer` family; 100 µs
-   per-surface intervals (64-bit only, `aya`)
-2. **surfaceflinger** — `timestats -dump` (`totalFrames` diff for fps
-   + `presentToPresent` histogram, 1 ms bins, when `--latency` is
-   period-only on the ROM)
-3. **windowmanager** — `TaskFpsCallback` (~2 Hz, rate only)
-
-Publishes cumulative frametime histograms to
-`API/current_frametime` (`hist-sum == frames`, gen bumps on every
-source restart) — consumed by archdaemon for the recorder's
-`low1` / `low01` / `jank`. `current_fps` format stays
-`"<fps> <epoch_ms>"` (frozen for the manager + archdaemon).
+- Diagnostic check that tests whether your device actually supports
+  the feature before enabling it
+- Adjustable charging threshold to match your battery health usage
+- Charging-state dynamic bypass while gaming
 
 ### Preference Tweaks
 
-`binpreferenced` (toggles under `persist.sys.azenithconf.*`):
+AZenith ships extra add-on tweaks you can enable or disable whenever
+you like — flip each one on/off from the tweaks screen and it applies
+immediately:
 
-- JIT (speed-profile compile), schedtunes, WALT tunes
+- schedtunes, WALT tunes
 - FPSGO & GED parameters (MediaTek), Mali scheduler
-- SFL latency, DThermal (thermal engine), trace/logd kill-switches
-- Fstrim, custom thermal, display colour presets
-
-### Cosmetic & UX
-
-- Display colour schemes, custom themes, accent colors, Material You
-- Sound effects (tap/scroll/notice/cancel volume), haptic feedback
-- App icon (shortcut / launcher alias), banner / boot jingle
-- BGM playlist, custom sidepanel images, blur/opacity controls
+- SFL latency, display colour presets
 
 ---
 
@@ -152,7 +153,7 @@ Magisk):
 
 1. Flash the release zip.
 2. Reboot.
-3. Open AZenith, grant overlay permission, tap **Enter Game Space**.
+3. Enjoy
 
 ---
 
