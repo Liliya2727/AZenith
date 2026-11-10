@@ -1,6 +1,6 @@
 //! Startup logic.
 
-use crate::android_ffi::__system_property_foreach;
+use crate::android_ffi::{__system_property_foreach, __system_property_read_callback};
 use crate::core::{
     DaemonContext, GAMELIST, JAVA_LOCK_PATH,
 };
@@ -14,7 +14,7 @@ use crate::fileops;
 use crate::util::{notify, trim_newline};
 
 use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_uchar, c_void};
+use std::os::raw::{c_char, c_void};
 use std::thread;
 use std::time::Duration;
 
@@ -80,6 +80,39 @@ const LEGACY_STALE_PROPS: [&str; 2] = [
     "persist.sys.rianixia.thermalcore-bigdata.path",
 ];
 
+// Bionic's `__system_property_foreach` callback is
+// `(const prop_info*, void* cookie)`; the name/value pair must be read with
+// `__system_property_read_callback`. A previous 6-arg callback treated
+// whatever was left in x2 as the name pointer, so the same garbage string was
+// checked for every prop and no stale prop was ever flagged.
+extern "C" fn validateprop_read_cb(
+    cookie: *mut c_void,
+    name: *const c_char,
+    _value: *const c_char,
+    _serial: u32,
+) {
+    if cookie.is_null() || name.is_null() {
+        return;
+    }
+    let pending: &mut Vec<String> = unsafe { &mut *(cookie as *mut Vec<String>) };
+    let c_name = unsafe { CStr::from_ptr(name) };
+    let name_str = c_name.to_string_lossy();
+
+    if !is_stale_azenith_prop(&name_str) {
+        return;
+    }
+    pending.push(name_str.into_owned());
+}
+
+extern "C" fn validateprop_foreach_cb(pi: *const c_void, cookie: *mut c_void) {
+    if pi.is_null() || cookie.is_null() {
+        return;
+    }
+    unsafe {
+        __system_property_read_callback(pi, validateprop_read_cb as *mut c_void, cookie);
+    }
+}
+
 pub fn validateprop() {
     let mut pending: Vec<String> = Vec::new();
 
@@ -87,43 +120,17 @@ pub fn validateprop() {
     for &name in LEGACY_STALE_PROPS.iter() {
         if get(name).is_some() {
             pending.push(name.to_string());
-            log_warn!("prop", "legacy stale prop flagged name={}", name);
         }
     }
 
-    // Iterate all system properties via __system_property_foreach.
-    // Bionic signature: cb(prop_info*, cookie*, name*, value*, source*, serial).
-    // The old 4-arg callback (cookie, name, value, serial) never matched, so
-    // `cookie` actually received the prop_info pointer and the real cookie
-    // was read as a CStr -- garbage that never starts with the AZenith
-    // prefix, hence no stale prop was ever flagged.
-    extern "C" fn validateprop_foreach_cb(
-        _pi: *const c_void,
-        cookie: *mut c_void,
-        name: *const c_uchar,
-        _value: *const c_uchar,
-        _source: *const c_uchar,
-        _serial: u32,
-    ) {
-        if cookie.is_null() {
-            return;
-        }
-        let pending: &mut Vec<String> = unsafe { &mut *(cookie as *mut Vec<String>) };
-        let c_name = unsafe { CStr::from_ptr(name as *const c_char) };
-        let name_str = c_name.to_string_lossy();
-
-        if !is_stale_azenith_prop(&name_str) {
-            return;
-        }
-        pending.push(name_str.to_string());
-        log_warn!("prop", "stale prop flagged name={}", name_str);
-    }
-
-    unsafe {
+    let status = unsafe {
         __system_property_foreach(
             validateprop_foreach_cb as *mut c_void,
             &mut pending as *mut Vec<String> as *mut c_void,
-        );
+        )
+    };
+    if status != 0 {
+        log_warn!("prop", "prop foreach failed status={}", status);
     }
 
     if pending.is_empty() {
@@ -131,6 +138,9 @@ pub fn validateprop() {
         return;
     }
 
+    for name in &pending {
+        log_warn!("prop", "stale prop flagged name={}", name);
+    }
     log_info!("prop", "cleaning stale props count={}", pending.len());
 
     for name in pending {
@@ -275,11 +285,41 @@ mod tests {
     fn stale_detection_catches_old_and_new_names() {
         assert!(is_stale_azenith_prop("persist.sys.azenith.old_removed_key"));
         assert!(is_stale_azenith_prop("persist.sys.azenithconf.old_key"));
+        assert!(is_stale_azenith_prop("persist.sys.azenithConf.nigger"));
+        assert!(is_stale_azenith_prop("persist.sys.azenithIntg.disabletweak"));
         assert!(!is_stale_azenith_prop("persist.sys.azenith.state"));
         assert!(!is_stale_azenith_prop("persist.sys.azenith.force_sidepanel"));
         assert!(!is_stale_azenith_prop("persist.sys.azenithdebug.soctype"));
         assert!(!is_stale_azenith_prop("persist.sys.other"));
         assert!(!is_stale_azenith_prop("ro.build.version"));
+        // Set by the daemon for thermalcore; not under the azenith prefix.
+        assert!(!is_stale_azenith_prop("persist.sys.rynx.thermalcore-bigdata.path"));
+    }
+
+    #[test]
+    fn read_callback_collects_only_stale_names() {
+        let mut pending: Vec<String> = Vec::new();
+        let cookie = &mut pending as *mut Vec<String> as *mut c_void;
+
+        let stale = CString::new("persist.sys.azenithConf.nigger").unwrap();
+        validateprop_read_cb(cookie, stale.as_ptr(), std::ptr::null(), 0);
+        let valid = CString::new("persist.sys.azenith.state").unwrap();
+        validateprop_read_cb(cookie, valid.as_ptr(), std::ptr::null(), 0);
+        let other = CString::new("ro.build.version").unwrap();
+        validateprop_read_cb(cookie, other.as_ptr(), std::ptr::null(), 0);
+
+        assert_eq!(pending, vec!["persist.sys.azenithConf.nigger".to_string()]);
+    }
+
+    #[test]
+    fn read_callback_ignores_null() {
+        let mut pending: Vec<String> = Vec::new();
+        let cookie = &mut pending as *mut Vec<String> as *mut c_void;
+
+        validateprop_read_cb(cookie, std::ptr::null(), std::ptr::null(), 0);
+        validateprop_read_cb(std::ptr::null_mut(), std::ptr::null(), std::ptr::null(), 0);
+
+        assert!(pending.is_empty());
     }
 
     #[test]

@@ -113,7 +113,7 @@ unsafe extern "C" {
 unsafe extern "C" {
     pub fn __system_property_get(name: *const c_uchar, value: *mut c_uchar) -> c_int;
     pub fn __system_property_set(name: *const c_char, value: *const c_char) -> c_int;
-    pub fn __system_property_foreach(callback: *mut c_void, cookie: *mut c_void);
+    pub fn __system_property_foreach(callback: *mut c_void, cookie: *mut c_void) -> c_int;
     pub fn __system_property_read_callback(
         pi: *const c_void,
         callback: *mut c_void,
