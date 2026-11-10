@@ -63,6 +63,78 @@ impl Delta {
     }
 }
 
+/// Why a tick has no frametime delta. `Ok` is the only value that yields
+/// real `ft_avg` / `ft_max`; every other variant maps to `-1`/`-1`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FtReason {
+    Ok,
+    /// File missing, empty, or unreadable.
+    Missing,
+    /// Line present but does not match the contract.
+    Unparsable,
+    /// Source label is `none` (rate-only source).
+    SourceNone,
+    /// Snapshot older than `STALE_MS`.
+    Stale,
+    /// First snapshot of the session: no baseline yet.
+    NoBaseline,
+    /// `gen` changed (source restart/switch/failure/gate reopen).
+    GenChange,
+    /// Cumulative counter or histogram bucket moved backwards.
+    CounterDecrease,
+    /// Same snapshot as the previous tick: no new frames in this interval.
+    ZeroFrames,
+}
+
+impl FtReason {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            FtReason::Ok => "ok",
+            FtReason::Missing => "missing",
+            FtReason::Unparsable => "unparsable",
+            FtReason::SourceNone => "none",
+            FtReason::Stale => "stale",
+            FtReason::NoBaseline => "no_baseline",
+            FtReason::GenChange => "gen_change",
+            FtReason::CounterDecrease => "counter_decrease",
+            FtReason::ZeroFrames => "zero_frames",
+        }
+    }
+}
+
+/// One tick's frametime outcome, including enough context for the
+/// diagnostic log line (`t`, gen and snapshot age are added by the caller).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FtUpdate {
+    pub ft_avg_tenths: i64,
+    pub ft_max_tenths: i64,
+    pub reason: FtReason,
+    pub gen_id: u64,
+    pub epoch_ms: u64,
+}
+
+impl FtUpdate {
+    fn missing(reason: FtReason) -> Self {
+        FtUpdate {
+            ft_avg_tenths: FT_MISSING,
+            ft_max_tenths: FT_MISSING,
+            reason,
+            gen_id: 0,
+            epoch_ms: 0,
+        }
+    }
+
+    fn from_snapshot(reason: FtReason, snap: &FrametimeSnapshot) -> Self {
+        FtUpdate {
+            ft_avg_tenths: FT_MISSING,
+            ft_max_tenths: FT_MISSING,
+            reason,
+            gen_id: snap.gen_id,
+            epoch_ms: snap.epoch_ms,
+        }
+    }
+}
+
 /// Parse the single-line `current_frametime` payload.
 ///
 /// Returns `None` on any unparsable content (caller writes `-1` and adds
@@ -115,23 +187,20 @@ pub fn is_stale(epoch_ms: u64, now_ms: i64) -> bool {
     diff > STALE_MS as i128
 }
 
-/// Diff `cur` against `prev` (same gen only).
-///
-/// `None` means: different generation, a cumulative counter moved
-/// backwards, a histogram count decreased, or no new frames arrived —
-/// in every case the caller rebases (the current snapshot becomes the
-/// new baseline) and emits no delta for that tick.
-pub fn diff(prev: &FrametimeSnapshot, cur: &FrametimeSnapshot) -> Option<Delta> {
+/// Diff `cur` against `prev` (same gen only), preserving the reason on
+/// failure so the diagnostic log can distinguish a real reset from a
+/// repeated snapshot.
+pub fn diff_reason(prev: &FrametimeSnapshot, cur: &FrametimeSnapshot) -> Result<Delta, FtReason> {
     if prev.gen_id != cur.gen_id {
-        return None;
+        return Err(FtReason::GenChange);
     }
     if cur.frames < prev.frames || cur.sum_us < prev.sum_us {
-        return None;
+        return Err(FtReason::CounterDecrease);
     }
     let dt_frames = cur.frames - prev.frames;
     let dt_sum_us = cur.sum_us - prev.sum_us;
     if dt_frames == 0 {
-        return None;
+        return Err(FtReason::ZeroFrames);
     }
     let prev_map: BTreeMap<u32, u64> = prev.hist.iter().copied().collect();
     let cur_map: BTreeMap<u32, u64> = cur.hist.iter().copied().collect();
@@ -140,14 +209,14 @@ pub fn diff(prev: &FrametimeSnapshot, cur: &FrametimeSnapshot) -> Option<Delta> 
     for (idx, p) in &prev_map {
         match cur_map.get(idx) {
             Some(c) if c >= p => {}
-            _ => return None,
+            _ => return Err(FtReason::CounterDecrease),
         }
     }
     let mut buckets = Vec::new();
     for (idx, c) in &cur_map {
         let p = prev_map.get(idx).copied().unwrap_or(0);
         if c < &p {
-            return None;
+            return Err(FtReason::CounterDecrease);
         }
         let d = c - p;
         if d > 0 {
@@ -155,9 +224,19 @@ pub fn diff(prev: &FrametimeSnapshot, cur: &FrametimeSnapshot) -> Option<Delta> 
         }
     }
     if buckets.is_empty() {
-        return None;
+        return Err(FtReason::ZeroFrames);
     }
-    Some(Delta { dt_frames, dt_sum_us, buckets })
+    Ok(Delta { dt_frames, dt_sum_us, buckets })
+}
+
+/// Diff `cur` against `prev` (same gen only).
+///
+/// `None` means: different generation, a cumulative counter moved
+/// backwards, a histogram count decreased, or no new frames arrived —
+/// in every case the caller rebases (the current snapshot becomes the
+/// new baseline) and emits no delta for that tick.
+pub fn diff(prev: &FrametimeSnapshot, cur: &FrametimeSnapshot) -> Option<Delta> {
+    diff_reason(prev, cur).ok()
 }
 
 /// `ft_avg` for a tick in tenths of a ms (-1 when there is no data).
@@ -276,44 +355,47 @@ pub fn summarize(hist: &[u64], total: u64, jank: u64, has: bool, jank_known: boo
 
 /// Read `current_frametime` once and advance the session state.
 ///
-/// Returns the `(ft_avg_tenths, ft_max_tenths)` pair for the CSV row:
-/// real values only for a valid same-gen delta, `-1`/`-1` for missing,
-/// stale, unparsable, `source == "none"`, gen-reset, zero-frame, or
+/// Returns the CSV pair plus the exact reason: real values only for a
+/// valid same-gen delta, `-1`/`-1` for missing, stale, unparsable,
+/// `source == "none"`, no baseline, gen-reset, zero-frame, or
 /// backward-counter ticks — and nothing is added to the session
 /// aggregate in those cases (a rebase tick only moves the baseline).
 /// `refresh_hz` is this tick's display rate, used for jank.
-pub fn update_session(sess: &mut Session, refresh_hz: i64, now_ms: i64) -> (i64, i64) {
-    let raw = std::fs::read_to_string(super::CURRENT_FRAMETIME_PATH).ok();
-    let line = match raw.as_deref().and_then(|s| s.lines().next()) {
-        Some(l) => l.trim().to_string(),
-        None => return (FT_MISSING, FT_MISSING),
+pub fn update_session(sess: &mut Session, refresh_hz: i64, now_ms: i64) -> FtUpdate {
+    let raw = match std::fs::read_to_string(super::CURRENT_FRAMETIME_PATH) {
+        Ok(raw) => raw,
+        Err(_) => return FtUpdate::missing(FtReason::Missing),
     };
-    if line.is_empty() {
-        return (FT_MISSING, FT_MISSING);
-    }
-    let cur = match parse_line(&line) {
+    let line = match raw.lines().next().map(str::trim) {
+        Some(l) if !l.is_empty() => l,
+        _ => return FtUpdate::missing(FtReason::Missing),
+    };
+    let cur = match parse_line(line) {
         Some(c) => c,
-        None => return (FT_MISSING, FT_MISSING),
+        None => return FtUpdate::missing(FtReason::Unparsable),
     };
-    if cur.source == "none" || is_stale(cur.epoch_ms, now_ms) {
-        return (FT_MISSING, FT_MISSING);
+    if cur.source == "none" {
+        return FtUpdate::from_snapshot(FtReason::SourceNone, &cur);
+    }
+    if is_stale(cur.epoch_ms, now_ms) {
+        return FtUpdate::from_snapshot(FtReason::Stale, &cur);
     }
     let prev = match sess.prev_frametime.clone() {
         Some(p) => p,
         None => {
-            sess.prev_frametime = Some(cur);
-            return (FT_MISSING, FT_MISSING);
+            sess.prev_frametime = Some(cur.clone());
+            return FtUpdate::from_snapshot(FtReason::NoBaseline, &cur);
         }
     };
     if prev.gen_id != cur.gen_id {
-        sess.prev_frametime = Some(cur);
-        return (FT_MISSING, FT_MISSING);
+        sess.prev_frametime = Some(cur.clone());
+        return FtUpdate::from_snapshot(FtReason::GenChange, &cur);
     }
-    let delta = match diff(&prev, &cur) {
-        Some(d) => d,
-        None => {
-            sess.prev_frametime = Some(cur);
-            return (FT_MISSING, FT_MISSING);
+    let delta = match diff_reason(&prev, &cur) {
+        Ok(d) => d,
+        Err(reason) => {
+            sess.prev_frametime = Some(cur.clone());
+            return FtUpdate::from_snapshot(reason, &cur);
         }
     };
     let ft_avg = delta_ft_avg_tenths(&delta);
@@ -329,8 +411,15 @@ pub fn update_session(sess: &mut Session, refresh_hz: i64, now_ms: i64) -> (i64,
         sess.session_jank_known = true;
     }
     sess.has_frametime = true;
+    let out = FtUpdate {
+        ft_avg_tenths: ft_avg,
+        ft_max_tenths: ft_max,
+        reason: FtReason::Ok,
+        gen_id: cur.gen_id,
+        epoch_ms: cur.epoch_ms,
+    };
     sess.prev_frametime = Some(cur);
-    (ft_avg, ft_max)
+    out
 }
 
 /// CSV cell for an `ft_avg` value in tenths of a ms.
@@ -452,6 +541,29 @@ mod tests {
         // zero new frames -> no delta
         let same = snap(2, 1, "uprobe", 100, 1_700_000, vec![(166, 80), (167, 20)]);
         assert!(diff(&prev, &same).is_none());
+    }
+
+    #[test]
+    fn diff_reason_names_each_rebase_cause() {
+        let prev = snap(1, 7, "uprobe", 100, 1_700_000, vec![(166, 80), (167, 20)]);
+        // Same source, new gen -> gen change, not a counter problem.
+        let gen_snap = snap(2, 8, "uprobe", 10, 167_000, vec![(166, 10)]);
+        assert_eq!(diff_reason(&prev, &gen_snap), Err(FtReason::GenChange));
+        // Same gen, cumulative counter moved backwards.
+        let back = snap(2, 7, "uprobe", 50, 800_000, vec![(166, 50)]);
+        assert_eq!(diff_reason(&prev, &back), Err(FtReason::CounterDecrease));
+        // Same gen, identical snapshot (the ~95 s beat / catch-up case).
+        let same = snap(2, 7, "uprobe", 100, 1_700_000, vec![(166, 80), (167, 20)]);
+        assert_eq!(diff_reason(&prev, &same), Err(FtReason::ZeroFrames));
+        // Same gen, frames advanced but histogram did not -> no delta.
+        let no_hist = snap(2, 7, "uprobe", 110, 1_800_000, vec![(166, 80), (167, 20)]);
+        assert_eq!(diff_reason(&prev, &no_hist), Err(FtReason::ZeroFrames));
+        // Real delta still succeeds.
+        let ok = snap(2, 7, "uprobe", 160, 1_700_000 + 50 * 16_700 + 10 * 33_400,
+            vec![(166, 130), (167, 20), (334, 10)]);
+        let d = diff_reason(&prev, &ok).unwrap();
+        assert_eq!(d.dt_frames, 60);
+        assert_eq!(d.buckets, vec![(166, 50), (334, 10)]);
     }
 
     #[test]

@@ -121,8 +121,12 @@ const RETRY_DELAY: Duration = Duration::from_secs(5);
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
 /// Re-read the pin at most this often while a source is running.
 const FLAG_CHECK_INTERVAL: Duration = Duration::from_secs(5);
-/// Publish interval of the polling sources. The manager treats a stamp older than 3 s as 0.
-const SF_INTERVAL: Duration = Duration::from_secs(1);
+/// Publish interval of the polling sources. Kept below archdaemon's 1 s sample cadence: a 1.0 s
+/// publisher (about 1.01 s with loop overhead) beats against the 1.0 s consumer and one tick every
+/// ~95 s sees no new snapshot. The manager treats a stamp older than 3 s as 0.
+const PUBLISH_INTERVAL: Duration = Duration::from_millis(800);
+/// Warn when two consecutive frametime writes are farther apart than this.
+const PUBLISH_GAP_WARN_MS: u128 = 1500;
 /// Consecutive unusable `dumpsys` results before the source is declared dead.
 const SF_MAX_MISSES: u32 = 5;
 /// Line prefix of SurfaceFlinger's cumulative frame counter.
@@ -311,6 +315,9 @@ struct FrameTimeInner {
     frames: u64,
     sum_us: u64,
     hist: [u64; FT_HIST_LEN],
+    /// Wall-clock ms of the last `current_frametime` write, for the
+    /// publish-gap warning (None before the first write).
+    last_publish_ms: Option<u128>,
 }
 
 /// Shared frametime publisher. Interior mutex keeps every increment and each
@@ -373,6 +380,7 @@ impl FrameTime {
                 frames: 0,
                 sum_us: 0,
                 hist: [0; FT_HIST_LEN],
+                last_publish_ms: None,
             }),
         }
     }
@@ -380,8 +388,8 @@ impl FrameTime {
     /// Start a source: monotonic gen bump, counters zeroed, fresh empty line
     /// published immediately so archdaemon sees the new gen before the next
     /// 1 s tick. One lock for snapshot, one atomic write.
-    fn begin_source(&self, source: &str) {
-        let (gen_id, line) = {
+    fn begin_source(&self, source: &str, reason: &str) {
+        let (gen_id, line, gap_ms) = {
             let mut g = self.inner.lock().unwrap_or_else(|e| e.into_inner());
             g.gen_id = g.gen_id.wrapping_add(1);
             if g.gen_id == 0 {
@@ -391,12 +399,18 @@ impl FrameTime {
             g.sum_us = 0;
             g.hist = [0; FT_HIST_LEN];
             let gen_id = g.gen_id;
-            let line = ft_format_line(now_ms(), gen_id, source, g.frames, g.sum_us, &g.hist);
-            (gen_id, line)
+            let now = now_ms();
+            let gap_ms = g.last_publish_ms.map(|last| now.saturating_sub(last));
+            g.last_publish_ms = Some(now);
+            let line = ft_format_line(now, gen_id, source, g.frames, g.sum_us, &g.hist);
+            (gen_id, line, gap_ms)
         };
         let _ = fs::create_dir_all(FPS_DIR);
         let _ = crate::state::write_atomic(FT_FILE, &line);
-        info!("frametime source={source} gen={gen_id} (empty)");
+        if let Some(gap) = gap_ms.filter(|g| *g > PUBLISH_GAP_WARN_MS) {
+            warn!("frametime publish gap={}ms source={source} reason={reason}", gap);
+        }
+        info!("frametime gen bump source={source} gen={gen_id} reason={reason}");
     }
 
     /// Record one interval in microseconds (0 allowed -> bucket 0).
@@ -423,11 +437,18 @@ impl FrameTime {
 
     /// Write one consistent snapshot line for `source` (uprobe/sf/none).
     fn publish_source(&self, source: &str) {
-        let line = {
-            let g = self.inner.lock().unwrap_or_else(|e| e.into_inner());
-            ft_format_line(now_ms(), g.gen_id, source, g.frames, g.sum_us, &g.hist)
+        let (line, gap_ms) = {
+            let mut g = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+            let now = now_ms();
+            let gap_ms = g.last_publish_ms.map(|last| now.saturating_sub(last));
+            g.last_publish_ms = Some(now);
+            let line = ft_format_line(now, g.gen_id, source, g.frames, g.sum_us, &g.hist);
+            (line, gap_ms)
         };
         let _ = crate::state::write_atomic(FT_FILE, &line);
+        if let Some(gap) = gap_ms.filter(|g| *g > PUBLISH_GAP_WARN_MS) {
+            warn!("frametime publish gap={}ms source={source}", gap);
+        }
     }
 }
 
@@ -799,7 +820,7 @@ fn run_windmanager(forced: Option<Method>, frametime: &FrameTime) -> bool {
 
     // windowmanager pushes a rate only (registerTaskFpsCallback), never per-frame
     // timestamps: publish the "none" line, never fabricate intervals from fps.
-    frametime.begin_source("none");
+    frametime.begin_source("none", "windowmanager_start");
     info!("frametime: windowmanager publishes no intervals (source=none)");
 
     let mut healthy = false;
@@ -857,7 +878,7 @@ fn run_windmanager(forced: Option<Method>, frametime: &FrameTime) -> bool {
         }
 
         // Keep the "none" line fresh for archdaemon's 3 s staleness window.
-        if last_ft_publish.elapsed() >= SF_INTERVAL {
+        if last_ft_publish.elapsed() >= PUBLISH_INTERVAL {
             last_ft_publish = Instant::now();
             if active() {
                 frametime.publish_source("none");
@@ -875,7 +896,7 @@ fn run_surfaceflinger(forced: Option<Method>, frametime: &FrameTime) -> bool {
 
     info!("fps source starting method=surfaceflinger out={FPS_FILE}");
     sf_timestats("-enable");
-    frametime.begin_source("sf");
+    frametime.begin_source("sf", "sf_start");
 
     let mut prev: Option<(u64, Instant)> = None;
     let mut healthy = false;
@@ -989,7 +1010,7 @@ fn run_surfaceflinger(forced: Option<Method>, frametime: &FrameTime) -> bool {
             }
         }
 
-        nap(SF_INTERVAL);
+        nap(PUBLISH_INTERVAL);
     }
 }
 
@@ -1007,7 +1028,7 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
 
     info!("fps source starting method=uprobe out={FPS_FILE}");
     let _ = fs::create_dir_all(FPS_DIR);
-    frametime.begin_source("uprobe");
+    frametime.begin_source("uprobe", "uprobe_start");
 
     let mut focused: Option<(String, i32, i32)> = None;
     let mut targets: Vec<i32> = Vec::new();
@@ -1101,7 +1122,7 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
         }
 
         let elapsed = window.elapsed();
-        if elapsed >= SF_INTERVAL {
+        if elapsed >= PUBLISH_INTERVAL {
             let fps_frames = tracked.close_window();
             if healthy && active() {
                 let fps = (fps_frames as f32 / elapsed.as_secs_f32()).round() as i64;
@@ -1595,12 +1616,12 @@ mod tests {
         acc.add_interval_us(8_333);
         let (gen0, frames0, _) = snap_frames(&acc);
         assert_eq!(frames0, 1);
-        acc.begin_source("sf");
+        acc.begin_source("sf", "test");
         let (gen1, frames1, sum1) = snap_frames(&acc);
         assert_eq!(gen1, gen0 + 1, "gen must be monotonic");
         assert_eq!((frames1, sum1), (0, 0));
         assert_eq!(hist_sum(&acc), 0);
-        acc.begin_source("uprobe");
+        acc.begin_source("uprobe", "test");
         let (gen2, _, _) = snap_frames(&acc);
         assert_eq!(gen2, gen1 + 1);
     }

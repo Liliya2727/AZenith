@@ -160,9 +160,13 @@ pub fn main_daemon() -> c_int {
             ctx.power.fg_away_timer = 0;
         }
 
-        // Recorder sampling needs a ~1s tick cadence while active.
-        if recorder.is_active() && (poll_timeout < 0 || poll_timeout > 1000) {
-            poll_timeout = 1000;
+        // Recorder sampling: wake exactly at the next sample deadline. A
+        // fixed 1000 ms poll plus loop work drifts ~10 ms/tick and every
+        // ~95 ticks tick() has to write two rows from one snapshot.
+        if let Some(ms) = recorder.ms_until_next_tick() {
+            if poll_timeout < 0 || poll_timeout > ms {
+                poll_timeout = ms;
+            }
         }
         // Upper bound of the idle poll interval (poll would otherwise block
         // forever and delay the SIGTERM/SIGINT finalize until the next

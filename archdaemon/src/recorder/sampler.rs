@@ -9,10 +9,26 @@ pub fn sample_once(sess: &mut Session, t: i64) {
     row.fps = read_fps().unwrap_or(-1);
     row.refresh_hz = read_refresh_hz().unwrap_or(-1);
     // Frametime delta for this tick (needs this tick's refresh_hz for
-    // jank). -1/-1 on missing/stale/unparsable/none/gen-reset ticks.
-    let (ft_avg, ft_max) = frametime::update_session(sess, row.refresh_hz, now_ms());
-    row.ft_avg_tenths = ft_avg;
-    row.ft_max_tenths = ft_max;
+    // jank). -1/-1 on missing/stale/unparsable/none/gen-reset ticks;
+    // log the exact reason so a bad row is never a mystery.
+    let now = now_ms();
+    let dt_ms = if sess.last_sample_ms == 0 { 0 } else { now - sess.last_sample_ms };
+    sess.last_sample_ms = now;
+    let ft = frametime::update_session(sess, row.refresh_hz, now);
+    row.ft_avg_tenths = ft.ft_avg_tenths;
+    row.ft_max_tenths = ft.ft_max_tenths;
+    if ft.ft_avg_tenths < 0 {
+        let age_ms = if ft.epoch_ms == 0 { -1 } else { now - ft.epoch_ms as i64 };
+        if t == 0 {
+            crate::log_info!("recorder",
+                "ft invalid t={} reason={} gen={} snap_ms={} age_ms={} dt_ms={}",
+                t, ft.reason.as_str(), ft.gen_id, ft.epoch_ms, age_ms, dt_ms);
+        } else {
+            crate::log_warn!("recorder",
+                "ft invalid t={} reason={} gen={} snap_ms={} age_ms={} dt_ms={}",
+                t, ft.reason.as_str(), ft.gen_id, ft.epoch_ms, age_ms, dt_ms);
+        }
+    }
 
     row.cpu_temp = sess.cpu_temp_path.as_ref().and_then(read_int).filter(|v| *v != 0).map(mc_to_deg_tenths).unwrap_or(-1);
     row.bat_temp = max_temp(&sess.bat_temps).or_else(|| read_bat_temp_supply()).map(mc_to_deg_tenths).unwrap_or(-1);

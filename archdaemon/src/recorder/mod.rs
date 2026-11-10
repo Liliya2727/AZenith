@@ -185,6 +185,9 @@ pub struct Session {
     pub next_deadline: Instant,
     /// `t` of the most recently written row (for finalize's last sample).
     pub last_written_t: i64,
+    /// Wall-clock ms of the previous `sample_once` call, for the
+    /// frametime diagnostic (`dt_ms`); 0 before the first tick.
+    pub last_sample_ms: i64,
     pub began_at: Instant,
     cpu_temp_path: Option<PathBuf>,
     #[allow(dead_code)]
@@ -357,6 +360,7 @@ impl Recorder {
             rows_since_flush: 0,
             next_deadline: began_at + Duration::from_secs(1),
             last_written_t: 0,
+            last_sample_ms: 0,
             began_at,
             cpu_temp_path: nodes.cpu_zone.map(|z| z.path),
             bat_temps: nodes.bat_temps,
@@ -382,6 +386,16 @@ impl Recorder {
     }
 
     /// Per-loop tick: deadline-based sampling, never silently skip a t.
+    /// Milliseconds (rounded up) until the next sample deadline, or `None`
+    /// when not recording. The main loop polls for exactly this long so the
+    /// loop's own work never accumulates lag against the 1 s deadlines.
+    pub fn ms_until_next_tick(&self) -> Option<i32> {
+        self.active.as_ref().map(|s| {
+            let d = s.next_deadline.saturating_duration_since(Instant::now());
+            (d.as_micros().div_ceil(1000)).min(1000) as i32
+        })
+    }
+
     pub fn tick(&mut self, ctx: &mut DaemonContext) {
         if self.active.is_none() {
             return;
