@@ -63,7 +63,7 @@ pub fn run_profiler(profile: i32, ctx: &DaemonContext) {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
-    let secs = now.as_secs() as i64;
+    let secs = now.as_secs() as libc::time_t;
     let time_str = unsafe {
         let mut tm = std::mem::zeroed::<libc::tm>();
         if libc::localtime_r(&secs, &mut tm).is_null() {

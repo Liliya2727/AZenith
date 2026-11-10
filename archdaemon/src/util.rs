@@ -43,7 +43,7 @@ pub fn timern() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let now = SystemTime::now();
     let duration = now.duration_since(UNIX_EPOCH).unwrap_or_default();
-    let secs = duration.as_secs() as i64;
+    let secs = duration.as_secs() as libc::time_t;
 
     // Use localtime via libc
     unsafe {

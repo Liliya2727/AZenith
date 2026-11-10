@@ -80,7 +80,12 @@ pub fn set_priority(pid: i32) {
         if libc::setpriority(libc::PRIO_PROCESS, pid as u32, -20) == -1 {
             crate::log_error!("priority", "setpriority failed pid={} errno={}", pid, std::io::Error::last_os_error());
         }
-        if libc::syscall(libc::SYS_ioprio_set as i64, 1i64, pid as i64, (1 << 13) | 0) == -1 {
+        if libc::syscall(
+            libc::SYS_ioprio_set as libc::c_long,
+            1 as libc::c_long,
+            pid as libc::c_long,
+            ((1 << 13) | 0) as libc::c_long,
+        ) == -1 {
             crate::log_error!("priority", "ioprio_set failed pid={} errno={}", pid, std::io::Error::last_os_error());
         }
     }

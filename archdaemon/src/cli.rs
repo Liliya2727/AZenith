@@ -677,7 +677,7 @@ fn chmod(path: &str, mode: u32) {
         Ok(c) => c,
         Err(_) => return,
     };
-    unsafe { libc::chmod(c.as_ptr(), mode) };
+    unsafe { libc::chmod(c.as_ptr(), mode as libc::mode_t) };
 }
 
 fn chmodg(pattern: &str, mode: u32) {

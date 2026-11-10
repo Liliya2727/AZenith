@@ -502,7 +502,7 @@ fn sanitize_pkg(pkg: &str) -> String {
 
 fn timestamp_name(epoch: u64) -> String {
     // yyyyMMdd_HHmmss via localtime_r (no chrono dependency).
-    let t = epoch as i64;
+    let t = epoch as libc::time_t;
     let mut tm = unsafe { std::mem::zeroed::<libc::tm>() };
     unsafe {
         if libc::localtime_r(&t, &mut tm).is_null() {
