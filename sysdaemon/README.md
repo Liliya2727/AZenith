@@ -363,15 +363,6 @@ read over binder, never by shelling out.
 
 ---
 
-## 12. Credits & license
-
-* Developed by @Zexshia and @rianixia (Telegram).
-* Credits: @Kombat, @Kaminarich, @Rem01Gaming.
-* Adapted from AZenith (Java companion daemon).
-* Licensed under the GNU General Public License v3.0 — see `LICENSE`.
-
----
-
 ## 13. Related documents in this repo
 
 | Document | Purpose |
