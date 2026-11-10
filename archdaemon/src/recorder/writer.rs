@@ -39,7 +39,7 @@ pub fn build_summary_json(sess: &Session, reason: StopReason, incomplete: bool) 
     let ft = frametime::summarize(&sess.session_hist, sess.session_frames, sess.session_jank,
         sess.has_frametime, sess.session_jank_known);
     format!(
-        "{{\n  \"version\": 2,\n  \"pkg\": {},\n  \"profile\": {},\n  \"start\": {},\n  \"duration\": {},\n  \"stop_reason\": {},\n  \"incomplete\": {},\n  \"fps\": {{\"avg\": {}, \"min\": {}, \"low1\": {}, \"low01\": {}}},\n  \"fps_active\": {{\"avg\": {}, \"min\": {}}},\n  \"temp\": {{\"cpu_max\": {}, \"gpu_max\": {}, \"bat_max\": {}}},\n  \"power\": {{\"avg_mw\": {}}},\n  \"jank\": {},\n  \"units\": {{\"temp\": \"C\", \"freq\": \"kHz\", \"power\": \"mW\"}}\n}}",
+        "{{\n  \"version\": 3,\n  \"pkg\": {},\n  \"profile\": {},\n  \"start\": {},\n  \"duration\": {},\n  \"stop_reason\": {},\n  \"incomplete\": {},\n  \"fps\": {{\"avg\": {}, \"min\": {}, \"low1\": {}, \"low01\": {}}},\n  \"fps_active\": {{\"avg\": {}, \"min\": {}}},\n  \"temp\": {{\"cpu_max\": {}, \"bat_start\": {}, \"bat_end\": {}, \"bat_delta\": {}, \"bat_min\": {}, \"bat_max\": {}}},\n  \"power\": {{\"avg_mw\": {}}},\n  \"jank\": {},\n  \"units\": {{\"temp\": \"C\", \"freq\": \"kHz\", \"power\": \"mW\"}}\n}}",
         json_str(&sess.pkg),
         json_str(&sess.profile),
         sess.start_epoch,
@@ -53,8 +53,11 @@ pub fn build_summary_json(sess: &Session, reason: StopReason, incomplete: bool) 
         st.fps_active_avg,
         st.fps_active_min,
         temp_json(st.cpu_max),
-        temp_json(st.gpu_max),
-        temp_json(st.bat_max),
+        temp_json_opt(st.bat_start),
+        temp_json_opt(st.bat_end),
+        temp_delta_json(st.bat_delta),
+        temp_json_opt(st.bat_min),
+        temp_json_opt(st.bat_max),
         st.avg_mw,
         frametime::jank_json(ft.jank)
     )
@@ -69,7 +72,7 @@ pub fn build_summary_json_rows(csv: &str, pkg: &str, profile: &str, start_epoch:
     let samples = parse_csv_rows(csv);
     let st = stats(&samples);
     format!(
-        "{{\n  \"version\": 2,\n  \"pkg\": {},\n  \"profile\": {},\n  \"start\": {},\n  \"duration\": {},\n  \"stop_reason\": {},\n  \"incomplete\": {},\n  \"fps\": {{\"avg\": {}, \"min\": {}, \"low1\": null, \"low01\": null}},\n  \"fps_active\": {{\"avg\": {}, \"min\": {}}},\n  \"temp\": {{\"cpu_max\": {}, \"gpu_max\": {}, \"bat_max\": {}}},\n  \"power\": {{\"avg_mw\": {}}},\n  \"jank\": null,\n  \"units\": {{\"temp\": \"C\", \"freq\": \"kHz\", \"power\": \"mW\"}}\n}}",
+        "{{\n  \"version\": 3,\n  \"pkg\": {},\n  \"profile\": {},\n  \"start\": {},\n  \"duration\": {},\n  \"stop_reason\": {},\n  \"incomplete\": {},\n  \"fps\": {{\"avg\": {}, \"min\": {}, \"low1\": null, \"low01\": null}},\n  \"fps_active\": {{\"avg\": {}, \"min\": {}}},\n  \"temp\": {{\"cpu_max\": {}, \"bat_start\": {}, \"bat_end\": {}, \"bat_delta\": {}, \"bat_min\": {}, \"bat_max\": {}}},\n  \"power\": {{\"avg_mw\": {}}},\n  \"jank\": null,\n  \"units\": {{\"temp\": \"C\", \"freq\": \"kHz\", \"power\": \"mW\"}}\n}}",
         json_str(pkg),
         json_str(profile),
         start_epoch,
@@ -81,8 +84,11 @@ pub fn build_summary_json_rows(csv: &str, pkg: &str, profile: &str, start_epoch:
         st.fps_active_avg,
         st.fps_active_min,
         temp_json(st.cpu_max),
-        temp_json(st.gpu_max),
-        temp_json(st.bat_max),
+        temp_json_opt(st.bat_start),
+        temp_json_opt(st.bat_end),
+        temp_delta_json(st.bat_delta),
+        temp_json_opt(st.bat_min),
+        temp_json_opt(st.bat_max),
         st.avg_mw
     )
 }
@@ -96,6 +102,26 @@ fn temp_json(tenths: i64) -> String {
     }
 }
 
+/// Like `temp_json`, but renders a missing value as JSON `null`.
+fn temp_json_opt(tenths: Option<i64>) -> String {
+    match tenths {
+        Some(v) => temp_json(v),
+        None => "null".to_string(),
+    }
+}
+
+/// Signed one-decimal delta; JSON has no leading `+`, so `+3.0` is `3.0`.
+fn temp_delta_json(tenths: Option<i64>) -> String {
+    match tenths {
+        Some(v) => {
+            let sign = if v < 0 { "-" } else { "" };
+            let abs = v.abs();
+            format!("{}{}.{}", sign, abs / 10, abs % 10)
+        }
+        None => "null".to_string(),
+    }
+}
+
 pub struct SummaryStats {
     pub fps_avg: i64,
     pub fps_min: i64,
@@ -103,8 +129,12 @@ pub struct SummaryStats {
     pub fps_active_avg: i64,
     pub fps_active_min: i64,
     pub cpu_max: i64,
-    pub gpu_max: i64,
-    pub bat_max: i64,
+    /// Battery temperature (tenths of °C) across valid samples; None if none.
+    pub bat_start: Option<i64>,
+    pub bat_end: Option<i64>,
+    pub bat_delta: Option<i64>,
+    pub bat_min: Option<i64>,
+    pub bat_max: Option<i64>,
     pub avg_mw: i64,
 }
 
@@ -123,8 +153,7 @@ pub fn stats(samples: &[Sample]) -> SummaryStats {
     let active: Vec<i64> = samples.iter().map(|s| s.fps).filter(|v| *v > 0).collect();
     let (fps_active_avg, fps_active_min) = fps_avg_min(&active);
     let cpu_max = samples.iter().map(|s| s.cpu_temp).filter(|v| *v != -1).max().unwrap_or(-1);
-    let gpu_max = samples.iter().map(|s| s.gpu_temp).filter(|v| *v != -1).max().unwrap_or(-1);
-    let bat_max = samples.iter().map(|s| s.bat_temp).filter(|v| *v != -1).max().unwrap_or(-1);
+    let bat = bat_stats(samples);
     let power: Vec<i64> = samples
         .iter()
         .filter(|s| s.ma != -1 && s.mv != -1)
@@ -141,9 +170,47 @@ pub fn stats(samples: &[Sample]) -> SummaryStats {
         fps_active_avg,
         fps_active_min,
         cpu_max,
-        gpu_max,
-        bat_max,
+        bat_start: bat.start,
+        bat_end: bat.end,
+        bat_delta: bat.delta,
+        bat_min: bat.min,
+        bat_max: bat.max,
         avg_mw,
+    }
+}
+
+/// `bat_temp` is stored in tenths of °C with about 1 °C resolution, so a
+/// computed delta carries roughly ±1 °C of noise. The -1 sentinel and values
+/// outside a sane -20..100 °C range are ignored.
+fn valid_bat_temp(tenths: i64) -> Option<i64> {
+    if tenths != -1 && (-200..=1000).contains(&tenths) {
+        Some(tenths)
+    } else {
+        None
+    }
+}
+
+pub struct BatStats {
+    pub start: Option<i64>,
+    pub end: Option<i64>,
+    pub delta: Option<i64>,
+    pub min: Option<i64>,
+    pub max: Option<i64>,
+}
+
+/// Battery start/end/delta/min/max from the per-second samples, in sample
+/// order (first and last *valid* reading, not merely the first/last row).
+fn bat_stats(samples: &[Sample]) -> BatStats {
+    let valid: Vec<i64> = samples.iter().filter_map(|s| valid_bat_temp(s.bat_temp)).collect();
+    match (valid.first(), valid.last()) {
+        (Some(&start), Some(&end)) => BatStats {
+            start: Some(start),
+            end: Some(end),
+            delta: Some(end - start),
+            min: valid.iter().copied().min(),
+            max: valid.iter().copied().max(),
+        },
+        _ => BatStats { start: None, end: None, delta: None, min: None, max: None },
     }
 }
 
@@ -170,34 +237,50 @@ fn parse_temp(s: &str) -> i64 {
 pub fn parse_csv_rows(content: &str) -> Vec<Sample> {
     let mut it = content.lines();
     let header = it.next().unwrap_or("");
-    // v2 files carry refresh_hz after fps; v1 doesn't.
-    let has_refresh = header.split(',').nth(2).is_some_and(|s| s.trim() == "refresh_hz");
+    // Parse by header name, not position: recovery must handle the old
+    // 16-column files (with gpu_temp), the newer 15-column ones, and v1 files
+    // without refresh_hz. Missing optional columns read -1.
+    let names: Vec<&str> = header.split(',').map(|s| s.trim()).collect();
+    let col = |name: &str| names.iter().position(|n| *n == name);
+    let t_i = col("t").unwrap_or(0);
+    let fps_i = col("fps").unwrap_or(1);
+    let refresh_i = col("refresh_hz");
+    let cpu_i = col("cpu_temp");
+    let bat_i = col("bat_temp");
+    let gpu_freq_i = col("gpu_freq");
+    let gpu_load_i = col("gpu_load");
+    let cpu_freq_l_i = col("cpu_freq_l");
+    let cpu_freq_b_i = col("cpu_freq_b");
+    let cpu_load_i = col("cpu_load");
+    let ma_i = col("ma");
+    let mv_i = col("mv");
+    let bat_lvl_i = col("bat_lvl");
     it.filter_map(|line| {
         let cols: Vec<&str> = line.split(',').collect();
-        if cols.len() < 15 {
+        if cols.len() < names.len() {
             return None;
         }
-        let get = |i: usize| cols[i].trim().parse::<i64>().unwrap_or(-1);
-        let idx = |base: usize| if has_refresh { base + 1 } else { base };
+        let get = |i: usize| cols.get(i).map(|s| s.trim()).unwrap_or("").parse::<i64>().unwrap_or(-1);
+        let get_opt = |i: Option<usize>| i.map(get).unwrap_or(-1);
+        let temp_opt = |i: Option<usize>| i.and_then(|i| cols.get(i)).map(|s| parse_temp(s)).unwrap_or(-1);
         Some(Sample {
-            t: get(0),
-            fps: get(1),
-            refresh_hz: if has_refresh { get(2) } else { -1 },
+            t: get(t_i),
+            fps: get(fps_i),
+            refresh_hz: get_opt(refresh_i),
             // Per-second frametime is only needed for the live path;
             // the recovery summary cannot rebuild histograms from it.
             ft_avg_tenths: frametime::FT_MISSING,
             ft_max_tenths: frametime::FT_MISSING,
-            cpu_temp: parse_temp(cols[idx(4)]),
-            gpu_temp: parse_temp(cols[idx(5)]),
-            bat_temp: parse_temp(cols[idx(6)]),
-            gpu_freq: get(idx(7)),
-            gpu_load: get(idx(8)),
-            cpu_freq_l: get(idx(9)),
-            cpu_freq_b: get(idx(10)),
-            cpu_load: get(idx(11)),
-            ma: get(idx(12)),
-            mv: get(idx(13)),
-            bat_lvl: get(idx(14)),
+            cpu_temp: temp_opt(cpu_i),
+            bat_temp: temp_opt(bat_i),
+            gpu_freq: get_opt(gpu_freq_i),
+            gpu_load: get_opt(gpu_load_i),
+            cpu_freq_l: get_opt(cpu_freq_l_i),
+            cpu_freq_b: get_opt(cpu_freq_b_i),
+            cpu_load: get_opt(cpu_load_i),
+            ma: get_opt(ma_i),
+            mv: get_opt(mv_i),
+            bat_lvl: get_opt(bat_lvl_i),
         })
     }).collect()
 }
@@ -221,7 +304,12 @@ mod tests {
     use super::*;
 
     fn sample(fps: i64, cpu: i64, ma: i64, mv: i64) -> Sample {
-        Sample { t: 0, fps, refresh_hz: 120, ft_avg_tenths: -1, ft_max_tenths: -1, cpu_temp: cpu, gpu_temp: -1, bat_temp: 400, gpu_freq: -1, gpu_load: -1, cpu_freq_l: 2_000_000, cpu_freq_b: 2_500_000, cpu_load: 50, ma, mv, bat_lvl: 50 }
+        Sample { t: 0, fps, refresh_hz: 120, ft_avg_tenths: -1, ft_max_tenths: -1, cpu_temp: cpu, bat_temp: 400, gpu_freq: -1, gpu_load: -1, cpu_freq_l: 2_000_000, cpu_freq_b: 2_500_000, cpu_load: 50, ma, mv, bat_lvl: 50 }
+    }
+
+    fn with_bat(mut s: Sample, bat: i64) -> Sample {
+        s.bat_temp = bat;
+        s
     }
 
     #[test]
@@ -232,18 +320,18 @@ mod tests {
         s.ft_max_tenths = 335; // 33.5 ms
         let line = s.to_csv();
         let cols: Vec<&str> = line.split(',').collect();
-        assert_eq!(cols.len(), 16);
+        assert_eq!(cols.len(), 15);
         assert_eq!(cols[3], "16.7");
         assert_eq!(cols[4], "33.5");
         // Order preserved: t,fps,refresh_hz,ft_avg,ft_max,...
         assert_eq!(s.to_csv().split(',').take(5).collect::<Vec<_>>(),
             vec!["7", "120", "120", "16.7", "33.5"]);
-        // Overflow max renders as >=500.0 and keeps 16 columns.
+        // Overflow max renders as >=500.0 and keeps 15 columns.
         let mut o = sample(60, 500, 1000, 4000);
         o.ft_max_tenths = frametime::FT_OVERFLOW;
         let ol = o.to_csv();
         assert!(ol.split(',').nth(4).unwrap() == ">=500.0", "{}", ol);
-        assert_eq!(ol.split(',').count(), 16);
+        assert_eq!(ol.split(',').count(), 15);
         // Missing values stay -1.
         let m = sample(60, 500, 1000, 4000).to_csv();
         let mc: Vec<&str> = m.split(',').collect();
@@ -264,8 +352,11 @@ mod tests {
         assert_eq!(st.fps_active_avg, 75);
         assert_eq!(st.fps_active_min, 60);
         assert_eq!(st.cpu_max, 600); // 60.0°C
-        assert_eq!(st.gpu_max, -1);
-        assert_eq!(st.bat_max, 400); // 40.0°C
+        assert_eq!(st.bat_start, Some(400)); // 40.0°C
+        assert_eq!(st.bat_end, Some(400));
+        assert_eq!(st.bat_delta, Some(0));
+        assert_eq!(st.bat_min, Some(400));
+        assert_eq!(st.bat_max, Some(400));
         assert_eq!(st.avg_mw, 6000); // (1000*4000/1000 + 2000*4000/1000) / 2
     }
 
@@ -314,5 +405,148 @@ mod tests {
         assert_eq!(back[0].cpu_temp, 1003); // 100°C read back from 100322 mc (approx)
         assert_eq!(back[0].bat_temp, 430);
         // normalize check: legacy gpu_freq is raw Hz → kept as-is on parse; new files store kHz later via sampler scaling
+    }
+
+    #[test]
+    fn bat_stats_rising_delta() {
+        let rows = vec![
+            with_bat(sample(60, 500, 1000, 4000), 430),
+            with_bat(sample(60, 500, 1000, 4000), 460),
+        ];
+        let st = stats(&rows);
+        assert_eq!(st.bat_start, Some(430));
+        assert_eq!(st.bat_end, Some(460));
+        assert_eq!(st.bat_delta, Some(30)); // +3.0 °C
+        assert_eq!(st.bat_min, Some(430));
+        assert_eq!(st.bat_max, Some(460));
+    }
+
+    #[test]
+    fn bat_stats_falling_delta() {
+        let rows = vec![
+            with_bat(sample(60, 500, 1000, 4000), 430),
+            with_bat(sample(60, 500, 1000, 4000), 390),
+        ];
+        let st = stats(&rows);
+        assert_eq!(st.bat_delta, Some(-40)); // -4.0 °C (cooler)
+        assert_eq!(st.bat_min, Some(390));
+        assert_eq!(st.bat_max, Some(430));
+    }
+
+    #[test]
+    fn bat_stats_zero_delta() {
+        let rows = vec![
+            with_bat(sample(60, 500, 1000, 4000), 430),
+            with_bat(sample(60, 500, 1000, 4000), 430),
+        ];
+        let st = stats(&rows);
+        assert_eq!(st.bat_delta, Some(0));
+        assert_eq!(temp_delta_json(st.bat_delta), "0.0");
+    }
+
+    #[test]
+    fn bat_stats_first_last_valid_skip_sentinel() {
+        let rows = vec![
+            with_bat(sample(60, 500, 1000, 4000), -1),
+            with_bat(sample(60, 500, 1000, 4000), 430),
+            with_bat(sample(60, 500, 1000, 4000), 460),
+            with_bat(sample(60, 500, 1000, 4000), -1),
+        ];
+        let st = stats(&rows);
+        assert_eq!(st.bat_start, Some(430));
+        assert_eq!(st.bat_end, Some(460));
+        assert_eq!(st.bat_delta, Some(30));
+    }
+
+    #[test]
+    fn bat_stats_all_missing_is_null() {
+        let rows = vec![
+            with_bat(sample(60, 500, 1000, 4000), -1),
+            with_bat(sample(60, 500, 1000, 4000), -1),
+        ];
+        let st = stats(&rows);
+        assert_eq!(st.bat_start, None);
+        assert_eq!(st.bat_end, None);
+        assert_eq!(st.bat_delta, None);
+        assert_eq!(st.bat_min, None);
+        assert_eq!(st.bat_max, None);
+        assert_eq!(temp_json_opt(st.bat_start), "null");
+        assert_eq!(temp_delta_json(st.bat_delta), "null");
+    }
+
+    #[test]
+    fn bat_stats_single_sample() {
+        let rows = vec![with_bat(sample(60, 500, 1000, 4000), 430)];
+        let st = stats(&rows);
+        assert_eq!(st.bat_start, Some(430));
+        assert_eq!(st.bat_end, Some(430));
+        assert_eq!(st.bat_delta, Some(0));
+        assert_eq!(st.bat_min, Some(430));
+        assert_eq!(st.bat_max, Some(430));
+    }
+
+    #[test]
+    fn bat_stats_out_of_range_ignored() {
+        // -300 and 1200 tenths are outside the sane -20..100 °C range.
+        let rows = vec![
+            with_bat(sample(60, 500, 1000, 4000), 430),
+            with_bat(sample(60, 500, 1000, 4000), -300),
+            with_bat(sample(60, 500, 1000, 4000), 1200),
+            with_bat(sample(60, 500, 1000, 4000), 460),
+        ];
+        let st = stats(&rows);
+        assert_eq!(st.bat_start, Some(430));
+        assert_eq!(st.bat_end, Some(460));
+        assert_eq!(st.bat_min, Some(430));
+        assert_eq!(st.bat_max, Some(460));
+    }
+
+    #[test]
+    fn csv_header_has_no_gpu_temp() {
+        assert_eq!(crate::recorder::SESSION_CSV_HEADER.split(',').count(), 15);
+        assert!(!crate::recorder::SESSION_CSV_HEADER.contains("gpu_temp"));
+        assert_eq!(
+            crate::recorder::SESSION_CSV_HEADER,
+            "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl"
+        );
+        let line = sample(60, 500, 1000, 4000).to_csv();
+        let cols: Vec<&str> = line.split(',').collect();
+        assert_eq!(cols.len(), 15);
+        assert_eq!(cols[5], "50.0"); // cpu_temp
+        assert_eq!(cols[6], "40.0"); // bat_temp
+        assert_eq!(cols[7], "-1"); // gpu_freq stays, GPU temp is gone
+    }
+
+    #[test]
+    fn recovery_parses_old_16_column_csv() {
+        let csv = "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,gpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl\n0,60,120,-1,-1,60.0,55.0,43.0,100000,50,2000000,2500000,50,1000,4000,50\n1,60,120,-1,-1,61.0,56.0,46.0,100000,50,2000000,2500000,50,1000,4000,50";
+        let back = parse_csv_rows(csv);
+        assert_eq!(back.len(), 2);
+        assert_eq!(back[0].cpu_temp, 600);
+        assert_eq!(back[0].bat_temp, 430);
+        assert_eq!(back[0].gpu_freq, 100_000);
+        assert_eq!(back[1].bat_temp, 460);
+    }
+
+    #[test]
+    fn recovery_parses_new_15_column_csv() {
+        let csv = "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl\n0,60,120,-1,-1,60.0,43.0,100000,50,2000000,2500000,50,1000,4000,50\n1,60,120,-1,-1,61.0,46.0,100000,50,2000000,2500000,50,1000,4000,50";
+        let back = parse_csv_rows(csv);
+        assert_eq!(back.len(), 2);
+        assert_eq!(back[0].cpu_temp, 600);
+        assert_eq!(back[0].bat_temp, 430);
+        assert_eq!(back[1].bat_temp, 460);
+    }
+
+    #[test]
+    fn json_temp_object_and_version_golden() {
+        let csv = "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl\n0,60,120,-1,-1,60.0,43.0,100000,50,2000000,2500000,50,1000,4000,50\n1,60,120,-1,-1,61.0,46.0,100000,50,2000000,2500000,50,1000,4000,50\n2,60,120,-1,-1,59.0,39.0,100000,50,2000000,2500000,50,1000,4000,50";
+        let json = build_summary_json_rows(csv, "com.example.game", "Performance", 1_700_000_000, 3, StopReason::Manual, false);
+        assert!(json.contains("\"version\": 3"), "{}", json);
+        assert!(
+            json.contains("\"temp\": {\"cpu_max\": 61.0, \"bat_start\": 43.0, \"bat_end\": 39.0, \"bat_delta\": -4.0, \"bat_min\": 39.0, \"bat_max\": 46.0}"),
+            "{}", json
+        );
+        assert!(!json.contains("gpu_max"), "{}", json);
     }
 }

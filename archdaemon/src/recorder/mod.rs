@@ -15,8 +15,7 @@
 //!   ft_max   ms, 1 decimal — upper edge of worst bucket; ">=500.0" for
 //!            the >= 500 ms overflow bucket; -1 if invalid
 //!   cpu_temp °C (thermal zone matched by type name; milli-°C / 100, 1 decimal)
-//!   gpu_temp °C (thermal zone *gpu*/*mali*/*adreno; -1 if absent)
-//!   bat_temp °C (thermal zone *battery*, else supply temp)
+//!   bat_temp °C (thermal zone *battery*, else supply temp; ~1 °C resolution)
 //!   gpu_freq kHz (devfreq cur_freq is in Hz → /1000; GED is already kHz)
 //!   gpu_load percent 0-100 (devfreq gpu_load, else load/10; -1 if absent)
 //!   cpu_freq_l kHz (first cpufreq policy; scaling_cur_freq is already kHz)
@@ -61,7 +60,7 @@ pub const CURRENT_FPS_PATH: &str = "/data/adb/.config/AZenith/API/current_fps";
 pub const CURRENT_FRAMETIME_PATH: &str = "/data/adb/.config/AZenith/API/current_frametime";
 
 pub const SESSION_CSV_HEADER: &str =
-    "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,gpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl";
+    "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl";
 
 /// Minimum session length — shorter sessions are discarded (no JSON).
 pub const MIN_SESSION_SECS: u64 = 30;
@@ -112,7 +111,6 @@ pub struct Sample {
     /// overflow bucket (rendered ">=500.0").
     pub ft_max_tenths: i64,
     pub cpu_temp: i64,
-    pub gpu_temp: i64,
     pub bat_temp: i64,
     pub gpu_freq: i64,
     pub gpu_load: i64,
@@ -133,7 +131,6 @@ impl Sample {
             ft_avg_tenths: frametime::FT_MISSING,
             ft_max_tenths: frametime::FT_MISSING,
             cpu_temp: -1,
-            gpu_temp: -1,
             bat_temp: -1,
             gpu_freq: -1,
             gpu_load: -1,
@@ -150,11 +147,11 @@ impl Sample {
     /// as a decimal ("103.2"); -1 stays the missing-value sentinel.
     pub fn to_csv(&self) -> String {
         format!(
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             self.t, self.fps, self.refresh_hz,
             frametime::ft_avg_csv(self.ft_avg_tenths),
             frametime::ft_max_csv(self.ft_max_tenths),
-            temp_csv(self.cpu_temp), temp_csv(self.gpu_temp), temp_csv(self.bat_temp),
+            temp_csv(self.cpu_temp), temp_csv(self.bat_temp),
             self.gpu_freq, self.gpu_load, self.cpu_freq_l, self.cpu_freq_b,
             self.cpu_load, self.ma, self.mv, self.bat_lvl
         )
@@ -186,7 +183,6 @@ pub struct Session {
     pub last_written_t: i64,
     pub began_at: Instant,
     cpu_temp_path: Option<PathBuf>,
-    gpu_temps: Vec<PathBuf>,
     #[allow(dead_code)]
     bat_temps: Vec<PathBuf>,
     gpu_freq_src: Option<sampler::GpuFreqSrc>,
@@ -358,7 +354,6 @@ impl Recorder {
             last_written_t: 0,
             began_at,
             cpu_temp_path: nodes.cpu_zone.map(|z| z.path),
-            gpu_temps: nodes.gpu_temps,
             bat_temps: nodes.bat_temps,
             gpu_freq_src: nodes.gpu_freq_src,
             gpu_load_src: nodes.gpu_load_src,

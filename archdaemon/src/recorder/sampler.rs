@@ -15,7 +15,6 @@ pub fn sample_once(sess: &mut Session, t: i64) {
     row.ft_max_tenths = ft_max;
 
     row.cpu_temp = sess.cpu_temp_path.as_ref().and_then(read_int).filter(|v| *v != 0).map(mc_to_deg_tenths).unwrap_or(-1);
-    row.gpu_temp = max_temp(&sess.gpu_temps).map(mc_to_deg_tenths).unwrap_or(-1);
     row.bat_temp = max_temp(&sess.bat_temps).or_else(|| read_bat_temp_supply()).map(mc_to_deg_tenths).unwrap_or(-1);
 
     row.gpu_freq = sess.gpu_freq_src.as_ref().and_then(|s| s.read()).unwrap_or(-1);
@@ -208,7 +207,6 @@ impl std::fmt::Display for GpuLoadSrc {
 
 pub struct Nodes {
     pub cpu_zone: Option<CpuZone>,
-    pub gpu_temps: Vec<PathBuf>,
     pub bat_temps: Vec<PathBuf>,
     pub gpu_freq_src: Option<GpuFreqSrc>,
     pub gpu_load_src: Option<GpuLoadSrc>,
@@ -217,7 +215,7 @@ pub struct Nodes {
 }
 
 pub fn detect_nodes() -> Nodes {
-    let (cpu_zones, gpu_temps, bat_temps) = thermal_zones();
+    let (cpu_zones, bat_temps) = thermal_zones();
     let cpu_zone = choose_cpu_zone(&cpu_zones);
     let (gpu_freq_src, gpu_load_src) = detect_gpu_nodes();
     let policies = detect_cpu_policies();
@@ -225,7 +223,6 @@ pub fn detect_nodes() -> Nodes {
     let cpu_freq_b = policies.last().filter(|_| policies.len() > 1).cloned();
     Nodes {
         cpu_zone,
-        gpu_temps,
         bat_temps,
         gpu_freq_src,
         gpu_load_src,
@@ -271,13 +268,12 @@ fn detect_gpu_nodes() -> (Option<GpuFreqSrc>, Option<GpuLoadSrc>) {
 
 /// Enumerate thermal zones as (temp path, type string) groups so the caller
 /// can pick specific sensors by name instead of a blind max over guesses.
-fn thermal_zones() -> (Vec<(PathBuf, String)>, Vec<PathBuf>, Vec<PathBuf>) {
+fn thermal_zones() -> (Vec<(PathBuf, String)>, Vec<PathBuf>) {
     let base = Path::new("/sys/class/thermal");
     let mut cpu = Vec::new();
-    let mut gpu = Vec::new();
     let mut bat = Vec::new();
     let Ok(entries) = std::fs::read_dir(base) else {
-        return (cpu, gpu, bat);
+        return (cpu, bat);
     };
     for entry in entries.flatten() {
         let path = entry.path();
@@ -290,13 +286,11 @@ fn thermal_zones() -> (Vec<(PathBuf, String)>, Vec<PathBuf>, Vec<PathBuf>) {
         let lower = t.to_lowercase();
         if lower.contains("cpu") {
             cpu.push((temp, t));
-        } else if lower.contains("gpu") || lower.contains("mali") || lower.contains("adreno") {
-            gpu.push(temp);
         } else if lower.contains("battery") {
             bat.push(temp);
         }
     }
-    (cpu, gpu, bat)
+    (cpu, bat)
 }
 
 /// Choose ONE CPU thermal zone by type name (not by index, and never a max
