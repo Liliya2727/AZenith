@@ -16,10 +16,11 @@
 //!            the >= 500 ms overflow bucket; -1 if invalid
 //!   cpu_temp °C (thermal zone matched by type name; milli-°C / 100, 1 decimal)
 //!   bat_temp °C (thermal zone *battery*, else supply temp; ~1 °C resolution)
-//!   gpu_freq kHz (devfreq cur_freq is in Hz → /1000; GED is already kHz)
+//!   gpu_freq kHz (GED current_freqency, actual current; devfreq/kgsl cur_freq
+//!            is in Hz → /1000)
 //!   gpu_load percent 0-100 (devfreq gpu_load, else load/10; -1 if absent)
-//!   cpu_freq_l kHz (first cpufreq policy; scaling_cur_freq is already kHz)
-//!   cpu_freq_b kHz (last cpufreq policy)
+//!   cpu_freq_l kHz (lowest cpufreq policy; scaling_cur_freq, actual current)
+//!   cpu_freq_b kHz (highest cpufreq policy; actual current)
 //!   cpu_load percent 0-100 (from /proc/stat deltas)
 //!   ma       milliamps (current_now uA / 1000, signed)
 //!   mv       millivolts (voltage_now uV / 1000)

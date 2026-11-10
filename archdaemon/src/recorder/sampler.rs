@@ -17,11 +17,18 @@ pub fn sample_once(sess: &mut Session, t: i64) {
     row.cpu_temp = sess.cpu_temp_path.as_ref().and_then(read_int).filter(|v| *v != 0).map(mc_to_deg_tenths).unwrap_or(-1);
     row.bat_temp = max_temp(&sess.bat_temps).or_else(|| read_bat_temp_supply()).map(mc_to_deg_tenths).unwrap_or(-1);
 
+    // All three frequency columns are *current* values read every tick:
+    // cpufreq `scaling_cur_freq` for the CPU policies and GED
+    // `current_freqency` for the GPU (never a max/limit node). A constant
+    // value within a session is therefore real: the performance profile pins
+    // each CPU cluster through PPM hard_userlimit (min == max), and the GPU
+    // tends to stay at its top OPP while a game is running. A failed read or
+    // an offline policy (0) is written as -1, never a stale value.
     row.gpu_freq = sess.gpu_freq_src.as_ref().and_then(|s| s.read()).unwrap_or(-1);
     row.gpu_load = sess.gpu_load_src.as_ref().and_then(|s| s.read()).unwrap_or(-1);
 
-    row.cpu_freq_l = sess.cpu_freq_l.as_ref().and_then(read_int).unwrap_or(-1);
-    row.cpu_freq_b = sess.cpu_freq_b.as_ref().and_then(read_int).unwrap_or(-1);
+    row.cpu_freq_l = sess.cpu_freq_l.as_ref().and_then(read_int).filter(|v| *v > 0).unwrap_or(-1);
+    row.cpu_freq_b = sess.cpu_freq_b.as_ref().and_then(read_int).filter(|v| *v > 0).unwrap_or(-1);
     row.cpu_load = cpu_load_delta(&mut sess.prev_stat).unwrap_or(-1);
 
     row.ma = read_int(Path::new("/sys/class/power_supply/battery/current_now")).map(|v| (v / 1000).abs()).unwrap_or(-1);
@@ -103,15 +110,33 @@ fn read_bat_temp_supply() -> Option<i64> {
     read_int(Path::new("/sys/class/power_supply/battery/temp")).map(|v| v * 100)
 }
 
-/// Normalise a raw GPU frequency to kHz. Devfreq/kgsl nodes report Hz
-/// (e.g. 886000000), GED reports kHz already (e.g. 886000) — scale Hz down
-/// only when the raw value is above 1_000_000.
-fn normalize_freq_khz(raw: i64) -> i64 {
-    if raw >= 1_000_000 {
-        raw / 1000
-    } else {
-        raw
+/// Unit of a raw GPU frequency node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FreqUnit {
+    /// Devfreq / kgsl `cur_freq` (kernel ABI: Hz, e.g. 886000000).
+    Hz,
+    /// MTK GED `current_freqency` (kHz, e.g. 886000).
+    KHz,
+    /// Some vendor GPU nodes report MHz; not used by a detected node today.
+    #[allow(dead_code)]
+    MHz,
+}
+
+/// Convert a raw GPU frequency to the recorder's kHz unit. Kept explicit per
+/// node because inferring the unit from magnitude is ambiguous (e.g. 886 could
+/// be kHz or MHz).
+pub fn freq_to_khz(raw: i64, unit: FreqUnit) -> i64 {
+    match unit {
+        FreqUnit::Hz => raw / 1000,
+        FreqUnit::KHz => raw,
+        FreqUnit::MHz => raw * 1000,
     }
+}
+
+/// Parse MTK GED `current_freqency` (`"<opp idx> <kHz>"`, the typo is the
+/// kernel ABI). Returns kHz.
+fn parse_ged_freq_khz(content: &str) -> Option<i64> {
+    content.split_whitespace().nth(1)?.parse::<i64>().ok()
 }
 
 /// Convert a sysfs milli-°C reading to tenths of °C, the recorder's
@@ -149,11 +174,10 @@ impl GpuFreqSrc {
         match self {
             GpuFreqSrc::GedFreq { path } => {
                 let content = std::fs::read_to_string(path).ok()?;
-                let s = content.split_whitespace().nth(1).unwrap_or("");
-                s.parse::<i64>().ok()
+                parse_ged_freq_khz(&content).map(|v| freq_to_khz(v, FreqUnit::KHz))
             }
-            GpuFreqSrc::DevfreqFreq { dir } => read_int(dir.join("cur_freq")).map(|v| normalize_freq_khz(v)),
-            GpuFreqSrc::KgslFreq { dir } => read_int(dir.join("cur_freq")).map(|v| normalize_freq_khz(v)),
+            GpuFreqSrc::DevfreqFreq { dir } => read_int(dir.join("cur_freq")).map(|v| freq_to_khz(v, FreqUnit::Hz)),
+            GpuFreqSrc::KgslFreq { dir } => read_int(dir.join("cur_freq")).map(|v| freq_to_khz(v, FreqUnit::Hz)),
         }
     }
 }
@@ -346,9 +370,14 @@ fn detect_cpu_policies() -> Vec<PathBuf> {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.file_name().map(|n| n.to_string_lossy().starts_with("policy")).unwrap_or(false) {
+                // Current frequency per policy. Prefer scaling_cur_freq and
+                // fall back to cpuinfo_cur_freq when the former is absent.
                 let cur = path.join("scaling_cur_freq");
+                let hw = path.join("cpuinfo_cur_freq");
                 if cur.exists() {
                     out.push(cur);
+                } else if hw.exists() {
+                    out.push(hw);
                 }
             }
         }
@@ -367,4 +396,62 @@ fn policy_id(p: &Path) -> u64 {
             s.strip_prefix("policy").and_then(|n| n.parse().ok()).unwrap_or(0)
         })
         .unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{freq_to_khz, parse_ged_freq_khz, read_int, FreqUnit};
+    use std::path::PathBuf;
+
+    fn temp_path(name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("azenith_sampler_{}_{}", std::process::id(), name))
+    }
+
+    #[test]
+    fn freq_khz_passthrough() {
+        assert_eq!(freq_to_khz(886_000, FreqUnit::KHz), 886_000);
+    }
+
+    #[test]
+    fn freq_hz_to_khz() {
+        assert_eq!(freq_to_khz(886_000_000, FreqUnit::Hz), 886_000);
+    }
+
+    #[test]
+    fn freq_mhz_to_khz() {
+        assert_eq!(freq_to_khz(886, FreqUnit::MHz), 886_000);
+    }
+
+    #[test]
+    fn ged_freq_parses_khz() {
+        assert_eq!(parse_ged_freq_khz("4 861000\n"), Some(861_000));
+    }
+
+    #[test]
+    fn ged_freq_rejects_garbage_empty_and_missing_field() {
+        assert_eq!(parse_ged_freq_khz(""), None);
+        assert_eq!(parse_ged_freq_khz("garbage"), None);
+        assert_eq!(parse_ged_freq_khz("4 not-a-freq"), None);
+        assert_eq!(parse_ged_freq_khz("4"), None);
+    }
+
+    #[test]
+    fn read_int_missing_empty_garbage_and_valid() {
+        assert_eq!(read_int(temp_path("does_not_exist")), None);
+
+        let empty = temp_path("empty");
+        std::fs::write(&empty, "").unwrap();
+        assert_eq!(read_int(&empty), None);
+        let _ = std::fs::remove_file(&empty);
+
+        let garbage = temp_path("garbage");
+        std::fs::write(&garbage, "not a number\n").unwrap();
+        assert_eq!(read_int(&garbage), None);
+        let _ = std::fs::remove_file(&garbage);
+
+        let valid = temp_path("valid");
+        std::fs::write(&valid, "886000000\n").unwrap();
+        assert_eq!(read_int(&valid), Some(886_000_000));
+        let _ = std::fs::remove_file(&valid);
+    }
 }
