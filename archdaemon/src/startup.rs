@@ -1,6 +1,6 @@
 //! Startup logic.
 
-use crate::android_ffi::{__system_property_foreach, __system_property_read_callback};
+use crate::android_ffi::{__system_property_foreach, system_property_read_callback};
 use crate::core::{
     DaemonContext, GAMELIST, JAVA_LOCK_PATH,
 };
@@ -109,7 +109,7 @@ extern "C" fn validateprop_foreach_cb(pi: *const c_void, cookie: *mut c_void) {
         return;
     }
     unsafe {
-        __system_property_read_callback(pi, validateprop_read_cb as *mut c_void, cookie);
+        system_property_read_callback(pi, validateprop_read_cb as *mut c_void, cookie);
     }
 }
 

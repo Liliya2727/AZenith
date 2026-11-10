@@ -114,11 +114,23 @@ unsafe extern "C" {
     pub fn __system_property_get(name: *const c_uchar, value: *mut c_uchar) -> c_int;
     pub fn __system_property_set(name: *const c_char, value: *const c_char) -> c_int;
     pub fn __system_property_foreach(callback: *mut c_void, cookie: *mut c_void) -> c_int;
-    pub fn __system_property_read_callback(
-        pi: *const c_void,
-        callback: *mut c_void,
-        cookie: *mut c_void,
-    );
+}
+
+/// `__system_property_read_callback` only exists from API 26, so linking it
+/// directly fails with a lower NDK API level. Resolve it at runtime instead;
+/// without the symbol nothing is read and no prop is flagged.
+pub unsafe fn system_property_read_callback(
+    pi: *const c_void,
+    callback: *mut c_void,
+    cookie: *mut c_void,
+) {
+    type ReadCb = unsafe extern "C" fn(*const c_void, *mut c_void, *mut c_void);
+    let sym = unsafe { libc::dlsym(libc::RTLD_DEFAULT, c"__system_property_read_callback".as_ptr()) };
+    if sym.is_null() {
+        return;
+    }
+    let f: ReadCb = unsafe { std::mem::transmute(sym) };
+    unsafe { f(pi, callback, cookie) };
 }
 
 // prop_info is an opaque type
