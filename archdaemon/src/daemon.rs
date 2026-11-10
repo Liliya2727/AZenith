@@ -16,6 +16,7 @@ use crate::config::state::restore_daemon_state;
 use crate::profile::{
     apply_balanced_profile, apply_eco_profile, apply_performance_profile_inner,
     get_gamestart, get_low_power_state, get_screenstate, profile_mode_name, run_profiler,
+    update_game_info,
 };
 use crate::proc::{get_pids_of, set_priority, setspid};
 use crate::shell::systemv;
@@ -125,6 +126,7 @@ pub fn main_daemon() -> c_int {
     let mut need_loop = true;
     runthermalcore();
     run_profiler(0, &ctx); // PERFCOMMON
+    update_game_info(&ctx);
     update_module_description(std::process::id() as i32);
     fileops::remove_file_best_effort("/dev/.azenithSingleInstance");
 
@@ -232,9 +234,10 @@ pub fn main_daemon() -> c_int {
 
         handle_dynamic_bypass(&mut ctx);
 
-        if ctx.is_initialize_complete && ctx.prev_ai_state_str() == "0" {
-            continue;
-        }
+        // Manual mode (AIenabled == "0" / current_modes == "0"): keep the
+        // loop running so games are still detected and gameinfo stays
+        // current, but skip automatic profile application below.
+        let is_manual_mode = ctx.prev_ai_state_str() == "0";
 
         if ctx.need_profile_checkup {
             let opts = &mut ctx.opts;
@@ -261,8 +264,9 @@ pub fn main_daemon() -> c_int {
                     ctx.render.has_applied_renderer = false;
                     ctx.need_profile_checkup = true;
                     handle_dynamic_bypass(&mut ctx);
+                    update_game_info(&ctx);
                 }
-            } else if ctx.profile.cur_mode != ProfileMode::BalancedProfile && ctx.profile.cur_mode != ProfileMode::EcoMode {
+            } else if !is_manual_mode && ctx.profile.cur_mode != ProfileMode::BalancedProfile && ctx.profile.cur_mode != ProfileMode::EcoMode {
                 ctx.need_profile_checkup = false;
             }
         }
@@ -346,6 +350,7 @@ pub fn main_daemon() -> c_int {
                                 ctx.game.gamestart = None;
                                 ctx.game.active_app_name = None;
                                 ctx.need_profile_checkup = true;
+                                update_game_info(&ctx);
                             }
                         }
                     } else if ctx.power.fg_away_active {
@@ -359,113 +364,117 @@ pub fn main_daemon() -> c_int {
             }
         }
 
-        if ctx.is_initialize_complete
-            && ctx.profile.cur_mode != ProfileMode::PerformanceProfile
-            && ctx.game.gamestart.is_none()
-            && !ctx.need_profile_checkup
-        {
-            let is_low_power = get_low_power_state(&ctx.current_system_cache);
-
-            if is_low_power && ctx.profile.cur_mode != ProfileMode::EcoMode {
-                apply_eco_profile(&mut ctx);
-            } else if !is_low_power && ctx.profile.cur_mode == ProfileMode::EcoMode {
-                apply_balanced_profile(&mut ctx);
-            } else {
-                continue;
-            }
-        }
-
-        if ctx.is_initialize_complete
-            && ctx.game.gamestart.is_some()
-            && effective_screen_state != 0
-        {
-            let gs = ctx.game.gamestart.as_deref().unwrap().to_string();
-            if !ctx.need_profile_checkup
-                && ctx.profile.cur_mode == ProfileMode::PerformanceProfile
-                && ctx.render.has_applied_renderer
-                && ctx.game.game_pid_count > 0
+        if !is_manual_mode {
+            if ctx.is_initialize_complete
+                && ctx.profile.cur_mode != ProfileMode::PerformanceProfile
+                && ctx.game.gamestart.is_none()
+                && !ctx.need_profile_checkup
             {
-                continue;
+                let is_low_power = get_low_power_state(&ctx.current_system_cache);
+
+                if is_low_power && ctx.profile.cur_mode != ProfileMode::EcoMode {
+                    apply_eco_profile(&mut ctx);
+                } else if !is_low_power && ctx.profile.cur_mode == ProfileMode::EcoMode {
+                    apply_balanced_profile(&mut ctx);
+                } else {
+                    continue;
+                }
             }
 
-            if !ctx.render.has_applied_renderer {
-                let mut renderer_changed = false;
-                if !IS_DEFAULT!(ctx.opts_renderer()) {
-                    let renderer = ctx.opts_renderer().to_string();
-                    renderer_changed = apply_smart_renderer(
-                        &renderer,
-                        &mut ctx.profile.saved_renderer,
-                        &mut ctx.profile.saved_sys_renderer,
-                    );
+            if ctx.is_initialize_complete
+                && ctx.game.gamestart.is_some()
+                && effective_screen_state != 0
+            {
+                let gs = ctx.game.gamestart.as_deref().unwrap().to_string();
+                if !ctx.need_profile_checkup
+                    && ctx.profile.cur_mode == ProfileMode::PerformanceProfile
+                    && ctx.render.has_applied_renderer
+                    && ctx.game.game_pid_count > 0
+                {
+                    continue;
                 }
 
-                let mut reso_changed = false;
-                if !IS_DEFAULT!(ctx.opts_resolution_downscale()) {
-                    let downscale = ctx.opts_resolution_downscale().to_string();
-                    let fps = ctx.opts_resolution_fps().to_string();
-                    reso_changed = apply_resolution_target(
-                        &mut ctx,
-                        &gs,
-                        &downscale,
-                        &fps,
-                    );
-                }
-
-                if renderer_changed || reso_changed {
-                    ctx.render.is_restarting_renderer = true;
-                    restart_target_app_inner(&gs);
-                    ctx.render.is_restarting_renderer = false;
-                    ctx.game.game_pids = [0; crate::core::MAX_GAME_PIDS];
-                    ctx.game.game_pid_count = 0;
-                    ctx.pid_retries = 0;
-                }
-
-                ctx.render.has_applied_renderer = true;
-            }
-
-            if ctx.game.game_pid_count == 0 {
-                if ctx.current_system_cache.focused_app_str() == &gs {
-                    ctx.game.game_pid_count = get_pids_of(&gs, &mut ctx.game.game_pids, crate::core::MAX_GAME_PIDS as i32);
-                }
-                if ctx.game.game_pid_count == 0 {
-                    if ctx.pid_retries < 5 {
-                        ctx.pid_retries += 1;
-                        log_warn!("profile", "game pkg={} not spawned yet retry={}/5",
-                            ctx.game.active_app_name.as_deref().unwrap_or(&gs), ctx.pid_retries);
-                        thread::sleep(Duration::from_millis(200));
-                        need_loop = true;
-                        continue;
-                    } else {
-                        log_error!("profile", "no pid found pkg={} after retries=5 action=drop",
-                            ctx.game.active_app_name.as_deref().unwrap_or(&gs));
-                        ctx.game.gamestart = None;
-                        ctx.game.active_app_name = None;
-                        ctx.pid_retries = 0;
-                        ctx.need_profile_checkup = true;
-                        continue;
+                if !ctx.render.has_applied_renderer {
+                    let mut renderer_changed = false;
+                    if !IS_DEFAULT!(ctx.opts_renderer()) {
+                        let renderer = ctx.opts_renderer().to_string();
+                        renderer_changed = apply_smart_renderer(
+                            &renderer,
+                            &mut ctx.profile.saved_renderer,
+                            &mut ctx.profile.saved_sys_renderer,
+                        );
                     }
+
+                    let mut reso_changed = false;
+                    if !IS_DEFAULT!(ctx.opts_resolution_downscale()) {
+                        let downscale = ctx.opts_resolution_downscale().to_string();
+                        let fps = ctx.opts_resolution_fps().to_string();
+                        reso_changed = apply_resolution_target(
+                            &mut ctx,
+                            &gs,
+                            &downscale,
+                            &fps,
+                        );
+                    }
+
+                    if renderer_changed || reso_changed {
+                        ctx.render.is_restarting_renderer = true;
+                        restart_target_app_inner(&gs);
+                        ctx.render.is_restarting_renderer = false;
+                        ctx.game.game_pids = [0; crate::core::MAX_GAME_PIDS];
+                        ctx.game.game_pid_count = 0;
+                        ctx.pid_retries = 0;
+                    }
+
+                    ctx.render.has_applied_renderer = true;
                 }
-                ctx.pid_retries = 0;
-                for i in 0..ctx.game.game_pid_count {
-                    if IS_TRUE!(ctx.opts_app_priority()) {
-                        set_priority(ctx.game.game_pids[i as usize]);
-                    } else if !IS_FALSE!(ctx.opts_app_priority()) {
-                        let mut val = [0u8; 92];
-                        let _ = get_into("persist.sys.azenithconf.iosched", &mut val);
-                        let val = unsafe {
-                            std::ffi::CStr::from_ptr(val.as_ptr() ).to_string_lossy()
-                        };
-                        if val == "1" {
+
+                if ctx.game.game_pid_count == 0 {
+                    if ctx.current_system_cache.focused_app_str() == &gs {
+                        ctx.game.game_pid_count = get_pids_of(&gs, &mut ctx.game.game_pids, crate::core::MAX_GAME_PIDS as i32);
+                    }
+                    if ctx.game.game_pid_count == 0 {
+                        if ctx.pid_retries < 5 {
+                            ctx.pid_retries += 1;
+                            log_warn!("profile", "game pkg={} not spawned yet retry={}/5",
+                                ctx.game.active_app_name.as_deref().unwrap_or(&gs), ctx.pid_retries);
+                            thread::sleep(Duration::from_millis(200));
+                            need_loop = true;
+                            continue;
+                        } else {
+                            log_error!("profile", "no pid found pkg={} after retries=5 action=drop",
+                                ctx.game.active_app_name.as_deref().unwrap_or(&gs));
+                            ctx.game.gamestart = None;
+                            ctx.game.active_app_name = None;
+                            ctx.pid_retries = 0;
+                            ctx.need_profile_checkup = true;
+                            update_game_info(&ctx);
+                            continue;
+                        }
+                    }
+                    ctx.pid_retries = 0;
+                    update_game_info(&ctx);
+                    for i in 0..ctx.game.game_pid_count {
+                        if IS_TRUE!(ctx.opts_app_priority()) {
                             set_priority(ctx.game.game_pids[i as usize]);
+                        } else if !IS_FALSE!(ctx.opts_app_priority()) {
+                            let mut val = [0u8; 92];
+                            let _ = get_into("persist.sys.azenithconf.iosched", &mut val);
+                            let val = unsafe {
+                                std::ffi::CStr::from_ptr(val.as_ptr() ).to_string_lossy()
+                            };
+                            if val == "1" {
+                                set_priority(ctx.game.game_pids[i as usize]);
+                            }
                         }
                     }
                 }
+                apply_performance_profile_inner(&mut ctx);
+            } else if ctx.is_initialize_complete && get_low_power_state(&ctx.current_system_cache) {
+                apply_eco_profile(&mut ctx);
+            } else {
+                apply_balanced_profile(&mut ctx);
             }
-            apply_performance_profile_inner(&mut ctx);
-        } else if ctx.is_initialize_complete && get_low_power_state(&ctx.current_system_cache) {
-            apply_eco_profile(&mut ctx);
-        } else {
-            apply_balanced_profile(&mut ctx);
         }
     }
 

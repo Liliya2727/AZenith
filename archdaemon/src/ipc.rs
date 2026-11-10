@@ -299,6 +299,8 @@ fn process_api_file_event(ctx: &mut DaemonContext, wd: i32, mask: u32, rec: &mut
                             ctx.game.game_pids = [0; super::core::MAX_GAME_PIDS];
                             ctx.game.game_pid_count = 0;
                             ctx.need_profile_checkup = true;
+                        } else {
+                            ctx.need_profile_checkup = true;
                         }
                     }
                 }
@@ -394,6 +396,11 @@ fn process_event(
                                 ctx.game.active_app_name = None;
                                 ctx.game.game_pids = [0; super::core::MAX_GAME_PIDS];
                                 ctx.game.game_pid_count = 0;
+                                ctx.need_profile_checkup = true;
+                            } else {
+                                // Manual mode: keep current game state but
+                                // re-enable game detection so gameinfo stays
+                                // current and sidepanel can show for new games.
                                 ctx.need_profile_checkup = true;
                             }
                         }

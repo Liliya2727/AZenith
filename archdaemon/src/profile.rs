@@ -57,9 +57,19 @@ pub fn profile_mode_name(mode: ProfileMode) -> &'static str {
 // ---------------------------------------------------------------------------
 // run_profiler (takes ctx for gamestart/pids access)
 // ---------------------------------------------------------------------------
-pub fn run_profiler(profile: i32, ctx: &DaemonContext) {
+pub fn run_profiler(profile: i32, _ctx: &DaemonContext) {
     crate::module::is_kanged();
 
+    let _ = write2file(PROFILE_MODE, false, false, &format!("{profile}\n"));
+    let _ = write2file(PROFILE_MODE_APP, false, false, &format!("{profile}\n"));
+
+    let _ = systemv(&format!("sys.azenith-profilesettings {profile}"));
+}
+
+// ---------------------------------------------------------------------------
+// update_game_info (writes gameinfo independent of profile / manual mode)
+// ---------------------------------------------------------------------------
+pub fn update_game_info(ctx: &DaemonContext) {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
@@ -72,12 +82,12 @@ pub fn run_profiler(profile: i32, ctx: &DaemonContext) {
             let mut buf = [0u8; 16];
             let fmt = CString::new("%H:%M:%S").unwrap();
             libc::strftime(
-                buf.as_mut_ptr() ,
+                buf.as_mut_ptr(),
                 buf.len(),
                 fmt.as_ptr(),
                 &mut tm as *mut libc::tm,
             );
-            std::ffi::CStr::from_ptr(buf.as_ptr() )
+            std::ffi::CStr::from_ptr(buf.as_ptr())
                 .to_string_lossy()
                 .into_owned()
         }
@@ -87,18 +97,13 @@ pub fn run_profiler(profile: i32, ctx: &DaemonContext) {
     let main_pid = if ctx.game.game_pid_count > 0 { ctx.game.game_pids[0] } else { 0 };
     let uid = uidof(main_pid);
 
-    if profile == 1 {
+    if !gamestart.is_empty() {
         let _ = write2file(GAME_INFO, false, false, &format!("{} {} {}\nTime: {}\n", gamestart, main_pid, uid, time_str));
         let _ = write2file(GAME_INFO_APP, false, false, &format!("{} {} {}\nTime: {}\n", gamestart, main_pid, uid, time_str));
     } else {
         let _ = write2file(GAME_INFO, false, false, &format!("NULL 0 0\nTime: {}\n", time_str));
         let _ = write2file(GAME_INFO_APP, false, false, &format!("NULL 0 0\nTime: {}\n", time_str));
     }
-
-    let _ = write2file(PROFILE_MODE, false, false, &format!("{profile}\n"));
-    let _ = write2file(PROFILE_MODE_APP, false, false, &format!("{profile}\n"));
-
-    let _ = systemv(&format!("sys.azenith-profilesettings {profile}"));
 }
 
 // ---------------------------------------------------------------------------
