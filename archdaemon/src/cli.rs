@@ -354,7 +354,10 @@ pub fn print_bypass_path_list() {
 // require_daemon_running
 // ---------------------------------------------------------------------------
 pub fn require_daemon_running() -> bool {
-    if !check_running_state() {
+    // check_running_state() returns true when it can acquire the lock,
+    // i.e. when no daemon holds it (daemon not running). It returns false
+    // when the daemon holds the lock (daemon running).
+    if check_running_state() {
         eprintln!("\u{1b}[31mERROR:\u{1b}[0m AZenith daemon is not running.\nRun: sys.azenith-service --run");
         return false;
     }
