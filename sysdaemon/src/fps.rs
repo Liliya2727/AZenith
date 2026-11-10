@@ -1042,6 +1042,9 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
     let mut last_flag_check = Instant::now();
 
     loop {
+        let iter_t = Instant::now();
+        let mut scan_ms = 0u128;
+        let mut reattach_ms = 0u128;
         if !active() {
             info!("gate closed, stopping the fps source");
             return true;
@@ -1065,12 +1068,15 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
             if changed || last_scan.elapsed() >= uprobe::TARGET_REFRESH {
                 last_scan = Instant::now();
                 focused = now_focused;
+                let scan_t = Instant::now();
                 let pids = match &focused {
                     Some((package, uid, pid)) => uprobe::target_pids(package, *uid, *pid),
                     None => Vec::new(),
                 };
+                scan_ms = scan_t.elapsed().as_millis();
 
                 if changed || pids != targets {
+                    let reattach_t = Instant::now();
                     probe.detach();
                     // Records still queued belong to the process that just went away.
                     probe.drain(|_, _| {});
@@ -1104,10 +1110,12 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
                             }
                         }
                     }
+                    reattach_ms = reattach_t.elapsed().as_millis();
                 }
             }
         }
 
+        let drain_t = Instant::now();
         let mut seen = false;
         probe.drain(|ktime, key| {
             seen = true;
@@ -1115,6 +1123,7 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
                 frametime.add_interval_us(us);
             }
         });
+        let drain_ms = drain_t.elapsed().as_millis();
 
         if seen && !healthy {
             healthy = true;
@@ -1124,12 +1133,21 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
         let elapsed = window.elapsed();
         if elapsed >= PUBLISH_INTERVAL {
             let fps_frames = tracked.close_window();
+            let pub_t = Instant::now();
             if healthy && active() {
                 let fps = (fps_frames as f32 / elapsed.as_secs_f32()).round() as i64;
                 let _ = publish(fps);
                 frametime.publish_source("uprobe");
             }
+            let pub_ms = pub_t.elapsed().as_millis();
+            if pub_ms > 200 {
+                warn!("uprobe slow publish={pub_ms}ms");
+            }
             window = Instant::now();
+        }
+        let iter_ms = iter_t.elapsed().as_millis();
+        if iter_ms > 300 {
+            warn!("uprobe slow iter={iter_ms}ms scan={scan_ms}ms reattach={reattach_ms}ms drain={drain_ms}ms");
         }
 
         if !healthy
