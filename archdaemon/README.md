@@ -321,10 +321,15 @@ inotify), the daemon writes `API/record_state` (`idle` / `recording
 | `frameratedata/<pkg>_<yyyyMMdd_HHmmss>.json` | Session summary |
 
 CSV columns (order fixed):
-`t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl`.
+`t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_m,cpu_freq_b,cpu_load,ma,mv,bat_lvl`.
 JSON summaries are version 3; `temp` holds `cpu_max` plus battery
 `bat_start` / `bat_end` / `bat_delta` / `bat_min` / `bat_max` (null when no
 valid battery reading).
+
+* `cpu_freq_l` / `cpu_freq_m` / `cpu_freq_b` are the current
+  `scaling_cur_freq` of the lowest / middle / highest cpufreq policy in kHz.
+  `cpu_freq_m` is `-1` on dual-cluster SoCs; SoCs with more than three
+  policies still record only one middle cluster.
 
 * `fps` from `API/current_fps` (`<fps> <epoch_ms>`, stale > 3 s → `-1`);
   `fps.avg/min` stay per-second-FPS based.

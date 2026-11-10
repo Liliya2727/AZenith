@@ -28,6 +28,7 @@ pub fn sample_once(sess: &mut Session, t: i64) {
     row.gpu_load = sess.gpu_load_src.as_ref().and_then(|s| s.read()).unwrap_or(-1);
 
     row.cpu_freq_l = sess.cpu_freq_l.as_ref().and_then(read_int).filter(|v| *v > 0).unwrap_or(-1);
+    row.cpu_freq_m = sess.cpu_freq_m.as_ref().and_then(read_int).filter(|v| *v > 0).unwrap_or(-1);
     row.cpu_freq_b = sess.cpu_freq_b.as_ref().and_then(read_int).filter(|v| *v > 0).unwrap_or(-1);
     row.cpu_load = cpu_load_delta(&mut sess.prev_stat).unwrap_or(-1);
 
@@ -235,6 +236,7 @@ pub struct Nodes {
     pub gpu_freq_src: Option<GpuFreqSrc>,
     pub gpu_load_src: Option<GpuLoadSrc>,
     pub cpu_freq_l: Option<PathBuf>,
+    pub cpu_freq_m: Option<PathBuf>,
     pub cpu_freq_b: Option<PathBuf>,
 }
 
@@ -242,17 +244,26 @@ pub fn detect_nodes() -> Nodes {
     let (cpu_zones, bat_temps) = thermal_zones();
     let cpu_zone = choose_cpu_zone(&cpu_zones);
     let (gpu_freq_src, gpu_load_src) = detect_gpu_nodes();
-    let policies = detect_cpu_policies();
-    let cpu_freq_l = policies.first().cloned();
-    let cpu_freq_b = policies.last().filter(|_| policies.len() > 1).cloned();
+    let (cpu_freq_l, cpu_freq_m, cpu_freq_b) = pick_freq_paths(detect_cpu_policies());
     Nodes {
         cpu_zone,
         bat_temps,
         gpu_freq_src,
         gpu_load_src,
         cpu_freq_l,
+        cpu_freq_m,
         cpu_freq_b,
     }
+}
+
+/// Map the sorted policy list to CSV columns: lowest → `l`, highest → `b`,
+/// second policy → `m` only when the SoC exposes at least three clusters.
+/// SoCs with more than three policies still record only one middle cluster.
+fn pick_freq_paths(policies: Vec<PathBuf>) -> (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) {
+    let l = policies.first().cloned();
+    let b = policies.last().filter(|_| policies.len() > 1).cloned();
+    let m = if policies.len() > 2 { policies.get(1).cloned() } else { None };
+    (l, m, b)
 }
 
 /// Pick GPU freq/load sources in priority order: MTK GED first (its devfreq
@@ -400,7 +411,7 @@ fn policy_id(p: &Path) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{freq_to_khz, parse_ged_freq_khz, read_int, FreqUnit};
+    use super::{freq_to_khz, parse_ged_freq_khz, pick_freq_paths, read_int, FreqUnit};
     use std::path::PathBuf;
 
     fn temp_path(name: &str) -> PathBuf {
@@ -433,6 +444,26 @@ mod tests {
         assert_eq!(parse_ged_freq_khz("garbage"), None);
         assert_eq!(parse_ged_freq_khz("4 not-a-freq"), None);
         assert_eq!(parse_ged_freq_khz("4"), None);
+    }
+
+    #[test]
+    fn pick_freq_paths_dual_tri_and_single_cluster() {
+        let p = |n: &str| PathBuf::from(format!("/sys/devices/system/cpu/cpufreq/policy{}/scaling_cur_freq", n));
+
+        let (l, m, b) = pick_freq_paths(vec![p("0"), p("4")]);
+        assert_eq!(l, Some(p("0")));
+        assert_eq!(m, None);
+        assert_eq!(b, Some(p("4")));
+
+        let (l, m, b) = pick_freq_paths(vec![p("0"), p("4"), p("7")]);
+        assert_eq!(l, Some(p("0")));
+        assert_eq!(m, Some(p("4")));
+        assert_eq!(b, Some(p("7")));
+
+        let (l, m, b) = pick_freq_paths(vec![p("0")]);
+        assert_eq!(l, Some(p("0")));
+        assert_eq!(m, None);
+        assert_eq!(b, None);
     }
 
     #[test]

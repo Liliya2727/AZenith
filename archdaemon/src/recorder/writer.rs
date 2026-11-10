@@ -237,9 +237,10 @@ fn parse_temp(s: &str) -> i64 {
 pub fn parse_csv_rows(content: &str) -> Vec<Sample> {
     let mut it = content.lines();
     let header = it.next().unwrap_or("");
-    // Parse by header name, not position: recovery must handle the old
-    // 16-column files (with gpu_temp), the newer 15-column ones, and v1 files
-    // without refresh_hz. Missing optional columns read -1.
+    // Parse by header name, not position: recovery must handle the legacy
+    // 16-column files (with gpu_temp), the 15-column ones, the current
+    // 16-column ones (cpu_freq_m), and v1 files without refresh_hz. Missing
+    // optional columns read -1.
     let names: Vec<&str> = header.split(',').map(|s| s.trim()).collect();
     let col = |name: &str| names.iter().position(|n| *n == name);
     let t_i = col("t").unwrap_or(0);
@@ -250,6 +251,7 @@ pub fn parse_csv_rows(content: &str) -> Vec<Sample> {
     let gpu_freq_i = col("gpu_freq");
     let gpu_load_i = col("gpu_load");
     let cpu_freq_l_i = col("cpu_freq_l");
+    let cpu_freq_m_i = col("cpu_freq_m");
     let cpu_freq_b_i = col("cpu_freq_b");
     let cpu_load_i = col("cpu_load");
     let ma_i = col("ma");
@@ -276,6 +278,7 @@ pub fn parse_csv_rows(content: &str) -> Vec<Sample> {
             gpu_freq: get_opt(gpu_freq_i),
             gpu_load: get_opt(gpu_load_i),
             cpu_freq_l: get_opt(cpu_freq_l_i),
+            cpu_freq_m: get_opt(cpu_freq_m_i),
             cpu_freq_b: get_opt(cpu_freq_b_i),
             cpu_load: get_opt(cpu_load_i),
             ma: get_opt(ma_i),
@@ -304,7 +307,7 @@ mod tests {
     use super::*;
 
     fn sample(fps: i64, cpu: i64, ma: i64, mv: i64) -> Sample {
-        Sample { t: 0, fps, refresh_hz: 120, ft_avg_tenths: -1, ft_max_tenths: -1, cpu_temp: cpu, bat_temp: 400, gpu_freq: -1, gpu_load: -1, cpu_freq_l: 2_000_000, cpu_freq_b: 2_500_000, cpu_load: 50, ma, mv, bat_lvl: 50 }
+        Sample { t: 0, fps, refresh_hz: 120, ft_avg_tenths: -1, ft_max_tenths: -1, cpu_temp: cpu, bat_temp: 400, gpu_freq: -1, gpu_load: -1, cpu_freq_l: 2_000_000, cpu_freq_m: 2_200_000, cpu_freq_b: 2_500_000, cpu_load: 50, ma, mv, bat_lvl: 50 }
     }
 
     fn with_bat(mut s: Sample, bat: i64) -> Sample {
@@ -320,18 +323,18 @@ mod tests {
         s.ft_max_tenths = 335; // 33.5 ms
         let line = s.to_csv();
         let cols: Vec<&str> = line.split(',').collect();
-        assert_eq!(cols.len(), 15);
+        assert_eq!(cols.len(), 16);
         assert_eq!(cols[3], "16.7");
         assert_eq!(cols[4], "33.5");
         // Order preserved: t,fps,refresh_hz,ft_avg,ft_max,...
         assert_eq!(s.to_csv().split(',').take(5).collect::<Vec<_>>(),
             vec!["7", "120", "120", "16.7", "33.5"]);
-        // Overflow max renders as >=500.0 and keeps 15 columns.
+        // Overflow max renders as >=500.0 and keeps 16 columns.
         let mut o = sample(60, 500, 1000, 4000);
         o.ft_max_tenths = frametime::FT_OVERFLOW;
         let ol = o.to_csv();
         assert!(ol.split(',').nth(4).unwrap() == ">=500.0", "{}", ol);
-        assert_eq!(ol.split(',').count(), 15);
+        assert_eq!(ol.split(',').count(), 16);
         // Missing values stay -1.
         let m = sample(60, 500, 1000, 4000).to_csv();
         let mc: Vec<&str> = m.split(',').collect();
@@ -503,22 +506,23 @@ mod tests {
 
     #[test]
     fn csv_header_has_no_gpu_temp() {
-        assert_eq!(crate::recorder::SESSION_CSV_HEADER.split(',').count(), 15);
+        assert_eq!(crate::recorder::SESSION_CSV_HEADER.split(',').count(), 16);
         assert!(!crate::recorder::SESSION_CSV_HEADER.contains("gpu_temp"));
         assert_eq!(
             crate::recorder::SESSION_CSV_HEADER,
-            "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl"
+            "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_m,cpu_freq_b,cpu_load,ma,mv,bat_lvl"
         );
         let line = sample(60, 500, 1000, 4000).to_csv();
         let cols: Vec<&str> = line.split(',').collect();
-        assert_eq!(cols.len(), 15);
+        assert_eq!(cols.len(), 16);
         assert_eq!(cols[5], "50.0"); // cpu_temp
         assert_eq!(cols[6], "40.0"); // bat_temp
         assert_eq!(cols[7], "-1"); // gpu_freq stays, GPU temp is gone
+        assert_eq!(cols[10], "2200000"); // cpu_freq_m
     }
 
     #[test]
-    fn recovery_parses_old_16_column_csv() {
+    fn recovery_parses_legacy_16_column_csv_with_gpu_temp() {
         let csv = "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,gpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl\n0,60,120,-1,-1,60.0,55.0,43.0,100000,50,2000000,2500000,50,1000,4000,50\n1,60,120,-1,-1,61.0,56.0,46.0,100000,50,2000000,2500000,50,1000,4000,50";
         let back = parse_csv_rows(csv);
         assert_eq!(back.len(), 2);
@@ -529,13 +533,24 @@ mod tests {
     }
 
     #[test]
-    fn recovery_parses_new_15_column_csv() {
+    fn recovery_parses_legacy_15_column_csv() {
         let csv = "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl\n0,60,120,-1,-1,60.0,43.0,100000,50,2000000,2500000,50,1000,4000,50\n1,60,120,-1,-1,61.0,46.0,100000,50,2000000,2500000,50,1000,4000,50";
         let back = parse_csv_rows(csv);
         assert_eq!(back.len(), 2);
         assert_eq!(back[0].cpu_temp, 600);
         assert_eq!(back[0].bat_temp, 430);
+        assert_eq!(back[0].cpu_freq_m, -1);
         assert_eq!(back[1].bat_temp, 460);
+    }
+
+    #[test]
+    fn recovery_parses_16_column_csv_with_mid_freq() {
+        let csv = "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_m,cpu_freq_b,cpu_load,ma,mv,bat_lvl\n0,60,120,-1,-1,60.0,43.0,100000,50,2000000,2200000,2500000,50,1000,4000,50";
+        let back = parse_csv_rows(csv);
+        assert_eq!(back.len(), 1);
+        assert_eq!(back[0].cpu_freq_l, 2_000_000);
+        assert_eq!(back[0].cpu_freq_m, 2_200_000);
+        assert_eq!(back[0].cpu_freq_b, 2_500_000);
     }
 
     #[test]

@@ -20,6 +20,7 @@
 //!            is in Hz → /1000)
 //!   gpu_load percent 0-100 (devfreq gpu_load, else load/10; -1 if absent)
 //!   cpu_freq_l kHz (lowest cpufreq policy; scaling_cur_freq, actual current)
+//!   cpu_freq_m kHz (middle cpufreq policy on 3+ cluster SoCs; -1 otherwise)
 //!   cpu_freq_b kHz (highest cpufreq policy; actual current)
 //!   cpu_load percent 0-100 (from /proc/stat deltas)
 //!   ma       milliamps (current_now uA / 1000, signed)
@@ -61,7 +62,7 @@ pub const CURRENT_FPS_PATH: &str = "/data/adb/.config/AZenith/API/current_fps";
 pub const CURRENT_FRAMETIME_PATH: &str = "/data/adb/.config/AZenith/API/current_frametime";
 
 pub const SESSION_CSV_HEADER: &str =
-    "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_b,cpu_load,ma,mv,bat_lvl";
+    "t,fps,refresh_hz,ft_avg,ft_max,cpu_temp,bat_temp,gpu_freq,gpu_load,cpu_freq_l,cpu_freq_m,cpu_freq_b,cpu_load,ma,mv,bat_lvl";
 
 /// Minimum session length — shorter sessions are discarded (no JSON).
 pub const MIN_SESSION_SECS: u64 = 30;
@@ -116,6 +117,7 @@ pub struct Sample {
     pub gpu_freq: i64,
     pub gpu_load: i64,
     pub cpu_freq_l: i64,
+    pub cpu_freq_m: i64,
     pub cpu_freq_b: i64,
     pub cpu_load: i64,
     pub ma: i64,
@@ -136,6 +138,7 @@ impl Sample {
             gpu_freq: -1,
             gpu_load: -1,
             cpu_freq_l: -1,
+            cpu_freq_m: -1,
             cpu_freq_b: -1,
             cpu_load: -1,
             ma: -1,
@@ -148,12 +151,12 @@ impl Sample {
     /// as a decimal ("103.2"); -1 stays the missing-value sentinel.
     pub fn to_csv(&self) -> String {
         format!(
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             self.t, self.fps, self.refresh_hz,
             frametime::ft_avg_csv(self.ft_avg_tenths),
             frametime::ft_max_csv(self.ft_max_tenths),
             temp_csv(self.cpu_temp), temp_csv(self.bat_temp),
-            self.gpu_freq, self.gpu_load, self.cpu_freq_l, self.cpu_freq_b,
+            self.gpu_freq, self.gpu_load, self.cpu_freq_l, self.cpu_freq_m, self.cpu_freq_b,
             self.cpu_load, self.ma, self.mv, self.bat_lvl
         )
     }
@@ -189,6 +192,7 @@ pub struct Session {
     gpu_freq_src: Option<sampler::GpuFreqSrc>,
     gpu_load_src: Option<sampler::GpuLoadSrc>,
     cpu_freq_l: Option<PathBuf>,
+    cpu_freq_m: Option<PathBuf>,
     cpu_freq_b: Option<PathBuf>,
     prev_stat: Option<(u64, u64)>,
     /// Last `current_frametime` snapshot; the next tick diffs against it.
@@ -359,6 +363,7 @@ impl Recorder {
             gpu_freq_src: nodes.gpu_freq_src,
             gpu_load_src: nodes.gpu_load_src,
             cpu_freq_l: nodes.cpu_freq_l,
+            cpu_freq_m: nodes.cpu_freq_m,
             cpu_freq_b: nodes.cpu_freq_b,
             prev_stat: None,
             prev_frametime: None,
