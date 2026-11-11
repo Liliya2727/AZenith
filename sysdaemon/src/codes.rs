@@ -79,8 +79,29 @@ fn prop(k: &str) -> String {
 // zx.binder.MainKt, the older prebuilt (encore) uses com.rem01gaming.binderresolver.MainKt.
 const ENTRY_CLASSES: [&str; 2] = ["zx.binder.MainKt", "com.rem01gaming.binderresolver.MainKt"];
 
+// app_process/ART aborts during JNI_CreateJavaVM ("BOOTCLASSPATH and
+// DEX2OATBOOTCLASSPATH must not be empty", tombstone-verified) when a
+// daemon started at boot does not inherit those variables. Prefer the
+// inherited daemon environment; fall back to the stock Android 14-16
+// list seen on this device so spawns work regardless of launch context.
+const DEFAULT_BOOTCLASSPATH: &str = "/apex/com.android.art/javalib/core-oj.jar:/apex/com.android.art/javalib/core-libart.jar:/apex/com.android.art/javalib/okhttp.jar:/apex/com.android.art/javalib/bouncycastle.jar:/apex/com.android.art/javalib/apache-xml.jar:/system/framework/framework.jar:/system/framework/framework-graphics.jar:/system/framework/framework-location.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-ondeviceintelligence-platform.jar:/system/framework/mediatek-common.jar:/apex/com.android.i18n/javalib/core-icu4j.jar:/apex/com.android.adservices/javalib/framework-adservices.jar:/apex/com.android.adservices/javalib/framework-sdksandbox.jar:/apex/com.android.appsearch/javalib/framework-appsearch.jar:/apex/com.android.bt/javalib/framework-bluetooth.jar:/apex/com.android.configinfrastructure/javalib/framework-configinfrastructure.jar:/apex/com.android.conscrypt/javalib/conscrypt.jar:/apex/com.android.crashrecovery/javalib/framework-crashrecovery.jar:/apex/com.android.devicelock/javalib/framework-devicelock.jar:/apex/com.android.healthfitness/javalib/framework-healthfitness.jar:/apex/com.android.ipsec/javalib/android.net.ipsec.ike.jar:/apex/com.android.media/javalib/updatable-media.jar:/apex/com.android.mediaprovider/javalib/framework-mediaprovider.jar:/apex/com.android.mediaprovider/javalib/framework-pdf.jar:/apex/com.android.mediaprovider/javalib/framework-pdf-v.jar:/apex/com.android.mediaprovider/javalib/framework-photopicker.jar:/apex/com.android.nfcservices/javalib/framework-nfc.jar:/apex/com.android.ondevicepersonalization/javalib/framework-ondevicepersonalization.jar:/apex/com.android.os.statsd/javalib/framework-statsd.jar:/apex/com.android.permission/javalib/framework-permission.jar:/apex/com.android.permission/javalib/framework-permission-s.jar:/apex/com.android.profiling/javalib/framework-profiling.jar:/apex/com.android.scheduling/javalib/framework-scheduling.jar:/apex/com.android.sdkext/javalib/framework-sdkextensions.jar:/apex/com.android.telephonycore/javalib/framework-telephony.jar:/apex/com.android.tethering/javalib/framework-connectivity.jar:/apex/com.android.tethering/javalib/framework-connectivity-b.jar:/apex/com.android.tethering/javalib/framework-connectivity-t.jar:/apex/com.android.tethering/javalib/framework-tethering.jar:/apex/com.android.uwb/javalib/framework-ranging.jar:/apex/com.android.uwb/javalib/framework-uwb.jar:/apex/com.android.virt/javalib/framework-virtualization.jar:/apex/com.android.wifi/javalib/framework-wifi.jar";
+const DEFAULT_DEX2OATBOOTCLASSPATH: &str = "/apex/com.android.art/javalib/core-oj.jar:/apex/com.android.art/javalib/core-libart.jar:/apex/com.android.art/javalib/okhttp.jar:/apex/com.android.art/javalib/bouncycastle.jar:/apex/com.android.art/javalib/apache-xml.jar:/system/framework/framework.jar:/system/framework/framework-graphics.jar:/system/framework/framework-location.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-ondeviceintelligence-platform.jar:/system/framework/mediatek-common.jar:/apex/com.android.i18n/javalib/core-icu4j.jar";
+
+/// Set BOOTCLASSPATH/DEX2OATBOOTCLASSPATH for an app_process child,
+/// keeping the inherited value when the daemon already has one.
+pub(crate) fn apply_boot_cp_env(cmd: &mut Command) {
+    if std::env::var("BOOTCLASSPATH").map(|v| v.is_empty()).unwrap_or(true) {
+        cmd.env("BOOTCLASSPATH", DEFAULT_BOOTCLASSPATH);
+    }
+    if std::env::var("DEX2OATBOOTCLASSPATH").map(|v| v.is_empty()).unwrap_or(true) {
+        cmd.env("DEX2OATBOOTCLASSPATH", DEFAULT_DEX2OATBOOTCLASSPATH);
+    }
+}
+
 fn run_resolver(apk: &str, entry: &str, queries: &[&str]) -> String {
-    let Ok(mut ch) = Command::new("/system/bin/app_process")
+    let mut cmd = Command::new("/system/bin/app_process");
+    apply_boot_cp_env(&mut cmd);
+    let Ok(mut ch) = cmd
         .env_remove("LD_LIBRARY_PATH")
         .env_remove("LD_PRELOAD")
         .env("ANDROID_ROOT", "/system").env("ANDROID_DATA", "/data")

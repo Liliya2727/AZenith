@@ -233,10 +233,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         private const val DAEMON_GAMEINFO_PATH = "/data/adb/.config/AZenith/API/gameinfo"
         private const val APP_GAMEINFO_PATH = "/data/data/zx.azenith/API/gameinfo"
         private const val DAEMON_MODES_PATH = "/data/adb/.config/AZenith/API/current_modes"
+        private const val DAEMON_RECORD_CMD_PATH = "/data/adb/.config/AZenith/API/record_cmd"
+        private const val DAEMON_RECORD_STATE_PATH = "/data/adb/.config/AZenith/API/record_state"
+        private const val FRAMERATEDATA_DIR = "/data/adb/.config/AZenith/frameratedata"
         private const val AI_PROP = "persist.sys.azenithconf.AIenabled"
         private const val LITE_PROP = "persist.sys.azenithconf.litemode"
         private const val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
         private const val PREF_QUICK_APPS = "gamespace_sidepanel_quick_apps"
+        const val PREF_SIDEPANEL_ENABLED = "gamespace_sidepanel_enabled"
 
         const val PROP_FORCE_SIDEPANEL = "persist.sys.azenith.force_sidepanel"
         const val PROP_FORCE_SIDEPANEL_DEBUG = "debug.azenith.force_sidepanel"
@@ -257,11 +261,18 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             return p2 == "1" || p2.equals("true", ignoreCase = true)
         }
 
+        /** Experimental master gate for the overlay. Default OFF: no source may show it. */
+        fun isSidepanelEnabled(context: Context): Boolean =
+            context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                .getBoolean(PREF_SIDEPANEL_ENABLED, false)
+
         @Volatile
         var isServiceActive = false
             private set
 
         fun show(context: Context, packageName: String? = null, appLabel: String? = null) {
+            // Master gate: when disabled (default), only the force check may show it.
+            if (!isSidepanelEnabled(context) && !isForceSidepanelEnabled()) return
             try {
                 if (!packageName.isNullOrBlank()) {
                     registerAppOpenedFromAzenith(packageName)
@@ -494,6 +505,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         panelState.onToggleAutoModeRequest = { enableAuto ->
             applyAutoModeToggle(enableAuto)
         }
+        panelState.onToggleRecord = { onMonitorTap() }
         panelState.onSelectProfileRequest = { profileCode ->
             applyDaemonProfile(profileCode)
         }
@@ -521,6 +533,11 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         startForegroundNotification()
         when (action) {
             ACTION_SHOW -> {
+                if (!isSidepanelEnabled(this) && !isForceSidepanelEnabled()) {
+                    isHandleVisible = false
+                    detachOverlay()
+                    return START_STICKY
+                }
                 val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME)?.takeIf { it.isNotBlank() && it != packageName }
                 val label = intent?.getStringExtra(EXTRA_APP_LABEL)
                 sideSetting = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
@@ -605,6 +622,11 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 stopServiceIfIdle()
             }
             ACTION_OPEN_FLOATING_APP -> {
+                if (!isSidepanelEnabled(this) && !isForceSidepanelEnabled()) {
+                    isHandleVisible = false
+                    detachOverlay()
+                    return START_STICKY
+                }
                 val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME)
                 if (!pkg.isNullOrBlank()) {
                     launchExternalApp(pkg)
@@ -1730,15 +1752,20 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
 
                     if (!focusedPkg.isNullOrBlank()) {
-                        val isHostedFloatingApp = floatingAppManager?.isPackageHosted(focusedPkg) == true ||
-                            floatingAppManager?.sessions?.any { it.packageName == focusedPkg } == true
-                        val isHomeLauncher = isLauncherPackage(focusedPkg)
+                        // Master gate: disabled (default) blocks auto-show,
+                        // except when the force check explicitly allows it.
                         val forceSidepanel = isForceSidepanelEnabled()
+                        val sidepanelEnabled = prefs.getBoolean(PREF_SIDEPANEL_ENABLED, false) || forceSidepanel
+                        val isHostedFloatingApp = sidepanelEnabled &&
+                            (floatingAppManager?.isPackageHosted(focusedPkg) == true ||
+                                floatingAppManager?.sessions?.any { it.packageName == focusedPkg } == true)
+                        val isHomeLauncher = isLauncherPackage(focusedPkg)
                         val isConfiguredGame = focusedPkg != packageName &&
                             !isHomeLauncher &&
                             (isConfiguredAzGame(focusedPkg, rootGranted) || appsOpenedFromAzenith.contains(focusedPkg) || (inLaunchGrace && focusedPkg == pendingLaunchPkg))
 
-                        val shouldShowForForeground = isConfiguredGame || (forceSidepanel && !isHomeLauncher && focusedPkg != packageName)
+                        val shouldShowForForeground = sidepanelEnabled &&
+                            (isConfiguredGame || (forceSidepanel && !isHomeLauncher && focusedPkg != packageName))
 
                         if (screenAwake && (isHostedFloatingApp || hasFloatingWindows)) {
                             withContext(Dispatchers.Main) {
@@ -2043,6 +2070,46 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    private var onRecordLastTapMs: Long = 0L
+
+    private fun onMonitorTap() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - onRecordLastTapMs < 500L) return
+        onRecordLastTapMs = now
+        serviceScope.launch(Dispatchers.IO) {
+            val rootGranted = checkRootGranted()
+            val stateText = telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted)?.trim().orEmpty()
+            val cmd = if (stateText.startsWith("recording")) "stop\n" else "start\n"
+            if (rootGranted) {
+                RootUtils.writeRootFile(DAEMON_RECORD_CMD_PATH, cmd)
+            }
+        }
+    }
+
+    /**
+     * Outcome check for a just-stopped session: backed by the daemon's files.
+     * - session <30s → CSV discarded, no JSON → "too_short"
+     * - JSON exists → parse incomplete; if ok → "saved", if incomplete → "incomplete"
+     * - JSON missing but CSV exists → "incomplete" (crash path)
+     */
+    private fun readRecordOutcomeFor(sessionBase: String): String {
+        val jsonName = "$sessionBase.json"
+        val csvName = "$sessionBase.csv"
+        val jsonText = telemetryCollector.readFileTextDirectOrSu("$FRAMERATEDATA_DIR/$jsonName", checkRootGranted())
+        if (jsonText != null) {
+            val incomplete = runCatching {
+                val o = JSONObject(jsonText)
+                o.optBoolean("incomplete", false)
+            }.getOrDefault(false)
+            return if (incomplete) "incomplete" else "saved"
+        }
+        val csvExists = runCatching {
+            val f = SuFile("$FRAMERATEDATA_DIR/$csvName")
+            f.exists()
+        }.getOrDefault(false)
+        return if (csvExists) "incomplete" else "too_short"
+    }
+
     private fun startRealTelemetryMonitor() {
         telemetryJob?.cancel()
         telemetryJob = serviceScope.launch(Dispatchers.IO) {
@@ -2083,6 +2150,28 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
                     val liteEnabled = PropertyUtils.get(LITE_PROP, "0") == "1"
                     val bypassActive = PropertyUtils.get(BYPASS_PROP, "0") == "1"
+
+                    // FPS Recorder status (daemon-owned state file, for the overlay).
+                    val recordStateText = telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted)?.trim()
+                    if (!recordStateText.isNullOrEmpty()) {
+                        val previous = panelState.recordState
+                        val isRecording = recordStateText.startsWith("recording")
+                        if (previous.startsWith("recording") && !isRecording) {
+                            val lastFile = previous.removePrefix("recording ").trim()
+                            if (lastFile.isNotEmpty()) {
+                                val base = lastFile.removeSuffix(".csv")
+                                val outcome = readRecordOutcomeFor(base)
+                                panelState.recordFinishedOutcome = outcome
+                                panelState.recordFinishedUntilMs =
+                                    android.os.SystemClock.elapsedRealtime() + 3000L
+                            }
+                        } else if (isRecording) {
+                            panelState.recordFinishedOutcome = null
+                            panelState.recordFinishedUntilMs = 0L
+                        }
+                        panelState.recordState = recordStateText
+                    }
+                    panelState.recordGameActive = isGameInfoFileActive(DAEMON_GAMEINFO_PATH, rootGranted)
 
                     val rawProfileCode = if (daemonRunning) {
                         telemetryCollector.readFileTextDirectOrSu(APP_PROFILE_PATH, false)?.trim()

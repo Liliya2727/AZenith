@@ -202,6 +202,21 @@ class ZXSidePanelStateHolder {
     var isBypassChargingActive by mutableStateOf(false)
     var isRootAvailable by mutableStateOf(false)
 
+    // FPS recorder status, mirrored from the daemon's API/record_state file:
+    // "idle" | "recording <csv file>".
+    var recordState by mutableStateOf("idle")
+    // Daemon-backed game presence for the recorder Disabled state; polled
+    // from API/gameinfo only while the panel is visible (same loop that
+    // mirrors recordState).
+    var recordGameActive by mutableStateOf(false)
+    // Outcome of the most recent finished session, for the Dashboard
+    // "Recording finished" transient: "saved" | "too_short" | "incomplete".
+    var recordFinishedOutcome by mutableStateOf<String?>(null)
+    var recordFinishedUntilMs by mutableLongStateOf(0L)
+    // Toggle callback wired by the Service to the record_cmd writer, used by
+    // the Dashboard FPS recorder button.
+    var onToggleRecord: (() -> Unit)? = null
+
     val currentProfileDisplayName: String
         get() = when (currentProfileCode) {
             "0" -> "Initializing"

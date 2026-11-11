@@ -48,10 +48,11 @@ mkdir -p mainfiles/libs/armeabi-v7a
 mkdir -p mainfiles/system/bin
 
 [ -d "libs" ] && cp -r libs/* mainfiles/libs/ 2>/dev/null
-[ -d "archdaemon/libs" ] && cp -r archdaemon/libs/* mainfiles/libs/ 2>/dev/null
 [ -d "preloadbin/libs" ] && cp -r preloadbin/libs/* mainfiles/libs/ 2>/dev/null
 
 # Ambil binari Rust berdasarkan RUST_PROFILE (debug / release)
+cp archdaemon/target/aarch64-linux-android/$RUST_PROFILE/azenith-service mainfiles/libs/arm64-v8a/sys.azenith-service 2>/dev/null || true
+cp archdaemon/target/armv7-linux-androideabi/$RUST_PROFILE/azenith-service mainfiles/libs/armeabi-v7a/sys.azenith-service 2>/dev/null || true
 cp thermalcore/target/aarch64-linux-android/$RUST_PROFILE/rianixia-thermalcore mainfiles/libs/arm64-v8a/sys.azenith-rianixiathermalcore 2>/dev/null || true
 cp binprofiles/target/aarch64-linux-android/$RUST_PROFILE/azenith-profilesettings mainfiles/libs/arm64-v8a/sys.azenith-profilesettings 2>/dev/null || true
 cp binutils/target/aarch64-linux-android/$RUST_PROFILE/azenith-utilityconf mainfiles/libs/arm64-v8a/sys.azenith-utilityconf 2>/dev/null || true
