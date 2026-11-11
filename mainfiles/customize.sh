@@ -26,6 +26,7 @@ API_LEVEL=$(getprop ro.build.version.sdk)
 readonly APK_COMP="$MODPATH/AZenith.apk"
 readonly TMP_DIR="/data/local/tmp"
 readonly TMP_APK="$TMP_DIR/AZenith_install.apk"
+readonly APP_PKG="zx.azenith"
 
 # Create File
 make_node() {
@@ -55,13 +56,24 @@ install_manager() {
     local app_name="$2"
     local tmp_log="$TMP_DIR/install_log.txt"
 
-    local MAX_TIMEOUT=100
+    local MAX_TIMEOUT=300
 
     (
-        local install_output
-        install_output=$(pm install -r -d --user 0 "$apk_path" 2>&1)    
+        install_output=$(pm install -r -d --user 0 "$apk_path" 2>&1)
         if ! echo "$install_output" | grep -iq "Success"; then
             install_output=$(cmd package install -r -d --user 0 "$apk_path" 2>&1)
+        fi
+        
+        if echo "$install_output" | grep -iqE "UPDATE_INCOMPATIBLE|INCONSISTENT_CERTIFICATES|signatures do not match"; then
+            pm uninstall --user 0 "$APP_PKG" >/dev/null 2>&1 \
+                || cmd package uninstall --user 0 "$APP_PKG" >/dev/null 2>&1
+            install_output=$(pm install -r -d --user 0 "$apk_path" 2>&1)
+            if ! echo "$install_output" | grep -iq "Success"; then
+                install_output=$(cmd package install -r -d --user 0 "$apk_path" 2>&1)
+            fi
+            if echo "$install_output" | grep -iq "Success"; then
+                install_output="Success (reinstalled, signature changed)"
+            fi
         fi
         echo "$install_output" > "$tmp_log"
     ) &
