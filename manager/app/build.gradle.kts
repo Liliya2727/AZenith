@@ -32,10 +32,16 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("azenith.jks")
-            storePassword = System.getenv("KS_PWD")
-            keyAlias = "azenith_key"
-            keyPassword = System.getenv("KS_PWD")
+            val ksFile = file("azenith.jks")
+            val pwd = System.getenv("KS_PWD")
+            val alias = System.getenv("KS_ALIAS")
+            if (ksFile.exists() && ksFile.length() > 0 &&
+                !pwd.isNullOrEmpty() && !alias.isNullOrEmpty()) {
+                storeFile = ksFile
+                storePassword = pwd
+                keyAlias = alias
+                keyPassword = pwd
+            }
         }
     }
     
@@ -57,6 +63,8 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            val rel = signingConfigs.getByName("release")
+            signingConfig = if (rel.storeFile != null) rel else signingConfigs.getByName("debug")
         }
     }
 

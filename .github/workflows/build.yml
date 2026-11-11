@@ -150,6 +150,11 @@ jobs:
           else
             cargo ndk -t arm64-v8a -t armeabi-v7a build --release
           fi
+          
+      - name: Decode keystore
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE }}
+        run: echo "$KEYSTORE" | base64 -d > manager/app/azenith.jks
 
       - name: Build Manager APK
         working-directory: ./manager
@@ -162,6 +167,7 @@ jobs:
           fi
         env:
           KS_PWD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v7.0.1
