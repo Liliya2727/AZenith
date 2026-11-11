@@ -327,7 +327,8 @@ pub fn main_daemon() -> c_int {
             if now - ctx.power.screen_off_timer < 10 {
                 effective_screen_state = 1;
             } else {
-                log_info!("power", "grace period expired action=drop_performance");
+                log_info!("power", "grace period expired action={}",
+                    if is_manual_mode { "released_active_game" } else { "drop_performance" });
                 ctx.power.grace_period_active = false;
                 ctx.power.screen_off_timer = 0;
                 effective_screen_state = 0;
@@ -361,8 +362,9 @@ pub fn main_daemon() -> c_int {
                                 .unwrap_or_default()
                                 .as_secs() as i64;
                             if now - ctx.power.fg_away_timer >= 30 {
-                                log_info!("profile", "foreground grace expired pkg={} action=drop_to_balanced",
-                                    ctx.game.active_app_name.as_deref().unwrap_or(gs));
+                                log_info!("profile", "foreground grace expired pkg={} action={}",
+                                    ctx.game.active_app_name.as_deref().unwrap_or(gs),
+                                    if is_manual_mode { "released_active_game" } else { "drop_to_balanced" });
                                 ctx.power.fg_away_active = false;
                                 ctx.power.fg_away_timer = 0;
                                 ctx.render.manual_sidepanel_shown = false;

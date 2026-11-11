@@ -162,8 +162,10 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 // check has run and the service poll returned its first id.
                 val bannerPid = if (uiState.startupStage == StartupStage.Ready) uiState.servicePid else ""
 
-                val isPerformanceMode = uiState.currentProfileRes == R.string.Profile_Performance || uiState.currentProfileRes == R.string.profile_perflite
-                val showGameCard = isPerformanceMode && !uiState.runningGamePkg.isNullOrEmpty()
+                // The running-game card (with its elapsed time) is driven by
+                // gameinfo only: show it whenever gameinfo reports a running
+                // game, regardless of the current profile or auto/manual mode.
+                val showGameCard = !uiState.runningGamePkg.isNullOrEmpty()
 
                 var retainedPkg by remember { mutableStateOf("") }
                 var retainedStartTime by remember { mutableStateOf("00:00:00") }
