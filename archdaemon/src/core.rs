@@ -322,6 +322,9 @@ pub struct RenderState {
     pub resolution_applied: bool,
     pub used_legacy_fallback: bool,
     pub is_restarting_renderer: bool,
+    /// True once the manual-mode sidepanel has been broadcast for the
+    /// active game; reset whenever the tracked game changes or is dropped.
+    pub manual_sidepanel_shown: bool,
 }
 
 // ---------------------------------------------------------------------------

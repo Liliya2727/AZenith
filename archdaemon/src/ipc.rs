@@ -10,7 +10,7 @@ use crate::core::{
 };
 use crate::log_info;
 use crate::monitor::{read_app_status, reload_gamelist_cache};
-use crate::profile::apply_balanced_profile;
+use crate::profile::{apply_balanced_profile, update_game_info};
 use crate::recorder::{Recorder, RECORD_CMD_PATH};
 use crate::sysprop::set;
 use crate::fileops;
@@ -293,11 +293,13 @@ fn process_api_file_event(ctx: &mut DaemonContext, wd: i32, mask: u32, rec: &mut
                         let n = bytes.len().min(ctx.prev_ai_state.len() - 1);
                         ctx.prev_ai_state[..n].copy_from_slice(&bytes[..n]);
                         ctx.prev_ai_state[n] = 0;
+                        ctx.render.manual_sidepanel_shown = false;
                         if ai_state == "1" {
                             ctx.game.gamestart = None;
                             ctx.game.active_app_name = None;
                             ctx.game.game_pids = [0; super::core::MAX_GAME_PIDS];
                             ctx.game.game_pid_count = 0;
+                            update_game_info(ctx);
                             ctx.need_profile_checkup = true;
                         } else {
                             ctx.need_profile_checkup = true;
@@ -391,11 +393,13 @@ fn process_event(
                             let n = bytes.len().min(ctx.prev_ai_state.len() - 1);
                             ctx.prev_ai_state[..n].copy_from_slice(&bytes[..n]);
                             ctx.prev_ai_state[n] = 0;
+                            ctx.render.manual_sidepanel_shown = false;
                             if ai_state == "1" {
                                 ctx.game.gamestart = None;
                                 ctx.game.active_app_name = None;
                                 ctx.game.game_pids = [0; super::core::MAX_GAME_PIDS];
                                 ctx.game.game_pid_count = 0;
+                                update_game_info(ctx);
                                 ctx.need_profile_checkup = true;
                             } else {
                                 // Manual mode: keep current game state but

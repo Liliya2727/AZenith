@@ -107,6 +107,57 @@ pub fn update_game_info(ctx: &DaemonContext) {
 }
 
 // ---------------------------------------------------------------------------
+// is_manual_mode (mirrors C profiles.c: AIenabled "0" = manual, "1" = auto)
+// ---------------------------------------------------------------------------
+pub fn is_manual_mode(ctx: &DaemonContext) -> bool {
+    ctx.prev_ai_state_str() == "0"
+}
+
+// ---------------------------------------------------------------------------
+// show_sidepanel (mirrors C profiles.c)
+// ---------------------------------------------------------------------------
+/// Broadcasts a dedicated intent so ZenithReceiver can show the sidepanel
+/// overlay for the detected game, without applying a profile or posting a
+/// notification.
+pub fn show_sidepanel(app_label: &str) {
+    let safe_label = crate::util::escape_shell_string(app_label);
+    let _ = systemv(&format!(
+        "su -c \"am broadcast -a zx.azenith.ACTION_SHOW_SIDEPANEL -n zx.azenith/.receiver.ZenithReceiver --es sidepanel_pkg '{safe_label}' >/dev/null 2>&1\""
+    ));
+    log_info!("sidepanel", "broadcast action=show app={}", app_label);
+}
+
+// ---------------------------------------------------------------------------
+// restore_saved_renderer (mirrors C profiles.c)
+// ---------------------------------------------------------------------------
+/// Restores the renderer saved before a per-game override was applied.
+pub fn restore_saved_renderer(ctx: &mut DaemonContext) {
+    if ctx.saved_renderer_str().is_empty() {
+        return;
+    }
+
+    let mut current_now = [0u8; 92];
+    let _ = get_into("debug.hwui.renderer", &mut current_now);
+    let current_now = unsafe {
+        std::ffi::CStr::from_ptr(current_now.as_ptr()).to_string_lossy().into_owned()
+    };
+    let current_now = if current_now.is_empty() { "default".to_string() } else { current_now };
+
+    if current_now != ctx.saved_renderer_str() {
+        log_info!("render", "renderer restored value={}", ctx.saved_renderer_str());
+        if ctx.saved_renderer_str() == "default" {
+            systemv("sys.azenith-utilityconf setrender default");
+            set("persist.sys.azenithconf.renderer", "default");
+        } else {
+            systemv(&format!("sys.azenith-utilityconf setrender {}", ctx.saved_renderer_str()));
+            set("persist.sys.azenithconf.renderer", ctx.saved_sys_renderer_str());
+        }
+    }
+    ctx.profile.saved_renderer = [0; 92];
+    ctx.profile.saved_sys_renderer = [0; 92];
+}
+
+// ---------------------------------------------------------------------------
 // apply_performance_profile_inner
 // ---------------------------------------------------------------------------
 pub fn apply_performance_profile_inner(ctx: &mut DaemonContext) {
@@ -219,27 +270,7 @@ pub fn apply_eco_profile(ctx: &mut DaemonContext) {
     }
     ctx.display.saved_zen_mode = -1;
 
-    if !ctx.saved_renderer_str().is_empty() {
-        let mut current_now = [0u8; 92];
-        let _ = get_into("debug.hwui.renderer", &mut current_now);
-        let current_now = unsafe {
-            std::ffi::CStr::from_ptr(current_now.as_ptr() ).to_string_lossy().into_owned()
-        };
-        let current_now = if current_now.is_empty() { "default".to_string() } else { current_now };
-
-        if current_now != ctx.saved_renderer_str() {
-            log_info!("render", "renderer restored value={}", ctx.saved_renderer_str());
-            if ctx.saved_renderer_str() == "default" {
-                systemv("sys.azenith-utilityconf setrender default");
-                set("persist.sys.azenithconf.renderer", "default");
-            } else {
-                systemv(&format!("sys.azenith-utilityconf setrender {}", ctx.saved_renderer_str()));
-                set("persist.sys.azenithconf.renderer", ctx.saved_sys_renderer_str());
-            }
-        }
-        ctx.profile.saved_renderer = [0; 92];
-        ctx.profile.saved_sys_renderer = [0; 92];
-    }
+    restore_saved_renderer(ctx);
 
     let start = std::time::Instant::now();
     run_profiler(3, ctx);
@@ -282,27 +313,7 @@ pub fn apply_balanced_profile(ctx: &mut DaemonContext) {
     }
     ctx.display.saved_zen_mode = -1;
 
-    if !ctx.saved_renderer_str().is_empty() {
-        let mut current_now = [0u8; 92];
-        let _ = get_into("debug.hwui.renderer", &mut current_now);
-        let current_now = unsafe {
-            std::ffi::CStr::from_ptr(current_now.as_ptr() ).to_string_lossy().into_owned()
-        };
-        let current_now = if current_now.is_empty() { "default".to_string() } else { current_now };
-
-        if current_now != ctx.saved_renderer_str() {
-            log_info!("render", "renderer restored value={}", ctx.saved_renderer_str());
-            if ctx.saved_renderer_str() == "default" {
-                systemv("sys.azenith-utilityconf setrender default");
-                set("persist.sys.azenithconf.renderer", "default");
-            } else {
-                systemv(&format!("sys.azenith-utilityconf setrender {}", ctx.saved_renderer_str()));
-                set("persist.sys.azenithconf.renderer", ctx.saved_sys_renderer_str());
-            }
-        }
-        ctx.profile.saved_renderer = [0; 92];
-        ctx.profile.saved_sys_renderer = [0; 92];
-    }
+    restore_saved_renderer(ctx);
 
     let start = std::time::Instant::now();
     run_profiler(2, ctx);

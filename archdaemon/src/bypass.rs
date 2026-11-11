@@ -4,6 +4,7 @@ use crate::android_ffi::PROP_VALUE_MAX;
 use crate::config::resolution::restore_resolution_target;
 use crate::core::{BypassNode, ProfileMode, DaemonContext};
 use crate::proc::{get_pids_of_at, set_priority};
+use crate::profile::{is_manual_mode, restore_saved_renderer, update_game_info};
 use crate::sysprop::{get_or_default, get_into, set};
 use crate::fileops;
 use crate::{IS_FALSE, IS_TRUE, log_info, log_warn};
@@ -461,7 +462,7 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
         if new_count > 0 {
             log_info!("inotify", "tracking pids count={} game={}", new_count, ctx.game.active_app_name.as_deref().unwrap_or(gamestart.as_str()));
         } else {
-            log_info!("inotify", "game pids updated game={} count={}", ctx.game.active_app_name.as_deref().unwrap_or(gamestart.as_str()), new_count);
+            log_info!("inotify", "game pids cleared game={}", ctx.game.active_app_name.as_deref().unwrap_or(gamestart.as_str()));
         }
 
         ctx.game.game_pid_count = new_count;
@@ -482,16 +483,25 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
         if new_count == 0 {
             let focused = ctx.current_system_cache.focused_app_str();
             if focused == gamestart.as_str() || ctx.render.is_restarting_renderer {
-                log_info!("inotify", "game pids dropped reason=restarting game={}", gamestart);
+                log_info!("inotify", "game pids dropped reason={} game={}",
+                    if ctx.render.is_restarting_renderer { "renderer_restart" } else { "still_focused" }, gamestart);
             } else {
-                log_info!("inotify", "game closed action=exit_performance game={}", gamestart);
+                let manual = is_manual_mode(ctx);
+                log_info!("inotify", "game closed action={} game={}",
+                    if manual { "manual_close" } else { "exit_performance" }, gamestart);
                 restore_resolution_target(ctx, &gamestart);
+                if manual {
+                    restore_saved_renderer(ctx);
+                }
                 ctx.game.gamestart = None;
                 ctx.game.active_app_name = None;
                 ctx.power.fg_away_active = false;
+                ctx.render.manual_sidepanel_shown = false;
                 ctx.power.fg_away_timer = 0;
             }
         }
+
+        update_game_info(ctx);
     }
 }
 
