@@ -158,21 +158,16 @@ pub fn restore_saved_renderer(ctx: &mut DaemonContext) {
 }
 
 // ---------------------------------------------------------------------------
-// apply_performance_profile_inner
+// apply_per_app_overrides
 // ---------------------------------------------------------------------------
-pub fn apply_performance_profile_inner(ctx: &mut DaemonContext) {
-    toast("Applying Performance Profile");
-
-    let prev_mode = ctx.profile.cur_mode;
-    ctx.profile.cur_mode = ProfileMode::PerformanceProfile;
-    ctx.need_profile_checkup = false;
-
-    let app_name = ctx.game.active_app_name.as_deref().unwrap_or(ctx.game.gamestart.as_deref().unwrap_or("unknown"));
-    let pkg = ctx.game.gamestart.as_deref().unwrap_or("unknown");
-    notify("Performance Profile", &format!("Running at {app_name}"), false, 0, None);
-    log_info!("profile", "profile changed from={} to=performance app={} pkg={}",
-        profile_mode_name(prev_mode), app_name, pkg);
-
+/// Applies per-app game options: lite mode, DND on gaming, per-game refresh
+/// rate and game preload. These are game-specific overrides rather than the
+/// profile itself, so they run in BOTH auto and manual mode - per-app options
+/// must not be gated by manual mode. Renderer/resolution/PID priority are
+/// applied separately in the game block.
+pub fn apply_per_app_overrides(ctx: &mut DaemonContext) {
+    // lite mode - must be set before run_profiler() because the profile
+    // settings binary reads this prop while applying a profile.
     if IS_TRUE!(ctx.opts_perf_lite_mode()) {
         set("persist.sys.azenithconf.litemode", "1");
     } else if IS_FALSE!(ctx.opts_perf_lite_mode()) {
@@ -182,6 +177,7 @@ pub fn apply_performance_profile_inner(ctx: &mut DaemonContext) {
         set("persist.sys.azenithconf.litemode", if lite_prop == "1" { "1" } else { "0" });
     }
 
+    // DND on gaming
     if ctx.display.saved_zen_mode < 0 {
         ctx.display.saved_zen_mode = ctx.current_system_cache.zen_mode;
     }
@@ -201,11 +197,7 @@ pub fn apply_performance_profile_inner(ctx: &mut DaemonContext) {
         }
     }
 
-    let start = std::time::Instant::now();
-    run_profiler(1, ctx);
-    let elapsed = start.elapsed().as_secs_f64();
-    log_info!("profile", "profile applied name=performance elapsed={:.4}s", elapsed);
-
+    // per-game refresh rate
     if !IS_DEFAULT!(ctx.opts_refresh_rate()) {
         let rr: i32 = ctx.opts_refresh_rate().parse().unwrap_or(0);
         if ctx.display.saved_refresh_rate < 0 {
@@ -214,6 +206,7 @@ pub fn apply_performance_profile_inner(ctx: &mut DaemonContext) {
         apply_dynamic_refresh_rate(rr);
     }
 
+    // game preload
     let is_preload_active = if !IS_FALSE!(ctx.opts_game_preload()) {
         let preload_active = get_or_default("persist.sys.azenithconf.APreload", "");
         preload_active == "1"
@@ -222,6 +215,7 @@ pub fn apply_performance_profile_inner(ctx: &mut DaemonContext) {
     };
 
     if IS_TRUE!(ctx.opts_game_preload()) || is_preload_active {
+        let app_name = ctx.game.active_app_name.as_deref().unwrap_or(ctx.game.gamestart.as_deref().unwrap_or("unknown"));
         notify("AZenith Preload", &format!("Preloading initiated for: {app_name}"), true, 10000, None);
 
         let package = ctx.game.gamestart.as_deref().unwrap_or("");
@@ -236,6 +230,62 @@ pub fn apply_performance_profile_inner(ctx: &mut DaemonContext) {
             GamePreload(pkg_for_thread.to_str().unwrap_or(""));
         });
     }
+}
+
+// ---------------------------------------------------------------------------
+// restore_per_app_overrides
+// ---------------------------------------------------------------------------
+/// Restores per-app overrides once a game session ends in manual mode (auto
+/// mode restores them through apply_balanced_profile / apply_eco_profile).
+/// Idempotent: every piece of saved state is cleared as it is restored, so
+/// repeated calls are no-ops.
+pub fn restore_per_app_overrides(ctx: &mut DaemonContext) {
+    let had_refresh = ctx.display.saved_refresh_rate > 0;
+    let had_dnd = ctx.dnd_enabled;
+    let had_renderer = !ctx.saved_renderer_str().is_empty();
+
+    if had_refresh {
+        apply_dynamic_refresh_rate(ctx.display.saved_refresh_rate);
+        ctx.display.saved_refresh_rate = -1;
+    }
+
+    if had_dnd {
+        if ctx.display.saved_zen_mode == 0 {
+            systemv("sys.azenith-utilityconf disableDND");
+        }
+        ctx.dnd_enabled = false;
+    }
+    ctx.display.saved_zen_mode = -1;
+
+    restore_saved_renderer(ctx);
+
+    if had_refresh || had_dnd || had_renderer {
+        fileops::remove_file_best_effort(DAEMON_STATE_FILE);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// apply_performance_profile_inner
+// ---------------------------------------------------------------------------
+pub fn apply_performance_profile_inner(ctx: &mut DaemonContext) {
+    toast("Applying Performance Profile");
+
+    let prev_mode = ctx.profile.cur_mode;
+    ctx.profile.cur_mode = ProfileMode::PerformanceProfile;
+    ctx.need_profile_checkup = false;
+
+    let app_name = ctx.game.active_app_name.as_deref().unwrap_or(ctx.game.gamestart.as_deref().unwrap_or("unknown"));
+    let pkg = ctx.game.gamestart.as_deref().unwrap_or("unknown");
+    notify("Performance Profile", &format!("Running at {app_name}"), false, 0, None);
+    log_info!("profile", "profile changed from={} to=performance app={} pkg={}",
+        profile_mode_name(prev_mode), app_name, pkg);
+
+    apply_per_app_overrides(ctx);
+
+    let start = std::time::Instant::now();
+    run_profiler(1, ctx);
+    let elapsed = start.elapsed().as_secs_f64();
+    log_info!("profile", "profile applied name=performance elapsed={:.4}s", elapsed);
 
     save_daemon_state(ctx);
 }

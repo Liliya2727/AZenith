@@ -12,11 +12,12 @@ use crate::ipc::{process_inotify_events, setup_inotify_watchers};
 use crate::{log_debug, log_error, log_fatal, log_info, log_warn};
 use crate::module::{check_module_version, is_kanged, runthermalcore, update_module_description};
 use crate::monitor::{read_app_status, reload_gamelist_cache};
-use crate::config::state::restore_daemon_state;
+use crate::config::state::{restore_daemon_state, save_daemon_state};
 use crate::profile::{
     apply_balanced_profile, apply_eco_profile, apply_performance_profile_inner,
-    get_gamestart, get_low_power_state, get_screenstate, profile_mode_name, restore_saved_renderer,
-    run_profiler, show_sidepanel, update_game_info,
+    apply_per_app_overrides, get_gamestart, get_low_power_state, get_screenstate,
+    profile_mode_name, restore_per_app_overrides, run_profiler, show_sidepanel,
+    update_game_info,
 };
 use crate::proc::{get_pids_of, set_priority, setspid};
 use crate::shell::systemv;
@@ -491,11 +492,19 @@ pub fn main_daemon() -> c_int {
             }
             if !is_manual_mode {
                 apply_performance_profile_inner(&mut ctx);
-            } else if !ctx.render.manual_sidepanel_shown {
-                // Manual mode: detect the game and show the sidepanel directly.
-                // Do not apply a profile and do not post a profile notification.
-                show_sidepanel(ctx.game.active_app_name.as_deref().unwrap_or(gs.as_str()));
-                ctx.render.manual_sidepanel_shown = true;
+            } else {
+                // Manual mode: per-app options (lite mode, DND on gaming,
+                // per-game refresh rate, preload) still apply - only the
+                // profile itself is not auto-applied, so the user's manually
+                // selected profile stays untouched.
+                if !ctx.render.manual_sidepanel_shown {
+                    apply_per_app_overrides(&mut ctx);
+                    save_daemon_state(&ctx);
+                    // Show the sidepanel directly for the detected game: no
+                    // profile application, no profile notification.
+                    show_sidepanel(ctx.game.active_app_name.as_deref().unwrap_or(gs.as_str()));
+                    ctx.render.manual_sidepanel_shown = true;
+                }
             }
         } else if !is_manual_mode && ctx.is_initialize_complete && get_low_power_state(&ctx.current_system_cache) {
             apply_eco_profile(&mut ctx);
@@ -505,10 +514,10 @@ pub fn main_daemon() -> c_int {
             // auto-execute a profile again while manual mode stays on.
             apply_balanced_profile(&mut ctx);
         } else if ctx.game.gamestart.is_none() {
-            // Manual mode idle: never auto-execute a profile. Only make sure
-            // any per-game renderer left behind by a previous session is
-            // restored.
-            restore_saved_renderer(&mut ctx);
+            // Manual mode idle: never auto-execute a profile. Only restore
+            // per-app overrides (refresh rate, DND, renderer) left behind by
+            // the game session so the user's manual state stays clean.
+            restore_per_app_overrides(&mut ctx);
         }
     }
 

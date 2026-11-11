@@ -4,7 +4,7 @@ use crate::android_ffi::PROP_VALUE_MAX;
 use crate::config::resolution::restore_resolution_target;
 use crate::core::{BypassNode, ProfileMode, DaemonContext};
 use crate::proc::{get_pids_of_at, set_priority};
-use crate::profile::{is_manual_mode, restore_saved_renderer, update_game_info};
+use crate::profile::{is_manual_mode, restore_per_app_overrides, update_game_info};
 use crate::sysprop::{get_or_default, get_into, set};
 use crate::fileops;
 use crate::{IS_FALSE, IS_TRUE, log_info, log_warn};
@@ -491,7 +491,10 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
                     if manual { "manual_close" } else { "exit_performance" }, gamestart);
                 restore_resolution_target(ctx, &gamestart);
                 if manual {
-                    restore_saved_renderer(ctx);
+                    // Manual mode has no auto profile switch to clean up, so
+                    // restore the per-app overrides (refresh rate, DND,
+                    // renderer) directly here.
+                    restore_per_app_overrides(ctx);
                 }
                 ctx.game.gamestart = None;
                 ctx.game.active_app_name = None;
