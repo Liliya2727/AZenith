@@ -80,13 +80,21 @@ jobs:
           cp "$APK" sysdaemon/binder_resolver.apk
           ls -l sysdaemon/binder_resolver.apk
 
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
       - name: Compile Daemon
         working-directory: ./archdaemon
         run: |
           if [ "$V_TYPE" == "experimental" ]; then
-            ndk-build NDK_DEBUG=1
+            cargo ndk -t arm64-v8a -t armeabi-v7a build
           else
-            ndk-build
+            cargo ndk -t arm64-v8a -t armeabi-v7a build --release
           fi
 
       - name: Compile Preload Binary
@@ -97,14 +105,6 @@ jobs:
           else
             ndk-build
           fi
-
-      - name: Setup Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android, armv7-linux-androideabi
-
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk
 
       - name: Build AZenith Thermalcore
         working-directory: ./thermalcore

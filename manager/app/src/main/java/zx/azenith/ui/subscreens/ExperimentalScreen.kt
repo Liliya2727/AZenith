@@ -70,6 +70,12 @@ fun ExperimentalScreen(navController: NavController) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     var launcherOn by remember { mutableStateOf(isGameSpaceLauncherEnabled(context)) }
+    var sidepanelOn by remember {
+        mutableStateOf(
+            context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+                .getBoolean("gamespace_sidepanel_enabled", false)
+        )
+    }
     var enteringGameSpace by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -105,6 +111,19 @@ fun ExperimentalScreen(navController: NavController) {
                                     onCheckedChange = { checked ->
                                         launcherOn = checked
                                         setGameSpaceLauncherEnabled(context, checked)
+                                    }
+                                )
+                            },
+                            {
+                                ExpressiveSwitchItem(
+                                    icon = Icons.Rounded.SportsEsports,
+                                    title = "Sidepanel",
+                                    summary = "Show the in-game sidepanel overlay.",
+                                    checked = sidepanelOn,
+                                    onCheckedChange = { checked ->
+                                        sidepanelOn = checked
+                                        context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+                                            .edit().putBoolean("gamespace_sidepanel_enabled", checked).apply()
                                     }
                                 )
                             },
