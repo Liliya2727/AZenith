@@ -63,6 +63,12 @@ macro_rules! ndk {
     };
 }
 
+// Every symbol listed below must be exported by libbinder_ndk on Android 10
+// (API 29 / LIBBINDER_NDK), the oldest release the module supports. A symbol
+// that only exists on newer Android is not just a missing feature: dlsym()
+// fails and the whole monitor aborts, which in turn makes archdaemon time out
+// waiting for java.lock. Add new symbols with that in mind. (AParcel_marshal is
+// API 33, AParcel_getDataSize is API 31, AStatus_getDescription is API 30.)
 ndk! {
     AServiceManager_getService(*const c_char) -> P;
     AIBinder_Class_define(*const c_char, unsafe extern "C" fn(P) -> P,
@@ -74,8 +80,6 @@ ndk! {
     AIBinder_DeathRecipient_new(unsafe extern "C" fn(P)) -> P;
     AIBinder_linkToDeath(P, P, P) -> i32;
     AParcel_delete(P);
-    AParcel_getDataSize(P) -> i32;
-    AParcel_getDataPosition(P) -> i32;
     AParcel_writeStrongBinder(P, P) -> i32;
     AParcel_writeInt32(P, i32) -> i32;
     AParcel_writeString(P, *const c_char) -> i32;
@@ -84,8 +88,8 @@ ndk! {
     AParcel_readString(P, P, unsafe extern "C" fn(P, i32, *mut *mut c_char) -> bool) -> i32;
     AParcel_readStatusHeader(P, *mut P) -> i32;
     AStatus_isOk(P) -> bool;
-    AStatus_getDescription(P) -> *const c_char;
-    AStatus_deleteDescription(*const c_char);
+    AStatus_getExceptionCode(P) -> i32;
+    AStatus_getMessage(P) -> *const c_char;
     AStatus_delete(P);
     ABinderProcess_startThreadPool();
     ABinderProcess_joinThreadPool();
@@ -118,11 +122,13 @@ pub(crate) fn call(b: P, code: u32, fill: impl FnOnce(P)) -> Option<P> {
         let hr = (n.AParcel_readStatusHeader)(o, &mut sp);
         let ok = hr == 0 && !sp.is_null() && (n.AStatus_isOk)(sp);
         if !ok {
-            let desc = if !sp.is_null() { (n.AStatus_getDescription)(sp) } else { null() };
-            let msg = if desc.is_null() { String::new() }
-                      else { format!(" ({})", CStr::from_ptr(desc).to_string_lossy()) };
-            error!("reply code={code} not OK (readStatusHeader={hr}){msg}");
-            if !desc.is_null() { (n.AStatus_deleteDescription)(desc); }
+            // AStatus_getDescription/deleteDescription only exists from Android 11
+            // (LIBBINDER_NDK30); Android 10 has only the exception code and message.
+            let ec = if sp.is_null() { 0 } else { (n.AStatus_getExceptionCode)(sp) };
+            let msg_ptr = if sp.is_null() { null() } else { (n.AStatus_getMessage)(sp) };
+            let msg = if msg_ptr.is_null() { String::new() }
+                      else { format!(" ({})", CStr::from_ptr(msg_ptr).to_string_lossy()) };
+            error!("reply code={code} not OK (readStatusHeader={hr}, exception={ec}){msg}");
         }
         if !sp.is_null() { (n.AStatus_delete)(sp); }
         if ok { Some(o) } else { (n.AParcel_delete)(o); None }
@@ -139,23 +145,25 @@ pub(crate) fn call_i32(b: P, code: u32) -> Option<i32> {
 
 /// The bytes of the reply payload that are left after the status header.
 ///
-/// `AParcel_marshal` cannot be used on a received parcel (it returns ENOSYS),
-/// so the payload is read word by word. A word is just four bytes, whatever
-/// AIDL type it belongs to: the UTF-16 text of a string, an int, a binder
-/// handle. Reassembling them gives the same blob that `AParcel_marshal` would
-/// have returned, which is all the task parcel scanner needs.
+/// `AParcel_marshal` cannot be used on a received parcel (it returns ENOSYS)
+/// and does not exist before Android 13 (LIBBINDER_NDK33), so the payload is
+/// read word by word until the parcel runs out. A word is just four bytes,
+/// whatever AIDL type it belongs to: the UTF-16 text of a string, an int, a
+/// binder handle. Reassembling them gives the same blob that `AParcel_marshal`
+/// would have returned, which is all the task parcel scanner needs.
+///
+/// `AParcel_getDataSize` is not used either: it is only exported from Android
+/// 12 (LIBBINDER_NDK31) while the module supports Android 10. `AParcel_readInt32`
+/// fails once the parcel is exhausted, which is a version independent end
+/// marker.
 pub(crate) fn parcel_words(parcel: P) -> Option<Vec<u8>> {
-    const MAX_BYTES: i32 = 10 * 1024 * 1024;
+    const MAX_BYTES: usize = 10 * 1024 * 1024;
     let n = n();
-    let (pos, size) = unsafe {
-        ((n.AParcel_getDataPosition)(parcel), (n.AParcel_getDataSize)(parcel))
-    };
-    if pos < 0 || size <= pos || size - pos > MAX_BYTES { return None; }
-    let words = ((size - pos) / 4) as usize;
-    let mut out = Vec::with_capacity(words * 4);
-    for _ in 0..words {
+    let mut out = Vec::new();
+    loop {
         let mut v = 0i32;
         if unsafe { (n.AParcel_readInt32)(parcel, &mut v) } != 0 { break; }
+        if out.len() + 4 > MAX_BYTES { return None; }
         out.extend_from_slice(&v.to_le_bytes());
     }
     (!out.is_empty()).then_some(out)

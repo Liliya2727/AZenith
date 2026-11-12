@@ -41,12 +41,23 @@ const USER_ID: u32 = 0;
 /// contains strings like "android.intent.action.MAIN", which look like a
 /// package name but are not one.
 pub(crate) fn task_packages(task: P, code: u32, known: &[String]) -> Option<Vec<String>> {
+    // IActivityTaskManager.getTasks grew its argument list over time:
+    //   API 29-30: (maxNum)
+    //   API 31-33: (maxNum, filterOnlyVisibleRecents, keepIntentExtra)
+    //   API 34+  : (maxNum, filterOnlyVisibleRecents, keepIntentExtra, displayId)
+    // Sending arguments the server does not read can make the transaction fail,
+    // so match the running release exactly.
+    let sdk = crate::codes::android_sdk();
     let o = call(task, code, |i| unsafe {
         let n = n();
         (n.AParcel_writeInt32)(i, MAX_TASKS as i32);
-        (n.AParcel_writeInt32)(i, 1); // filterOnlyVisibleRecents
-        (n.AParcel_writeInt32)(i, 0); // keepIntentExtra
-        (n.AParcel_writeInt32)(i, 0); // displayId (default display)
+        if sdk >= 31 {
+            (n.AParcel_writeInt32)(i, 1); // filterOnlyVisibleRecents
+            (n.AParcel_writeInt32)(i, 0); // keepIntentExtra
+        }
+        if sdk >= 34 {
+            (n.AParcel_writeInt32)(i, 0); // displayId (default display)
+        }
     })?;
     let bytes = parcel_words(o);
     unsafe { (n().AParcel_delete)(o) };

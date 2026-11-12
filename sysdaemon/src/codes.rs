@@ -39,7 +39,8 @@ pub(crate) struct Codes {
     pub(crate) recent_tasks: u32,
     /// IActivityTaskManager.getTasks (all tasks, the full recents list)
     pub(crate) tasks: u32,
-    /// IActivityTaskManager.getFocusedRootTaskInfo (the task on screen)
+    /// IActivityTaskManager.getFocusedRootTaskInfo (the task on screen);
+    /// Android 10-11's getFocusedStackInfo is used as the fallback.
     pub(crate) focused_task: u32,
 }
 static CODES: OnceLock<Codes> = OnceLock::new();
@@ -70,9 +71,21 @@ const Q: [&str; 15] = [
 // (asking for a field that does not exist makes the resolver abort).
 const LABEL_Q: &str = "android.content.pm.IPackageManager.Stub::TRANSACTION_getApplicationLabel";
 
+// Android 10-11 have getFocusedStackInfo; Android 12 renamed it to
+// getFocusedRootTaskInfo. Only the one that exists is queried.
+const FOCUSED_STACK_Q: &str =
+    "android.app.IActivityTaskManager.Stub::TRANSACTION_getFocusedStackInfo";
+
 fn prop(k: &str) -> String {
     Command::new("getprop").arg(k).output().ok()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_default()
+}
+
+/// `ro.build.version.sdk`, cached. 0 when the property is missing, which makes
+/// callers pick the most conservative argument list.
+pub(crate) fn android_sdk() -> u32 {
+    static SDK: OnceLock<u32> = OnceLock::new();
+    *SDK.get_or_init(|| prop("ro.build.version.sdk").parse().unwrap_or(0))
 }
 
 // Entry point of the binder_resolver APK. The apk built from ./binder_resolver uses
@@ -82,19 +95,52 @@ const ENTRY_CLASSES: [&str; 2] = ["zx.binder.MainKt", "com.rem01gaming.binderres
 // app_process/ART aborts during JNI_CreateJavaVM ("BOOTCLASSPATH and
 // DEX2OATBOOTCLASSPATH must not be empty", tombstone-verified) when a
 // daemon started at boot does not inherit those variables. Prefer the
-// inherited daemon environment; fall back to the stock Android 14-16
-// list seen on this device so spawns work regardless of launch context.
-const DEFAULT_BOOTCLASSPATH: &str = "/apex/com.android.art/javalib/core-oj.jar:/apex/com.android.art/javalib/core-libart.jar:/apex/com.android.art/javalib/okhttp.jar:/apex/com.android.art/javalib/bouncycastle.jar:/apex/com.android.art/javalib/apache-xml.jar:/system/framework/framework.jar:/system/framework/framework-graphics.jar:/system/framework/framework-location.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-ondeviceintelligence-platform.jar:/system/framework/mediatek-common.jar:/apex/com.android.i18n/javalib/core-icu4j.jar:/apex/com.android.adservices/javalib/framework-adservices.jar:/apex/com.android.adservices/javalib/framework-sdksandbox.jar:/apex/com.android.appsearch/javalib/framework-appsearch.jar:/apex/com.android.bt/javalib/framework-bluetooth.jar:/apex/com.android.configinfrastructure/javalib/framework-configinfrastructure.jar:/apex/com.android.conscrypt/javalib/conscrypt.jar:/apex/com.android.crashrecovery/javalib/framework-crashrecovery.jar:/apex/com.android.devicelock/javalib/framework-devicelock.jar:/apex/com.android.healthfitness/javalib/framework-healthfitness.jar:/apex/com.android.ipsec/javalib/android.net.ipsec.ike.jar:/apex/com.android.media/javalib/updatable-media.jar:/apex/com.android.mediaprovider/javalib/framework-mediaprovider.jar:/apex/com.android.mediaprovider/javalib/framework-pdf.jar:/apex/com.android.mediaprovider/javalib/framework-pdf-v.jar:/apex/com.android.mediaprovider/javalib/framework-photopicker.jar:/apex/com.android.nfcservices/javalib/framework-nfc.jar:/apex/com.android.ondevicepersonalization/javalib/framework-ondevicepersonalization.jar:/apex/com.android.os.statsd/javalib/framework-statsd.jar:/apex/com.android.permission/javalib/framework-permission.jar:/apex/com.android.permission/javalib/framework-permission-s.jar:/apex/com.android.profiling/javalib/framework-profiling.jar:/apex/com.android.scheduling/javalib/framework-scheduling.jar:/apex/com.android.sdkext/javalib/framework-sdkextensions.jar:/apex/com.android.telephonycore/javalib/framework-telephony.jar:/apex/com.android.tethering/javalib/framework-connectivity.jar:/apex/com.android.tethering/javalib/framework-connectivity-b.jar:/apex/com.android.tethering/javalib/framework-connectivity-t.jar:/apex/com.android.tethering/javalib/framework-tethering.jar:/apex/com.android.uwb/javalib/framework-ranging.jar:/apex/com.android.uwb/javalib/framework-uwb.jar:/apex/com.android.virt/javalib/framework-virtualization.jar:/apex/com.android.wifi/javalib/framework-wifi.jar";
-const DEFAULT_DEX2OATBOOTCLASSPATH: &str = "/apex/com.android.art/javalib/core-oj.jar:/apex/com.android.art/javalib/core-libart.jar:/apex/com.android.art/javalib/okhttp.jar:/apex/com.android.art/javalib/bouncycastle.jar:/apex/com.android.art/javalib/apache-xml.jar:/system/framework/framework.jar:/system/framework/framework-graphics.jar:/system/framework/framework-location.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-ondeviceintelligence-platform.jar:/system/framework/mediatek-common.jar:/apex/com.android.i18n/javalib/core-icu4j.jar";
+// inherited daemon environment; otherwise build a classpath from the files
+// that actually exist on this release.
+//
+// The core jars moved between APEXes: Android 10 ships them in
+// com.android.runtime, Android 11+ in com.android.art, and core-icu4j in
+// com.android.i18n (or /system/framework on some ROMs). Picking the first
+// existing location avoids duplicate boot classes.
+const BOOT_CP_DIRS: [&str; 4] = [
+    "/apex/com.android.art/javalib",
+    "/apex/com.android.runtime/javalib",
+    "/apex/com.android.i18n/javalib",
+    "/system/framework",
+];
+const BOOT_CP_JARS: [&str; 6] = [
+    "core-oj.jar", "core-libart.jar", "okhttp.jar",
+    "bouncycastle.jar", "apache-xml.jar", "core-icu4j.jar",
+];
+
+// Everything after the core jars. Missing files are ignored by ART, so the
+// same list works on every release.
+const BOOT_CP_REST: &str = "/system/framework/framework.jar:/system/framework/framework-graphics.jar:/system/framework/framework-location.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-ondeviceintelligence-platform.jar:/system/framework/mediatek-common.jar:/apex/com.android.adservices/javalib/framework-adservices.jar:/apex/com.android.adservices/javalib/framework-sdksandbox.jar:/apex/com.android.appsearch/javalib/framework-appsearch.jar:/apex/com.android.bt/javalib/framework-bluetooth.jar:/apex/com.android.configinfrastructure/javalib/framework-configinfrastructure.jar:/apex/com.android.conscrypt/javalib/conscrypt.jar:/apex/com.android.crashrecovery/javalib/framework-crashrecovery.jar:/apex/com.android.devicelock/javalib/framework-devicelock.jar:/apex/com.android.healthfitness/javalib/framework-healthfitness.jar:/apex/com.android.ipsec/javalib/android.net.ipsec.ike.jar:/apex/com.android.media/javalib/updatable-media.jar:/apex/com.android.mediaprovider/javalib/framework-mediaprovider.jar:/apex/com.android.mediaprovider/javalib/framework-pdf.jar:/apex/com.android.mediaprovider/javalib/framework-pdf-v.jar:/apex/com.android.mediaprovider/javalib/framework-photopicker.jar:/apex/com.android.nfcservices/javalib/framework-nfc.jar:/apex/com.android.ondevicepersonalization/javalib/framework-ondevicepersonalization.jar:/apex/com.android.os.statsd/javalib/framework-statsd.jar:/apex/com.android.permission/javalib/framework-permission.jar:/apex/com.android.permission/javalib/framework-permission-s.jar:/apex/com.android.profiling/javalib/framework-profiling.jar:/apex/com.android.scheduling/javalib/framework-scheduling.jar:/apex/com.android.sdkext/javalib/framework-sdkextensions.jar:/apex/com.android.telephonycore/javalib/framework-telephony.jar:/apex/com.android.tethering/javalib/framework-connectivity.jar:/apex/com.android.tethering/javalib/framework-connectivity-b.jar:/apex/com.android.tethering/javalib/framework-connectivity-t.jar:/apex/com.android.tethering/javalib/framework-tethering.jar:/apex/com.android.uwb/javalib/framework-ranging.jar:/apex/com.android.uwb/javalib/framework-uwb.jar:/apex/com.android.virt/javalib/framework-virtualization.jar:/apex/com.android.wifi/javalib/framework-wifi.jar";
+const DEX2OAT_CP_REST: &str = "/system/framework/framework.jar:/system/framework/framework-graphics.jar:/system/framework/framework-location.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-ondeviceintelligence-platform.jar:/system/framework/mediatek-common.jar";
+
+fn default_boot_classpath(rest: &str) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    for jar in BOOT_CP_JARS {
+        for dir in BOOT_CP_DIRS {
+            let path = format!("{dir}/{jar}");
+            if std::path::Path::new(&path).is_file() {
+                parts.push(path);
+                break;
+            }
+        }
+    }
+    parts.push(rest.to_string());
+    parts.join(":")
+}
 
 /// Set BOOTCLASSPATH/DEX2OATBOOTCLASSPATH for an app_process child,
 /// keeping the inherited value when the daemon already has one.
 pub(crate) fn apply_boot_cp_env(cmd: &mut Command) {
     if std::env::var("BOOTCLASSPATH").map(|v| v.is_empty()).unwrap_or(true) {
-        cmd.env("BOOTCLASSPATH", DEFAULT_BOOTCLASSPATH);
+        cmd.env("BOOTCLASSPATH", default_boot_classpath(BOOT_CP_REST));
     }
     if std::env::var("DEX2OATBOOTCLASSPATH").map(|v| v.is_empty()).unwrap_or(true) {
-        cmd.env("DEX2OATBOOTCLASSPATH", DEFAULT_DEX2OATBOOTCLASSPATH);
+        cmd.env("DEX2OATBOOTCLASSPATH", default_boot_classpath(DEX2OAT_CP_REST));
     }
 }
 
@@ -138,7 +184,11 @@ fn parse_codes(text: &str, with_label: bool) -> Option<Codes> {
         app_label: if with_label { get(LABEL_Q) } else { 0 },
         recent_tasks: get(Q[12]),
         tasks: get(Q[13]),
-        focused_task: get(Q[14]),
+        // Android 10-11 only have getFocusedStackInfo; Android 12 renamed it.
+        focused_task: {
+            let root = get(Q[14]);
+            if root != 0 { root } else { get(FOCUSED_STACK_Q) }
+        },
     };
     // bat_prop is optional (the battery field becomes "unknown" if it is missing)
     let req = [c.reg, c.fg_act, c.died, c.pm_name,
@@ -151,13 +201,13 @@ fn log_codes(c: &Codes) {
           c.reg, c.fg_act, c.fg_svc, c.died, c.pm_name);
     info!("transaction codes: isInteractive={} isPowerSaveMode={} getZenMode={} registerDisplayCallback={} getProperty={} getDisplayInfo={}",
           c.is_interactive, c.is_saver, c.get_zen, c.disp_reg, c.bat_prop, c.get_display_info);
-    info!("transaction codes: processStarted={} getApplicationLabel={} getRecentTasks={} getTasks={} getFocusedRootTaskInfo={}",
+    info!("transaction codes: processStarted={} getApplicationLabel={} getRecentTasks={} getTasks={} focusedTask={}",
           c.proc_started, c.app_label, c.recent_tasks, c.tasks, c.focused_task);
 }
 
 /// Marker of the cache file: the hash of the query list. A new query (a new
 /// transaction) needs a new resolver run, so an old cache is not used.
-fn cache_marker(with_label: bool) -> String {
+fn cache_marker(with_label: bool, legacy_focus: bool) -> String {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     let mut feed = |s: &str| {
         for b in s.as_bytes() {
@@ -168,6 +218,9 @@ fn cache_marker(with_label: bool) -> String {
     for q in Q.iter() {
         feed(q);
     }
+    if legacy_focus {
+        feed(FOCUSED_STACK_Q);
+    }
     if with_label {
         feed(LABEL_Q);
     }
@@ -175,13 +228,13 @@ fn cache_marker(with_label: bool) -> String {
 }
 
 /// The resolver output with the marker in front of it.
-fn with_marker(text: &str, with_label: bool) -> String {
-    format!("{}\n{}", cache_marker(with_label), text)
+fn with_marker(text: &str, with_label: bool, legacy_focus: bool) -> String {
+    format!("{}\n{}", cache_marker(with_label, legacy_focus), text)
 }
 
 /// True when the cache file was written with the same queries.
-fn cache_is_current(text: &str, with_label: bool) -> bool {
-    text.lines().next().map(|l| l.trim()) == Some(cache_marker(with_label).as_str())
+fn cache_is_current(text: &str, with_label: bool, legacy_focus: bool) -> bool {
+    text.lines().next().map(|l| l.trim()) == Some(cache_marker(with_label, legacy_focus).as_str())
 }
 
 pub(crate) fn load_codes() -> Option<Codes> {
@@ -193,11 +246,15 @@ pub(crate) fn load_codes() -> Option<Codes> {
 
     // Android 16 dropped getApplicationLabel from the AIDL entirely.
     let want_label = sdk.parse::<u32>().map(|v| v < 36).unwrap_or(true);
+    // Android 10-11 call the focused task getFocusedStackInfo; Android 12
+    // renamed it to getFocusedRootTaskInfo. Only ask for the one that exists.
+    let legacy_focus = sdk.parse::<u32>().map(|v| v < 31).unwrap_or(false);
     let mut queries: Vec<&str> = Q.to_vec();
+    if legacy_focus { queries.push(FOCUSED_STACK_Q); }
     if want_label { queries.push(LABEL_Q); }
 
     if let Some(t) = fs::read_to_string(&cache).ok()
-        && cache_is_current(&t, want_label)
+        && cache_is_current(&t, want_label, legacy_focus)
         && let Some(c) = parse_codes(&t, want_label)
     {
         info!("transaction codes from cache: {cache}");
@@ -232,7 +289,7 @@ pub(crate) fn load_codes() -> Option<Codes> {
         error!("resolver output incomplete, required codes not found");
         return None;
     };
-    match fs::write(&cache, with_marker(&out, want_label)) {
+    match fs::write(&cache, with_marker(&out, want_label, legacy_focus)) {
         Ok(()) => info!("transaction codes saved to cache: {cache}"),
         Err(e) => warn!("failed to save cache {cache}: {e}"),
     }
@@ -244,10 +301,43 @@ pub(crate) fn load_codes() -> Option<Codes> {
         warn!("onProcessStarted code not found, the process table only learns about new pids from the /proc scan");
     }
     if c.focused_task == 0 {
-        warn!("getFocusedRootTaskInfo code not found, a missed foreground callback cannot be corrected");
+        warn!("focused-task code not found, a missed foreground callback cannot be corrected");
     }
     if c.app_label == 0 {
         warn!("getApplicationLabel is not available, app labels are read from the APK resources");
     }
     Some(c)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn resolver_output(focused_root: u32, focused_stack: u32) -> String {
+        let mut s = String::new();
+        // The required subset; the optional queries are allowed to be absent.
+        for (i, q) in [Q[0], Q[1], Q[3], Q[4], Q[5], Q[6], Q[7], Q[8]].iter().enumerate() {
+            s.push_str(&format!("{q} {}\n", i + 1));
+        }
+        if focused_root != 0 { s.push_str(&format!("{} {focused_root}\n", Q[14])); }
+        if focused_stack != 0 { s.push_str(&format!("{FOCUSED_STACK_Q} {focused_stack}\n")); }
+        s
+    }
+
+    #[test]
+    fn focused_task_falls_back_to_the_legacy_transaction() {
+        let c = parse_codes(&resolver_output(0, 42), false).unwrap();
+        assert_eq!(c.focused_task, 42);
+    }
+
+    #[test]
+    fn focused_root_task_wins_when_both_exist() {
+        let c = parse_codes(&resolver_output(41, 42), false).unwrap();
+        assert_eq!(c.focused_task, 41);
+    }
+
+    #[test]
+    fn the_legacy_query_changes_the_cache_marker() {
+        assert_ne!(cache_marker(false, false), cache_marker(false, true));
+    }
 }

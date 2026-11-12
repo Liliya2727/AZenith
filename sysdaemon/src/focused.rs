@@ -23,9 +23,10 @@
 //
 // The focused root task is the authority on what is actually on screen, so it
 // is polled lightly and used to correct the state when the callbacks missed a
-// switch. The reply is a RootTaskInfo; the topActivity component is written
-// before the base intent and the other task fields, so the first package-like
-// string that belongs to a running app is the focused app.
+// switch. The reply is a RootTaskInfo (a StackInfo on Android 10-11); the
+// topActivity component is written before the base intent and the other task
+// fields, so the first package-like string that belongs to a running app is
+// the focused app.
 use std::sync::OnceLock;
 use std::thread;
 use std::time::{Duration, Instant};
