@@ -109,8 +109,12 @@ pub fn log_preload(component: &str, _message: &str, args: std::fmt::Arguments<'_
 }
 
 /// External logging interface for companion binaries.
-pub fn external_log(level: i32, tag: &str, _message: &str, args: std::fmt::Arguments<'_>) {
-    let body = format!("{args}");
+///
+/// The CLI already joins every trailing argument into `message`, so the
+/// formatted body must come from `message` — not from `args`, which the
+/// `--log` caller leaves empty.
+pub fn external_log(level: i32, tag: &str, message: &str, _args: std::fmt::Arguments<'_>) {
+    let body = message.to_string();
     let lvl = match level {
         0 => LogLevel::Debug,
         1 => LogLevel::Info,
@@ -131,8 +135,8 @@ pub fn external_log(level: i32, tag: &str, _message: &str, args: std::fmt::Argum
 }
 
 /// External verbose logging interface for companion binaries.
-pub fn external_vlog(_level: i32, tag: &str, _message: &str, args: std::fmt::Arguments<'_>) {
-    let body = format!("{args}");
+pub fn external_vlog(_level: i32, tag: &str, message: &str, _args: std::fmt::Arguments<'_>) {
+    let body = message.to_string();
     write_line(LOG_VFILE, LogLevel::Info, tag, &body);
     let comp = safe_component(tag);
     logcat(ANDROID_LOG_INFO, LOG_TAG_PROFILE, &format!("[{comp}] {body}"));
