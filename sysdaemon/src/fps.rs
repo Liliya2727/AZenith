@@ -126,7 +126,10 @@ const FLAG_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 /// ~95 s sees no new snapshot. The manager treats a stamp older than 3 s as 0.
 const PUBLISH_INTERVAL: Duration = Duration::from_millis(800);
 /// Warn when two consecutive frametime writes are farther apart than this.
+/// The gap is measured on the monotonic clock, so device suspend does not count as a gap.
 const PUBLISH_GAP_WARN_MS: u128 = 1500;
+/// At most one publish-gap warning per this interval, so one long stall cannot flood the log.
+const PUBLISH_GAP_WARN_COOLDOWN: Duration = Duration::from_secs(30);
 /// Consecutive unusable `dumpsys` results before the source is declared dead.
 const SF_MAX_MISSES: u32 = 5;
 /// Line prefix of SurfaceFlinger's cumulative frame counter.
@@ -315,9 +318,13 @@ struct FrameTimeInner {
     frames: u64,
     sum_us: u64,
     hist: [u64; FT_HIST_LEN],
-    /// Wall-clock ms of the last `current_frametime` write, for the
-    /// publish-gap warning (None before the first write).
-    last_publish_ms: Option<u128>,
+    /// Monotonic timestamp of the last `current_frametime` write, for the
+    /// publish-gap warning (None before the first write). `Instant` is
+    /// CLOCK_MONOTONIC, which stops while the device is suspended: a sleeping
+    /// device is not a stalled publisher and must not be reported as one.
+    last_publish: Option<Instant>,
+    /// Monotonic timestamp of the last emitted gap warning, for rate limiting.
+    last_gap_warn: Option<Instant>,
 }
 
 /// Shared frametime publisher. Interior mutex keeps every increment and each
@@ -372,6 +379,30 @@ fn ft_format_line(
     )
 }
 
+/// Advance the publish stamp and return the gap worth warning about, if any.
+///
+/// The stamp always moves; the warning is suppressed below `PUBLISH_GAP_WARN_MS` and by
+/// `PUBLISH_GAP_WARN_COOLDOWN`. `Instant` (CLOCK_MONOTONIC) deliberately excludes suspend
+/// time, so a device that slept is not mistaken for a publisher that stalled.
+fn note_publish(g: &mut FrameTimeInner, now: Instant) -> Option<u128> {
+    let gap = g
+        .last_publish
+        .map(|last| now.duration_since(last).as_millis());
+    g.last_publish = Some(now);
+    let gap = gap?;
+    if gap <= PUBLISH_GAP_WARN_MS {
+        return None;
+    }
+    let allowed = match g.last_gap_warn {
+        Some(last) if now.duration_since(last) < PUBLISH_GAP_WARN_COOLDOWN => false,
+        _ => {
+            g.last_gap_warn = Some(now);
+            true
+        }
+    };
+    allowed.then_some(gap)
+}
+
 impl FrameTime {
     fn new() -> Self {
         FrameTime {
@@ -380,7 +411,8 @@ impl FrameTime {
                 frames: 0,
                 sum_us: 0,
                 hist: [0; FT_HIST_LEN],
-                last_publish_ms: None,
+                last_publish: None,
+                last_gap_warn: None,
             }),
         }
     }
@@ -399,15 +431,14 @@ impl FrameTime {
             g.sum_us = 0;
             g.hist = [0; FT_HIST_LEN];
             let gen_id = g.gen_id;
-            let now = now_ms();
-            let gap_ms = g.last_publish_ms.map(|last| now.saturating_sub(last));
-            g.last_publish_ms = Some(now);
-            let line = ft_format_line(now, gen_id, source, g.frames, g.sum_us, &g.hist);
+            let now = Instant::now();
+            let gap_ms = note_publish(&mut g, now);
+            let line = ft_format_line(now_ms(), gen_id, source, g.frames, g.sum_us, &g.hist);
             (gen_id, line, gap_ms)
         };
         let _ = fs::create_dir_all(FPS_DIR);
         let _ = crate::state::write_atomic(FT_FILE, &line);
-        if let Some(gap) = gap_ms.filter(|g| *g > PUBLISH_GAP_WARN_MS) {
+        if let Some(gap) = gap_ms {
             warn!("frametime publish gap={}ms source={source} reason={reason}", gap);
         }
         info!("frametime gen bump source={source} gen={gen_id} reason={reason}");
@@ -439,14 +470,13 @@ impl FrameTime {
     fn publish_source(&self, source: &str) {
         let (line, gap_ms) = {
             let mut g = self.inner.lock().unwrap_or_else(|e| e.into_inner());
-            let now = now_ms();
-            let gap_ms = g.last_publish_ms.map(|last| now.saturating_sub(last));
-            g.last_publish_ms = Some(now);
-            let line = ft_format_line(now, g.gen_id, source, g.frames, g.sum_us, &g.hist);
+            let now = Instant::now();
+            let gap_ms = note_publish(&mut g, now);
+            let line = ft_format_line(now_ms(), g.gen_id, source, g.frames, g.sum_us, &g.hist);
             (line, gap_ms)
         };
         let _ = crate::state::write_atomic(FT_FILE, &line);
-        if let Some(gap) = gap_ms.filter(|g| *g > PUBLISH_GAP_WARN_MS) {
+        if let Some(gap) = gap_ms {
             warn!("frametime publish gap={}ms source={source}", gap);
         }
     }
@@ -1788,5 +1818,30 @@ mod tests {
         assert_eq!(snap_frames(&acc).1, 2);
         d.ingest(&[(8, 5)], &acc);
         assert_eq!(snap_frames(&acc).1, 4);
+    }
+
+    #[test]
+    fn publish_gap_threshold_and_cooldown() {
+        let acc = new_acc();
+        let mut g = acc.inner.lock().unwrap_or_else(|e| e.into_inner());
+        let t0 = Instant::now();
+        g.last_publish = Some(t0);
+        // Normal cadence: no warning.
+        assert_eq!(note_publish(&mut g, t0 + Duration::from_millis(800)), None);
+        // Real stall: one warning carrying the gap.
+        let t1 = t0 + Duration::from_millis(800);
+        assert_eq!(
+            note_publish(&mut g, t1 + Duration::from_secs(5)),
+            Some(5000)
+        );
+        // A second stall inside the cooldown is suppressed.
+        let t2 = t1 + Duration::from_secs(5);
+        assert_eq!(note_publish(&mut g, t2 + Duration::from_secs(5)), None);
+        // Once the cooldown has passed it warns again.
+        let t3 = t2 + Duration::from_secs(5);
+        assert_eq!(
+            note_publish(&mut g, t3 + PUBLISH_GAP_WARN_COOLDOWN),
+            Some(PUBLISH_GAP_WARN_COOLDOWN.as_millis())
+        );
     }
 }
