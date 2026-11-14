@@ -97,6 +97,13 @@ pub(crate) fn start() {
 }
 
 // ---------------- callbacks from AMS (oneway, must be fast) ----------------
+
+/// UTF-8 string out of a parcel buffer filled by `str_alloc` (NUL terminated).
+fn parcel_string(buf: &[u8]) -> String {
+    let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+    String::from_utf8_lossy(&buf[..end]).into_owned()
+}
+
 pub(crate) unsafe extern "C" fn on_observer(_b: P, code: u32, inp: P, _o: P) -> i32 {
     let (n, c) = (n(), codes());
     let (mut pid, mut uid) = (-1i32, -1i32);
@@ -112,20 +119,31 @@ pub(crate) unsafe extern "C" fn on_observer(_b: P, code: u32, inp: P, _o: P) -> 
             return 0;
         }
         if code == c.proc_started {
+            // IProcessObserver.onProcessStarted since Android 14 is
+            //   (int pid, int processUid, int packageUid, String packageName, String processName)
+            // so the third field is an int, not a string. Reading one string
+            // right after the uid misaligns the parcel (Encore's BinderMonitor
+            // reads the same layout). The process name carries the ":service"
+            // suffix, so it also tells a main process from an auxiliary one.
+            let mut process_uid = -1i32;
+            let mut package_uid = -1i32;
             (n.AParcel_readInt32)(inp, &mut pid);
-            (n.AParcel_readInt32)(inp, &mut uid);
-            let mut buf: Vec<u8> = Vec::new();
-            let r = (n.AParcel_readString)(inp, &mut buf as *mut Vec<u8> as P, str_alloc);
-            let (pkg, main) = if r == 0 {
-                let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
-                let name = String::from_utf8_lossy(&buf[..end]).into_owned();
+            (n.AParcel_readInt32)(inp, &mut process_uid);
+            (n.AParcel_readInt32)(inp, &mut package_uid);
+            let mut pkg_buf: Vec<u8> = Vec::new();
+            let mut name_buf: Vec<u8> = Vec::new();
+            let pkg_ok = (n.AParcel_readString)(inp, &mut pkg_buf as *mut Vec<u8> as P, str_alloc);
+            let name_ok = (n.AParcel_readString)(inp, &mut name_buf as *mut Vec<u8> as P, str_alloc);
+            let (pkg, main) = if pkg_ok == 0 && name_ok == 0 {
+                let name = parcel_string(&name_buf);
                 (crate::procs::base_pkg(&name).unwrap_or_default(), !name.contains(':'))
             } else {
-                warn!("readString onProcessStarted failed, status={r}");
+                warn!("readString onProcessStarted failed, status={pkg_ok}/{name_ok}");
                 // The worker resolves the package from the uid and the name from
                 // /proc, which also tells a main process from a ":service" one.
                 (String::new(), false)
             };
+            let uid = if process_uid > 0 { process_uid } else { package_uid };
             debug!("onProcessStarted: pid={pid} uid={uid} pkg=[{pkg}] main={main}");
             // An empty package name is resolved from the uid by the worker.
             if !pkg.is_empty() || crate::state::is_app(uid) { send(Event::Started { pid, uid, pkg, main }); }
