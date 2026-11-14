@@ -90,6 +90,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.navigation.NavController
@@ -1342,28 +1343,22 @@ private fun PinnedPreviewHeader(
 
     BoxWithConstraints(modifier = modifier) {
         val mockAspect = MOCK_H / MOCK_W
-        val targetHeight = if (expanded) {
-            minOf(maxWidth * 1.12f, 430.dp).coerceAtLeast(320.dp)
-        } else {
-            minOf(maxWidth * 0.42f, 165.dp).coerceAtLeast(140.dp)
-        }
-        val height by animateDpAsState(
-            targetValue = targetHeight,
+        val expandedH = minOf(maxWidth * 1.12f, 430.dp).coerceAtLeast(320.dp)
+        val collapsedH = minOf(maxWidth * 0.42f, 165.dp).coerceAtLeast(140.dp)
+        // One progress value drives both axes, so the frame keeps the mock's
+        // aspect ratio for the whole transition, including the spring
+        // overshoot. Animating height and width with separate springs changed
+        // the ratio mid-flight and made the fit scale in MockScreen wobble.
+        val progress by animateFloatAsState(
+            targetValue = if (expanded) 1f else 0f,
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
+                stiffness = Spring.StiffnessMedium
             ),
-            label = "previewHeight"
+            label = "previewProgress"
         )
-        val targetWidth = (targetHeight / mockAspect).coerceIn(70.dp, maxWidth * 0.88f)
-        val frameWidth by animateDpAsState(
-            targetValue = targetWidth,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            ),
-            label = "previewWidth"
-        )
+        val height = lerp(collapsedH, expandedH, progress)
+        val frameWidth = (height / mockAspect).coerceIn(70.dp, maxWidth * 0.88f)
 
         Box(
             modifier = Modifier
@@ -1400,8 +1395,7 @@ private fun PinnedPreviewHeader(
                     isBannerEnabled = isBannerEnabled,
                     isBlurEnabled = isBlurEnabled,
                     gradientAlpha = gradientAlpha,
-                    customBannerUri = customBannerUri,
-                    isCollapsed = !expanded
+                    customBannerUri = customBannerUri
                 )
             }
         }
@@ -1461,7 +1455,6 @@ private fun MockScreen(
     isBlurEnabled: Boolean,
     gradientAlpha: Float,
     customBannerUri: String?,
-    isCollapsed: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // One haze state for the mock's content and the nav bar that blurs it, so
@@ -1472,10 +1465,13 @@ private fun MockScreen(
         // cropped the bottom rows -- the navbar -- away.
         val fit = minOf(maxWidth / MOCK_W, maxHeight / MOCK_H)
         // The mock's two upper cards stand in for Home's profile/root InfoTiles,
-        // and the lower card stands in for its device-info card. All use the
-        // same authored 26dp widget corner on Home, scaled by roundness.
+        // and the lower card stands in for its device-info card. Home authors
+        // them at 26dp, but the mock is drawn on a narrower design width and
+        // then scaled down, so the radius is scaled by the same MOCK_W / 420
+        // factor as the banner below; at BANNER_CENTER both then read as the
+        // same radius in the preview.
         val k = personalization.cornerMultiplier
-        val homeCardShape = personalization.widgetCorner(26.dp)
+        val homeCardShape = personalization.widgetCorner(26.dp * (MOCK_W / 420.dp))
         // Real blur on the content the mock dialog covers, so the toggle changes
         // something measurable instead of tinting a rectangle. Animated so the
         // reveal reads as the dialog arriving rather than a setting flipping.
@@ -1512,7 +1508,10 @@ private fun MockScreen(
                 .blur(blurRadius)
                 // The nav bar blurs this column, so it has to be a haze source.
                 .hazeSource(mockHaze)
-                .padding(horizontal = 8.dp, vertical = if (isCollapsed) 2.dp else 9.dp),
+                // Padding does not depend on the collapsed/expanded state: the
+                // content is only scaled by the parent, so changing it here made
+                // the mock snap upward on the first collapse frame.
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
