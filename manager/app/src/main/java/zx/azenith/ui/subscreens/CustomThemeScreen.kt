@@ -1352,8 +1352,9 @@ private fun PinnedPreviewHeader(
         val progress by animateFloatAsState(
             targetValue = if (expanded) 1f else 0f,
             animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMedium
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+                visibilityThreshold = 0.0005f
             ),
             label = "previewProgress"
         )
