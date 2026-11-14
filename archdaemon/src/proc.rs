@@ -1,6 +1,7 @@
 //! Process utilities.
 use crate::sysprop::set;
 use std::io::BufRead;
+use std::os::unix::fs::MetadataExt;
 
 
 // ---------------------------------------------------------------------------
@@ -27,11 +28,21 @@ pub fn get_pids_of_at(name: &str, path: &str, pids: &mut [i32], max_pids: i32) -
         let mut parts = line.split_whitespace();
         let pkg = parts.next().unwrap_or("");
         let pid = parts.next().and_then(|s| s.parse::<i32>().ok()).unwrap_or(-1);
-        let _uid = parts.next().and_then(|s| s.parse::<i32>().ok()).unwrap_or(-1);
+        let uid = parts.next().and_then(|s| s.parse::<i32>().ok()).unwrap_or(-1);
 
         if pkg == name && pid > 0 {
-            pids[count as usize] = pid;
-            count += 1;
+            // A stale entry can outlive its process (a missed onProcessDied is
+            // exactly how a game session gets stuck). Validate it against
+            // /proc and the uid so a dead or recycled pid never keeps the
+            // performance profile alive; Encore does the same liveness check
+            // before it applies a game profile.
+            let alive = std::fs::metadata(format!("/proc/{pid}"))
+                .map(|m| m.uid() as i32 == uid)
+                .unwrap_or(false);
+            if alive {
+                pids[count as usize] = pid;
+                count += 1;
+            }
         }
     }
 

@@ -560,6 +560,7 @@ pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::unix::fs::MetadataExt;
     use std::sync::atomic::{AtomicU32, Ordering};
 
     static SEQ: AtomicU32 = AtomicU32::new(0);
@@ -604,10 +605,14 @@ mod tests {
     #[test]
     fn background_updates_pids_without_drop() {
         let mut ctx = ctx_with_game();
-        let f = tmp_file("bgapps", "com.test.game 7777 10001\n");
+        // get_pids_of_at validates the pid against /proc, so use this live
+        // process (with its real uid) instead of an arbitrary number.
+        let pid = std::process::id() as i32;
+        let uid = std::fs::metadata("/proc/self").map(|m| m.uid() as i32).unwrap_or(10001);
+        let f = tmp_file("bgapps", &format!("com.test.game {pid} {uid}\n"));
         handle_background_apps_event_at(&mut ctx, f.to_str().unwrap());
         assert_eq!(ctx.game.game_pid_count, 1);
-        assert_eq!(ctx.game.game_pids[0], 7777);
+        assert_eq!(ctx.game.game_pids[0], pid);
         assert_eq!(ctx.game.gamestart.as_deref(), Some("com.test.game"));
     }
 }
