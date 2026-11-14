@@ -17,11 +17,12 @@
 // The daemon has no profile logic any more, it only observes:
 //   * app_status      -> focused app + screen/saver/zen/battery state
 //   * background_apps -> recently used user apps and their live pids
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{LazyLock, Mutex, MutexGuard, OnceLock};
+use std::time::{Duration, Instant};
 
 use crate::log::{debug, error, info};
 use crate::pkg::label_of;
@@ -29,6 +30,11 @@ use crate::{BACKGROUND_FILE, STATUS_FILE};
 
 /// How many packages are kept in the "recently used" list.
 pub(crate) const MAX_RECENT: usize = 30;
+
+/// How long an app may be without its main process before it is treated as
+/// closed. The grace lets a restart (crash recovery, renderer restart) spawn a
+/// new main process and cancel the close instead of dropping the app.
+pub(crate) const MAIN_DEATH_GRACE: Duration = Duration::from_secs(2);
 
 /// Screen on/off, battery saver, zen mode, battery level and charging state.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -64,6 +70,13 @@ pub(crate) struct St {
     recent: Vec<String>,
     /// pid -> (package, uid) of every known app process
     procs: BTreeMap<i32, (String, i32)>,
+    /// pids of the packages' main processes (no ":suffix" in the process name).
+    /// The map above holds every process, main and auxiliary; only a main
+    /// process death means the app has no UI left.
+    main_pids: BTreeSet<i32>,
+    /// package -> instant its main process died. The app is removed from the
+    /// recent list once the grace expires, unless a new main process starts.
+    pending_close: BTreeMap<String, Instant>,
     /// package -> last seen (pid, uid). Kept when the process dies so a task
     /// that is still in the recents stays in background_apps.
     apps: BTreeMap<String, (i32, i32)>,
@@ -80,6 +93,8 @@ static ST: LazyLock<Mutex<St>> = LazyLock::new(|| {
         focused: None,
         recent: Vec::new(),
         procs: BTreeMap::new(),
+        main_pids: BTreeSet::new(),
+        pending_close: BTreeMap::new(),
         apps: BTreeMap::new(),
         recents_seen: false,
         sys: SysStat::default(),
@@ -404,62 +419,138 @@ pub(crate) fn set_focused(pkg: &str, pid: i32, uid: i32, why: &str) {
         // The focused app must always be known in the process table, even when
         // its onProcessStarted event was missed.
         s.procs.insert(pid, (pkg.to_string(), uid));
+        // A process that hosts an activity is the app's main process.
+        s.main_pids.insert(pid);
+        s.pending_close.remove(&pkg);
         s.apps.insert(pkg, (pid, uid));
     }
     publish(why);
 }
 
 /// A process was started.
-pub(crate) fn add_proc(pid: i32, pkg: &str, uid: i32) {
+pub(crate) fn add_proc(pid: i32, pkg: &str, uid: i32, main: bool) {
     let Some(pkg) = crate::procs::base_pkg(pkg) else { return };
     {
         let mut s = st();
-        let e = s.procs.entry(pid).or_insert_with(|| (pkg.to_string(), uid));
-        if e.0 != pkg || e.1 != uid { *e = (pkg.to_string(), uid); }
-        s.apps.insert(pkg, (pid, uid));
+        let e = s.procs.entry(pid).or_insert_with(|| (pkg.clone(), uid));
+        if e.0 != pkg || e.1 != uid { *e = (pkg.clone(), uid); }
+        s.apps.insert(pkg.clone(), (pid, uid));
+        if main {
+            s.main_pids.insert(pid);
+            // A new main process means the app restarted: cancel the close.
+            s.pending_close.remove(&pkg);
+        } else {
+            s.main_pids.remove(&pid);
+        }
     }
     publish("process started");
 }
 
 /// A process died. When it was the focused one, the focus moves to another
 /// live process of the same app, or it is cleared when the app is gone.
+///
+/// A dead main process schedules the app close after `MAIN_DEATH_GRACE`. An
+/// auxiliary process (`:push`, `:service`) dying never closes the app: the user
+/// can still be inside it.
 pub(crate) fn remove_proc(pid: i32, why: &str) {
-    {
+    let log = {
         let mut s = st();
-        let removed = s.procs.remove(&pid).map(|(p, _)| p);
-        if let Some(ref pkg) = removed {
-            // The app's process died. When it was the last process of the app,
-            // remove it from background_apps immediately instead of waiting for
-            // the user to clear the task from the recents: Android kills cached
-            // processes while their task is still in recents, but a destroyed
-            // app should not linger in background_apps.
-            if !s.procs.values().any(|(p, _)| p == pkg) {
-                s.recent.retain(|x| x != pkg);
-                s.apps.remove(pkg);
-            }
-        }
-        let existed = removed.is_some();
-        let mut cleared = false;
-        if let Some((pkg, fpid, _)) = s.focused.clone()
-            && fpid == pid
-        {
-            let alt = s
-                .procs
-                .iter()
-                .find(|(_, (p, _))| *p == pkg)
-                .map(|(p, (_, u))| (*p, *u));
-            match alt {
-                Some((np, nu)) => s.focused = Some((pkg, np, nu)),
-                None => {
-                    info!("focused app [{pkg}] is gone");
-                    s.focused = None;
-                    cleared = true;
-                }
-            }
-        }
-        if !existed && !cleared { return; }
+        let (pkg, was_main, should_publish) = remove_proc_from(&mut s, pid, Instant::now());
+        if !should_publish { return; }
+        pkg.map(|pkg| (pkg, was_main))
+    };
+    if let Some((pkg, was_main)) = log {
+        info!("process died pid={pid} pkg={pkg} main={was_main}");
     }
     publish(why);
+}
+
+/// Remove `pid` from `s`. Returns (package, was it the main process, publish).
+fn remove_proc_from(s: &mut St, pid: i32, now: Instant) -> (Option<String>, bool, bool) {
+    let removed = s.procs.remove(&pid).map(|(p, _)| p);
+    let was_main = s.main_pids.remove(&pid);
+    if let Some(ref pkg) = removed {
+        // The UI process is gone. Auxiliary processes may keep running, but an
+        // app without its main process has no window left, so close it after a
+        // grace that a restart can cancel.
+        let main_alive = s
+            .procs
+            .iter()
+            .any(|(p, (name, _))| name == pkg && s.main_pids.contains(p));
+        if was_main && !main_alive {
+            s.pending_close.insert(pkg.clone(), now);
+        }
+        // When it was the last process of the app, remove it from
+        // background_apps immediately instead of waiting for the user to clear
+        // the task from the recents: Android kills cached processes while their
+        // task is still in recents, but a destroyed app should not linger in
+        // background_apps.
+        if !s.procs.values().any(|(p, _)| p == pkg) {
+            s.recent.retain(|x| x != pkg);
+            s.apps.remove(pkg);
+            s.pending_close.remove(pkg);
+        }
+    }
+    let existed = removed.is_some();
+    let mut cleared = false;
+    if let Some((pkg, fpid, _)) = s.focused.clone()
+        && fpid == pid
+    {
+        let alt = s
+            .procs
+            .iter()
+            .find(|(_, (p, _))| *p == pkg)
+            .map(|(p, (_, u))| (*p, *u));
+        match alt {
+            Some((np, nu)) => s.focused = Some((pkg, np, nu)),
+            None => {
+                info!("focused app [{pkg}] is gone");
+                s.focused = None;
+                cleared = true;
+            }
+        }
+    }
+    let should_publish = existed || cleared;
+    (removed, was_main, should_publish)
+}
+
+/// Remove apps whose main process has been gone for `MAIN_DEATH_GRACE`.
+///
+/// Only `recent` is touched; `apps` keeps the last pid so the task parser can
+/// still recognise the package. Returns true when the recent list changed.
+fn close_main_dead_apps(s: &mut St, now: Instant) -> bool {
+    let mut closed = false;
+    let pkgs: Vec<String> = s.pending_close.keys().cloned().collect();
+    for pkg in pkgs {
+        let Some(at) = s.pending_close.get(&pkg).copied() else { continue };
+        if now.duration_since(at) < MAIN_DEATH_GRACE {
+            continue;
+        }
+        let main_alive = s
+            .procs
+            .iter()
+            .any(|(p, (name, _))| name == &pkg && s.main_pids.contains(p));
+        s.pending_close.remove(&pkg);
+        if main_alive {
+            continue;
+        }
+        if s.recent.iter().any(|p| p == &pkg) {
+            s.recent.retain(|p| p != &pkg);
+            closed = true;
+        }
+    }
+    closed
+}
+
+/// Apply the pending main-process-death closes. Runs on the recents tick.
+pub(crate) fn process_pending_closes() {
+    let changed = {
+        let mut s = st();
+        close_main_dead_apps(&mut s, Instant::now())
+    };
+    if changed {
+        publish("main process died");
+    }
 }
 
 /// Update one of the system status values, republish if something changed.
@@ -521,6 +612,9 @@ pub(crate) fn seed() {
         for a in &apps {
             s.procs.insert(a.pid, (a.pkg.clone(), a.uid));
             s.apps.insert(a.pkg.clone(), (a.pid, a.uid));
+            if a.main {
+                s.main_pids.insert(a.pid);
+            }
         }
 
         // The "recently used" list starts empty on purpose: it is filled by the
@@ -577,6 +671,10 @@ mod tests {
                 .iter()
                 .map(|(pid, pkg)| (*pid, (pkg.to_string(), 10000 + pid)))
                 .collect(),
+            // Tests treat every process as a main process unless they say
+            // otherwise (an auxiliary one is removed from main_pids by hand).
+            main_pids: procs.iter().map(|(pid, _)| *pid).collect(),
+            pending_close: BTreeMap::new(),
             apps: procs
                 .iter()
                 .map(|(pid, pkg)| (pkg.to_string(), (*pid, 10000 + pid)))
@@ -665,5 +763,64 @@ mod tests {
         let mut other = st(Some("com.b"), &["com.b"], &[(2, "com.b")]);
         other.focused = Some(("com.b".to_string(), 2, 10002));
         assert!(!snap.valid_for(&other));
+    }
+
+    #[test]
+    fn an_auxiliary_process_death_keeps_the_app() {
+        let mut s = st(None, &["com.a"], &[(1, "com.a"), (2, "com.a")]);
+        // pid 2 is a ":service" process, only pid 1 is the main process.
+        s.main_pids.remove(&2);
+        let (pkg, was_main, publish) = remove_proc_from(&mut s, 2, Instant::now());
+        assert_eq!(pkg.as_deref(), Some("com.a"));
+        assert!(!was_main);
+        assert!(publish);
+        assert!(s.recent.contains(&"com.a".to_string()));
+        assert!(s.pending_close.is_empty());
+    }
+
+    #[test]
+    fn a_main_process_death_closes_the_app_after_the_grace() {
+        let mut s = st(None, &["com.a"], &[(1, "com.a"), (2, "com.a")]);
+        s.main_pids.remove(&2);
+        let t0 = Instant::now();
+        let (_, was_main, _) = remove_proc_from(&mut s, 1, t0);
+        assert!(was_main);
+        // The auxiliary process is still alive: the app stays for now...
+        assert!(s.recent.contains(&"com.a".to_string()));
+        assert!(s.pending_close.contains_key("com.a"));
+        assert!(!close_main_dead_apps(&mut s, t0 + MAIN_DEATH_GRACE / 2));
+        assert!(s.recent.contains(&"com.a".to_string()));
+        // ...and is closed once the grace has passed.
+        assert!(close_main_dead_apps(
+            &mut s,
+            t0 + MAIN_DEATH_GRACE + Duration::from_millis(1)
+        ));
+        assert!(!s.recent.contains(&"com.a".to_string()));
+    }
+
+    #[test]
+    fn a_restarted_main_process_cancels_the_close() {
+        let mut s = st(None, &["com.a"], &[(1, "com.a"), (2, "com.a")]);
+        s.main_pids.remove(&2);
+        let t0 = Instant::now();
+        remove_proc_from(&mut s, 1, t0);
+        // A new main process started before the grace expired.
+        s.procs.insert(3, ("com.a".to_string(), 10003));
+        s.main_pids.insert(3);
+        s.pending_close.remove("com.a");
+        assert!(!close_main_dead_apps(
+            &mut s,
+            t0 + MAIN_DEATH_GRACE + Duration::from_millis(1)
+        ));
+        assert!(s.recent.contains(&"com.a".to_string()));
+    }
+
+    #[test]
+    fn a_last_process_death_removes_the_app_immediately() {
+        let mut s = st(None, &["com.a"], &[(1, "com.a")]);
+        let (_, was_main, _) = remove_proc_from(&mut s, 1, Instant::now());
+        assert!(was_main);
+        assert!(!s.recent.contains(&"com.a".to_string()));
+        assert!(s.pending_close.is_empty());
     }
 }

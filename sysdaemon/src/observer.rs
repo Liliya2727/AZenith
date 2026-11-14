@@ -31,7 +31,7 @@ pub(crate) enum Event {
     /// An activity of the app came to the foreground.
     Foreground { pid: i32, uid: i32 },
     /// A new app process was started.
-    Started { pid: i32, uid: i32, pkg: String },
+    Started { pid: i32, uid: i32, pkg: String, main: bool },
     /// An app process died.
     Died { pid: i32, uid: i32 },
 }
@@ -68,7 +68,7 @@ pub(crate) fn start() {
                         None => debug!("foreground: pid={pid} uid={uid}: package name not found"),
                     }
                 }
-                Event::Started { pid, uid, pkg } => {
+                Event::Started { pid, uid, pkg, main } => {
                     if !state::is_app(uid) { continue; }
                     // onProcessStarted usually carries the package name; when it
                     // is null (some processes) the uid lookup is used instead.
@@ -80,8 +80,11 @@ pub(crate) fn start() {
                     } else {
                         pkg
                     };
-                    debug!("process started: pid={pid} uid={uid} pkg={pkg}");
-                    state::add_proc(pid, &pkg, uid);
+                    // Without a usable name the /proc cmdline still tells a main
+                    // process from a ":service" one.
+                    let main = main || crate::procs::is_main_process(pid);
+                    debug!("process started: pid={pid} uid={uid} pkg={pkg} main={main}");
+                    state::add_proc(pid, &pkg, uid, main);
                 }
                 Event::Died { pid, uid } => {
                     debug!("onProcessDied: pid={pid} uid={uid}");
@@ -113,19 +116,19 @@ pub(crate) unsafe extern "C" fn on_observer(_b: P, code: u32, inp: P, _o: P) -> 
             (n.AParcel_readInt32)(inp, &mut uid);
             let mut buf: Vec<u8> = Vec::new();
             let r = (n.AParcel_readString)(inp, &mut buf as *mut Vec<u8> as P, str_alloc);
-            let pkg = if r == 0 {
+            let (pkg, main) = if r == 0 {
                 let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
-                String::from_utf8_lossy(&buf[..end]).into_owned()
+                let name = String::from_utf8_lossy(&buf[..end]).into_owned();
+                (crate::procs::base_pkg(&name).unwrap_or_default(), !name.contains(':'))
             } else {
                 warn!("readString onProcessStarted failed, status={r}");
-                String::new()
+                // The worker resolves the package from the uid and the name from
+                // /proc, which also tells a main process from a ":service" one.
+                (String::new(), false)
             };
-            // The process name can carry a suffix ("com.foo:push"): only the
-            // base package identifies the app.
-            let pkg = crate::procs::base_pkg(&pkg).unwrap_or_default();
-            debug!("onProcessStarted: pid={pid} uid={uid} pkg=[{pkg}]");
+            debug!("onProcessStarted: pid={pid} uid={uid} pkg=[{pkg}] main={main}");
             // An empty package name is resolved from the uid by the worker.
-            if !pkg.is_empty() || crate::state::is_app(uid) { send(Event::Started { pid, uid, pkg }); }
+            if !pkg.is_empty() || crate::state::is_app(uid) { send(Event::Started { pid, uid, pkg, main }); }
             return 0;
         }
         if code == c.died {

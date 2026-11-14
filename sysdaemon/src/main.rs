@@ -238,6 +238,9 @@ fn main() {
             if let Some(list) = list {
                 state::set_recent(list);
             }
+            // Last, so a task-list refresh cannot put a closed app back before
+            // archdaemon sees the empty background_apps of this tick.
+            state::process_pending_closes();
         }
     });
 

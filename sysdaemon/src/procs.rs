@@ -24,6 +24,10 @@ pub(crate) struct AppProc {
     pub(crate) uid: i32,
     /// oom_score_adj: 0 means "top app" (the app the user is looking at).
     pub(crate) adj: i32,
+    /// True for the package's main process (the process name has no ":suffix").
+    /// Only its death means the app has no UI left; an auxiliary process
+    /// (":push", ":service") dying is normal and says nothing about the app.
+    pub(crate) main: bool,
 }
 
 /// Base package of a process name: "com.foo.bar:remote" -> "com.foo.bar".
@@ -41,11 +45,23 @@ pub(crate) fn base_pkg(name: &str) -> Option<String> {
     Some(base.to_string())
 }
 
+/// First field of /proc/<pid>/cmdline (the process name), if still alive.
+fn process_name(pid: i32) -> Option<String> {
+    let raw = fs::read(format!("/proc/{pid}/cmdline")).ok()?;
+    let first = raw.split(|&b| b == 0).next()?;
+    if first.is_empty() { return None; }
+    Some(String::from_utf8_lossy(first).into_owned())
+}
+
 /// Package of a running process, read from /proc/<pid>/cmdline.
 pub(crate) fn pkg_of(pid: i32) -> Option<String> {
-    let raw = fs::read(format!("/proc/{pid}/cmdline")).ok()?;
-    let name = String::from_utf8_lossy(raw.split(|&b| b == 0).next()?).into_owned();
-    base_pkg(&name)
+    base_pkg(&process_name(pid)?)
+}
+
+/// Whether the process still alive in /proc/<pid> is the app's main process.
+/// Used when onProcessStarted did not carry a usable process name.
+pub(crate) fn is_main_process(pid: i32) -> bool {
+    process_name(pid).is_some_and(|name| !name.contains(':'))
 }
 
 fn adj_of(pid: i32) -> i32 {
@@ -64,8 +80,9 @@ pub(crate) fn scan_apps() -> Vec<AppProc> {
         let Ok(md) = e.metadata() else { continue };
         let uid = md.uid() as i32;
         if !is_app(uid) { continue; }
-        let Some(pkg) = pkg_of(pid) else { continue };
-        out.push(AppProc { pid, pkg, uid, adj: adj_of(pid) });
+        let Some(name) = process_name(pid) else { continue };
+        let Some(pkg) = base_pkg(&name) else { continue };
+        out.push(AppProc { pid, pkg, uid, adj: adj_of(pid), main: !name.contains(':') });
     }
     out
 }
