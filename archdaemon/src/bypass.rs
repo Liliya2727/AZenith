@@ -623,6 +623,7 @@ pub enum NodeVerdict {
     InputCurrentLost { battery_ma: i32, input_ma: i32 },
     RestoreFailed { ma: i32 },
     NoRecovery { ma: i32 },
+    NoBaseline { ma: i32 },
 }
 
 impl NodeVerdict {
@@ -647,6 +648,9 @@ impl NodeVerdict {
             ),
             NodeVerdict::NoRecovery { ma } => format!(
                 "current did not recover after restore ({ma} mA): node may still be latched"
+            ),
+            NodeVerdict::NoBaseline { ma } => format!(
+                "battery was already at {ma} mA before the test: nothing to measure, node left untouched"
             ),
         }
     }
@@ -737,6 +741,22 @@ fn recovery_target(baseline_ma: i32) -> i32 {
     std::cmp::max(MIN_TESTABLE_CURRENT_MA, baseline_ma / 4)
 }
 
+/// Wait until the charger is delivering measurable current again.
+///
+/// Restoring a node makes the charger renegotiate its contract, and a node
+/// tested in that window would be judged against an idle battery.
+fn wait_for_charge_current() {
+    const WAIT_SECS: u32 = 10;
+    for _ in 0..(WAIT_SECS as u64 * 1000 / 250) {
+        if read_current_ma_checked().is_some_and(|v| v >= MIN_TESTABLE_CURRENT_MA) {
+            return;
+        }
+        if sleep_interruptible(250) {
+            return;
+        }
+    }
+}
+
 /// After the node is restored, charging must come back. Without this the test
 /// cannot tell "the node controls this current" from "current happened to be
 /// low", and it also catches a restore that silently failed.
@@ -766,7 +786,30 @@ fn verify_recovery(baseline_ma: i32) -> NodeVerdict {
 ///   3. current recovers after the node is restored.
 pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
     install_test_signal_handlers();
-    let baseline_ma = read_current_ma_checked().unwrap_or(-1);
+    let baseline = read_current_ma_checked();
+    let baseline_ma = baseline.unwrap_or(-1);
+
+    // With no charge current there is nothing to drop, so a low reading after
+    // the write proves nothing. Leaving the node untouched keeps a scan from
+    // reporting fake bypasses - and from cutting a charge session for nothing.
+    if baseline.is_none() {
+        return NodeTestOutcome {
+            verdict: NodeVerdict::UnreadableCurrent,
+            baseline_ma,
+            battery_ma: baseline_ma,
+            input_ma: None,
+            samples: 0,
+        };
+    }
+    if baseline_ma < MIN_TESTABLE_CURRENT_MA {
+        return NodeTestOutcome {
+            verdict: NodeVerdict::NoBaseline { ma: baseline_ma },
+            baseline_ma,
+            battery_ma: baseline_ma,
+            input_ma: None,
+            samples: 0,
+        };
+    }
 
     let mut guard = match BypassGuard::arm(node) {
         Ok(guard) => guard,
@@ -1006,20 +1049,48 @@ pub fn check_bypass_compatibility() -> i32 {
 
     let total_nodes = BYPASS_LIST.len();
 
-    let mut skipped_count = 0;
-    let mut tested_count = 0;
     let mut report: Vec<String> = Vec::new();
+    let mut available: Vec<&BypassNode> = Vec::new();
 
     for node in &BYPASS_LIST {
         if access(node.path) != 0 {
-            println!("\u{1b}[90m[-] Node {:<25}: Not Found, skipping...\u{1b}[0m", node.name);
-            skipped_count += 1;
-            report.push(format!("{:<28} path={} verdict=path_not_found", node.name, node.path));
-            continue;
+            println!(
+                "\u{1b}[90m[-] Node {:<25}: Not Found, skipping...\u{1b}[0m",
+                node.name
+            );
+            report.push(format!(
+                "{:<28} path={} verdict=path_not_found",
+                node.name, node.path
+            ));
+        } else {
+            available.push(node);
         }
+    }
 
-        tested_count += 1;
-        println!("\n\u{1b}[1;32m[+]\u{1b}[0m Testing Node ({}/{}): \u{1b}[1;37m{}\u{1b}[0m", tested_count, total_nodes, node.name);
+    let skipped_count = total_nodes - available.len();
+    let available_count = available.len();
+
+    println!(
+        "\u{1b}[90m[i] {} of {} nodes exist on this device, testing every one of them\u{1b}[0m",
+        available_count, total_nodes
+    );
+
+    // Every available node is tested, not just the first one that works: the
+    // fallback order matters when a node is later disabled by an update, and
+    // the per-node verdicts are what the diagnosis report is for.
+    let mut working: Vec<(&BypassNode, i32)> = Vec::new();
+
+    for (index, node) in available.iter().enumerate() {
+        println!(
+            "\n\u{1b}[1;32m[+]\u{1b}[0m Testing Node ({}/{}): \u{1b}[1;37m{}\u{1b}[0m",
+            index + 1,
+            available_count,
+            node.name
+        );
+
+        // A node that was just restored leaves the charger renegotiating, so
+        // give the charge current a moment to come back before judging.
+        wait_for_charge_current();
 
         let outcome = test_node(node, true);
         report.push(format!(
@@ -1033,22 +1104,6 @@ pub fn check_bypass_compatibility() -> i32 {
             outcome.verdict.describe()
         ));
 
-        if outcome.verdict == NodeVerdict::Pass {
-            println!("\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Found working node: \u{1b}[1m{}\u{1b}[0m", node.name);
-            println!("\u{1b}[32m[INFO]\u{1b}[0m Process finished. {} nodes skipped.", skipped_count);
-
-            log_info!(
-                "bypass",
-                "compatible node found name={} skipped={} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
-                node.name, skipped_count, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
-            );
-
-            let report_path = write_check_report(&report, "compatible_node_found");
-            println!("\u{1b}[32m[INFO]\u{1b}[0m Result saved to {}", report_path);
-
-            return 0;
-        }
-
         if outcome.verdict == NodeVerdict::Aborted {
             println!("\n\u{1b}[33m[!] ABORTED\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
             log_warn!("bypass", "compatibility check aborted node={} reason=signal", node.name);
@@ -1057,18 +1112,69 @@ pub fn check_bypass_compatibility() -> i32 {
             return -1;
         }
 
-        println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
-        log_warn!(
-            "bypass",
-            "node rejected name={} verdict={:?} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
-            node.name, outcome.verdict, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
-        );
+        if outcome.verdict == NodeVerdict::Pass {
+            println!(
+                "\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m {} stops charging: {} mA (baseline {} mA)",
+                node.name, outcome.battery_ma, outcome.baseline_ma
+            );
+            log_info!(
+                "bypass",
+                "node accepted name={} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+                node.name, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+            );
+            working.push((node, outcome.battery_ma));
+        } else {
+            println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
+            log_warn!(
+                "bypass",
+                "node rejected name={} verdict={:?} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+                node.name, outcome.verdict, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+            );
+        }
+
         println!("------------------------------------------");
         std::thread::sleep(std::time::Duration::from_millis(300));
     }
 
+    if !working.is_empty() {
+        println!(
+            "\n\u{1b}[1;37m[RESULTS]\u{1b}[0m {} of {} node(s) on this device can stop charging:",
+            working.len(),
+            available_count
+        );
+        for (node, ma) in &working {
+            println!("  \u{1b}[32m+\u{1b}[0m {:<24} {:>5} mA", node.name, ma);
+        }
+
+        // Fallback order is the list order, so the same node is still chosen
+        // when several work.
+        let chosen = working[0].0;
+        println!(
+            "\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Found working node: \u{1b}[1m{}\u{1b}[0m",
+            chosen.name
+        );
+        println!(
+            "\u{1b}[32m[INFO]\u{1b}[0m Process finished. {} tested, {} skipped.",
+            available_count, skipped_count
+        );
+        println!(
+            "\u{1b}[33m[INFO]\u{1b}[0m Configuration left unchanged; apply the node above to use it."
+        );
+
+        log_info!(
+            "bypass",
+            "compatible node found name={} working={} tested={} skipped={}",
+            chosen.name, working.len(), available_count, skipped_count
+        );
+
+        let report_path = write_check_report(&report, "compatible_node_found");
+        println!("\u{1b}[32m[INFO]\u{1b}[0m Result saved to {}", report_path);
+
+        return 0;
+    }
+
     println!("\n\u{1b}[1;31m[-]\u{1b}[0m Final Result: No compatible bypass node found.");
-    println!("\u{1b}[33m[INFO]\u{1b}[0m Summary: {} Scanned, {} Tested, {} Skipped.\u{1b}[0m", total_nodes, tested_count, skipped_count);
+    println!("\u{1b}[33m[INFO]\u{1b}[0m Summary: {} Scanned, {} Tested, {} Skipped.\u{1b}[0m", total_nodes, available_count, skipped_count);
 
     // A scan is a diagnostic, not a decision: leave the stored configuration
     // alone so the result stays visible and the path remains available for a
@@ -1550,6 +1656,7 @@ mod tests {
         assert!(NodeVerdict::NoRecovery { ma: 0 }.describe().contains("latched"));
         assert!(NodeVerdict::RestoreFailed { ma: 0 }.describe().contains("restore write failed"));
         assert!(NodeVerdict::NodeReverted { ma: 0 }.describe().contains("reset to its OFF value"));
+        assert!(NodeVerdict::NoBaseline { ma: 3 }.describe().contains("already at 3 mA"));
         assert_eq!(NodeVerdict::Pass.describe(), "bypass verified");
     }
 
