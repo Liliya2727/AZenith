@@ -223,14 +223,19 @@ const INPUT_CURRENT_PATHS: [&str; 3] = [
     "/sys/class/power_supply/dc/current_now",
 ];
 
-/// Read a current value from sysfs and normalise it to mA.
+/// True when a raw reading can only be microamps.
 ///
-/// Android exposes `current_now` either in uA or in mA depending on the
-/// driver, so the magnitude picks the unit: values >= 10_000 can only be uA.
-/// Returns `None` when the path is missing or not numeric, which lets callers
-/// tell "unreadable" apart from a genuine 0 mA reading.
-pub fn read_ma(path: &str) -> Option<i32> {
-    let raw = fileops::read_first_line(path)?;
+/// 10_000 mA (10 A) never flows through a phone battery, while 10_000 uA
+/// (10 mA) is an everyday reading, so the magnitude alone is conclusive.
+fn unit_from_magnitude(raw_abs: i64) -> bool {
+    raw_abs >= 10_000
+}
+
+/// Normalise a raw sysfs current reading to mA with a known unit.
+///
+/// Returns `None` when the content is missing or not numeric, which lets
+/// callers tell "unreadable" apart from a genuine 0 mA reading.
+fn parse_current_ma(raw: &str, micro: bool) -> Option<i32> {
     let raw = raw.trim();
     if !raw
         .trim_start_matches(['+', '-'])
@@ -241,7 +246,37 @@ pub fn read_ma(path: &str) -> Option<i32> {
         return None;
     }
     let val = parse_atol(raw).abs();
-    Some(if val >= 10_000 { (val / 1000) as i32 } else { val as i32 })
+    Some(if micro { (val / 1000) as i32 } else { val as i32 })
+}
+
+/// Unit this device reports battery current in, learned once per process.
+///
+/// Judging every sample on its own magnitude breaks exactly the case that
+/// matters: a working bypass reads a few thousand uA, which the ">= 10_000 is
+/// uA" rule would report as thousands of mA. Learning the unit from a known
+/// charging sample keeps small readings small for the rest of the run.
+static CURRENT_IN_MICROAMPS: AtomicBool = AtomicBool::new(false);
+
+/// Read a current value from sysfs and normalise it to mA.
+///
+/// Android exposes `current_now` either in uA or in mA depending on the
+/// driver. The first reading large enough to be unambiguous fixes the unit for
+/// the rest of the process (see `CURRENT_IN_MICROAMPS`).
+pub fn read_ma(path: &str) -> Option<i32> {
+    let raw = fileops::read_first_line(path)?;
+    if unit_from_magnitude(parse_atol(raw.trim()).abs()) {
+        CURRENT_IN_MICROAMPS.store(true, Ordering::Relaxed);
+    }
+    parse_current_ma(&raw, CURRENT_IN_MICROAMPS.load(Ordering::Relaxed))
+}
+
+/// Unit the driver was last seen reporting, for diagnostics.
+pub fn current_unit_label() -> &'static str {
+    if CURRENT_IN_MICROAMPS.load(Ordering::Relaxed) {
+        "uA"
+    } else {
+        "mA"
+    }
 }
 
 /// Battery current in mA, or `None` when no path is readable.
@@ -692,11 +727,21 @@ pub fn test_preflight() -> Result<i32, String> {
     Ok(baseline)
 }
 
+/// Current that proves charging resumed.
+///
+/// A latched node leaves the battery at ~0 mA, so any reading near the normal
+/// charge rate is enough. Halving the baseline was too strict: after a bypass
+/// the phone renegotiates the charger contract and often resumes at a third of
+/// the original rate.
+fn recovery_target(baseline_ma: i32) -> i32 {
+    std::cmp::max(MIN_TESTABLE_CURRENT_MA, baseline_ma / 4)
+}
+
 /// After the node is restored, charging must come back. Without this the test
 /// cannot tell "the node controls this current" from "current happened to be
 /// low", and it also catches a restore that silently failed.
 fn verify_recovery(baseline_ma: i32) -> NodeVerdict {
-    let target = std::cmp::max(MIN_TESTABLE_CURRENT_MA, baseline_ma / 2);
+    let target = recovery_target(baseline_ma);
     let mut best = 0;
     for _ in 0..(RECOVERY_MAX_SECS as u64 * 1000 / RECOVERY_SAMPLE_MS) {
         if sleep_interruptible(RECOVERY_SAMPLE_MS) {
@@ -819,8 +864,14 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
 
     if verbose {
         println!(
-            "    Summary: min {} mA | median {} mA | max {} mA | longest drop {} sample(s) (need {} after {}s)",
-            lowest, battery_ma, highest, low_run, needed_low_run, TEST_SETTLE_SECS
+            "    Summary: min {} mA | median {} mA | max {} mA | longest drop {} sample(s) (need {} after {}s) | unit {}",
+            lowest,
+            battery_ma,
+            highest,
+            low_run,
+            needed_low_run,
+            TEST_SETTLE_SECS,
+            current_unit_label()
         );
     }
 
@@ -947,7 +998,11 @@ pub fn check_bypass_compatibility() -> i32 {
             return -1;
         }
     };
-    println!("\u{1b}[90m[i] Baseline battery current: {} mA\u{1b}[0m", baseline_ma);
+    println!(
+        "\u{1b}[90m[i] Baseline battery current: {} mA (driver unit {})\u{1b}[0m",
+        baseline_ma,
+        current_unit_label()
+    );
 
     let total_nodes = BYPASS_LIST.len();
 
@@ -1084,7 +1139,11 @@ fn test_single_node(node: &BypassNode) -> i32 {
 
     println!("\n\u{1b}[1;32m[+]\u{1b}[0m Testing Node: \u{1b}[1;37m{}\u{1b}[0m", node.name);
     println!("    Path: {}", node.path);
-    println!("\u{1b}[90m[i] Baseline battery current: {} mA\u{1b}[0m", baseline_ma);
+    println!(
+        "\u{1b}[90m[i] Baseline battery current: {} mA (driver unit {})\u{1b}[0m",
+        baseline_ma,
+        current_unit_label()
+    );
 
     let outcome = test_node(node, true);
 
@@ -1326,29 +1385,46 @@ mod tests {
     // current unit normalisation (detection accuracy)
     // -----------------------------------------------------------------------
 
-    fn read_ma_of(content: &str) -> Option<i32> {
-        let p = tmp_file("current", content);
-        read_ma(p.to_str().unwrap())
+    // Drivers disagree on the unit: some report mA, some uA.
+    #[test]
+    fn read_ma_normalises_milliamp_drivers() {
+        assert_eq!(parse_current_ma("2500\n", false), Some(2500));
+        assert_eq!(parse_current_ma("-1500\n", false), Some(1500));
+        assert_eq!(parse_current_ma("0\n", false), Some(0));
     }
 
-    // Drivers disagree on the unit: some report uA, some mA. A 2500 mA charge
-    // must read as 2500 in both cases instead of collapsing to 2 mA.
+    // A bypass on a uA driver reads a few thousand uA. That must stay a few
+    // mA: reporting 3600 mA made a working node look like a failed one.
     #[test]
-    fn read_ma_normalises_units() {
-        assert_eq!(read_ma_of("2500\n"), Some(2500));
-        assert_eq!(read_ma_of("2500000\n"), Some(2500));
-        assert_eq!(read_ma_of("-1500\n"), Some(1500));
-        assert_eq!(read_ma_of("0\n"), Some(0));
-        assert_eq!(read_ma_of("12000\n"), Some(12));
+    fn read_ma_normalises_microamp_drivers() {
+        assert_eq!(parse_current_ma("2500000\n", true), Some(2500));
+        assert_eq!(parse_current_ma("5227000\n", true), Some(5227));
+        assert_eq!(parse_current_ma("3600\n", true), Some(3));
+        assert_eq!(parse_current_ma("-3600\n", true), Some(3));
+        assert_eq!(parse_current_ma("0\n", true), Some(0));
+    }
+
+    // The unit is learned from unambiguous magnitudes only, so a bypass reading
+    // cannot flip an already known uA device back to mA.
+    #[test]
+    fn current_unit_is_learned_from_large_readings() {
+        assert!(unit_from_magnitude(10_000));
+        assert!(unit_from_magnitude(5_227_000));
+        assert!(!unit_from_magnitude(9_999));
+        assert!(!unit_from_magnitude(3_600));
+        assert!(!unit_from_magnitude(0));
     }
 
     // Unreadable must stay distinguishable from a real 0 mA reading, otherwise
     // "cannot read current" is indistinguishable from "bypass works".
     #[test]
     fn read_ma_reports_unreadable_as_none() {
-        assert_eq!(read_ma_of("nonsense\n"), None);
-        assert_eq!(read_ma_of(""), None);
-        assert_eq!(read_ma("/sys/class/power_supply/battery/does_not_exist"), None);
+        assert_eq!(parse_current_ma("nonsense\n", false), None);
+        assert_eq!(parse_current_ma("", false), None);
+        assert_eq!(
+            read_ma("/sys/class/power_supply/battery/does_not_exist"),
+            None
+        );
     }
 
     #[test]
@@ -1357,6 +1433,15 @@ mod tests {
         assert_eq!(median_ma(&mut a), 40);
         let mut b = [0, 10, 20, 30];
         assert_eq!(median_ma(&mut b), 20);
+    }
+
+    // A bypass makes the charger renegotiate, so recovery often lands well
+    // below the original rate - still far above the ~0 mA of a latched node.
+    #[test]
+    fn recovery_target_tolerates_renegotiated_rate() {
+        assert_eq!(recovery_target(2500), 625);
+        assert_eq!(recovery_target(400), MIN_TESTABLE_CURRENT_MA);
+        assert_eq!(recovery_target(0), MIN_TESTABLE_CURRENT_MA);
     }
 
     // -----------------------------------------------------------------------
