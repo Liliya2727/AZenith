@@ -172,6 +172,8 @@ internal enum class TweaksSubTab {
     DisplayColor
 }
 
+private const val MAX_BYPASS_LOG_LINES = 1500
+
 private val blockLargeCorner = 22.dp
 private val blockSmallCorner = 4.dp
 
@@ -935,7 +937,17 @@ private fun BypassChargingSubPane(
     )
 
     fun runCompatibilityCheck() {
-        diagnosticLogs.clear()
+        // Keep the previous run visible: the scan is slow and its result must
+        // stay readable afterwards. Trim only so the list cannot grow forever.
+        val excess = diagnosticLogs.size - MAX_BYPASS_LOG_LINES
+        if (excess > 0) {
+            repeat(excess) { diagnosticLogs.removeAt(0) }
+        }
+        if (diagnosticLogs.isNotEmpty()) {
+            diagnosticLogs.add("")
+        }
+        val firstNewLog = diagnosticLogs.size
+
         isRunningDiagnostic = true
         showConsole = true
         foundWorkingNode = null
@@ -955,7 +967,8 @@ private fun BypassChargingSubPane(
                 refreshNodes()
 
                 val successRegex = "Found working node:\\s*(\\S+)".toRegex()
-                val cleanLogs = diagnosticLogs.map { it.replace("\u001B\\[[;\\d]*m".toRegex(), "") }
+                val cleanLogs = diagnosticLogs.drop(firstNewLog)
+                    .map { it.replace("\u001B\\[[;\\d]*m".toRegex(), "") }
                 val detected = cleanLogs.firstNotNullOfOrNull { successRegex.find(it)?.groupValues?.get(1) }
                 if (detected != null) {
                     foundWorkingNode = detected

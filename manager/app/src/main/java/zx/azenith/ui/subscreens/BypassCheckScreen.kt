@@ -84,6 +84,8 @@ data class ShellOutput(
     val isCompleted: Boolean = false
 )
 
+private const val MAX_BYPASS_LOG_LINES = 1500
+
 @Composable
 fun BypassChargeCheckScreen(navController: NavController) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -193,7 +195,17 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
 
     fun runCompatibilityCheck() {
-        logs.clear()
+        // Keep the previous run on screen: a scan takes minutes and the result
+        // must stay readable after it finishes. Trim only to bound memory.
+        val excess = logs.size - MAX_BYPASS_LOG_LINES
+        if (excess > 0) {
+            repeat(excess) { logs.removeAt(0) }
+        }
+        if (logs.isNotEmpty()) {
+            logs.add(ShellOutput("", true))
+        }
+        val firstNewLog = logs.size
+
         isRunning = true
         hasRunDiagnosis = false
         isConsoleClosed = false
@@ -213,7 +225,9 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 hasRunDiagnosis = true
     
                 val successRegex = "Found working node:\\s*(\\S+)".toRegex()
-                val cleanLogs = logs.map { it.text.replace("\u001B\\[[;\\d]*m".toRegex(), "") }
+                // Only this run: an older success line must not be applied again.
+                val cleanLogs = logs.drop(firstNewLog)
+                    .map { it.text.replace("\u001B\\[[;\\d]*m".toRegex(), "") }
                 val successNode = cleanLogs.firstNotNullOfOrNull { successRegex.find(it)?.groupValues?.get(1) }
     
                 refreshBypassData { }
