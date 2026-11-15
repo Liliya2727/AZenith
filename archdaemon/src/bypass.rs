@@ -203,14 +203,17 @@ fn parse_atol(s: &str) -> i64 {
 // ---------------------------------------------------------------------------
 // Battery / charger state
 // ---------------------------------------------------------------------------
-const CHARGER_ONLINE_PATHS: [&str; 3] = [
-    "/sys/class/power_supply/ac/online",
+const CHARGER_ONLINE_PATHS: [&str; 5] = [
+    "/sys/class/power_supply/charger/online",
     "/sys/class/power_supply/usb/online",
+    "/sys/class/power_supply/usb_switch/online",
+    "/sys/class/power_supply/ac/online",
     "/sys/class/power_supply/dc/online",
 ];
 
-const BATTERY_CURRENT_PATHS: [&str; 2] = [
+const BATTERY_CURRENT_PATHS: [&str; 3] = [
     "/sys/class/power_supply/battery/current_now",
+    "/sys/class/power_supply/battery/current_avg",
     "/sys/class/power_supply/battery/BatteryAverageCurrent",
 ];
 
@@ -766,7 +769,9 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
                 i / 2,
                 TEST_DURATION_SECS,
                 value_or_unknown(battery_now),
-                value_or_unknown(read_ma(BATTERY_CURRENT_PATHS[1])),
+                value_or_unknown(
+                    read_ma(BATTERY_CURRENT_PATHS[1]).or_else(|| read_ma(BATTERY_CURRENT_PATHS[2]))
+                ),
                 value_or_unknown(input_now),
                 node_value(node),
                 read_battery_status().unwrap_or_else(|| "?".to_string())
