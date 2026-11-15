@@ -191,27 +191,283 @@ fn parse_atol(s: &str) -> i64 {
 }
 
 // ---------------------------------------------------------------------------
-// read_current_ma
+// Battery / charger state
 // ---------------------------------------------------------------------------
+const CHARGER_ONLINE_PATHS: [&str; 3] = [
+    "/sys/class/power_supply/ac/online",
+    "/sys/class/power_supply/usb/online",
+    "/sys/class/power_supply/dc/online",
+];
+
+const BATTERY_CURRENT_PATHS: [&str; 2] = [
+    "/sys/class/power_supply/battery/current_now",
+    "/sys/class/power_supply/battery/BatteryAverageCurrent",
+];
+
+const INPUT_CURRENT_PATHS: [&str; 3] = [
+    "/sys/class/power_supply/usb/current_now",
+    "/sys/class/power_supply/ac/current_now",
+    "/sys/class/power_supply/dc/current_now",
+];
+
+/// Read a current value from sysfs and normalise it to mA.
+///
+/// Android exposes `current_now` either in uA or in mA depending on the
+/// driver, so the magnitude picks the unit: values >= 10_000 can only be uA.
+/// Returns `None` when the path is missing or not numeric, which lets callers
+/// tell "unreadable" apart from a genuine 0 mA reading.
+pub fn read_ma(path: &str) -> Option<i32> {
+    let raw = fileops::read_first_line(path)?;
+    let raw = raw.trim();
+    if !raw
+        .trim_start_matches(['+', '-'])
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_digit())
+    {
+        return None;
+    }
+    let val = parse_atol(raw).abs();
+    Some(if val >= 10_000 { (val / 1000) as i32 } else { val as i32 })
+}
+
+/// Battery current in mA, or `None` when no path is readable.
+pub fn read_current_ma_checked() -> Option<i32> {
+    BATTERY_CURRENT_PATHS.iter().find_map(|p| read_ma(p))
+}
+
+/// Charger input current in mA, or `None` when no path is readable.
+pub fn read_input_current_ma() -> Option<i32> {
+    INPUT_CURRENT_PATHS.iter().find_map(|p| read_ma(p))
+}
+
+/// Battery current in mA, with the historical `9999` sentinel on failure.
 pub fn read_current_ma() -> i32 {
-    let current_paths = [
-        "/sys/class/power_supply/battery/current_now\0",
-        "/sys/class/power_supply/battery/BatteryAverageCurrent\0",
-    ];
-    for path in &current_paths {
-        let c_path = std::ffi::CString::new(path.trim_end_matches('\0')).unwrap();
-        let fd = unsafe { libc::open(c_path.as_ptr(), libc::O_RDONLY) };
-        if fd >= 0 {
-            let mut buf = [0u8; 32];
-            let _ = unsafe { libc::read(fd, buf.as_mut_ptr() as *mut _, buf.len() - 1) };
-            unsafe { libc::close(fd) };
-            let s = unsafe { std::ffi::CStr::from_ptr(buf.as_ptr() ) }.to_string_lossy();
-            let val = parse_atol(s.trim());
-            let val = if val < 0 { -val } else { val };
-            return if val > 1000 { (val / 1000) as i32 } else { val as i32 };
+    read_current_ma_checked().unwrap_or(9999)
+}
+
+pub fn read_battery_status() -> Option<String> {
+    fileops::read_first_line("/sys/class/power_supply/battery/status")
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// True when the battery is powering the system.
+pub fn is_discharging() -> bool {
+    read_battery_status()
+        .map(|s| s.eq_ignore_ascii_case("Discharging"))
+        .unwrap_or(false)
+}
+
+/// True when a charger is attached.
+///
+/// Kept separate from `is_charging()` on purpose: a phone in bypass reports
+/// "Not charging" (and sometimes "Discharging") while still being plugged in,
+/// and treating that as "no charger" makes callers disable bypass again on the
+/// next tick.
+pub fn is_plugged() -> bool {
+    for path in CHARGER_ONLINE_PATHS {
+        if fileops::read_int(path) == Some(1) {
+            return true;
         }
     }
-    9999
+    match read_battery_status() {
+        Some(s) => !s.eq_ignore_ascii_case("Discharging"),
+        None => false,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Node testing (shared by -cbc and -tb)
+// ---------------------------------------------------------------------------
+
+/// Seconds the node is held in its ON state before it is restored.
+pub const TEST_DURATION_SECS: u32 = 10;
+const TEST_SAMPLE_MS: u64 = 500;
+const RECOVERY_MAX_SECS: u32 = 5;
+const RECOVERY_SAMPLE_MS: u64 = 250;
+
+/// Battery current below this counts as "not charging".
+const LOW_CURRENT_MA: i32 = 50;
+/// A test is meaningless when the battery already draws less than this.
+const MIN_TESTABLE_CURRENT_MA: i32 = 100;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NodeVerdict {
+    Pass,
+    WriteFailed,
+    UnreadableCurrent,
+    CurrentNotDropped { ma: i32 },
+    BatteryDischarging { ma: i32 },
+    InputCurrentLost { battery_ma: i32, input_ma: i32 },
+    RestoreFailed { ma: i32 },
+    NoRecovery { ma: i32 },
+}
+
+impl NodeVerdict {
+    pub fn describe(self) -> String {
+        match self {
+            NodeVerdict::Pass => "bypass verified".to_string(),
+            NodeVerdict::WriteFailed => "could not write to node".to_string(),
+            NodeVerdict::UnreadableCurrent => "battery current unreadable".to_string(),
+            NodeVerdict::CurrentNotDropped { ma } => format!("current did not drop ({ma} mA)"),
+            NodeVerdict::BatteryDischarging { ma } => format!(
+                "battery is discharging during the test ({ma} mA): charging was killed, not bypassed"
+            ),
+            NodeVerdict::InputCurrentLost { battery_ma, input_ma } => format!(
+                "charger input collapsed too ({input_ma} mA in, {battery_ma} mA to battery): charging was killed, not bypassed"
+            ),
+            NodeVerdict::RestoreFailed { ma } => format!(
+                "restore write failed while current was {ma} mA: node may still be latched, reboot if charging does not resume"
+            ),
+            NodeVerdict::NoRecovery { ma } => format!(
+                "current did not recover after restore ({ma} mA): node may still be latched"
+            ),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NodeTestOutcome {
+    pub verdict: NodeVerdict,
+    pub baseline_ma: i32,
+    pub battery_ma: i32,
+    pub input_ma: Option<i32>,
+    pub samples: usize,
+}
+
+fn median_ma(values: &mut [i32]) -> i32 {
+    values.sort_unstable();
+    values[values.len() / 2]
+}
+
+/// Pre-flight shared by every node test.
+///
+/// Refuses to test when a result cannot mean anything: no charger, unreadable
+/// current, or a battery that already draws almost nothing (full, or a charge
+/// switch left latched by an earlier run).
+pub fn test_preflight() -> Result<i32, String> {
+    if !is_plugged() {
+        return Err("charger not detected, plug in first".to_string());
+    }
+    let baseline = read_current_ma_checked()
+        .ok_or_else(|| "cannot read battery current".to_string())?;
+    if baseline < MIN_TESTABLE_CURRENT_MA {
+        return Err(format!(
+            "battery current is only {baseline} mA while plugged in: battery is full, or a charge switch is already latched. Restore the node first (or reboot) before testing"
+        ));
+    }
+    Ok(baseline)
+}
+
+/// After the node is restored, charging must come back. Without this the test
+/// cannot tell "the node controls this current" from "current happened to be
+/// low", and it also catches a restore that silently failed.
+fn verify_recovery(baseline_ma: i32) -> NodeVerdict {
+    let target = std::cmp::max(MIN_TESTABLE_CURRENT_MA, baseline_ma / 2);
+    let mut best = 0;
+    for _ in 0..(RECOVERY_MAX_SECS as u64 * 1000 / RECOVERY_SAMPLE_MS) {
+        std::thread::sleep(std::time::Duration::from_millis(RECOVERY_SAMPLE_MS));
+        if let Some(v) = read_current_ma_checked() {
+            best = best.max(v);
+            if v >= target {
+                return NodeVerdict::Pass;
+            }
+        }
+    }
+    NodeVerdict::NoRecovery { ma: best }
+}
+
+/// Hold a node in its ON state and decide whether it produced a usable bypass.
+///
+/// A node passes only when all of these hold:
+///   1. battery current drops below 50 mA (median of the samples),
+///   2. the charger still feeds the system: input current stays >= 50 mA, or,
+///      when input current is unreadable, the battery is not discharging,
+///   3. current recovers after the node is restored.
+pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
+    let baseline_ma = read_current_ma_checked().unwrap_or(-1);
+
+    if echo_to_file(node.path, node.on_val, 0) != 0 {
+        let _ = echo_to_file(node.path, node.off_val, 0);
+        return NodeTestOutcome {
+            verdict: NodeVerdict::WriteFailed,
+            baseline_ma,
+            battery_ma: baseline_ma,
+            input_ma: None,
+            samples: 0,
+        };
+    }
+
+    let total_samples = (TEST_DURATION_SECS as u64 * 1000 / TEST_SAMPLE_MS) as usize;
+    let mut battery: Vec<i32> = Vec::with_capacity(total_samples);
+    let mut input: Vec<i32> = Vec::with_capacity(total_samples);
+    let mut saw_discharging = false;
+
+    for i in 1..=total_samples {
+        std::thread::sleep(std::time::Duration::from_millis(TEST_SAMPLE_MS));
+        if let Some(v) = read_current_ma_checked() {
+            battery.push(v);
+        }
+        if let Some(v) = read_input_current_ma() {
+            input.push(v);
+        }
+        if is_discharging() {
+            saw_discharging = true;
+        }
+        if verbose && i % 2 == 0 {
+            println!(
+                "    Checking current ({}/{}s): \u{1b}[33m{} mA\u{1b}[0m",
+                i / 2,
+                TEST_DURATION_SECS,
+                read_current_ma()
+            );
+        }
+    }
+
+    let restored = echo_to_file(node.path, node.off_val, 0) == 0;
+
+    if battery.is_empty() {
+        return NodeTestOutcome {
+            verdict: NodeVerdict::UnreadableCurrent,
+            baseline_ma,
+            battery_ma: -1,
+            input_ma: None,
+            samples: 0,
+        };
+    }
+
+    let samples = battery.len();
+    let battery_ma = median_ma(&mut battery);
+    let input_ma = if input.is_empty() {
+        None
+    } else {
+        Some(median_ma(&mut input))
+    };
+
+    let verdict = if battery_ma >= LOW_CURRENT_MA {
+        NodeVerdict::CurrentNotDropped { ma: battery_ma }
+    } else if !restored {
+        NodeVerdict::RestoreFailed { ma: battery_ma }
+    } else if let Some(input_ma) = input_ma {
+        if input_ma < LOW_CURRENT_MA {
+            NodeVerdict::InputCurrentLost { battery_ma, input_ma }
+        } else {
+            verify_recovery(baseline_ma)
+        }
+    } else if saw_discharging {
+        NodeVerdict::BatteryDischarging { ma: battery_ma }
+    } else {
+        verify_recovery(baseline_ma)
+    };
+
+    NodeTestOutcome {
+        verdict,
+        baseline_ma,
+        battery_ma,
+        input_ma,
+        samples,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -262,11 +518,15 @@ pub fn check_bypass_compatibility() -> i32 {
 
     std::thread::sleep(std::time::Duration::from_secs(5));
 
-    if is_charging() == 0 {
-        println!("\u{1b}[33m[!] WARNING:\u{1b}[0m Charger not detected. Plug in first!");
-        log_warn!("bypass", "compatibility check aborted reason=charger_disconnected");
-        return -1;
-    }
+    let baseline_ma = match test_preflight() {
+        Ok(ma) => ma,
+        Err(reason) => {
+            println!("\u{1b}[33m[!] WARNING:\u{1b}[0m {reason}");
+            log_warn!("bypass", "compatibility check aborted reason={}", reason);
+            return -1;
+        }
+    };
+    println!("\u{1b}[90m[i] Baseline battery current: {} mA\u{1b}[0m", baseline_ma);
 
     let total_nodes = BYPASS_LIST.len();
 
@@ -282,29 +542,30 @@ pub fn check_bypass_compatibility() -> i32 {
 
         tested_count += 1;
         println!("\n\u{1b}[1;32m[+]\u{1b}[0m Testing Node ({}/{}): \u{1b}[1;37m{}\u{1b}[0m", tested_count, total_nodes, node.name);
-        echo_to_file(node.path, node.on_val, 0);
 
-        let mut last_ma = 9999;
-        for sec in 1..=10 {
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            last_ma = read_current_ma();
-            println!("    Checking current ({sec}s/10s): \u{1b}[33m{} mA\u{1b}[0m", last_ma);
-        }
+        let outcome = test_node(node, true);
 
-        echo_to_file(node.path, node.off_val, 0);
-
-        if last_ma < 50 {
+        if outcome.verdict == NodeVerdict::Pass {
             println!("\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Found working node: \u{1b}[1m{}\u{1b}[0m", node.name);
             println!("\u{1b}[32m[INFO]\u{1b}[0m Process finished. {} nodes skipped.", skipped_count);
 
-            log_info!("bypass", "compatible node found name={} skipped={}", node.name, skipped_count);
+            log_info!(
+                "bypass",
+                "compatible node found name={} skipped={} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+                node.name, skipped_count, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+            );
 
             return 0;
-        } else {
-            println!("\u{1b}[31m[FAILED]\u{1b}[0m Current drop test failed for {} ({} mA)", node.name, last_ma);
-            println!("------------------------------------------");
-            std::thread::sleep(std::time::Duration::from_millis(300));
         }
+
+        println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
+        log_warn!(
+            "bypass",
+            "node rejected name={} verdict={:?} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+            node.name, outcome.verdict, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+        );
+        println!("------------------------------------------");
+        std::thread::sleep(std::time::Duration::from_millis(300));
     }
 
     println!("\n\u{1b}[1;31m[-]\u{1b}[0m Final Result: No compatible bypass node found.");
@@ -344,11 +605,14 @@ fn test_single_node(node: &BypassNode) -> i32 {
 
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    if is_charging() == 0 {
-        println!("\u{1b}[33m[!] WARNING:\u{1b}[0m Charger not detected. Plug in first!");
-        log_warn!("bypass", "single node test aborted reason=charger_disconnected");
-        return -1;
-    }
+    let baseline_ma = match test_preflight() {
+        Ok(ma) => ma,
+        Err(reason) => {
+            println!("\u{1b}[33m[!] WARNING:\u{1b}[0m {reason}");
+            log_warn!("bypass", "single node test aborted reason={}", reason);
+            return -1;
+        }
+    };
 
     if access(node.path) != 0 {
         println!("\u{1b}[31m[ERROR]\u{1b}[0m Node path not found: {}", node.path);
@@ -357,27 +621,30 @@ fn test_single_node(node: &BypassNode) -> i32 {
 
     println!("\n\u{1b}[1;32m[+]\u{1b}[0m Testing Node: \u{1b}[1;37m{}\u{1b}[0m", node.name);
     println!("    Path: {}", node.path);
+    println!("\u{1b}[90m[i] Baseline battery current: {} mA\u{1b}[0m", baseline_ma);
 
-    echo_to_file(node.path, node.on_val, 0);
+    let outcome = test_node(node, true);
 
-    let mut last_ma = 9999;
-    for sec in 1..=10 {
-        std::thread::sleep(std::time::Duration::from_secs(1));
-        last_ma = read_current_ma();
-        println!("    Checking current ({sec}s/10s): \u{1b}[33m{} mA\u{1b}[0m", last_ma);
-    }
-
-    echo_to_file(node.path, node.off_val, 0);
-
-    if last_ma < 50 {
-        println!("\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Node is compatible: \u{1b}[1m{}\u{1b}[0m (Last: {} mA)", node.name, last_ma);
-        log_info!("bypass", "single node test success name={} last_ma={}", node.name, last_ma);
+    if outcome.verdict == NodeVerdict::Pass {
+        println!(
+            "\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Node is compatible: \u{1b}[1m{}\u{1b}[0m ({} mA, baseline {} mA)",
+            node.name, outcome.battery_ma, outcome.baseline_ma
+        );
+        log_info!(
+            "bypass",
+            "single node test success name={} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+            node.name, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+        );
         return 0;
-    } else {
-        println!("\n\u{1b}[31m[FAILED]\u{1b}[0m Node not compatible: {} (Last: {} mA)", node.name, last_ma);
-        log_warn!("bypass", "single node test failed name={} last_ma={}", node.name, last_ma);
-        return 1;
     }
+
+    println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
+    log_warn!(
+        "bypass",
+        "single node test failed name={} verdict={:?} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+        node.name, outcome.verdict, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+    );
+    1
 }
 
 // ---------------------------------------------------------------------------
@@ -585,6 +852,56 @@ mod tests {
         ctx.game.game_pid_count = 1;
         ctx.game.game_pids[0] = 4242;
         ctx
+    }
+
+    // -----------------------------------------------------------------------
+    // current unit normalisation (detection accuracy)
+    // -----------------------------------------------------------------------
+
+    fn read_ma_of(content: &str) -> Option<i32> {
+        let p = tmp_file("current", content);
+        read_ma(p.to_str().unwrap())
+    }
+
+    // Drivers disagree on the unit: some report uA, some mA. A 2500 mA charge
+    // must read as 2500 in both cases instead of collapsing to 2 mA.
+    #[test]
+    fn read_ma_normalises_units() {
+        assert_eq!(read_ma_of("2500\n"), Some(2500));
+        assert_eq!(read_ma_of("2500000\n"), Some(2500));
+        assert_eq!(read_ma_of("-1500\n"), Some(1500));
+        assert_eq!(read_ma_of("0\n"), Some(0));
+        assert_eq!(read_ma_of("12000\n"), Some(12));
+    }
+
+    // Unreadable must stay distinguishable from a real 0 mA reading, otherwise
+    // "cannot read current" is indistinguishable from "bypass works".
+    #[test]
+    fn read_ma_reports_unreadable_as_none() {
+        assert_eq!(read_ma_of("nonsense\n"), None);
+        assert_eq!(read_ma_of(""), None);
+        assert_eq!(read_ma("/sys/class/power_supply/battery/does_not_exist"), None);
+    }
+
+    #[test]
+    fn median_ignores_order() {
+        let mut a = [3000, 0, 40];
+        assert_eq!(median_ma(&mut a), 40);
+        let mut b = [0, 10, 20, 30];
+        assert_eq!(median_ma(&mut b), 20);
+    }
+
+    // A verdict must never claim success without the charger still feeding the
+    // system; these are the cases that used to be reported as "working node".
+    #[test]
+    fn verdicts_describe_the_failure() {
+        assert!(NodeVerdict::BatteryDischarging { ma: 0 }.describe().contains("discharging"));
+        assert!(NodeVerdict::InputCurrentLost { battery_ma: 0, input_ma: 0 }
+            .describe()
+            .contains("collapsed"));
+        assert!(NodeVerdict::NoRecovery { ma: 0 }.describe().contains("latched"));
+        assert!(NodeVerdict::RestoreFailed { ma: 0 }.describe().contains("restore write failed"));
+        assert_eq!(NodeVerdict::Pass.describe(), "bypass verified");
     }
 
     // C copies the old PIDs when the file is empty, so the diff sees

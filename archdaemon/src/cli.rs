@@ -195,11 +195,15 @@ pub fn check_bypass_compatibility() -> i32 {
 
     std::thread::sleep(std::time::Duration::from_secs(5));
 
-    if crate::bypass::is_charging() == 0 {
-        println!("\u{1b}[33m[!] WARNING:\u{1b}[0m Charger not detected. Plug in first!");
-        log_warn!("bypass", "compatibility check aborted reason=charger_disconnected");
-        return -1;
-    }
+    let baseline_ma = match crate::bypass::test_preflight() {
+        Ok(ma) => ma,
+        Err(reason) => {
+            println!("\u{1b}[33m[!] WARNING:\u{1b}[0m {reason}");
+            log_warn!("bypass", "compatibility check aborted reason={}", reason);
+            return -1;
+        }
+    };
+    println!("\u{1b}[90m[i] Baseline battery current: {} mA\u{1b}[0m", baseline_ma);
 
     let total_nodes = crate::bypass::BYPASS_LIST.len();
 
@@ -217,36 +221,31 @@ pub fn check_bypass_compatibility() -> i32 {
             continue;
         }
         tested_count += 1;
-        println!("\n\u{1b}[1;32m[+]\u{1b}[0m Testing Node ({}/{}): \u{1b}[1;37m{}\u{1b}[0m", tested_count + skipped_count, total_nodes, node.name);
-        if crate::bypass::echo_to_file(node.path, node.on_val, 0) != 0 {
-            let _ = crate::bypass::echo_to_file(node.path, node.off_val, 0);
-            log_warn!("bypass", "node test skipped after write failure name={} path={}", node.name, node.path);
-            skipped_count += 1;
-            tested_count -= 1;
-            continue;
-        }
+        println!("\n\u{1b}[1;32m[+]\u{1b}[0m Testing Node ({}/{}): \u{1b}[1;37m{}\u{1b}[0m", tested_count, total_nodes, node.name);
 
-        let mut last_ma = 9999;
-        for sec in 1..=10 {
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            last_ma = crate::bypass::read_current_ma();
-            println!("    Checking current ({sec}s/10s): \u{1b}[33m{} mA\u{1b}[0m", last_ma);
-        }
+        let outcome = crate::bypass::test_node(node, true);
 
-        crate::bypass::echo_to_file(node.path, node.off_val, 0);
-
-        if last_ma < 50 {
+        if outcome.verdict == crate::bypass::NodeVerdict::Pass {
             println!("\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Found working node: \u{1b}[1m{}\u{1b}[0m", node.name);
             println!("\u{1b}[32m[INFO]\u{1b}[0m Process finished. {} nodes skipped.", skipped_count);
 
-            log_info!("bypass", "compatible node found name={} skipped={}", node.name, skipped_count);
+            log_info!(
+                "bypass",
+                "compatible node found name={} skipped={} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+                node.name, skipped_count, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+            );
 
             return 0;
-        } else {
-            println!("\u{1b}[31m[FAILED]\u{1b}[0m Current drop test failed for {} ({} mA)", node.name, last_ma);
-            println!("------------------------------------------");
-            std::thread::sleep(std::time::Duration::from_millis(300));
         }
+
+        println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
+        log_warn!(
+            "bypass",
+            "node rejected name={} verdict={:?} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+            node.name, outcome.verdict, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+        );
+        println!("------------------------------------------");
+        std::thread::sleep(std::time::Duration::from_millis(300));
     }
 
     println!("\n\u{1b}[1;31m[-]\u{1b}[0m Final Result: No compatible bypass node found.");
@@ -286,11 +285,14 @@ fn test_single_node(node: &BypassNode) -> i32 {
 
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    if crate::bypass::is_charging() == 0 {
-        println!("\u{1b}[33m[!] WARNING:\u{1b}[0m Charger not detected. Plug in first!");
-        log_warn!("bypass", "single node test aborted reason=charger_disconnected");
-        return -1;
-    }
+    let baseline_ma = match crate::bypass::test_preflight() {
+        Ok(ma) => ma,
+        Err(reason) => {
+            println!("\u{1b}[33m[!] WARNING:\u{1b}[0m {reason}");
+            log_warn!("bypass", "single node test aborted reason={}", reason);
+            return -1;
+        }
+    };
 
     // Check if path exists using access
     let c_path = std::ffi::CString::new(node.path).unwrap();
@@ -301,27 +303,30 @@ fn test_single_node(node: &BypassNode) -> i32 {
 
     println!("\n\u{1b}[1;32m[+]\u{1b}[0m Testing Node: \u{1b}[1;37m{}\u{1b}[0m", node.name);
     println!("    Path: {}", node.path);
+    println!("\u{1b}[90m[i] Baseline battery current: {} mA\u{1b}[0m", baseline_ma);
 
-    crate::bypass::echo_to_file(node.path, node.on_val, 0);
+    let outcome = crate::bypass::test_node(node, true);
 
-    let mut last_ma = 9999;
-    for sec in 1..=10 {
-        std::thread::sleep(std::time::Duration::from_secs(1));
-        last_ma = crate::bypass::read_current_ma();
-        println!("    Checking current ({sec}s/10s): \u{1b}[33m{} mA\u{1b}[0m", last_ma);
-    }
-
-    crate::bypass::echo_to_file(node.path, node.off_val, 0);
-
-    if last_ma < 50 {
-        println!("\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Node is compatible: \u{1b}[1m{}\u{1b}[0m (Last: {} mA)", node.name, last_ma);
-        log_info!("bypass", "single node test success name={} last_ma={}", node.name, last_ma);
+    if outcome.verdict == crate::bypass::NodeVerdict::Pass {
+        println!(
+            "\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Node is compatible: \u{1b}[1m{}\u{1b}[0m ({} mA, baseline {} mA)",
+            node.name, outcome.battery_ma, outcome.baseline_ma
+        );
+        log_info!(
+            "bypass",
+            "single node test success name={} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+            node.name, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+        );
         return 0;
-    } else {
-        println!("\n\u{1b}[31m[FAILED]\u{1b}[0m Node not compatible: {} (Last: {} mA)", node.name, last_ma);
-        log_warn!("bypass", "single node test failed name={} last_ma={}", node.name, last_ma);
-        return 1;
     }
+
+    println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
+    log_warn!(
+        "bypass",
+        "single node test failed name={} verdict={:?} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
+        node.name, outcome.verdict, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
+    );
+    1
 }
 
 // ---------------------------------------------------------------------------
