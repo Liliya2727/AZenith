@@ -360,6 +360,17 @@ SIGINT/SIGTERM/SIGHUP. The record is replayed at daemon start, before
 every `-cbc`/`-tb`, and by `--restorepending`, so a killed root shell or
 a reboot cannot leave a charge switch latched.
 
+A node passes only when the battery current stays below 50 mA for three
+consecutive samples *after* a 2 s settling window, the charger input
+still feeds the system, and current recovers once the node is restored.
+`-tb` prints per-sample battery / average / input current, the node value
+read back, and the battery status, plus a Summary line, so a rejection
+can be explained. A node that is reset to its OFF value mid-test is
+reported as `NodeReverted` instead of "current did not drop".
+
+`-cbc` is a diagnostic and never rewrites the stored configuration; its
+per-node verdicts are saved to `bypasschgconfig/last_check`.
+
 ---
 
 ## 13. Logging

@@ -5,7 +5,7 @@ use crate::config::resolution::restore_resolution_target;
 use crate::core::{BypassNode, ProfileMode, DaemonContext};
 use crate::proc::{get_pids_of_at, set_priority};
 use crate::profile::{is_manual_mode, restore_per_app_overrides, update_game_info};
-use crate::sysprop::{get_or_default, get_into, set};
+use crate::sysprop::{get_or_default, get_into};
 use crate::fileops;
 use crate::{IS_FALSE, IS_TRUE, log_error, log_info, log_warn};
 use std::os::raw::c_int;
@@ -110,12 +110,22 @@ pub const BYPASS_LIST_SIZE: usize = BYPASS_LIST.len();
 // ---------------------------------------------------------------------------
 // echo_to_file
 // ---------------------------------------------------------------------------
+
+/// Write a value to a sysfs/proc node the way `echo` does, including the
+/// trailing newline: a few vendor drivers only accept the terminated form.
+fn write_node(path: &str, value: &str) -> std::io::Result<()> {
+    let mut payload = String::with_capacity(value.len() + 1);
+    payload.push_str(value);
+    payload.push('\n');
+    fileops::write_string(path, &payload)
+}
+
 pub fn echo_to_file(path: &str, value: &str, lock: i32) -> c_int {
     if access(path) != 0 {
         return -1;
     }
     chmod(path, 0o644);
-    let res = fileops::write_string(path, value);
+    let res = write_node(path, value);
     if lock != 0 {
         chmod(path, 0o444);
     }
@@ -367,7 +377,7 @@ fn replay_pending_at(file: &str) -> Result<bool, String> {
     };
 
     chmod(&record.path, 0o644);
-    match fileops::write_string(&record.path, &record.off_val) {
+    match write_node(&record.path, &record.off_val) {
         Ok(()) => {
             fileops::remove_file_best_effort(file);
             log_info!(
@@ -549,11 +559,17 @@ fn sleep_interruptible(ms: u64) -> bool {
 /// Seconds the node is held in its ON state before it is restored.
 pub const TEST_DURATION_SECS: u32 = 10;
 const TEST_SAMPLE_MS: u64 = 500;
+/// Seconds ignored after switching the node ON: the charger needs a moment to
+/// renegotiate, and the first samples are the noisiest.
+const TEST_SETTLE_SECS: u32 = 2;
 const RECOVERY_MAX_SECS: u32 = 5;
 const RECOVERY_SAMPLE_MS: u64 = 250;
 
 /// Battery current below this counts as "not charging".
 const LOW_CURRENT_MA: i32 = 50;
+/// How many consecutive low samples prove a drop. One sample can be a charger
+/// pulse or a rounding artefact; a real bypass holds for every sample.
+const LOW_WINDOW_SAMPLES: usize = 3;
 /// A test is meaningless when the battery already draws less than this.
 const MIN_TESTABLE_CURRENT_MA: i32 = 100;
 
@@ -564,6 +580,7 @@ pub enum NodeVerdict {
     WriteFailed,
     UnreadableCurrent,
     CurrentNotDropped { ma: i32 },
+    NodeReverted { ma: i32 },
     BatteryDischarging { ma: i32 },
     InputCurrentLost { battery_ma: i32, input_ma: i32 },
     RestoreFailed { ma: i32 },
@@ -578,6 +595,9 @@ impl NodeVerdict {
             NodeVerdict::WriteFailed => "could not write to node".to_string(),
             NodeVerdict::UnreadableCurrent => "battery current unreadable".to_string(),
             NodeVerdict::CurrentNotDropped { ma } => format!("current did not drop ({ma} mA)"),
+            NodeVerdict::NodeReverted { ma } => format!(
+                "node was reset to its OFF value while testing ({ma} mA): the charger HAL or kernel overrides it"
+            ),
             NodeVerdict::BatteryDischarging { ma } => format!(
                 "battery is discharging during the test ({ma} mA): charging was killed, not bypassed"
             ),
@@ -606,6 +626,48 @@ pub struct NodeTestOutcome {
 fn median_ma(values: &mut [i32]) -> i32 {
     values.sort_unstable();
     values[values.len() / 2]
+}
+
+/// Longest run of consecutive samples below `LOW_CURRENT_MA`, skipping the
+/// settling window. A real bypass holds low for every sample; a charge pulse
+/// only produces isolated zeros.
+fn longest_low_run(samples: &[i32], skip: usize) -> usize {
+    let mut best = 0;
+    let mut run = 0;
+    for &v in samples.iter().skip(skip) {
+        if v < LOW_CURRENT_MA {
+            run += 1;
+            best = best.max(run);
+        } else {
+            run = 0;
+        }
+    }
+    best
+}
+
+fn value_or_unknown(v: Option<i32>) -> String {
+    v.map(|ma| ma.to_string()).unwrap_or_else(|| "?".to_string())
+}
+
+/// Current value of the node itself, `?` when the node is write-only.
+fn node_value(node: &BypassNode) -> String {
+    fileops::read_first_line(node.path)
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| "?".to_string())
+}
+
+/// True when the node is readable and has fallen back to its OFF value while
+/// the test was running, i.e. something else (charger HAL, kernel, another
+/// app) reverted our write.
+fn node_fell_back(node: &BypassNode) -> bool {
+    match fileops::read_first_line(node.path) {
+        Some(v) => {
+            let v = v.trim();
+            v == node.off_val.trim() && v != node.on_val.trim()
+        }
+        None => false,
+    }
 }
 
 /// Pre-flight shared by every node test.
@@ -672,9 +734,11 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
     };
 
     let total_samples = (TEST_DURATION_SECS as u64 * 1000 / TEST_SAMPLE_MS) as usize;
+    let settle_samples = (TEST_SETTLE_SECS as u64 * 1000 / TEST_SAMPLE_MS) as usize;
     let mut battery: Vec<i32> = Vec::with_capacity(total_samples);
     let mut input: Vec<i32> = Vec::with_capacity(total_samples);
     let mut saw_discharging = false;
+    let mut fell_back = false;
     let mut aborted = false;
 
     for i in 1..=total_samples {
@@ -682,21 +746,30 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
             aborted = true;
             break;
         }
-        if let Some(v) = read_current_ma_checked() {
+        let battery_now = read_current_ma_checked();
+        if let Some(v) = battery_now {
             battery.push(v);
         }
-        if let Some(v) = read_input_current_ma() {
+        let input_now = read_input_current_ma();
+        if let Some(v) = input_now {
             input.push(v);
         }
-        if is_discharging() {
-            saw_discharging = true;
+        let discharging = is_discharging();
+        saw_discharging |= discharging;
+        if node_fell_back(node) {
+            fell_back = true;
         }
+
         if verbose && i % 2 == 0 {
             println!(
-                "    Checking current ({}/{}s): \u{1b}[33m{} mA\u{1b}[0m",
+                "    Checking current ({}/{}s): {} mA | avg {} mA | input {} mA | node \"{}\" | {}",
                 i / 2,
                 TEST_DURATION_SECS,
-                read_current_ma()
+                value_or_unknown(battery_now),
+                value_or_unknown(read_ma(BATTERY_CURRENT_PATHS[1])),
+                value_or_unknown(input_now),
+                node_value(node),
+                read_battery_status().unwrap_or_else(|| "?".to_string())
             );
         }
     }
@@ -724,6 +797,14 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
     }
 
     let samples = battery.len();
+    let lowest = battery.iter().copied().min().unwrap_or(-1);
+    let highest = battery.iter().copied().max().unwrap_or(-1);
+    // Clamp the settling window: if only a few samples arrived (unreadable
+    // node), skipping all of them would make the test impossible to pass.
+    let skip = settle_samples.min(samples.saturating_sub(1));
+    let low_run = longest_low_run(&battery, skip);
+    let needed_low_run = LOW_WINDOW_SAMPLES.min(samples - skip);
+    let bypass_seen = low_run >= needed_low_run;
     let battery_ma = median_ma(&mut battery);
     let input_ma = if input.is_empty() {
         None
@@ -731,8 +812,19 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
         Some(median_ma(&mut input))
     };
 
-    let verdict = if battery_ma >= LOW_CURRENT_MA {
-        NodeVerdict::CurrentNotDropped { ma: battery_ma }
+    if verbose {
+        println!(
+            "    Summary: min {} mA | median {} mA | max {} mA | longest drop {} sample(s) (need {} after {}s)",
+            lowest, battery_ma, highest, low_run, needed_low_run, TEST_SETTLE_SECS
+        );
+    }
+
+    let verdict = if !bypass_seen {
+        if fell_back {
+            NodeVerdict::NodeReverted { ma: battery_ma }
+        } else {
+            NodeVerdict::CurrentNotDropped { ma: battery_ma }
+        }
     } else if !restored {
         NodeVerdict::RestoreFailed { ma: battery_ma }
     } else if let Some(input_ma) = input_ma {
@@ -818,21 +910,21 @@ pub fn enable_bypass() -> i32 {
 // check_bypass_compatibility
 // ---------------------------------------------------------------------------
 
-/// What a failed scan is allowed to do to the stored configuration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum FailedScanAction {
-    /// Nothing was configured: write the neutral "not supported" state.
-    Clear,
-    /// The user configured a node: keep it, but stop applying it automatically.
-    KeepPathDisable,
-}
-
-fn failed_scan_action(current_path: &str) -> FailedScanAction {
-    if current_path.is_empty() || current_path == "UNSUPPORTED" {
-        FailedScanAction::Clear
-    } else {
-        FailedScanAction::KeepPathDisable
+/// Save the last scan to disk so its result can still be inspected after the
+/// console is gone or the app was closed.
+fn write_check_report(lines: &[String], result: &str) -> String {
+    let path = format!("{}/last_check", crate::core::BYPASSCHG_CONFIG);
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let mut text = format!("unix_time={stamp}\nresult={result}\n");
+    for line in lines {
+        text.push_str(line);
+        text.push('\n');
     }
+    fileops::write_string_best_effort(&path, &text);
+    path
 }
 
 pub fn check_bypass_compatibility() -> i32 {
@@ -856,11 +948,13 @@ pub fn check_bypass_compatibility() -> i32 {
 
     let mut skipped_count = 0;
     let mut tested_count = 0;
+    let mut report: Vec<String> = Vec::new();
 
     for node in &BYPASS_LIST {
         if access(node.path) != 0 {
             println!("\u{1b}[90m[-] Node {:<25}: Not Found, skipping...\u{1b}[0m", node.name);
             skipped_count += 1;
+            report.push(format!("{:<28} path={} verdict=path_not_found", node.name, node.path));
             continue;
         }
 
@@ -868,6 +962,16 @@ pub fn check_bypass_compatibility() -> i32 {
         println!("\n\u{1b}[1;32m[+]\u{1b}[0m Testing Node ({}/{}): \u{1b}[1;37m{}\u{1b}[0m", tested_count, total_nodes, node.name);
 
         let outcome = test_node(node, true);
+        report.push(format!(
+            "{:<28} path={} baseline={} median={} input={} samples={} verdict={}",
+            node.name,
+            node.path,
+            outcome.baseline_ma,
+            outcome.battery_ma,
+            outcome.input_ma.map(|v| v.to_string()).unwrap_or_else(|| "-".to_string()),
+            outcome.samples,
+            outcome.verdict.describe()
+        ));
 
         if outcome.verdict == NodeVerdict::Pass {
             println!("\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Found working node: \u{1b}[1m{}\u{1b}[0m", node.name);
@@ -879,12 +983,17 @@ pub fn check_bypass_compatibility() -> i32 {
                 node.name, skipped_count, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
             );
 
+            let report_path = write_check_report(&report, "compatible_node_found");
+            println!("\u{1b}[32m[INFO]\u{1b}[0m Result saved to {}", report_path);
+
             return 0;
         }
 
         if outcome.verdict == NodeVerdict::Aborted {
             println!("\n\u{1b}[33m[!] ABORTED\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
             log_warn!("bypass", "compatibility check aborted node={} reason=signal", node.name);
+            let report_path = write_check_report(&report, "aborted");
+            println!("\u{1b}[33m[INFO]\u{1b}[0m Result saved to {}", report_path);
             return -1;
         }
 
@@ -901,48 +1010,30 @@ pub fn check_bypass_compatibility() -> i32 {
     println!("\n\u{1b}[1;31m[-]\u{1b}[0m Final Result: No compatible bypass node found.");
     println!("\u{1b}[33m[INFO]\u{1b}[0m Summary: {} Scanned, {} Tested, {} Skipped.\u{1b}[0m", total_nodes, tested_count, skipped_count);
 
-    // Never touch the configuration while a node may still be ON: the stored
-    // path is the only thing that can restore it later.
+    // A scan is a diagnostic, not a decision: leave the stored configuration
+    // alone so the result stays visible and the path remains available for a
+    // later restore.
     if let Err(reason) = replay_pending_at(PENDING_RESTORE_FILE) {
         println!("\u{1b}[1;31m[!]\u{1b}[0m {}", reason);
-        println!(
-            "\u{1b}[33m[INFO]\u{1b}[0m Leaving the bypass configuration untouched: it may be the only way to restore that node."
-        );
         log_warn!(
             "bypass",
             "compatibility check failed but restore is unresolved reason={} configuration_kept=1",
             reason
         );
-        return 1;
     }
 
     let current_path = get_or_default("persist.sys.azenithconf.bypasspath", "");
-    match failed_scan_action(&current_path) {
-        FailedScanAction::Clear => {
-            set("persist.sys.azenithconf.bypasspath", "UNSUPPORTED");
-            set("persist.sys.azenithconf.bypasschg", "0");
-            set("persist.sys.azenithconf.bypasschgthreshold", "20");
-            fileops::write_string_best_effort(&format!("{}/bypasspath", crate::core::BYPASSCHG_CONFIG), "UNSUPPORTED");
-            fileops::write_string_best_effort(&format!("{}/bypasschg", crate::core::BYPASSCHG_CONFIG), "0");
-            fileops::write_string_best_effort(&format!("{}/bypasschgthreshold", crate::core::BYPASSCHG_CONFIG), "20");
-        }
-        FailedScanAction::KeepPathDisable => {
-            // A failed scan is not proof that a previously configured node is
-            // broken (charger unplugged mid-run, battery near full, ...). Keep
-            // the user's choice, but stop applying it automatically.
-            set("persist.sys.azenithconf.bypasschg", "0");
-            fileops::write_string_best_effort(&format!("{}/bypasschg", crate::core::BYPASSCHG_CONFIG), "0");
-            println!(
-                "\u{1b}[33m[INFO]\u{1b}[0m Keeping bypasspath={} (a failed scan is not proof the node is broken); automatic bypass disabled.",
-                current_path
-            );
-            log_warn!(
-                "bypass",
-                "no compatible node found, keeping bypasspath={} but disabling automatic bypass",
-                current_path
-            );
-        }
+    if current_path.is_empty() || current_path == "UNSUPPORTED" {
+        println!("\u{1b}[33m[INFO]\u{1b}[0m Configuration left unchanged (no bypass path configured).");
+    } else {
+        println!(
+            "\u{1b}[33m[INFO]\u{1b}[0m Configuration left unchanged (bypasspath={}).",
+            current_path
+        );
     }
+
+    let report_path = write_check_report(&report, "no_compatible_node");
+    println!("\u{1b}[33m[INFO]\u{1b}[0m Result saved to {}", report_path);
     1
 }
 
@@ -1303,7 +1394,7 @@ mod tests {
         let pending = tmp_file("pending", &sample_record(node.to_str().unwrap(), "0 0").render());
 
         assert_eq!(replay_pending_at(pending.to_str().unwrap()), Ok(true));
-        assert_eq!(std::fs::read_to_string(&node).unwrap(), "0 0");
+        assert_eq!(std::fs::read_to_string(&node).unwrap(), "0 0\n");
         assert!(!pending.exists());
     }
 
@@ -1342,15 +1433,20 @@ mod tests {
         assert_eq!(replay_pending_at(missing.to_str().unwrap()), Ok(false));
     }
 
-    // A failed scan must not silently wipe a node the user configured.
+    // A single low sample is a charge pulse; only a window counts as a drop.
     #[test]
-    fn failed_scan_keeps_user_path() {
-        assert_eq!(failed_scan_action(""), FailedScanAction::Clear);
-        assert_eq!(failed_scan_action("UNSUPPORTED"), FailedScanAction::Clear);
-        assert_eq!(
-            failed_scan_action("MTK_CURRENT_CMD"),
-            FailedScanAction::KeepPathDisable
-        );
+    fn longest_low_run_needs_consecutive_samples() {
+        assert_eq!(longest_low_run(&[0, 2400, 0, 1200, 0], 0), 1);
+        assert_eq!(longest_low_run(&[2400, 0, 0, 0, 1200], 0), 3);
+        assert_eq!(longest_low_run(&[0, 0, 0, 0], 0), 4);
+        assert_eq!(longest_low_run(&[2400; 10], 0), 0);
+    }
+
+    #[test]
+    fn longest_low_run_skips_settling_samples() {
+        // High current at the start is the charger renegotiating, not a result.
+        assert_eq!(longest_low_run(&[3600, 2400, 0, 0, 0], 2), 3);
+        assert_eq!(longest_low_run(&[0, 0, 1200, 1200], 2), 0);
     }
 
     // A verdict must never claim success without the charger still feeding the
@@ -1363,6 +1459,7 @@ mod tests {
             .contains("collapsed"));
         assert!(NodeVerdict::NoRecovery { ma: 0 }.describe().contains("latched"));
         assert!(NodeVerdict::RestoreFailed { ma: 0 }.describe().contains("restore write failed"));
+        assert!(NodeVerdict::NodeReverted { ma: 0 }.describe().contains("reset to its OFF value"));
         assert_eq!(NodeVerdict::Pass.describe(), "bypass verified");
     }
 
