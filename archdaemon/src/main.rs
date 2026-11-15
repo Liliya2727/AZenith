@@ -29,11 +29,14 @@ mod util;
 mod version;
 
 use crate::core::init_globals;
+use crate::bypass::{
+    check_bypass_compatibility, print_bypass_path_list, test_bypass_node_by_name,
+};
 use crate::cli::{
-    check_bypass_compatibility, clearlogs, dump_refresh_rate_modes, expose_telemetry_access,
+    clearlogs, dump_refresh_rate_modes, expose_telemetry_access,
     grant_app_permissions, handle_log, handle_verboselog, handle_profile, hidenotifications,
-    print_bypass_path_list, print_help, printversion, require_daemon_running, restart_service,
-    shownotifications, test_bypass_node_by_name,
+    print_help, printversion, require_daemon_running, restart_service,
+    shownotifications,
 };
 use crate::daemon::main_daemon;
 use crate::shell::systemv;
