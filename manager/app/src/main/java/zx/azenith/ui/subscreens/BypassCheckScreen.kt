@@ -117,7 +117,16 @@ fun BypassChargeCheckScreen(navController: NavController) {
         activePath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "UNSUPPORTED")
         
         scope.launch(Dispatchers.IO) {
-            val output = Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -bpl").exec().out
+            val binaryPath = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
+
+            // A previous diagnosis can be killed while a charge node is ON: the
+            // shell process dies and nobody restores the node. The daemon records
+            // that intent on disk, so replay it here and the user does not have
+            // to reboot just to charge again.
+            val restoreOut = Shell.cmd("$binaryPath -rp").exec().out
+            val restored = restoreOut.any { it.contains("Restored a charge node") }
+
+            val output = Shell.cmd("$binaryPath -bpl").exec().out
             val parsedList = output
                 .map { it.replace("\\u001B\\[[;\\d]*m".toRegex(), "") }
                 .filter { it.contains("FOUND") && !it.contains("NOT FOUND") }
@@ -128,6 +137,14 @@ fun BypassChargeCheckScreen(navController: NavController) {
                     Pair(name, path)
                 }
             withContext(Dispatchers.Main) {
+                if (restored) {
+                    logs.add(
+                        ShellOutput(
+                            "[INFO] A charge node left ON by an interrupted test was restored.",
+                            true
+                        )
+                    )
+                }
                 availablePaths = parsedList
                 isLoadingPaths = false
                 onComplete?.invoke(parsedList)

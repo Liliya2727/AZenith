@@ -30,7 +30,7 @@ mod version;
 
 use crate::core::init_globals;
 use crate::bypass::{
-    check_bypass_compatibility, print_bypass_path_list, test_bypass_node_by_name,
+    check_bypass_compatibility, print_bypass_path_list, restore_pending, test_bypass_node_by_name,
 };
 use crate::cli::{
     clearlogs, dump_refresh_rate_modes, expose_telemetry_access,
@@ -93,6 +93,10 @@ fn real_main() -> c_int {
     if is_cmd!(cmd, "--bypasspathlist", "-bpl") {
         print_bypass_path_list();
         return 0;
+    }
+    // Must not require the daemon: it is the recovery path for a dead/stuck state.
+    if is_cmd!(cmd, "--restorepending", "-rp") {
+        return restore_pending();
     }
     if is_cmd!(cmd, "--rerun", "-rr") {
         return restart_service();

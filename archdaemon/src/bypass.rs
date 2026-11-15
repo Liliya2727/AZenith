@@ -403,6 +403,29 @@ pub fn replay_pending_restore() -> bool {
     }
 }
 
+/// CLI entry point (`-rp`): clean up after an interrupted test.
+///
+/// Deliberately independent of the daemon and of the configured bypass path: it
+/// exists for the case where a root shell was killed between switching a node
+/// ON and restoring it, so the user does not have to reboot.
+pub fn restore_pending() -> i32 {
+    if !fileops::exists(PENDING_RESTORE_FILE) {
+        println!("\u{1b}[32m[INFO]\u{1b}[0m No interrupted bypass test to clean up.");
+        return 0;
+    }
+
+    replay_pending_restore();
+
+    if fileops::exists(PENDING_RESTORE_FILE) {
+        println!(
+            "\u{1b}[33m[!] WARNING:\u{1b}[0m Could not restore the node left ON by an interrupted test."
+        );
+        1
+    } else {
+        0
+    }
+}
+
 /// Owns a node for the duration of a test and always puts it back.
 pub struct BypassGuard {
     path: &'static str,

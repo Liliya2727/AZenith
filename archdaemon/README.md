@@ -217,6 +217,7 @@ Usage: `sys.azenith-service [options]`
 | `--hidenotifications`, `-hn` / `--shownotifications`, `-sn` | Toggle notifications |
 | `--bypasspathlist`, `-bpl` | Print bypass node list |
 | `--checkbypasschg`, `-cbc` / `--testbypass <NODE>`, `-tb` | Bypass compatibility checks |
+| `--restorepending`, `-rp` | Undo a bypass node left ON by an interrupted test |
 | `--get_rr_modes`, `-getrr` | Dump refresh-rate modes |
 | `--setup-access`, `-sa` | Telemetry access + app permissions |
 | `--appactivity`, `-actv` | Open the manager's main activity |
@@ -351,6 +352,13 @@ valid battery reading).
 transsion battery/charger sysfs paths. `handle_dynamic_bypass` reacts
 to charging state, `--checkbypasschg` / `--testbypass` verify nodes,
 and the list is printed by `--bypasspathlist`.
+
+A node test is guarded: the intended restore (`name`, `path`, off value,
+pid) is written to `bypasschgconfig/pending_restore` *before* the node is
+switched ON, and the guard restores it on return, panic, or
+SIGINT/SIGTERM/SIGHUP. The record is replayed at daemon start, before
+every `-cbc`/`-tb`, and by `--restorepending`, so a killed root shell or
+a reboot cannot leave a charge switch latched.
 
 ---
 

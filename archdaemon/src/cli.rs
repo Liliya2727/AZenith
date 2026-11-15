@@ -174,6 +174,7 @@ pub fn print_help() {
     println!("                                (or --testbypass --path=NODE_NAME)");
     println!();
     println!("     -bpl,  --bypasspathlist   Show all embedded bypass charging paths");
+    println!("     -rp,   --restorepending   Undo a bypass node left ON by an interrupted test");
     println!();
     println!("     -V,    --version          Show AZenith current version");
     println!();
