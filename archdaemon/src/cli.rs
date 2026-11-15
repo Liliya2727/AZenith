@@ -193,6 +193,8 @@ pub fn print_help() {
 pub fn check_bypass_compatibility() -> i32 {
     println!("\u{1b}[36m[Bypass Charge Compatibility Check]\u{1b}[0m Initializing...");
 
+    crate::bypass::replay_pending_restore();
+
     std::thread::sleep(std::time::Duration::from_secs(5));
 
     let baseline_ma = match crate::bypass::test_preflight() {
@@ -238,6 +240,12 @@ pub fn check_bypass_compatibility() -> i32 {
             return 0;
         }
 
+        if outcome.verdict == crate::bypass::NodeVerdict::Aborted {
+            println!("\n\u{1b}[33m[!] ABORTED\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
+            log_warn!("bypass", "compatibility check aborted node={} reason=signal", node.name);
+            return -1;
+        }
+
         println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
         log_warn!(
             "bypass",
@@ -271,6 +279,7 @@ pub fn test_bypass_node_by_name(name: &str) -> i32 {
 
     for node in &crate::bypass::BYPASS_LIST {
         if node.name == name {
+            crate::bypass::replay_pending_restore();
             return test_single_node(node);
         }
     }
@@ -318,6 +327,12 @@ fn test_single_node(node: &BypassNode) -> i32 {
             node.name, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
         );
         return 0;
+    }
+
+    if outcome.verdict == crate::bypass::NodeVerdict::Aborted {
+        println!("\n\u{1b}[33m[!] ABORTED\u{1b}[0m {}", outcome.verdict.describe());
+        log_warn!("bypass", "single node test aborted name={} reason=signal", node.name);
+        return -1;
     }
 
     println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());

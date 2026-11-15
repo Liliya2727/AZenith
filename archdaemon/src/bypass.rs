@@ -7,7 +7,7 @@ use crate::proc::{get_pids_of_at, set_priority};
 use crate::profile::{is_manual_mode, restore_per_app_overrides, update_game_info};
 use crate::sysprop::{get_or_default, get_into, set};
 use crate::fileops;
-use crate::{IS_FALSE, IS_TRUE, log_info, log_warn};
+use crate::{IS_FALSE, IS_TRUE, log_error, log_info, log_warn};
 use std::os::raw::c_int;
 
 // ---------------------------------------------------------------------------
@@ -278,6 +278,248 @@ pub fn is_plugged() -> bool {
 }
 
 // ---------------------------------------------------------------------------
+// Crash-safe restore (write-ahead pending restore record)
+// ---------------------------------------------------------------------------
+use std::sync::Once;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+pub const PENDING_RESTORE_FILE: &str =
+    "/data/adb/.config/AZenith/bypasschgconfig/pending_restore";
+
+static RESTORE_REQUESTED: AtomicBool = AtomicBool::new(false);
+static TEST_SIGNAL_HANDLERS: Once = Once::new();
+
+/// Write-ahead record of a node that is about to be switched ON.
+///
+/// A `Drop` guard only covers normal returns and panics; it cannot cover
+/// SIGKILL, a revoked root shell or a sudden reboot. The record on disk is the
+/// only thing that survives those, so it is written before the node is touched
+/// and replayed on the next daemon start / diagnosis run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PendingRestore {
+    name: String,
+    path: String,
+    off_val: String,
+    orig: Option<String>,
+    pid: i32,
+}
+
+impl PendingRestore {
+    fn render(&self) -> String {
+        format!(
+            "name={}\npath={}\noff={}\norig={}\npid={}\n",
+            self.name,
+            self.path,
+            self.off_val,
+            self.orig.as_deref().unwrap_or(""),
+            self.pid
+        )
+    }
+
+    fn parse(text: &str) -> Option<Self> {
+        let mut name = None;
+        let mut path = None;
+        let mut off_val = None;
+        let mut orig = None;
+        let mut pid = 0;
+
+        for line in text.lines() {
+            let Some((key, value)) = line.split_once('=') else {
+                continue;
+            };
+            match key.trim() {
+                "name" => name = Some(value.trim().to_string()),
+                "path" => path = Some(value.trim().to_string()),
+                "off" => off_val = Some(value.trim().to_string()),
+                "orig" => orig = Some(value.trim().to_string()).filter(|s| !s.is_empty()),
+                "pid" => pid = value.trim().parse().unwrap_or(0),
+                _ => {}
+            }
+        }
+
+        Some(Self {
+            name: name?,
+            path: path?,
+            off_val: off_val?,
+            orig,
+            pid,
+        })
+    }
+}
+
+fn write_pending(record: &PendingRestore) -> Result<(), String> {
+    fileops::create_dir_all_best_effort(crate::core::BYPASSCHG_CONFIG);
+    fileops::write_string(PENDING_RESTORE_FILE, &record.render())
+        .map_err(|e| format!("cannot write pending restore record: {e}"))
+}
+
+fn remove_pending_file() {
+    fileops::remove_file_best_effort(PENDING_RESTORE_FILE);
+}
+
+fn replay_pending_at(file: &str) -> Result<bool, String> {
+    let Some(text) = fileops::read_string(file) else {
+        return Ok(false);
+    };
+    let Some(record) = PendingRestore::parse(&text) else {
+        fileops::remove_file_best_effort(file);
+        return Err("corrupt pending restore record".to_string());
+    };
+
+    chmod(&record.path, 0o644);
+    match fileops::write_string(&record.path, &record.off_val) {
+        Ok(()) => {
+            fileops::remove_file_best_effort(file);
+            log_info!(
+                "bypass",
+                "pending restore applied node={} path={} value={} orig={:?} stale_pid={}",
+                record.name, record.path, record.off_val, record.orig, record.pid
+            );
+            Ok(true)
+        }
+        Err(e) => Err(format!(
+            "cannot restore node={} path={}: {e}",
+            record.name, record.path
+        )),
+    }
+}
+
+/// Restore a node that an interrupted run left ON.
+///
+/// Also used at daemon start and before `-cbc`/`-tb`, because a diagnosis run
+/// must not build on top of a latched node.
+pub fn replay_pending_restore() -> bool {
+    match replay_pending_at(PENDING_RESTORE_FILE) {
+        Ok(true) => {
+            println!("\u{1b}[32m[INFO]\u{1b}[0m Restored a charge node left ON by a previous run.");
+            true
+        }
+        Ok(false) => false,
+        Err(reason) => {
+            println!("\u{1b}[33m[!] WARNING:\u{1b}[0m {}", reason);
+            log_warn!("bypass", "pending restore failed reason={}", reason);
+            true
+        }
+    }
+}
+
+/// Owns a node for the duration of a test and always puts it back.
+pub struct BypassGuard {
+    path: &'static str,
+    off_val: &'static str,
+    active: bool,
+}
+
+impl BypassGuard {
+    /// Record the restore intent on disk, then switch the node ON.
+    ///
+    /// If the record cannot be written the node is left untouched: a test that
+    /// cannot be undone is worse than no test. An unresolved record from an
+    /// earlier failure is never clobbered, because it is the only way back for
+    /// the node that failed to restore.
+    pub fn arm(node: &BypassNode) -> Result<Self, String> {
+        if let Err(reason) = replay_pending_at(PENDING_RESTORE_FILE) {
+            log_error!(
+                "bypass",
+                "refusing to test node={} unresolved restore reason={}",
+                node.name,
+                reason
+            );
+            return Err(format!("unresolved pending restore: {reason}"));
+        }
+
+        let orig = fileops::read_first_line(node.path)
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
+        let record = PendingRestore {
+            name: node.name.to_string(),
+            path: node.path.to_string(),
+            off_val: node.off_val.to_string(),
+            orig,
+            pid: std::process::id() as i32,
+        };
+        write_pending(&record)?;
+
+        if echo_to_file(node.path, node.on_val, 0) != 0 {
+            // Keep the record when the rollback also fails: it is replayed later.
+            if echo_to_file(node.path, node.off_val, 0) == 0 {
+                remove_pending_file();
+            }
+            return Err(format!("could not write to {}", node.path));
+        }
+
+        Ok(Self {
+            path: node.path,
+            off_val: node.off_val,
+            active: true,
+        })
+    }
+
+    /// Put the node back. Idempotent; the pending record is kept if it fails.
+    pub fn restore(&mut self) -> bool {
+        if !self.active {
+            return true;
+        }
+        self.active = false;
+
+        if echo_to_file(self.path, self.off_val, 0) == 0 {
+            remove_pending_file();
+            log_info!("bypass", "node restored path={} value={}", self.path, self.off_val);
+            true
+        } else {
+            log_error!(
+                "bypass",
+                "node restore failed path={} value={} - pending record kept for replay",
+                self.path,
+                self.off_val
+            );
+            false
+        }
+    }
+}
+
+impl Drop for BypassGuard {
+    fn drop(&mut self) {
+        self.restore();
+    }
+}
+
+extern "C" fn request_restore_on_signal(_sig: c_int) {
+    RESTORE_REQUESTED.store(true, Ordering::SeqCst);
+}
+
+fn install_test_signal_handlers() {
+    TEST_SIGNAL_HANDLERS.call_once(|| {
+        RESTORE_REQUESTED.store(false, Ordering::SeqCst);
+        unsafe {
+            libc::signal(libc::SIGINT, request_restore_on_signal as *const () as usize);
+            libc::signal(libc::SIGTERM, request_restore_on_signal as *const () as usize);
+            libc::signal(libc::SIGHUP, request_restore_on_signal as *const () as usize);
+        }
+    });
+}
+
+fn restore_requested() -> bool {
+    RESTORE_REQUESTED.load(Ordering::SeqCst)
+}
+
+/// Sleep that notices a termination signal. Returns true when aborted, so the
+/// caller can restore the node before exiting instead of dying inside a sleep.
+fn sleep_interruptible(ms: u64) -> bool {
+    let mut left = ms;
+    while left > 0 {
+        let step = left.min(50);
+        std::thread::sleep(std::time::Duration::from_millis(step));
+        left -= step;
+        if restore_requested() {
+            return true;
+        }
+    }
+    false
+}
+
+// ---------------------------------------------------------------------------
 // Node testing (shared by -cbc and -tb)
 // ---------------------------------------------------------------------------
 
@@ -295,6 +537,7 @@ const MIN_TESTABLE_CURRENT_MA: i32 = 100;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeVerdict {
     Pass,
+    Aborted,
     WriteFailed,
     UnreadableCurrent,
     CurrentNotDropped { ma: i32 },
@@ -308,6 +551,7 @@ impl NodeVerdict {
     pub fn describe(self) -> String {
         match self {
             NodeVerdict::Pass => "bypass verified".to_string(),
+            NodeVerdict::Aborted => "aborted by signal, node restored".to_string(),
             NodeVerdict::WriteFailed => "could not write to node".to_string(),
             NodeVerdict::UnreadableCurrent => "battery current unreadable".to_string(),
             NodeVerdict::CurrentNotDropped { ma } => format!("current did not drop ({ma} mA)"),
@@ -367,7 +611,9 @@ fn verify_recovery(baseline_ma: i32) -> NodeVerdict {
     let target = std::cmp::max(MIN_TESTABLE_CURRENT_MA, baseline_ma / 2);
     let mut best = 0;
     for _ in 0..(RECOVERY_MAX_SECS as u64 * 1000 / RECOVERY_SAMPLE_MS) {
-        std::thread::sleep(std::time::Duration::from_millis(RECOVERY_SAMPLE_MS));
+        if sleep_interruptible(RECOVERY_SAMPLE_MS) {
+            return NodeVerdict::Aborted;
+        }
         if let Some(v) = read_current_ma_checked() {
             best = best.max(v);
             if v >= target {
@@ -386,26 +632,33 @@ fn verify_recovery(baseline_ma: i32) -> NodeVerdict {
 ///      when input current is unreadable, the battery is not discharging,
 ///   3. current recovers after the node is restored.
 pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
+    install_test_signal_handlers();
     let baseline_ma = read_current_ma_checked().unwrap_or(-1);
 
-    if echo_to_file(node.path, node.on_val, 0) != 0 {
-        let _ = echo_to_file(node.path, node.off_val, 0);
-        return NodeTestOutcome {
-            verdict: NodeVerdict::WriteFailed,
-            baseline_ma,
-            battery_ma: baseline_ma,
-            input_ma: None,
-            samples: 0,
-        };
-    }
+    let mut guard = match BypassGuard::arm(node) {
+        Ok(guard) => guard,
+        Err(_) => {
+            return NodeTestOutcome {
+                verdict: NodeVerdict::WriteFailed,
+                baseline_ma,
+                battery_ma: baseline_ma,
+                input_ma: None,
+                samples: 0,
+            };
+        }
+    };
 
     let total_samples = (TEST_DURATION_SECS as u64 * 1000 / TEST_SAMPLE_MS) as usize;
     let mut battery: Vec<i32> = Vec::with_capacity(total_samples);
     let mut input: Vec<i32> = Vec::with_capacity(total_samples);
     let mut saw_discharging = false;
+    let mut aborted = false;
 
     for i in 1..=total_samples {
-        std::thread::sleep(std::time::Duration::from_millis(TEST_SAMPLE_MS));
+        if sleep_interruptible(TEST_SAMPLE_MS) {
+            aborted = true;
+            break;
+        }
         if let Some(v) = read_current_ma_checked() {
             battery.push(v);
         }
@@ -425,7 +678,17 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
         }
     }
 
-    let restored = echo_to_file(node.path, node.off_val, 0) == 0;
+    let restored = guard.restore();
+
+    if aborted {
+        return NodeTestOutcome {
+            verdict: NodeVerdict::Aborted,
+            baseline_ma,
+            battery_ma: battery.last().copied().unwrap_or(-1),
+            input_ma: input.last().copied(),
+            samples: battery.len(),
+        };
+    }
 
     if battery.is_empty() {
         return NodeTestOutcome {
@@ -516,6 +779,8 @@ pub fn enable_bypass() -> i32 {
 pub fn check_bypass_compatibility() -> i32 {
     println!("\u{1b}[36m[Bypass Charge Compatibility Check]\u{1b}[0m Initializing...");
 
+    replay_pending_restore();
+
     std::thread::sleep(std::time::Duration::from_secs(5));
 
     let baseline_ma = match test_preflight() {
@@ -558,6 +823,12 @@ pub fn check_bypass_compatibility() -> i32 {
             return 0;
         }
 
+        if outcome.verdict == NodeVerdict::Aborted {
+            println!("\n\u{1b}[33m[!] ABORTED\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
+            log_warn!("bypass", "compatibility check aborted node={} reason=signal", node.name);
+            return -1;
+        }
+
         println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
         log_warn!(
             "bypass",
@@ -591,6 +862,7 @@ pub fn test_bypass_node_by_name(name: &str) -> i32 {
 
     for node in &BYPASS_LIST {
         if node.name == name {
+            replay_pending_restore();
             return test_single_node(node);
         }
     }
@@ -636,6 +908,12 @@ fn test_single_node(node: &BypassNode) -> i32 {
             node.name, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
         );
         return 0;
+    }
+
+    if outcome.verdict == NodeVerdict::Aborted {
+        println!("\n\u{1b}[33m[!] ABORTED\u{1b}[0m {}", outcome.verdict.describe());
+        log_warn!("bypass", "single node test aborted name={} reason=signal", node.name);
+        return -1;
     }
 
     println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
@@ -889,6 +1167,85 @@ mod tests {
         assert_eq!(median_ma(&mut a), 40);
         let mut b = [0, 10, 20, 30];
         assert_eq!(median_ma(&mut b), 20);
+    }
+
+    // -----------------------------------------------------------------------
+    // write-ahead restore record
+    // -----------------------------------------------------------------------
+
+    fn sample_record(path: &str, off_val: &str) -> PendingRestore {
+        PendingRestore {
+            name: "MTK_CURRENT_CMD".to_string(),
+            path: path.to_string(),
+            off_val: off_val.to_string(),
+            orig: Some("0 1".to_string()),
+            pid: 4242,
+        }
+    }
+
+    #[test]
+    fn pending_record_roundtrip() {
+        let record = sample_record("/proc/mtk_battery_cmd/current_cmd", "0 0");
+        assert_eq!(PendingRestore::parse(&record.render()), Some(record));
+    }
+
+    #[test]
+    fn pending_record_tolerates_missing_orig() {
+        let text = "name=NODE\npath=/sys/x\noff=1\norig=\npid=7\n";
+        let parsed = PendingRestore::parse(text).unwrap();
+        assert_eq!(parsed.orig, None);
+        assert_eq!(parsed.pid, 7);
+    }
+
+    #[test]
+    fn pending_record_requires_path_and_off() {
+        assert_eq!(PendingRestore::parse("name=NODE\npid=7\n"), None);
+    }
+
+    // Replay must actually write the OFF value, not just delete the record.
+    #[test]
+    fn replay_restores_node_and_clears_record() {
+        let node = tmp_file("node", "0 1");
+        let pending = tmp_file("pending", &sample_record(node.to_str().unwrap(), "0 0").render());
+
+        assert_eq!(replay_pending_at(pending.to_str().unwrap()), Ok(true));
+        assert_eq!(std::fs::read_to_string(&node).unwrap(), "0 0");
+        assert!(!pending.exists());
+    }
+
+    // If the write fails the record has to survive, otherwise the only memory
+    // of what needs restoring is gone.
+    #[test]
+    fn replay_keeps_record_when_write_fails() {
+        use std::os::unix::fs::PermissionsExt;
+
+        // Unwritable target: a directory. It lives in its own subdir because
+        // replay chmods the target, and that must not hit the shared temp dir.
+        let dir = std::env::temp_dir().join(format!("azenith_restore_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let pending = tmp_file(
+            "pending",
+            &sample_record(dir.to_str().unwrap(), "0 0").render(),
+        );
+
+        assert!(replay_pending_at(pending.to_str().unwrap()).is_err());
+        assert!(pending.exists());
+
+        let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn replay_drops_corrupt_record() {
+        let pending = tmp_file("pending", "not a record");
+        assert!(replay_pending_at(pending.to_str().unwrap()).is_err());
+        assert!(!pending.exists());
+    }
+
+    #[test]
+    fn replay_without_record_is_a_noop() {
+        let missing = std::env::temp_dir().join("azenith_pending_missing");
+        assert_eq!(replay_pending_at(missing.to_str().unwrap()), Ok(false));
     }
 
     // A verdict must never claim success without the charger still feeding the

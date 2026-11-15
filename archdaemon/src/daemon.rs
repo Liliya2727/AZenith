@@ -57,6 +57,10 @@ pub fn main_daemon() -> c_int {
     init_daemon_context(&mut ctx);
     restore_daemon_state(&mut ctx);
 
+    // A previous run may have been killed between switching a charge node ON
+    // and restoring it. Clear that before anything else touches bypass state.
+    crate::bypass::replay_pending_restore();
+
     let mut recorder = crate::recorder::Recorder::new();
     recorder.recover(&ctx);
     wait_for_java_companion(&mut ctx);
