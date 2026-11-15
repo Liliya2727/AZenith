@@ -737,6 +737,12 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
 // disable_bypass
 // ---------------------------------------------------------------------------
 pub fn disable_bypass(_ctx: &mut DaemonContext) {
+    // The write-ahead record is authoritative even when no path is configured:
+    // it exists precisely because a node may still be ON.
+    if fileops::exists(PENDING_RESTORE_FILE) {
+        let _ = replay_pending_at(PENDING_RESTORE_FILE);
+    }
+
     // bypass path is stored in prop "persist.sys.azenithconf.bypasspath"
     let path_key = get_or_default("persist.sys.azenithconf.bypasspath", "");
 
@@ -758,6 +764,15 @@ pub fn disable_bypass(_ctx: &mut DaemonContext) {
 // enable_bypass
 // ---------------------------------------------------------------------------
 pub fn enable_bypass() -> i32 {
+    if fileops::exists(PENDING_RESTORE_FILE) {
+        log_warn!(
+            "bypass",
+            "enable refused: an unresolved pending restore still exists path={}",
+            PENDING_RESTORE_FILE
+        );
+        return -3;
+    }
+
     let path_key = get_or_default("persist.sys.azenithconf.bypasspath", "");
 
     if path_key.is_empty() || path_key == "UNSUPPORTED" {
@@ -766,8 +781,11 @@ pub fn enable_bypass() -> i32 {
 
     for node in &BYPASS_LIST {
         if node.name == path_key {
-            echo_to_file(node.path, node.on_val, 1);
-            return 0;
+            if echo_to_file(node.path, node.on_val, 1) == 0 {
+                return 0;
+            }
+            log_warn!("bypass", "enable failed node={} path={}", path_key, node.path);
+            return -4;
         }
     }
     -2
@@ -776,6 +794,24 @@ pub fn enable_bypass() -> i32 {
 // ---------------------------------------------------------------------------
 // check_bypass_compatibility
 // ---------------------------------------------------------------------------
+
+/// What a failed scan is allowed to do to the stored configuration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FailedScanAction {
+    /// Nothing was configured: write the neutral "not supported" state.
+    Clear,
+    /// The user configured a node: keep it, but stop applying it automatically.
+    KeepPathDisable,
+}
+
+fn failed_scan_action(current_path: &str) -> FailedScanAction {
+    if current_path.is_empty() || current_path == "UNSUPPORTED" {
+        FailedScanAction::Clear
+    } else {
+        FailedScanAction::KeepPathDisable
+    }
+}
+
 pub fn check_bypass_compatibility() -> i32 {
     println!("\u{1b}[36m[Bypass Charge Compatibility Check]\u{1b}[0m Initializing...");
 
@@ -842,12 +878,48 @@ pub fn check_bypass_compatibility() -> i32 {
     println!("\n\u{1b}[1;31m[-]\u{1b}[0m Final Result: No compatible bypass node found.");
     println!("\u{1b}[33m[INFO]\u{1b}[0m Summary: {} Scanned, {} Tested, {} Skipped.\u{1b}[0m", total_nodes, tested_count, skipped_count);
 
-    set("persist.sys.azenithconf.bypasspath", "UNSUPPORTED");
-    set("persist.sys.azenithconf.bypasschg", "0");
-    set("persist.sys.azenithconf.bypasschgthreshold", "20");
-    let _ = std::fs::write(format!("{}/bypasspath", crate::core::BYPASSCHG_CONFIG), "UNSUPPORTED");
-    let _ = std::fs::write(format!("{}/bypasschg", crate::core::BYPASSCHG_CONFIG), "0");
-    let _ = std::fs::write(format!("{}/bypasschgthreshold", crate::core::BYPASSCHG_CONFIG), "20");
+    // Never touch the configuration while a node may still be ON: the stored
+    // path is the only thing that can restore it later.
+    if let Err(reason) = replay_pending_at(PENDING_RESTORE_FILE) {
+        println!("\u{1b}[1;31m[!]\u{1b}[0m {}", reason);
+        println!(
+            "\u{1b}[33m[INFO]\u{1b}[0m Leaving the bypass configuration untouched: it may be the only way to restore that node."
+        );
+        log_warn!(
+            "bypass",
+            "compatibility check failed but restore is unresolved reason={} configuration_kept=1",
+            reason
+        );
+        return 1;
+    }
+
+    let current_path = get_or_default("persist.sys.azenithconf.bypasspath", "");
+    match failed_scan_action(&current_path) {
+        FailedScanAction::Clear => {
+            set("persist.sys.azenithconf.bypasspath", "UNSUPPORTED");
+            set("persist.sys.azenithconf.bypasschg", "0");
+            set("persist.sys.azenithconf.bypasschgthreshold", "20");
+            fileops::write_string_best_effort(&format!("{}/bypasspath", crate::core::BYPASSCHG_CONFIG), "UNSUPPORTED");
+            fileops::write_string_best_effort(&format!("{}/bypasschg", crate::core::BYPASSCHG_CONFIG), "0");
+            fileops::write_string_best_effort(&format!("{}/bypasschgthreshold", crate::core::BYPASSCHG_CONFIG), "20");
+        }
+        FailedScanAction::KeepPathDisable => {
+            // A failed scan is not proof that a previously configured node is
+            // broken (charger unplugged mid-run, battery near full, ...). Keep
+            // the user's choice, but stop applying it automatically.
+            set("persist.sys.azenithconf.bypasschg", "0");
+            fileops::write_string_best_effort(&format!("{}/bypasschg", crate::core::BYPASSCHG_CONFIG), "0");
+            println!(
+                "\u{1b}[33m[INFO]\u{1b}[0m Keeping bypasspath={} (a failed scan is not proof the node is broken); automatic bypass disabled.",
+                current_path
+            );
+            log_warn!(
+                "bypass",
+                "no compatible node found, keeping bypasspath={} but disabling automatic bypass",
+                current_path
+            );
+        }
+    }
     1
 }
 
@@ -1076,8 +1148,7 @@ pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
             if current_battery >= 0 && bypass_charging_allowed && is_device_charging {
                 if current_battery >= threshold {
                     if read_current_ma() > 50 {
-                        enable_bypass();
-                        if !ctx.bypass.bypass_applied {
+                        if enable_bypass() == 0 && !ctx.bypass.bypass_applied {
                             log_info!("bypass", "bypass enabled battery={} threshold={}", current_battery, threshold);
                             ctx.bypass.bypass_applied = true;
                         }
@@ -1246,6 +1317,17 @@ mod tests {
     fn replay_without_record_is_a_noop() {
         let missing = std::env::temp_dir().join("azenith_pending_missing");
         assert_eq!(replay_pending_at(missing.to_str().unwrap()), Ok(false));
+    }
+
+    // A failed scan must not silently wipe a node the user configured.
+    #[test]
+    fn failed_scan_keeps_user_path() {
+        assert_eq!(failed_scan_action(""), FailedScanAction::Clear);
+        assert_eq!(failed_scan_action("UNSUPPORTED"), FailedScanAction::Clear);
+        assert_eq!(
+            failed_scan_action("MTK_CURRENT_CMD"),
+            FailedScanAction::KeepPathDisable
+        );
     }
 
     // A verdict must never claim success without the charger still feeding the
