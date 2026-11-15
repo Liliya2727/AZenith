@@ -741,20 +741,45 @@ fn recovery_target(baseline_ma: i32) -> i32 {
     std::cmp::max(MIN_TESTABLE_CURRENT_MA, baseline_ma / 4)
 }
 
-/// Wait until the charger is delivering measurable current again.
+/// Let the charger settle after the previous node was toggled.
 ///
-/// Restoring a node makes the charger renegotiate its contract, and a node
-/// tested in that window would be judged against an idle battery.
-fn wait_for_charge_current() {
-    const WAIT_SECS: u32 = 10;
-    for _ in 0..(WAIT_SECS as u64 * 1000 / 250) {
-        if read_current_ma_checked().is_some_and(|v| v >= MIN_TESTABLE_CURRENT_MA) {
-            return;
-        }
-        if sleep_interruptible(250) {
-            return;
-        }
+/// A node test cuts charging for about twelve seconds. When it ends the charger
+/// renegotiates its contract and the current climbs back over several seconds,
+/// so testing again immediately would judge the next node against a battery
+/// that is still recovering (347 mA instead of 2258 mA). Wait a short pause and
+/// then for the current to be readable and steady again.
+fn wait_for_settled_baseline() -> i32 {
+    const PAUSE_MS: u64 = 3_000;
+    const WAIT_MS: u64 = 15_000;
+    const STEP_MS: u64 = 500;
+    if sleep_interruptible(PAUSE_MS) {
+        return -1;
     }
+    let mut previous: Option<i32> = None;
+    let mut waited = 0;
+    while waited <= WAIT_MS {
+        let current = read_current_ma_checked();
+        if let (Some(prev), Some(now)) = (previous, current) {
+            if reading_is_settled(prev, now) {
+                return now;
+            }
+        }
+        previous = current;
+        if sleep_interruptible(STEP_MS) {
+            return -1;
+        }
+        waited += STEP_MS;
+    }
+    read_current_ma_checked().unwrap_or(-1)
+}
+
+/// Two consecutive readings are settled when both are measurable and within
+/// 15% of each other, i.e. the charger is no longer ramping back up.
+fn reading_is_settled(prev: i32, now: i32) -> bool {
+    if prev < MIN_TESTABLE_CURRENT_MA || now < MIN_TESTABLE_CURRENT_MA {
+        return false;
+    }
+    (now - prev).abs() * 100 <= prev.max(now) * 15
 }
 
 /// After the node is restored, charging must come back. Without this the test
@@ -1089,8 +1114,14 @@ pub fn check_bypass_compatibility() -> i32 {
         );
 
         // A node that was just restored leaves the charger renegotiating, so
-        // give the charge current a moment to come back before judging.
-        wait_for_charge_current();
+        // give the charge current time to come back and settle before judging.
+        if index > 0 {
+            let settled = wait_for_settled_baseline();
+            println!(
+                "\u{1b}[90m[i] Baseline before this node: {} mA\u{1b}[0m",
+                if settled < 0 { "?".to_string() } else { settled.to_string() }
+            );
+        }
 
         let outcome = test_node(node, true);
         report.push(format!(
@@ -1548,6 +1579,16 @@ mod tests {
         assert_eq!(recovery_target(2500), 625);
         assert_eq!(recovery_target(400), MIN_TESTABLE_CURRENT_MA);
         assert_eq!(recovery_target(0), MIN_TESTABLE_CURRENT_MA);
+    }
+
+    // Between two node tests the charger ramps back up. Only two readings that
+    // are both measurable and close to each other count as settled.
+    #[test]
+    fn settle_requires_measurable_steady_current() {
+        assert!(reading_is_settled(2000, 2100));
+        assert!(reading_is_settled(500, 480));
+        assert!(!reading_is_settled(50, 60));
+        assert!(!reading_is_settled(200, 900));
     }
 
     // -----------------------------------------------------------------------
