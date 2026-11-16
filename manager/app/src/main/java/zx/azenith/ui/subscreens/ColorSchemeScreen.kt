@@ -36,6 +36,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -62,11 +63,13 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -98,41 +101,66 @@ enum class ColorPreset(
 
 /**
  * Which LazyColumn item holds each searchable row, so a search result can scroll
- * to it. Positional: the list is built inline inside the screen and the rows
- * carry no keys of their own.
+ * to it. Positional: the lists are built inline and the rows carry no keys.
+ *
+ * Portrait is one list: info(0) illustration(1) presets title(2) presets(3)
+ * scheme title(4) rgb(5) saturation(6).
  */
 private val COLORS_ROW_ITEMS: Map<String, Int> = mapOf(
-    "colors.blue" to 5,
-    "colors.green" to 5,
     "colors.presets" to 2,
     "colors.red" to 5,
-    "colors.saturation" to 6,)
+    "colors.green" to 5,
+    "colors.blue" to 5,
+    "colors.saturation" to 6
+)
+
+/**
+ * Landscape splits the screen in two lists, so each has its own index space.
+ * Left: info(0) illustration(1).
+ * Right: presets title(0) presets(1) scheme title(2) rgb(3) saturation(4).
+ */
+private val COLORS_LEFT_ITEMS: Map<String, Int> = emptyMap()
+private val COLORS_RIGHT_ITEMS: Map<String, Int> = mapOf(
+    "colors.presets" to 0,
+    "colors.red" to 3,
+    "colors.green" to 3,
+    "colors.blue" to 3,
+    "colors.saturation" to 4
+)
 
 @Composable
 fun ColorSchemeSettings(navController: NavController) {
-    val listState = rememberLazyListState()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-    // Search results land here: entry id -> the LazyColumn item
-    // holding that row.
+    val listState = rememberLazyListState()
+    val rightListState = rememberLazyListState()
+
+    // Search results land here: entry id -> the LazyColumn item holding that row.
     val jumpPulse = listState.searchJumpTarget(
-        owns = { it.startsWith("colors.") },
-        indexOf = { id -> COLORS_ROW_ITEMS[id] }
+        owns = { id -> if (isLandscape) id in COLORS_LEFT_ITEMS else id.startsWith("colors.") },
+        indexOf = { id -> if (isLandscape) COLORS_LEFT_ITEMS[id] else COLORS_ROW_ITEMS[id] }
     )
+    val rightJumpPulse = rightListState.searchJumpTarget(
+        owns = { id -> isLandscape && id in COLORS_RIGHT_ITEMS },
+        indexOf = { id -> COLORS_RIGHT_ITEMS[id] }
+    )
+
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     var redVal by remember { mutableFloatStateOf(1000f) }
     var greenVal by remember { mutableFloatStateOf(1000f) }
     var blueVal by remember { mutableFloatStateOf(1000f) }
     var satVal by remember { mutableFloatStateOf(1000f) }
     var isLoading by remember { mutableStateOf(true) }
     var selectedPreset by remember { mutableStateOf<ColorPreset?>(null) }
-    
+
     val coroutineScope = rememberCoroutineScope()
     val resetToastMsg = stringResource(R.string.toast_settings_reset)
-    
+
     // Check if current values match a preset
     val matchingPreset = remember(redVal, greenVal, blueVal, satVal) {
         ColorPreset.values().firstOrNull { preset ->
@@ -141,18 +169,19 @@ fun ColorSchemeSettings(navController: NavController) {
         }
     }
 
-    LaunchedEffect(redVal, greenVal, blueVal) {
+    // Skipped while loading: the values are still the defaults until the saved
+    // prop is read, and applying them would flash the screen back to neutral.
+    LaunchedEffect(isLoading, redVal, greenVal, blueVal) {
+        if (isLoading) return@LaunchedEffect
         kotlinx.coroutines.delay(50)
         Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${redVal / 1000f} f 0 f 0 f 0 f 0 f ${greenVal / 1000f} f 0 f 0 f 0 f 0 f ${blueVal / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
     }
 
-    LaunchedEffect(satVal) {
+    LaunchedEffect(isLoading, satVal) {
+        if (isLoading) return@LaunchedEffect
         kotlinx.coroutines.delay(50)
         Shell.cmd("service call SurfaceFlinger 1022 f ${satVal / 1000f}").submit()
     }
-
-    val applyRGB = { _: Float, _: Float, _: Float -> }
-    val applySat = { _: Float -> }
 
     val saveToProp = {
         val config = "${redVal.toInt()} ${greenVal.toInt()} ${blueVal.toInt()} ${satVal.toInt()}"
@@ -172,16 +201,16 @@ fun ColorSchemeSettings(navController: NavController) {
                 satVal = parts[3]
             }
         }
-        
+
         isLoading = false
-        
+
         // Auto-detect preset on load
         selectedPreset = ColorPreset.values().firstOrNull { preset ->
             preset != ColorPreset.CUSTOM &&
             preset.r == redVal && preset.g == greenVal && preset.b == blueVal && preset.s == satVal
         }
     }
-    
+
     // Auto-switch to CUSTOM if values don't match selected preset
     LaunchedEffect(matchingPreset) {
         if (matchingPreset == null && selectedPreset != ColorPreset.CUSTOM) {
@@ -189,12 +218,13 @@ fun ColorSchemeSettings(navController: NavController) {
         }
     }
 
-
     Scaffold(
         modifier = Modifier,
         topBar = {
-            ColorSchemeTopAppBar(onBack = { navController.safePopBackStack() },
-            scrollBehavior = scrollBehavior)
+            ColorSchemeTopAppBar(
+                onBack = { navController.safePopBackStack() },
+                scrollBehavior = scrollBehavior
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentColor = ScaffoldContentColor(),
@@ -203,160 +233,240 @@ fun ColorSchemeSettings(navController: NavController) {
         if (isLoading) {
             SkeletonPreviewTile(modifier = Modifier.padding(innerPadding))
         } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                )
-            ) {
-                item {
-                    ExpressiveList(
-                        content = listOf(
-                            {
-                                ExpressiveInfoCard(
-                                    supportingContent = { 
-                                        Text(text = stringResource(R.string.str_adjust_and_calibrate_your_scre)) 
-                                    },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                    containerColor = colorScheme.surfaceContainerLow,
-                                    onClick = {}
-                                )
-                            }
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+            val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
+            val onPreset: (ColorPreset) -> Unit = { preset ->
+                if (preset == ColorPreset.CUSTOM) {
+                    // CUSTOM mode: just enable the sliders, keep current values
+                    selectedPreset = ColorPreset.CUSTOM
+                } else {
+                    redVal = preset.r
+                    greenVal = preset.g
+                    blueVal = preset.b
+                    satVal = preset.s
+                    saveToProp()
+                    selectedPreset = preset
                 }
+            }
+            val bottomPad = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-                item {
-                    Surface(
+            if (isLandscape) {
+                // Two panes: info + illustration on the left, the presets and
+                // sliders on the right, so neither side needs a long scroll.
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    LazyColumn(
+                        state = listState,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        shape = RoundedCornerShape(26.dp),
-                        color = colorScheme.surfaceContainerLow
+                            .weight(0.42f)
+                            .fillMaxHeight()
+                            .hazePageSource()
+                            .gamepadScreenEntry(),
+                        contentPadding = PaddingValues(
+                            top = innerPadding.calculateTopPadding(),
+                            bottom = bottomPad
+                        )
                     ) {
-                        AsyncImage(
-                            model = R.drawable.schemeillust,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                        introItems(colorScheme, illustrationHeight = 120.dp)
+                    }
+
+                    LazyColumn(
+                        state = rightListState,
+                        modifier = Modifier
+                            .weight(0.58f)
+                            .fillMaxHeight()
+                            .gamepadScreenEntry(),
+                        contentPadding = PaddingValues(
+                            top = innerPadding.calculateTopPadding(),
+                            bottom = bottomPad
+                        )
+                    ) {
+                        presetItems(rightJumpPulse, selectedPreset ?: matchingPreset, onPreset)
+                        schemeItems(
+                            jumpPulse = rightJumpPulse,
+                            isCustomMode = isCustomMode,
+                            red = redVal, green = greenVal, blue = blueVal, sat = satVal,
+                            onRed = { redVal = it },
+                            onGreen = { greenVal = it },
+                            onBlue = { blueVal = it },
+                            onSat = { satVal = it },
+                            onFinish = { saveToProp() }
                         )
                     }
                 }
-
-                item { JumpRow(activeId = jumpPulse, entryId = "colors.presets", highlightShape = RoundedCornerShape(14.dp)) { PrefSectionTitle(stringResource(R.string.presets)) } }
-
-                item {
-                    PresetSelectorItem(
-                        currentPreset = selectedPreset ?: matchingPreset,
-                        onPresetSelected = { preset ->
-                            if (preset == ColorPreset.CUSTOM) {
-                                // CUSTOM mode: cukup enable sliders, retain current values
-                                selectedPreset = ColorPreset.CUSTOM
-                            } else {
-                                // Apply preset values
-                                redVal = preset.r
-                                greenVal = preset.g
-                                blueVal = preset.b
-                                satVal = preset.s
-                                applyRGB(redVal, greenVal, blueVal)
-                                applySat(satVal)
-                                saveToProp()
-                                selectedPreset = preset
-                            }
-                        }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+                    contentPadding = PaddingValues(
+                        top = innerPadding.calculateTopPadding(),
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = bottomPad
                     )
-                }
-
-                item { PrefSectionTitle(stringResource(R.string.color_scheme)) }
-
-                item {
-                    val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
-                    ExpressiveList(
-                        content = listOf(
-                            { 
-                                JumpRow(activeId = jumpPulse, entryId = "colors.red") {
-                                    ColorSliderItem(
-                                                                        label = stringResource(R.string.color_red),
-                                                                        summary = stringResource(R.string.color_red_desc),
-                                                                        value = redVal,
-                                                                        accentColor = Color(0xFFEF5350),
-                                                                        enabled = isCustomMode,
-                                                                        onValueChange = { 
-                                                                            redVal = it
-                                                                            applyRGB(redVal, greenVal, blueVal)
-                                                                        },
-                                                                        onFinish = { saveToProp() }
-                                                                    )
-                                }
-                            },
-                            { 
-                                JumpRow(activeId = jumpPulse, entryId = "colors.green") {
-                                    ColorSliderItem(
-                                                                        label = stringResource(R.string.color_green),
-                                                                        summary = stringResource(R.string.color_green_desc),
-                                                                        value = greenVal,
-                                                                        accentColor = Color(0xFF66BB6A),
-                                                                        enabled = isCustomMode,
-                                                                        onValueChange = { 
-                                                                            greenVal = it
-                                                                            applyRGB(redVal, greenVal, blueVal)
-                                                                        },
-                                                                        onFinish = { saveToProp() }
-                                                                    )
-                                }
-                            },
-                            { 
-                                JumpRow(activeId = jumpPulse, entryId = "colors.blue") {
-                                    ColorSliderItem(
-                                                                        label = stringResource(R.string.color_blue),
-                                                                        summary = stringResource(R.string.color_blue_desc),
-                                                                        value = blueVal,
-                                                                        accentColor = Color(0xFF42A5F5),
-                                                                        enabled = isCustomMode,
-                                                                        onValueChange = { 
-                                                                            blueVal = it
-                                                                            applyRGB(redVal, greenVal, blueVal)
-                                                                        },
-                                                                        onFinish = { saveToProp() }
-                                                                    )
-                                }
-                            }
-                        )
-                    )
-                }
-
-                item {
-                    val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
-                    Spacer(modifier = Modifier.height(16.dp))
-                    ExpressiveList(
-                        content = listOf(
-                            { 
-                                JumpRow(activeId = jumpPulse, entryId = "colors.saturation") {
-                                    ColorSliderItem(
-                                                                        label = stringResource(R.string.color_saturation),
-                                                                        summary = stringResource(R.string.color_saturation_desc),
-                                                                        value = satVal,
-                                                                        accentColor = colorScheme.primary,
-                                                                        enabled = isCustomMode,
-                                                                        onValueChange = { 
-                                                                            satVal = it
-                                                                            applySat(satVal)
-                                                                        },
-                                                                        onFinish = { saveToProp() }
-                                                                    )
-                                }
-                            }
-                        )
+                ) {
+                    introItems(colorScheme, illustrationHeight = 200.dp)
+                    presetItems(jumpPulse, selectedPreset ?: matchingPreset, onPreset)
+                    schemeItems(
+                        jumpPulse = jumpPulse,
+                        isCustomMode = isCustomMode,
+                        red = redVal, green = greenVal, blue = blueVal, sat = satVal,
+                        onRed = { redVal = it },
+                        onGreen = { greenVal = it },
+                        onBlue = { blueVal = it },
+                        onSat = { satVal = it },
+                        onFinish = { saveToProp() }
                     )
                 }
             }
         }
+    }
+}
+
+/** Items 0 and 1: the info card and the illustration. */
+private fun LazyListScope.introItems(colorScheme: ColorScheme, illustrationHeight: Dp) {
+    item {
+        ExpressiveList(
+            content = listOf(
+                {
+                    ExpressiveInfoCard(
+                        supportingContent = {
+                            Text(text = stringResource(R.string.str_adjust_and_calibrate_your_scre))
+                        },
+                        leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                        containerColor = colorScheme.surfaceContainerLow,
+                        onClick = {}
+                    )
+                }
+            )
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    item {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(illustrationHeight),
+            shape = RoundedCornerShape(26.dp),
+            color = colorScheme.surfaceContainerLow
+        ) {
+            AsyncImage(
+                model = R.drawable.schemeillust,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+    }
+}
+
+/** Items 2 and 3 of the left/portrait list: the presets title and the selector. */
+private fun LazyListScope.presetItems(
+    jumpPulse: String?,
+    currentPreset: ColorPreset?,
+    onPresetSelected: (ColorPreset) -> Unit
+) {
+    item {
+        JumpRow(
+            activeId = jumpPulse,
+            entryId = "colors.presets",
+            highlightShape = RoundedCornerShape(14.dp)
+        ) { PrefSectionTitle(stringResource(R.string.presets)) }
+    }
+
+    item {
+        PresetSelectorItem(
+            currentPreset = currentPreset,
+            onPresetSelected = onPresetSelected
+        )
+    }
+}
+
+/** Title, RGB group and saturation group. */
+private fun LazyListScope.schemeItems(
+    jumpPulse: String?,
+    isCustomMode: Boolean,
+    red: Float,
+    green: Float,
+    blue: Float,
+    sat: Float,
+    onRed: (Float) -> Unit,
+    onGreen: (Float) -> Unit,
+    onBlue: (Float) -> Unit,
+    onSat: (Float) -> Unit,
+    onFinish: () -> Unit
+) {
+    item { PrefSectionTitle(stringResource(R.string.color_scheme)) }
+
+    item {
+        ExpressiveList(
+            content = listOf(
+                {
+                    JumpRow(activeId = jumpPulse, entryId = "colors.red") {
+                        ColorSliderItem(
+                            label = stringResource(R.string.color_red),
+                            summary = stringResource(R.string.color_red_desc),
+                            value = red,
+                            accentColor = Color(0xFFEF5350),
+                            enabled = isCustomMode,
+                            onValueChange = onRed,
+                            onFinish = onFinish
+                        )
+                    }
+                },
+                {
+                    JumpRow(activeId = jumpPulse, entryId = "colors.green") {
+                        ColorSliderItem(
+                            label = stringResource(R.string.color_green),
+                            summary = stringResource(R.string.color_green_desc),
+                            value = green,
+                            accentColor = Color(0xFF66BB6A),
+                            enabled = isCustomMode,
+                            onValueChange = onGreen,
+                            onFinish = onFinish
+                        )
+                    }
+                },
+                {
+                    JumpRow(activeId = jumpPulse, entryId = "colors.blue") {
+                        ColorSliderItem(
+                            label = stringResource(R.string.color_blue),
+                            summary = stringResource(R.string.color_blue_desc),
+                            value = blue,
+                            accentColor = Color(0xFF42A5F5),
+                            enabled = isCustomMode,
+                            onValueChange = onBlue,
+                            onFinish = onFinish
+                        )
+                    }
+                }
+            )
+        )
+    }
+
+    item {
+        Spacer(modifier = Modifier.height(16.dp))
+        ExpressiveList(
+            content = listOf(
+                {
+                    JumpRow(activeId = jumpPulse, entryId = "colors.saturation") {
+                        ColorSliderItem(
+                            label = stringResource(R.string.color_saturation),
+                            summary = stringResource(R.string.color_saturation_desc),
+                            value = sat,
+                            accentColor = MaterialTheme.colorScheme.primary,
+                            enabled = isCustomMode,
+                            onValueChange = onSat,
+                            onFinish = onFinish
+                        )
+                    }
+                }
+            )
+        )
     }
 }
 
@@ -394,7 +504,7 @@ fun ColorSliderItem(
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "progress"
     )
-    
+
     val alpha = if (enabled) 1f else 0.5f
     val animatedAlpha by animateFloatAsState(
         targetValue = alpha,
@@ -425,7 +535,7 @@ fun ColorSliderItem(
                     color = colorScheme.outline
                 )
             }
-            
+
             Surface(
                 color = if (value == 1000f) colorScheme.surfaceVariant else colorScheme.primaryContainer,
                 shape = RoundedCornerShape(12.dp)
@@ -446,7 +556,6 @@ fun ColorSliderItem(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.BottomCenter
         ) {
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -454,7 +563,6 @@ fun ColorSliderItem(
                     .clip(RoundedCornerShape(4.dp))
                     .background(colorScheme.surfaceContainerHighest)
             )
-            
 
             Box(
                 modifier = Modifier
@@ -533,22 +641,22 @@ fun ColorSchemeTopAppBar(
             .statusBarsPadding()
     ) {
         TopAppBar(
-            title = { 
+            title = {
                 Text(
                     text = stringResource(R.string.color_scheme),
                     fontWeight = FontWeight.Bold
-                ) 
+                )
             },
             navigationIcon = {
                 IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
-            },       
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }
