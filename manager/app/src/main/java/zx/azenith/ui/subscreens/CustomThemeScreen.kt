@@ -465,26 +465,18 @@ fun ColorPaletteScreen(navController: NavController) {
                         .padding(top = innerPadding.calculateTopPadding()), 
                     contentAlignment = Alignment.Center
                 ) {
-MockCardFrame(
-                        scheme = mockColorScheme(
-                            keyColor = currentKeyColor,
-                            colorSpec = currentColorSpec,
-                            isDark = isDark,
-                            isAmoled = amoledMode,
-                            personalization = personalization
-                        ),
-                        shape = personalization.shapes.extraLarge,
-                        modifier = Modifier.fillMaxWidth(0.85f)
-                    ) {
-                        MockScreen(
-                            scheme = MaterialTheme.colorScheme,
-                            personalization = personalization,
-                            isBannerEnabled = isBannerEnabled,
-                            isBlurEnabled = isBlurEnabled,
-                            gradientAlpha = bannerGradientAlpha,
-                            customBannerUri = customBannerUri
-                        )
-                    }
+                    HalfMockPreview(
+                        keyColor = currentKeyColor,
+                        colorSpec = currentColorSpec,
+                        isDark = isDark,
+                        isAmoled = amoledMode,
+                        personalization = personalization,
+                        isBannerEnabled = isBannerEnabled,
+                        isBlurEnabled = isBlurEnabled,
+                        gradientAlpha = bannerGradientAlpha,
+                        customBannerUri = customBannerUri,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
 
                 LazyColumn(
@@ -1404,6 +1396,75 @@ private fun PinnedPreviewHeader(
 }
 
 /**
+ * Landscape preview: the same mock as portrait, but only the top half of the
+ * phone. The mock is laid out at its full portrait size and the frame cuts it,
+ * so nothing is re-laid out or squeezed.
+ */
+@Composable
+private fun HalfMockPreview(
+    keyColor: Int,
+    colorSpec: ColorEngine,
+    isDark: Boolean,
+    isAmoled: Boolean,
+    personalization: Personalization,
+    isBannerEnabled: Boolean,
+    isBlurEnabled: Boolean,
+    gradientAlpha: Float,
+    customBannerUri: String?,
+    modifier: Modifier = Modifier
+) {
+    val scheme = mockColorScheme(
+        keyColor = keyColor,
+        colorSpec = colorSpec,
+        isDark = isDark,
+        isAmoled = isAmoled,
+        personalization = personalization
+    )
+
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.TopCenter) {
+        val mockAspect = MOCK_H / MOCK_W
+        // Visible height is half the mock's, so the width is capped by the
+        // pane's height as well as its width.
+        val frameWidth = minOf(maxWidth * 0.85f, maxHeight * 2f / mockAspect)
+        val fullHeight = frameWidth * mockAspect
+        val visibleHeight = fullHeight / 2f
+
+        val cornerScale = frameWidth / (420.dp / mockAspect)
+        val base = (28.dp * cornerScale * personalization.cornerMultiplier).coerceAtLeast(10.dp)
+        val shape = RoundedCornerShape(topStart = base, topEnd = base, bottomStart = 0.dp, bottomEnd = 0.dp)
+
+        MockCardFrame(
+            scheme = scheme,
+            shape = shape,
+            modifier = Modifier.width(frameWidth).height(visibleHeight)
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                MockScreen(
+                    scheme = scheme,
+                    personalization = personalization,
+                    isBannerEnabled = isBannerEnabled,
+                    isBlurEnabled = isBlurEnabled,
+                    gradientAlpha = gradientAlpha,
+                    customBannerUri = customBannerUri,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .requiredSize(frameWidth, fullHeight)
+                )
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .background(
+                            Brush.verticalGradient(listOf(Color.Transparent, scheme.surface))
+                        )
+                )
+            }
+        }
+    }
+}
+
+/**
  * The mock's own device frame: surface, shape ramp and hairline border.
  *
  * With [onClick] set the frame is a clickable Surface. That has to go through
@@ -1473,14 +1534,6 @@ private fun MockScreen(
         // same radius in the preview.
         val k = personalization.cornerMultiplier
         val homeCardShape = personalization.widgetCorner(26.dp * (MOCK_W / 420.dp))
-        // Real blur on the content the mock dialog covers, so the toggle changes
-        // something measurable instead of tinting a rectangle. Animated so the
-        // reveal reads as the dialog arriving rather than a setting flipping.
-        val blurRadius by animateDpAsState(
-            targetValue = if (isBlurEnabled) MOCK_DIALOG_BLUR else 0.dp,
-            animationSpec = spring(stiffness = Spring.StiffnessLow),
-            label = "mockDialogBlur"
-        )
         // The blur demo needs a shared parent for the content and the dialog that
         // covers it, so the two move together under the mock's scaling transform.
         // Nothing about the content itself changes; only the box it sits in.
@@ -1506,7 +1559,6 @@ private fun MockScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .blur(blurRadius)
                 // The nav bar blurs this column, so it has to be a haze source.
                 .hazeSource(mockHaze)
                 // Padding does not depend on the collapsed/expanded state: the
@@ -1571,12 +1623,6 @@ private fun MockScreen(
                 mockHaze = mockHaze
             )
         }
-
-            MockBlurDialog(
-                visible = isBlurEnabled,
-                cornerScale = k,
-                modifier = Modifier.matchParentSize()
-            )
         }
     }
 }
