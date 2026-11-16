@@ -663,6 +663,48 @@ pub struct NodeTestOutcome {
     pub battery_ma: i32,
     pub input_ma: Option<i32>,
     pub samples: usize,
+    /// Samples below `LOW_CURRENT_MA` after the settling window.
+    pub steady_low: usize,
+    /// Samples taken after the settling window.
+    pub settled_samples: usize,
+    /// Battery current measured after the restore (0 when never measured).
+    pub recovered_ma: i32,
+}
+
+impl NodeTestOutcome {
+    fn none(verdict: NodeVerdict, baseline_ma: i32, battery_ma: i32) -> Self {
+        Self {
+            verdict,
+            baseline_ma,
+            battery_ma,
+            input_ma: None,
+            samples: 0,
+            steady_low: 0,
+            settled_samples: 0,
+            recovered_ma: 0,
+        }
+    }
+}
+
+/// Rank a passing node with what the test actually measured.
+///
+/// There is no static list of "real bypass" paths that holds across ROMs, so
+/// the order is derived from the run itself: how much of the observation window
+/// stayed at zero current (steadiness) and how much of the charge rate came back
+/// afterwards (clean restore). A node that only pulses the current down scores
+/// lower than one that holds it at zero, and a clean restore breaks ties.
+fn node_quality(outcome: &NodeTestOutcome) -> (i32, i32) {
+    let steady = if outcome.settled_samples == 0 {
+        0
+    } else {
+        (outcome.steady_low * 100 / outcome.settled_samples) as i32
+    };
+    let restored = if outcome.baseline_ma > 0 {
+        outcome.recovered_ma * 100 / outcome.baseline_ma
+    } else {
+        0
+    };
+    (steady, restored)
 }
 
 fn median_ma(values: &mut [i32]) -> i32 {
@@ -785,21 +827,21 @@ fn reading_is_settled(prev: i32, now: i32) -> bool {
 /// After the node is restored, charging must come back. Without this the test
 /// cannot tell "the node controls this current" from "current happened to be
 /// low", and it also catches a restore that silently failed.
-fn verify_recovery(baseline_ma: i32) -> NodeVerdict {
+fn verify_recovery(baseline_ma: i32) -> (NodeVerdict, i32) {
     let target = recovery_target(baseline_ma);
     let mut best = 0;
     for _ in 0..(RECOVERY_MAX_SECS as u64 * 1000 / RECOVERY_SAMPLE_MS) {
         if sleep_interruptible(RECOVERY_SAMPLE_MS) {
-            return NodeVerdict::Aborted;
+            return (NodeVerdict::Aborted, best);
         }
         if let Some(v) = read_current_ma_checked() {
             best = best.max(v);
             if v >= target {
-                return NodeVerdict::Pass;
+                return (NodeVerdict::Pass, best);
             }
         }
     }
-    NodeVerdict::NoRecovery { ma: best }
+    (NodeVerdict::NoRecovery { ma: best }, best)
 }
 
 /// Hold a node in its ON state and decide whether it produced a usable bypass.
@@ -818,34 +860,20 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
     // the write proves nothing. Leaving the node untouched keeps a scan from
     // reporting fake bypasses - and from cutting a charge session for nothing.
     if baseline.is_none() {
-        return NodeTestOutcome {
-            verdict: NodeVerdict::UnreadableCurrent,
-            baseline_ma,
-            battery_ma: baseline_ma,
-            input_ma: None,
-            samples: 0,
-        };
+        return NodeTestOutcome::none(NodeVerdict::UnreadableCurrent, baseline_ma, baseline_ma);
     }
     if baseline_ma < MIN_TESTABLE_CURRENT_MA {
-        return NodeTestOutcome {
-            verdict: NodeVerdict::NoBaseline { ma: baseline_ma },
+        return NodeTestOutcome::none(
+            NodeVerdict::NoBaseline { ma: baseline_ma },
             baseline_ma,
-            battery_ma: baseline_ma,
-            input_ma: None,
-            samples: 0,
-        };
+            baseline_ma,
+        );
     }
 
     let mut guard = match BypassGuard::arm(node) {
         Ok(guard) => guard,
         Err(_) => {
-            return NodeTestOutcome {
-                verdict: NodeVerdict::WriteFailed,
-                baseline_ma,
-                battery_ma: baseline_ma,
-                input_ma: None,
-                samples: 0,
-            };
+            return NodeTestOutcome::none(NodeVerdict::WriteFailed, baseline_ma, baseline_ma);
         }
     };
 
@@ -901,17 +929,14 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
             battery_ma: battery.last().copied().unwrap_or(-1),
             input_ma: input.last().copied(),
             samples: battery.len(),
+            steady_low: 0,
+            settled_samples: 0,
+            recovered_ma: 0,
         };
     }
 
     if battery.is_empty() {
-        return NodeTestOutcome {
-            verdict: NodeVerdict::UnreadableCurrent,
-            baseline_ma,
-            battery_ma: -1,
-            input_ma: None,
-            samples: 0,
-        };
+        return NodeTestOutcome::none(NodeVerdict::UnreadableCurrent, baseline_ma, -1);
     }
 
     let samples = battery.len();
@@ -923,6 +948,7 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
     let low_run = longest_low_run(&battery, skip);
     let needed_low_run = LOW_WINDOW_SAMPLES.min(samples - skip);
     let bypass_seen = low_run >= needed_low_run;
+    let steady_low = battery.iter().skip(skip).filter(|v| **v < LOW_CURRENT_MA).count();
     let battery_ma = median_ma(&mut battery);
     let input_ma = if input.is_empty() {
         None
@@ -932,33 +958,38 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
 
     if verbose {
         println!(
-            "    Summary: min {} mA | median {} mA | max {} mA | longest drop {} sample(s) (need {} after {}s) | unit {}",
+            "    Summary: min {} mA | median {} mA | max {} mA | longest drop {} sample(s) (need {} after {}s) | steady {}% | unit {}",
             lowest,
             battery_ma,
             highest,
             low_run,
             needed_low_run,
             TEST_SETTLE_SECS,
+            if samples > skip {
+                steady_low * 100 / (samples - skip)
+            } else {
+                0
+            },
             current_unit_label()
         );
     }
 
-    let verdict = if !bypass_seen {
+    let (verdict, recovered_ma) = if !bypass_seen {
         if fell_back {
-            NodeVerdict::NodeReverted { ma: battery_ma }
+            (NodeVerdict::NodeReverted { ma: battery_ma }, 0)
         } else {
-            NodeVerdict::CurrentNotDropped { ma: battery_ma }
+            (NodeVerdict::CurrentNotDropped { ma: battery_ma }, 0)
         }
     } else if !restored {
-        NodeVerdict::RestoreFailed { ma: battery_ma }
+        (NodeVerdict::RestoreFailed { ma: battery_ma }, 0)
     } else if let Some(input_ma) = input_ma {
         if input_ma < LOW_CURRENT_MA {
-            NodeVerdict::InputCurrentLost { battery_ma, input_ma }
+            (NodeVerdict::InputCurrentLost { battery_ma, input_ma }, 0)
         } else {
             verify_recovery(baseline_ma)
         }
     } else if saw_discharging {
-        NodeVerdict::BatteryDischarging { ma: battery_ma }
+        (NodeVerdict::BatteryDischarging { ma: battery_ma }, 0)
     } else {
         verify_recovery(baseline_ma)
     };
@@ -969,6 +1000,9 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
         battery_ma,
         input_ma,
         samples,
+        steady_low,
+        settled_samples: samples - skip,
+        recovered_ma,
     }
 }
 
@@ -1101,9 +1135,9 @@ pub fn check_bypass_compatibility() -> i32 {
     );
 
     // Every available node is tested, not just the first one that works: the
-    // fallback order matters when a node is later disabled by an update, and
-    // the per-node verdicts are what the diagnosis report is for.
-    let mut working: Vec<(&BypassNode, i32)> = Vec::new();
+    // ranking below needs a measured comparison, and the per-node verdicts are
+    // what the diagnosis report is for.
+    let mut working: Vec<(&BypassNode, NodeTestOutcome)> = Vec::new();
 
     for (index, node) in available.iter().enumerate() {
         println!(
@@ -1124,14 +1158,17 @@ pub fn check_bypass_compatibility() -> i32 {
         }
 
         let outcome = test_node(node, true);
+        let (steady, restored_pct) = node_quality(&outcome);
         report.push(format!(
-            "{:<28} path={} baseline={} median={} input={} samples={} verdict={}",
+            "{:<28} path={} baseline={} median={} input={} samples={} steady={}% restore={}% verdict={}",
             node.name,
             node.path,
             outcome.baseline_ma,
             outcome.battery_ma,
             outcome.input_ma.map(|v| v.to_string()).unwrap_or_else(|| "-".to_string()),
             outcome.samples,
+            steady,
+            restored_pct,
             outcome.verdict.describe()
         ));
 
@@ -1153,7 +1190,7 @@ pub fn check_bypass_compatibility() -> i32 {
                 "node accepted name={} baseline_ma={} battery_ma={} input_ma={:?} samples={}",
                 node.name, outcome.baseline_ma, outcome.battery_ma, outcome.input_ma, outcome.samples
             );
-            working.push((node, outcome.battery_ma));
+            working.push((node, outcome));
         } else {
             println!("\n\u{1b}[31m[FAILED]\u{1b}[0m {}: {}", node.name, outcome.verdict.describe());
             log_warn!(
@@ -1168,21 +1205,39 @@ pub fn check_bypass_compatibility() -> i32 {
     }
 
     if !working.is_empty() {
+        // Best first: steadiest zero-current window, then the cleanest restore.
+        // `sort_by` is stable, so identical scores keep the list order and the
+        // choice stays deterministic across runs.
+        working.sort_by(|a, b| node_quality(&b.1).cmp(&node_quality(&a.1)));
+
         println!(
-            "\n\u{1b}[1;37m[RESULTS]\u{1b}[0m {} of {} node(s) on this device can stop charging:",
+            "\n\u{1b}[1;37m[RESULTS]\u{1b}[0m {} of {} node(s) on this device can stop charging, best first:",
             working.len(),
             available_count
         );
-        for (node, ma) in &working {
-            println!("  \u{1b}[32m+\u{1b}[0m {:<24} {:>5} mA", node.name, ma);
+        for (rank, (node, outcome)) in working.iter().enumerate() {
+            let (steady, restored_pct) = node_quality(outcome);
+            println!(
+                "  {}. \u{1b}[32m{:<24}\u{1b}[0m steady {:>3}% | restore {:>3}% | {:>5} mA",
+                rank + 1,
+                node.name,
+                steady,
+                restored_pct,
+                outcome.battery_ma
+            );
         }
 
-        // Fallback order is the list order, so the same node is still chosen
-        // when several work.
-        let chosen = working[0].0;
+        let (chosen, chosen_outcome) = &working[0];
+        let (steady, restored_pct) = node_quality(chosen_outcome);
         println!(
             "\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Found working node: \u{1b}[1m{}\u{1b}[0m",
             chosen.name
+        );
+        println!(
+            "\u{1b}[32m[INFO]\u{1b}[0m Best of {} working node(s): steady {}%, restore {}%.",
+            working.len(),
+            steady,
+            restored_pct
         );
         println!(
             "\u{1b}[32m[INFO]\u{1b}[0m Process finished. {} tested, {} skipped.",
@@ -1194,8 +1249,8 @@ pub fn check_bypass_compatibility() -> i32 {
 
         log_info!(
             "bypass",
-            "compatible node found name={} working={} tested={} skipped={}",
-            chosen.name, working.len(), available_count, skipped_count
+            "compatible node found name={} working={} tested={} skipped={} steady={} restore={}",
+            chosen.name, working.len(), available_count, skipped_count, steady, restored_pct
         );
 
         let report_path = write_check_report(&report, "compatible_node_found");
@@ -1285,9 +1340,10 @@ fn test_single_node(node: &BypassNode) -> i32 {
     let outcome = test_node(node, true);
 
     if outcome.verdict == NodeVerdict::Pass {
+        let (steady, restored_pct) = node_quality(&outcome);
         println!(
-            "\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Node is compatible: \u{1b}[1m{}\u{1b}[0m ({} mA, baseline {} mA)",
-            node.name, outcome.battery_ma, outcome.baseline_ma
+            "\n\u{1b}[1;32m[SUCCESS]\u{1b}[0m Node is compatible: \u{1b}[1m{}\u{1b}[0m ({} mA, baseline {} mA, steady {}%, restore {}%)",
+            node.name, outcome.battery_ma, outcome.baseline_ma, steady, restored_pct
         );
         log_info!(
             "bypass",
@@ -1589,6 +1645,35 @@ mod tests {
         assert!(reading_is_settled(500, 480));
         assert!(!reading_is_settled(50, 60));
         assert!(!reading_is_settled(200, 900));
+    }
+
+    // The scan has no static table of "real bypass" paths, so the ranking comes
+    // from the run: a node that holds zero current for the whole window beats
+    // one that only pulses down, and a clean restore breaks ties.
+    #[test]
+    fn quality_prefers_steady_bypass_and_clean_restore() {
+        let steady = |low: usize, settled: usize, recovered: i32| NodeTestOutcome {
+            verdict: NodeVerdict::Pass,
+            baseline_ma: 1000,
+            battery_ma: 2,
+            input_ma: None,
+            samples: settled,
+            steady_low: low,
+            settled_samples: settled,
+            recovered_ma: recovered,
+        };
+
+        assert_eq!(node_quality(&steady(18, 18, 1000)), (100, 100));
+        assert_eq!(node_quality(&steady(9, 18, 250)), (50, 25));
+        assert_eq!(node_quality(&steady(0, 0, 0)), (0, 0));
+
+        let mut ranked = [("pulse", steady(9, 18, 1000)), ("hold", steady(18, 18, 100))];
+        ranked.sort_by(|a, b| node_quality(&b.1).cmp(&node_quality(&a.1)));
+        assert_eq!(ranked[0].0, "hold");
+
+        let mut tie = [("first", steady(18, 18, 500)), ("second", steady(18, 18, 500))];
+        tie.sort_by(|a, b| node_quality(&b.1).cmp(&node_quality(&a.1)));
+        assert_eq!(tie[0].0, "first");
     }
 
     // -----------------------------------------------------------------------

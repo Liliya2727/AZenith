@@ -368,8 +368,19 @@ read back, and the battery status, plus a Summary line, so a rejection
 can be explained. A node that is reset to its OFF value mid-test is
 reported as `NodeReverted` instead of "current did not drop".
 
+`-cbc` tests every node that exists on the device and ranks the ones that
+pass. There is no static table of "real bypass" paths that holds across
+ROMs, so the order comes from the measurements: `steady` is the share of
+the post-settle window that stayed below 50 mA, and `restore` is the share
+of the baseline charge rate that came back after the node was restored.
+Highest steady wins, then highest restore; a tie keeps `BYPASS_LIST`
+order. Between two node tests the scan pauses and waits for the charge
+current to be measurable and steady again, so the next node is never
+judged against a battery that is still recovering.
+
 `-cbc` is a diagnostic and never rewrites the stored configuration; its
-per-node verdicts are saved to `bypasschgconfig/last_check`.
+per-node verdicts (including `steady`/`restore`) are saved to
+`bypasschgconfig/last_check`.
 
 ---
 
