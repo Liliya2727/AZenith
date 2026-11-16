@@ -64,6 +64,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -1421,44 +1422,43 @@ private fun HalfMockPreview(
         personalization = personalization
     )
 
-    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.TopCenter) {
+    BoxWithConstraints(modifier = modifier.clipToBounds()) {
         val mockAspect = MOCK_H / MOCK_W
-        // Visible height is half the mock's, so the width is capped by the
-        // pane's height as well as its width.
         val frameWidth = minOf(maxWidth * 0.85f, maxHeight * 2f / mockAspect)
         val fullHeight = frameWidth * mockAspect
-        val visibleHeight = fullHeight / 2f
+        // Frame sengaja lebih tinggi dari pane: border, sudut, dan shadow
+        // bawahnya jatuh di luar clip, jadi mock tembus sampai tepi layar.
+        val frameHeight = maxOf(fullHeight, maxHeight + 8.dp)
 
         val cornerScale = frameWidth / (420.dp / mockAspect)
         val base = (28.dp * cornerScale * personalization.cornerMultiplier).coerceAtLeast(10.dp)
         val shape = RoundedCornerShape(topStart = base, topEnd = base, bottomStart = 0.dp, bottomEnd = 0.dp)
 
-        MockCardFrame(
-            scheme = scheme,
-            shape = shape,
-            modifier = Modifier.width(frameWidth).height(visibleHeight)
+        // unbounded: biar frame yang lebih tinggi dari pane tetap top-anchored,
+        // tidak di-center atau di-coerce ke tinggi pane.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .wrapContentSize(Alignment.TopCenter, unbounded = true)
         ) {
-            Box(Modifier.fillMaxSize()) {
-                MockScreen(
-                    scheme = scheme,
-                    personalization = personalization,
-                    isBannerEnabled = isBannerEnabled,
-                    isBlurEnabled = isBlurEnabled,
-                    gradientAlpha = gradientAlpha,
-                    customBannerUri = customBannerUri,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .requiredSize(frameWidth, fullHeight)
-                )
-                Box(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(40.dp)
-                        .background(
-                            Brush.verticalGradient(listOf(Color.Transparent, scheme.surface))
-                        )
-                )
+            MockCardFrame(
+                scheme = scheme,
+                shape = shape,
+                modifier = Modifier.size(frameWidth, frameHeight)
+            ) {
+                Box(Modifier.fillMaxSize()) {
+                    MockScreen(
+                        scheme = scheme,
+                        personalization = personalization,
+                        isBannerEnabled = isBannerEnabled,
+                        isBlurEnabled = isBlurEnabled,
+                        gradientAlpha = gradientAlpha,
+                        customBannerUri = customBannerUri,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .size(frameWidth, fullHeight)
+                    )
+                }
             }
         }
     }
