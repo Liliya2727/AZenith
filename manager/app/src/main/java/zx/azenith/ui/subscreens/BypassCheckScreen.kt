@@ -104,6 +104,9 @@ fun BypassChargeCheckScreen(navController: NavController) {
     // the scan needs its own flag rather than inferring from an empty list.
     var isLoadingPaths by remember { mutableStateOf(true) }
     var isChargerConnected by remember { mutableStateOf(false) }
+    // Node whose action sheet is open. Tapping a node never switches it directly:
+    // the sheet offers switching or running a single node test first.
+    var sheetNode by remember { mutableStateOf<Pair<String, String>?>(null) }
     
 
     val logs = remember { mutableStateListOf<ShellOutput>() }
@@ -194,6 +197,86 @@ fun BypassChargeCheckScreen(navController: NavController) {
     }
 
 
+    fun applyBypassNode(nodeName: String) {
+        PropertyUtils.set("persist.sys.azenithconf.bypasspath", nodeName)
+        scope.launch(Dispatchers.IO) {
+            val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
+            SuFileOutputStream.open(file).writer().use { writer ->
+                writer.write(nodeName)
+            }
+        }
+        activePath = nodeName
+    }
+
+    fun confirmSwitchNode(nodeName: String) {
+        scope.launch {
+            val result = confirmDialogHandle.awaitConfirm(
+                title = context.getString(R.string.dialog_switch_node_title),
+                content = context.getString(R.string.dialog_switch_node_content, nodeName),
+                confirm = context.getString(R.string.dialog_apply_path),
+                dismiss = context.getString(R.string.dialog_dismiss)
+            )
+            if (result == ConfirmResult.Confirmed) {
+                applyBypassNode(nodeName)
+            }
+        }
+    }
+
+    // `-tb` for one node: same console as the full scan, so the per-sample trace
+    // and the verdict stay readable afterwards.
+    fun runSingleNodeTest(nodeName: String) {
+        val excess = logs.size - MAX_BYPASS_LOG_LINES
+        if (excess > 0) {
+            repeat(excess) { logs.removeAt(0) }
+        }
+        if (logs.isNotEmpty()) {
+            logs.add(ShellOutput("", true))
+        }
+        val firstNewLog = logs.size
+
+        isRunning = true
+        hasRunDiagnosis = false
+        isConsoleClosed = false
+
+        scope.launch(Dispatchers.IO) {
+            val callbackList = object : CallbackList<String>() {
+                override fun onAddElement(line: String) {
+                    scope.launch(Dispatchers.Main.immediate) {
+                        logs.add(ShellOutput(line, true))
+                    }
+                }
+            }
+
+            val binaryPath = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
+            Shell.cmd("$binaryPath -tb \"$nodeName\" 2>&1").to(callbackList).submit {
+                isRunning = false
+                hasRunDiagnosis = true
+
+                val successRegex = "Node is compatible:\\s*(\\S+)".toRegex()
+                // Only this run: an older success line must not be applied again.
+                val cleanLogs = logs.drop(firstNewLog)
+                    .map { it.text.replace("\u001B\\[[;\\d]*m".toRegex(), "") }
+                val passedNode = cleanLogs.firstNotNullOfOrNull { successRegex.find(it)?.groupValues?.get(1) }
+
+                refreshBypassData { }
+
+                if (passedNode != null) {
+                    scope.launch {
+                        val dialogResult = confirmDialogHandle.awaitConfirm(
+                            title = context.getString(R.string.dialog_diagnosis_complete_title),
+                            content = context.getString(R.string.dialog_diagnosis_complete_content, passedNode),
+                            confirm = context.getString(R.string.dialog_apply),
+                            dismiss = context.getString(R.string.dialog_dismiss)
+                        )
+                        if (dialogResult == ConfirmResult.Confirmed) {
+                            applyBypassNode(passedNode)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun runCompatibilityCheck() {
         // Keep the previous run on screen: a scan takes minutes and the result
         // must stay readable after it finishes. Trim only to bound memory.
@@ -241,14 +324,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                             dismiss = context.getString(R.string.dialog_dismiss)
                         )
                         if (dialogResult == ConfirmResult.Confirmed) {
-                            PropertyUtils.set("persist.sys.azenithconf.bypasspath", successNode)
-                            withContext(Dispatchers.IO) {
-                                val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
-                                SuFileOutputStream.open(file).writer().use { writer ->
-                                    writer.write(successNode)
-                                }
-                            }
-                            activePath = successNode
+                            applyBypassNode(successNode)
                         }
                     }
                 }
@@ -257,6 +333,39 @@ fun BypassChargeCheckScreen(navController: NavController) {
     }
 
     ConfirmDialogHost(handle = confirmDialogHandle)
+
+    RootAppDialog {
+        val node = sheetNode
+        AZenithSheet(
+            show = node != null,
+            onDismiss = { sheetNode = null },
+            title = node?.first ?: "",
+            subtitle = node?.second,
+            style = SheetRowStyle.Action,
+            items = listOf(
+                SheetItem(
+                    label = stringResource(R.string.str_switch_node),
+                    summary = stringResource(R.string.str_switch_node_desc),
+                    icon = Icons.Rounded.SwapHoriz,
+                ),
+                SheetItem(
+                    label = stringResource(R.string.str_test_this_node),
+                    summary = if (isChargerConnected) stringResource(R.string.str_test_this_node_desc)
+                              else stringResource(R.string.str_plug_in_charger),
+                    icon = Icons.Rounded.PlayArrow,
+                    enabled = isChargerConnected && !isRunning,
+                ),
+            ),
+            onItemClick = { index ->
+                val target = sheetNode
+                if (target != null) {
+                    // The sheet hides itself before this runs; the dialog it opens
+                    // then owns the screen.
+                    if (index == 0) confirmSwitchNode(target.first) else runSingleNodeTest(target.first)
+                }
+            },
+        )
+    }
 
 
     Scaffold(
@@ -491,25 +600,10 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                 ExpressiveListItemHighlight(
                                     containerColor = if (isSelected) colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
                                     onClick = {
+                                        // Tapping opens the action sheet; switching is
+                                        // only ever done from an explicit choice there.
                                         if (!isRunning) {
-                                            scope.launch {
-                                                val result = confirmDialogHandle.awaitConfirm(
-                                                    title = context.getString(R.string.dialog_switch_node_title),
-                                                    content = context.getString(R.string.dialog_switch_node_content, pathNode.first),
-                                                    confirm = context.getString(R.string.dialog_apply_path),
-                                                    dismiss = context.getString(R.string.dialog_dismiss)
-                                                )
-                                                if (result == ConfirmResult.Confirmed) {
-                                                    PropertyUtils.set("persist.sys.azenithconf.bypasspath", pathNode.first)
-                                                    withContext(Dispatchers.IO) {
-                                                        val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
-                                                        SuFileOutputStream.open(file).writer().use { writer ->
-                                                            writer.write(pathNode.first)
-                                                        }
-                                                    }
-                                                    activePath = pathNode.first
-                                                }
-                                            }
+                                            sheetNode = pathNode
                                         }
                                     },
                                     headlineContent = { 
