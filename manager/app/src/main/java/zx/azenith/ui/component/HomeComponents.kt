@@ -337,7 +337,7 @@ fun BannerCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .matchParentSize()
                         .then(if (isBlurEnabled) Modifier.hazeSource(state = bannerHazeState) else Modifier)
                 ) {
                     MediaBannerRenderer(
