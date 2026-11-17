@@ -1705,8 +1705,8 @@ private fun BannerGradientPreview(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 12.dp, bottom = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .padding(start = 10.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Surface(
                     color = colorScheme.secondaryContainer,
@@ -1714,9 +1714,12 @@ private fun BannerGradientPreview(
                 ) {
                     Text(
                         text = stringResource(R.string.status_alive),
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 8.sp,
+                            lineHeight = 10.sp
+                        ),
                         color = colorScheme.onSecondaryContainer
                     )
                 }
@@ -1725,10 +1728,13 @@ private fun BannerGradientPreview(
                     shape = CircleShape
                 ) {
                     Text(
-                        text = stringResource(R.string.pid_format, "0"),
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
+                        text = stringResource(R.string.pid_format, "2727"),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
                         fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 8.sp,
+                            lineHeight = 10.sp
+                        ),
                         color = colorScheme.onSecondaryContainer
                     )
                 }
