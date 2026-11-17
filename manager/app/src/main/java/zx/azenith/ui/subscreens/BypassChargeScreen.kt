@@ -226,12 +226,12 @@ fun BypassChargeScreen(navController: NavController) {
                         top = topPad,
                         bottom = bottomPad
                     ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.Center, 
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     bypassIllustrationItem(
                         colorScheme = colorScheme,
-                        illustrationHeight = 120.dp,
+                        illustrationHeight = 240.dp,
                         isUnsupported = isUnsupported
                     )
                 }
