@@ -226,7 +226,7 @@ fun ColorSchemeSettings(navController: NavController) {
                 scrollBehavior = scrollBehavior
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { ZenithSnackbarHost(snackbarHostState) },
         contentColor = ScaffoldContentColor(),
         containerColor = ScaffoldContainerColor(colorScheme.surface)
     ) { innerPadding ->

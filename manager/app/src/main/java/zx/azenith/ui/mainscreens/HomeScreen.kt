@@ -118,11 +118,10 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             )
         },
         snackbarHost = {
-            SnackbarHost(
+            ZenithSnackbarHost(
                 hostState = snackbarHostState,
-                modifier = Modifier.padding(
-                    bottom = 100.dp
-                )
+                portraitBottomPadding = 100.dp,
+                landscapeDockClearance = true
             )
         },
         contentColor = ScaffoldContentColor(),

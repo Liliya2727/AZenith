@@ -262,11 +262,10 @@ fun TweakScreen(
             )
         },
         snackbarHost = {
-            SnackbarHost(
+            ZenithSnackbarHost(
                 hostState = snackbarHostState,
-                modifier = Modifier.padding(
-                    bottom = 100.dp
-                )
+                portraitBottomPadding = 100.dp,
+                landscapeDockClearance = true
             )
         },
         containerColor = scaffoldColor,

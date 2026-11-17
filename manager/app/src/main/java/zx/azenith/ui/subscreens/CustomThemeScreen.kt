@@ -442,7 +442,7 @@ fun ColorPaletteScreen(navController: NavController) {
 
     Scaffold(
         modifier = Modifier.nestedScroll(nestedScrollConnection),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { ZenithSnackbarHost(snackbarHostState) },
         topBar = {
             PaletteTopAppBar(
                 onBack = { navController.safePopBackStack() },

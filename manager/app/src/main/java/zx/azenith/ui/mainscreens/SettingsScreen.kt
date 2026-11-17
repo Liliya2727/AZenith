@@ -258,13 +258,12 @@ fun SettingsScreen(
                     )
                 )
             },
-            snackbarHost = { 
-                SnackbarHost(
+            snackbarHost = {
+                ZenithSnackbarHost(
                     hostState = snackbarHostState,
-                    modifier = Modifier.padding(
-                        bottom = 100.dp
-                    )
-                ) 
+                    portraitBottomPadding = 100.dp,
+                    landscapeDockClearance = true
+                )
             },
             contentColor = ScaffoldContentColor(),
             containerColor = ScaffoldContainerColor(MaterialTheme.colorScheme.surface)
