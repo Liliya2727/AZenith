@@ -476,7 +476,7 @@ private fun ZXDropDownItem(
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            BlurCrossfadeText(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium

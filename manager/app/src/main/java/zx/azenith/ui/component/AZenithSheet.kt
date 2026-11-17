@@ -106,6 +106,8 @@ data class SheetItem(
     val icon: ImageVector? = null,
     val selected: Boolean = false,
     val enabled: Boolean = true,
+    /** Crossfade the label through a blur when the option text changes. */
+    val animateLabel: Boolean = false,
 )
 
 /**
@@ -508,16 +510,27 @@ private fun SheetRow(
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.label,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                color = when {
-                    !item.enabled -> scheme.onSurfaceVariant
-                    selected -> scheme.onSecondaryContainer
-                    else -> scheme.onSurface
-                },
+            val labelStyle = MaterialTheme.typography.bodyLarge.copy(
+                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
             )
+            val labelColor = when {
+                !item.enabled -> scheme.onSurfaceVariant
+                selected -> scheme.onSecondaryContainer
+                else -> scheme.onSurface
+            }
+            if (item.animateLabel) {
+                BlurCrossfadeText(
+                    text = item.label,
+                    style = labelStyle,
+                    color = labelColor
+                )
+            } else {
+                Text(
+                    text = item.label,
+                    style = labelStyle,
+                    color = labelColor,
+                )
+            }
             if (item.summary != null) {
                 Text(
                     text = item.summary,

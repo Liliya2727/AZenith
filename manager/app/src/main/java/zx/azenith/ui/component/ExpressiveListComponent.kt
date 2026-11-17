@@ -539,11 +539,14 @@ fun ExpressiveDropdownItem(
         supportingContent = summary?.let { { Text(it) } },
         trailingContent = {
             Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
-                Text(
+                BlurCrossfadeText(
                     text = selectedLabel,
-                    color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (enabled) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
-
             }
         }
     )
@@ -586,7 +589,11 @@ private fun OptionPickerSheet(
         subtitle = subtitle,
         style = SheetRowStyle.SingleSelect,
         items = items.mapIndexed { index, label ->
-            SheetItem(label = label, selected = index == safeIndex)
+            SheetItem(
+                label = label,
+                selected = index == safeIndex,
+                animateLabel = true
+            )
         },
         onItemClick = { index ->
             if (index in items.indices) onSelect(index)
