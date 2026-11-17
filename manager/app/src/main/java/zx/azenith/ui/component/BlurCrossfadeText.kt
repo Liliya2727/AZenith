@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** Shared duration so a row that sizes to its text can animate in step with it. */
-internal const val BlurCrossfadeDurationMillis = 220
+internal const val BlurCrossfadeDurationMillis = 600
 
 /**
  * Text that crossfades through a short blur when its value changes.
