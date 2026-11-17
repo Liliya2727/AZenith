@@ -25,18 +25,9 @@ import android.os.Build
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -842,7 +833,7 @@ fun ExpressiveTile(
         modifier = modifier
             .clip(RoundedCornerShape(26.dp))
             .clickable { onClick() }
-            .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)),
+            .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,
         shape = RoundedCornerShape(26.dp)
     ) {
@@ -896,27 +887,13 @@ fun ExpressiveTile(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    AnimatedContent(
-                        targetState = value,
-                        transitionSpec = {
-                            (fadeIn(animationSpec = tween(300, delayMillis = 100)) +
-                             scaleIn(initialScale = 0.95f, animationSpec = tween(300, delayMillis = 100)))
-                                .togetherWith(
-                                    fadeOut(animationSpec = tween(200)) +
-                                    scaleOut(targetScale = 1.05f, animationSpec = tween(200))
-                                )
-                        },
-                        label = "ValueTextAnimation"
-                    ) { targetValue ->
-                        Text(
-                            text = targetValue, 
-                            style = MaterialTheme.typography.bodySmall, 
-                            color = colorScheme.onSurfaceVariant, 
-                            maxLines = 1, 
-                            overflow = TextOverflow.Ellipsis,
-                            lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
-                        )
-                    }
+                    BlurCrossfadeText(
+                        text = value,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     
 
                     if (isLoading) {

@@ -575,7 +575,7 @@ fun InfoTile(
         modifier = modifier
             .clip(cardShape)
             .clickable { onClick() }
-            .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)),
+            .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,
         shape = cardShape
     ) {
@@ -585,8 +585,8 @@ fun InfoTile(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(82.dp) 
-                    .clip(pers.widgetCorner(18.dp, 82.dp)) 
+                    .height(82.dp)
+                    .clip(pers.widgetCorner(18.dp, 82.dp))
                     .background(iconBoxBgColor),
                 contentAlignment = Alignment.Center
             ) {
@@ -652,29 +652,13 @@ fun InfoTile(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                AnimatedContent(
-                    targetState = value,
-                    transitionSpec = {
-
-
-                        (fadeIn(animationSpec = tween(300, delayMillis = 100)) +
-                         scaleIn(initialScale = 0.95f, animationSpec = tween(300, delayMillis = 100)))
-                            .togetherWith(
-                                fadeOut(animationSpec = tween(200)) +
-                                scaleOut(targetScale = 1.05f, animationSpec = tween(200))
-                            )
-                    },
-                    label = "ValueTextAnimation"
-                ) { targetValue ->
-                    Text(
-                        text = targetValue, 
-                        style = MaterialTheme.typography.bodySmall, 
-                        color = valueColor, 
-                        maxLines = 1, 
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
-                    )
-                }
+                BlurCrossfadeText(
+                    text = value,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = valueColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
             }
             Spacer(modifier = Modifier.height(4.dp))
