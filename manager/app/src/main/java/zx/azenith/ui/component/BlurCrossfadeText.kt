@@ -21,6 +21,7 @@ import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -36,6 +37,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+/** Shared duration so a row that sizes to its text can animate in step with it. */
+internal const val BlurCrossfadeDurationMillis = 220
 
 /**
  * Text that crossfades through a short blur when its value changes.
@@ -55,13 +59,17 @@ internal fun BlurCrossfadeText(
     overflow: TextOverflow = TextOverflow.Clip,
     softWrap: Boolean = true,
     blurRadius: Dp = 6.dp,
-    durationMillis: Int = 180,
+    durationMillis: Int = BlurCrossfadeDurationMillis,
 ) {
     AnimatedContent(
         targetState = text,
         transitionSpec = {
+            // Let the text's own bounds travel between the two strings. Without a size
+            // transform AnimatedContent jumps to the new width in one frame, and a row
+            // that wraps to another line yanks its centred leading icon with it.
             fadeIn(animationSpec = tween(durationMillis)) togetherWith
-                fadeOut(animationSpec = tween(durationMillis))
+                fadeOut(animationSpec = tween(durationMillis)) using
+                SizeTransform(clip = false) { _, _ -> tween(durationMillis) }
         },
         label = "BlurCrossfadeText"
     ) { target ->

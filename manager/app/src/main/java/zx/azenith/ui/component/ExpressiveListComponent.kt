@@ -525,7 +525,7 @@ fun ExpressiveDropdownItem(
 
     ExpressiveListItem(
         modifier = Modifier
-            .animateContentSize()
+            .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis))
             .then(modifier)
             .then(
                 if (enabled) {
