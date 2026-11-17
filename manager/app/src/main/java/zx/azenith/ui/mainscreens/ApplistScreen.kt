@@ -194,7 +194,7 @@ fun ApplistScreen(navController: NavController) {
 
             val navBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             val listContentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
+                top = innerPadding.calculateTopPadding() + 16.dp,
                 start = 16.dp + safeAreaStartInset(),
                 end = 16.dp + navBarEndClearance(),
                 bottom = navBarBottomClearance(navBottomPadding)
