@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -104,7 +105,10 @@ internal fun BlurCrossfadeText(
 
         Text(
             text = target,
-            modifier = modifier.blur(blur.value),
+            modifier = modifier.blur(
+                radius = blur.value,
+                edgeTreatment = BlurredEdgeTreatment.Unbounded
+            ),
             color = color,
             style = style,
             maxLines = maxLines,

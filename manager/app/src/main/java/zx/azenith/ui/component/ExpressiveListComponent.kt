@@ -18,7 +18,6 @@ package zx.azenith.ui.component
 
 
 import android.annotation.SuppressLint
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Spring
@@ -43,7 +42,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -54,6 +52,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Checkbox
@@ -228,7 +227,6 @@ fun ExpressiveListItem(
     supportingContent: @Composable (() -> Unit)? = null,
     leadingContent: @Composable (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
-    @SuppressLint("ModifierParameter") leadingContentModifier: Modifier = Modifier,
 ) {
     Row(
         modifier = Modifier
@@ -247,9 +245,7 @@ fun ExpressiveListItem(
     ) {
         if (leadingContent != null) {
             Box(
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .then(leadingContentModifier),
+                modifier = Modifier.padding(end = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 leadingContent()
@@ -528,7 +524,6 @@ fun ExpressiveDropdownItem(
 
     ExpressiveListItem(
         modifier = Modifier
-            .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis))
             .then(modifier)
             .then(
                 if (enabled) {
@@ -538,19 +533,15 @@ fun ExpressiveDropdownItem(
                 }
             ),
         leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
-        leadingContentModifier = Modifier.animateContentSize(
-            animationSpec = tween(BlurCrossfadeDurationMillis)
-        ),
-        headlineContent = {
-            BlurCrossfadeText(text = title, transitionKey = selectedLabel)
-        },
-        supportingContent = summary?.let {
-            { BlurCrossfadeText(text = it, transitionKey = selectedLabel) }
-        },
-        trailingContent = {
-            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
+        headlineContent = { Text(text = title) },
+        supportingContent = {
+            Column {
+                if (summary != null) {
+                    Text(summary)
+                }
                 BlurCrossfadeText(
                     text = selectedLabel,
+                    modifier = if (summary != null) Modifier.padding(top = 4.dp) else Modifier,
                     color = if (enabled) {
                         MaterialTheme.colorScheme.primary
                     } else {
@@ -558,6 +549,13 @@ fun ExpressiveDropdownItem(
                     }
                 )
             }
+        },
+        trailingContent = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     )
 
