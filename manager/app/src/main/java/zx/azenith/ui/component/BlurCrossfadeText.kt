@@ -60,9 +60,12 @@ internal fun BlurCrossfadeText(
     softWrap: Boolean = true,
     blurRadius: Dp = 6.dp,
     durationMillis: Int = BlurCrossfadeDurationMillis,
+    /** Change this to replay the crossfade when the text itself stays the same. */
+    transitionKey: Any? = null,
 ) {
     AnimatedContent(
         targetState = text,
+        contentKey = { if (transitionKey == null) it else transitionKey },
         transitionSpec = {
             // Let the text's own bounds travel between the two strings. Without a size
             // transform AnimatedContent jumps to the new width in one frame, and a row

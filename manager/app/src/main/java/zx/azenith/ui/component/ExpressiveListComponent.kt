@@ -228,6 +228,7 @@ fun ExpressiveListItem(
     supportingContent: @Composable (() -> Unit)? = null,
     leadingContent: @Composable (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
+    @SuppressLint("ModifierParameter") leadingContentModifier: Modifier = Modifier,
 ) {
     Row(
         modifier = Modifier
@@ -246,7 +247,9 @@ fun ExpressiveListItem(
     ) {
         if (leadingContent != null) {
             Box(
-                modifier = Modifier.padding(end = 16.dp),
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .then(leadingContentModifier),
                 contentAlignment = Alignment.Center
             ) {
                 leadingContent()
@@ -535,8 +538,15 @@ fun ExpressiveDropdownItem(
                 }
             ),
         leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
-        headlineContent = { Text(text = title) },
-        supportingContent = summary?.let { { Text(it) } },
+        leadingContentModifier = Modifier.animateContentSize(
+            animationSpec = tween(BlurCrossfadeDurationMillis)
+        ),
+        headlineContent = {
+            BlurCrossfadeText(text = title, transitionKey = selectedLabel)
+        },
+        supportingContent = summary?.let {
+            { BlurCrossfadeText(text = it, transitionKey = selectedLabel) }
+        },
         trailingContent = {
             Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
                 BlurCrossfadeText(
