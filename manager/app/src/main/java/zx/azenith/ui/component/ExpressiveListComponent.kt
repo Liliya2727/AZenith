@@ -91,6 +91,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.shape.CircleShape
 import zx.azenith.ExpressiveShapes
@@ -535,19 +536,30 @@ fun ExpressiveDropdownItem(
         leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
         headlineContent = { Text(text = title) },
         supportingContent = {
+            val valueColor = if (enabled) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
             Column {
                 if (summary != null) {
                     Text(summary)
                 }
-                BlurCrossfadeText(
-                    text = selectedLabel,
-                    modifier = if (summary != null) Modifier.padding(top = 4.dp) else Modifier,
-                    color = if (enabled) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
+                Surface(
+                    color = valueColor.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = if (summary != null) Modifier.padding(top = 4.dp) else Modifier
+                ) {
+                    BlurCrossfadeText(
+                        text = selectedLabel,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                        color = valueColor,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    )
+                }
             }
         },
         trailingContent = {
