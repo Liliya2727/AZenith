@@ -77,6 +77,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -84,6 +86,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
@@ -134,6 +137,7 @@ fun TweakScreen(
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -229,8 +233,26 @@ fun TweakScreen(
         }
     }
 
+    // The renderer prop and the display mode can be changed from outside the app (the
+    // module's CLI, another app, a shell). Poll the small read so the tiles follow those
+    // changes while the screen is composed, instead of waiting for the app to be reopened.
     LaunchedEffect(Unit) {
         viewModel.loadAllConfiguration(context)
+        while (true) {
+            delay(2_000)
+            viewModel.refreshDisplayState(context)
+        }
+    }
+
+    // Coming back from another app should be instant, without waiting for the next poll.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                scope.launch(Dispatchers.IO) { viewModel.refreshDisplayState(context) }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold(

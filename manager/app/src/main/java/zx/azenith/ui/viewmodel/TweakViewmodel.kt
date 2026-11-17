@@ -248,6 +248,50 @@ class TweakViewModel : ViewModel() {
         }
     }
     
+    /**
+     * Re-reads only the values the renderer and refresh-rate tiles show.
+     *
+     * [loadAllConfiguration] does a full sweep: it also reads governor files and touches
+     * every tweak property, so running it just to notice a prop change made by the module
+     * or another app is wasteful. This lighter read is safe to call repeatedly, and it only
+     * writes when a value actually changed so a poll does not recompose the tiles for
+     * nothing.
+     */
+    suspend fun refreshDisplayState(context: Context) = withContext(Dispatchers.IO) {
+        val rawRenderer = PropertyUtils.get("debug.hwui.renderer")
+        val azenithRenderer = PropertyUtils.get("persist.sys.azenithconf.renderer")
+
+        val renderer = when {
+            rawRenderer.isEmpty() && (azenithRenderer.isEmpty() || azenithRenderer.equals("default", ignoreCase = true)) -> "Default"
+
+            azenithRenderer.isEmpty() -> if (rawRenderer.equals("default", ignoreCase = true)) "Default" else rawRenderer
+
+            rawRenderer.isEmpty() -> if (azenithRenderer.equals("default", ignoreCase = true)) "Default" else azenithRenderer
+
+            else -> {
+                val isSameValue = rawRenderer.equals(azenithRenderer, ignoreCase = true)
+                val isAzenithDefault = azenithRenderer.equals("default", ignoreCase = true)
+
+                when {
+                    isSameValue -> if (rawRenderer.equals("default", ignoreCase = true)) "Default" else rawRenderer
+                    isAzenithDefault -> "Default ($rawRenderer)"
+                    else -> "$azenithRenderer ($rawRenderer)"
+                }
+            }
+        }
+
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val refreshRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            context.display.refreshRate.toInt()
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.refreshRate.toInt()
+        }
+
+        if (currentRenderer != renderer) currentRenderer = renderer
+        if (currentRefreshRate != refreshRate) currentRefreshRate = refreshRate
+    }
+
     fun loadAllConfiguration(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             
@@ -266,35 +310,7 @@ class TweakViewModel : ViewModel() {
                 fstrimState = PropertyUtils.get("persist.sys.azenithconf.fstrim") == "1"
                 thermalState = PropertyUtils.get("persist.sys.azenithconf.thermalcore") == "1"
 
-                val rawRenderer = PropertyUtils.get("debug.hwui.renderer")
-                val azenithRenderer = PropertyUtils.get("persist.sys.azenithconf.renderer")
-                
-                currentRenderer = when {
-                    rawRenderer.isEmpty() && (azenithRenderer.isEmpty() || azenithRenderer.equals("default", ignoreCase = true)) -> "Default"
-                    
-                    azenithRenderer.isEmpty() -> if (rawRenderer.equals("default", ignoreCase = true)) "Default" else rawRenderer
-                    
-                    rawRenderer.isEmpty() -> if (azenithRenderer.equals("default", ignoreCase = true)) "Default" else azenithRenderer
-                    
-                    else -> {
-                        val isSameValue = rawRenderer.equals(azenithRenderer, ignoreCase = true)
-                        val isAzenithDefault = azenithRenderer.equals("default", ignoreCase = true)
-                        
-                        when {
-                            isSameValue -> if (rawRenderer.equals("default", ignoreCase = true)) "Default" else rawRenderer
-                            isAzenithDefault -> "Default ($rawRenderer)"
-                            else -> "$azenithRenderer ($rawRenderer)"
-                        }
-                    }
-                }
-
-                val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                currentRefreshRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    context.display.refreshRate.toInt()
-                } else {
-                    @Suppress("DEPRECATION")
-                    windowManager.defaultDisplay.refreshRate.toInt()
-                }
+                refreshDisplayState(context)
             }
 
             val govJob = async { loadGovernorsInternal() }
