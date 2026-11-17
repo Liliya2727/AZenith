@@ -113,14 +113,14 @@ private val BYPASS_ROW_ITEMS: Map<String, Int> = mapOf(
 
 /**
  * Landscape splits the screen in two lists, so each has its own index space.
- * Left: info(0) illustration(1) -- no searchable rows.
- * Right: enable(0) threshold(1) compatibility(2).
+ * Left: illustration(0) -- no searchable rows.
+ * Right: info(0) enable(1) threshold(2) compatibility(3).
  */
 private val BYPASS_LEFT_ITEMS: Map<String, Int> = emptyMap()
 private val BYPASS_RIGHT_ITEMS: Map<String, Int> = mapOf(
-    "bypass.enable" to 0,
-    "bypass.threshold" to 1,
-    "bypass.compat" to 2
+    "bypass.enable" to 1,
+    "bypass.threshold" to 2,
+    "bypass.compat" to 3
 )
 
 @Composable
@@ -229,7 +229,7 @@ fun BypassChargeScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    bypassIntroItems(
+                    bypassIllustrationItem(
                         colorScheme = colorScheme,
                         illustrationHeight = 120.dp,
                         isUnsupported = isUnsupported
@@ -250,6 +250,7 @@ fun BypassChargeScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    bypassInfoItem(colorScheme = colorScheme)
                     bypassOptionItems(
                         jumpPulse = rightJumpPulse,
                         isUnsupported = isUnsupported,
@@ -276,7 +277,8 @@ fun BypassChargeScreen(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                bypassIntroItems(
+                bypassInfoItem(colorScheme = colorScheme)
+                bypassIllustrationItem(
                     colorScheme = colorScheme,
                     illustrationHeight = 200.dp,
                     isUnsupported = isUnsupported
@@ -297,12 +299,8 @@ fun BypassChargeScreen(navController: NavController) {
     }
 }
 
-/** Items 0 and 1: the info card and the illustration. */
-private fun LazyListScope.bypassIntroItems(
-    colorScheme: ColorScheme,
-    illustrationHeight: Dp,
-    isUnsupported: Boolean
-) {
+/** The "pause battery charging" info card. */
+private fun LazyListScope.bypassInfoItem(colorScheme: ColorScheme) {
     item {
         ExpressiveList(
             content = listOf(
@@ -317,7 +315,14 @@ private fun LazyListScope.bypassIntroItems(
             )
         )
     }
+}
 
+/** The illustration. */
+private fun LazyListScope.bypassIllustrationItem(
+    colorScheme: ColorScheme,
+    illustrationHeight: Dp,
+    isUnsupported: Boolean
+) {
     item {
         Image(
             painter = painterResource(id = R.drawable.bypasschgillust),

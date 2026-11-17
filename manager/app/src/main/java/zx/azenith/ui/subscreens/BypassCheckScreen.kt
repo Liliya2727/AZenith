@@ -416,7 +416,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                     logs = logs,
                     logScrollState = logScrollState,
                     modifier = Modifier
-                        .weight(0.55f)
+                        .weight(0.42f)
                         .fillMaxHeight()
                         .padding(top = topPad, bottom = bottomPad)
                         .hazePageSource(),
@@ -425,7 +425,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
                 LazyColumn(
                     modifier = Modifier
-                        .weight(0.45f)
+                        .weight(0.58f)
                         .fillMaxHeight()
                         .hazePageSource()
                         .gamepadScreenEntry(),
