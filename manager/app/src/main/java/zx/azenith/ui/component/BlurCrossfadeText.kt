@@ -29,6 +29,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -63,6 +64,10 @@ internal fun BlurCrossfadeText(
     /** Change this to replay the crossfade when the text itself stays the same. */
     transitionKey: Any? = null,
 ) {
+    // The very first composition is not a real value change. Mark it so the initial text
+    // renders sharp instead of visibly resolving from a blur when the screen opens.
+    val isInitialComposition = remember { mutableStateOf(true) }
+
     AnimatedContent(
         targetState = text,
         contentKey = { if (transitionKey == null) it else transitionKey },
@@ -82,11 +87,15 @@ internal fun BlurCrossfadeText(
         val arriving = transition.targetState != EnterExitState.PostExit
         val blur = remember {
             Animatable(
-                initialValue = if (arriving) blurRadius else 0.dp,
+                initialValue = if (arriving && !isInitialComposition.value) blurRadius else 0.dp,
                 typeConverter = Dp.VectorConverter
             )
         }
         LaunchedEffect(arriving) {
+            if (isInitialComposition.value) {
+                isInitialComposition.value = false
+                return@LaunchedEffect
+            }
             blur.animateTo(
                 targetValue = if (arriving) 0.dp else blurRadius,
                 animationSpec = tween(durationMillis)
