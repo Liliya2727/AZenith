@@ -61,25 +61,36 @@ enum class AccentIntensity(val labelRes: Int) {
     }
 }
 
+/**
+ * The three corner presets shared by every surface that follows the app's shape
+ * ramp. Each is an authored radius; [multiplier] scales the stock 26dp ramp so a
+ * card authored at 26dp lands exactly on its preset radius.
+ */
+enum class CornerStyle(val radiusDp: Float, val labelRes: Int) {
+    Rounded(26f, R.string.pers_corner_rounded),
+    Smooth(16f, R.string.pers_corner_smooth),
+    Soft(12f, R.string.pers_corner_soft);
 
+    val multiplier: Float get() = radiusDp / 26f
+
+    companion object {
+        fun fromValue(value: Int): CornerStyle = entries.getOrElse(value) { Rounded }
+        fun fromMultiplier(multiplier: Float): CornerStyle =
+            entries.minBy { kotlin.math.abs(it.multiplier - multiplier) }
+    }
+}
 
 /**
- * Slider positions, not amounts of change.
- *
- * The track is a dial around the stock ramp: [SHARP_END] and [ROUND_END] are the
- * extremes of the M3 shape scale and [CENTER] is the untouched stock ramp, so the
- * user always has a neutral point to fall back on and both directions read the
- * same way. Every other corner control follows the same convention -- boxed at
- * one end, pill at the other, stock in the middle.
+ * Migration-only: the old continuous roundness dial's slider positions and the
+ * multiplier curve it produced. Kept solely so an install that stored the old
+ * float can be mapped to the nearest [CornerStyle] on first read.
  */
-private const val SHARP_END = 0f
-const val CENTER = 0.5f
-private const val ROUND_END = 1f
-
-/** Corner scale of the stock ramp, and of each end of the dial. */
-private const val CENTER_MULTIPLIER = 1f
-private const val SHARP_MULTIPLIER = 0.15f
-private const val ROUND_MULTIPLIER = 2.4f
+private const val LEGACY_SHARP_END = 0f
+private const val LEGACY_CENTER = 0.5f
+private const val LEGACY_ROUND_END = 1f
+private const val LEGACY_CENTER_MULTIPLIER = 1f
+private const val LEGACY_SHARP_MULTIPLIER = 0.15f
+private const val LEGACY_ROUND_MULTIPLIER = 2.4f
 
 /**
  * Navbar size slider travel. The real range is deliberately narrow at the top --
@@ -115,7 +126,7 @@ private const val NAV_SCALE_MIN_READOUT = 60f
 private const val NAV_SCALE_MAX_READOUT = 150f
 
 data class Personalization(
-    val roundness: Float = CENTER,
+    val cornerStyle: CornerStyle = CornerStyle.Rounded,
     val textScale: Float = 1f,
     val accentIntensity: AccentIntensity = AccentIntensity.Balanced,
     val navStyle: NavStyle = NavStyle.Floating,
@@ -137,13 +148,11 @@ data class Personalization(
     val navSpacing: Float = 1f
 ) {
     /**
-     * The M3 shape ramp, scaled by one continuous [roundness] value.
+     * The M3 shape ramp, scaled by the selected [cornerStyle].
      *
-     * One knob, not a preset plus a trim: both used to move the same multiplier,
-     * so two controls described one dimension. The mapping is linear on each side
-     * of [DEFAULT_ROUNDNESS] so the stock ramp sits exactly at the centre of the
-     * travel -- sharp and fully round are equidistant from the default, which is
-     * what makes "released near the middle snaps back to stock" feel right.
+     * The ramp follows the same multiplier as every widget corner, so changing
+     * the preset moves Material components and hand-authored cards together.
+     * Rounded leaves the ramp exactly as shipped.
      */
     val shapes: Shapes
         get() {
@@ -159,30 +168,21 @@ data class Personalization(
 
     /** True when the ramp is the stock one, so the theme can skip overriding it. */
     val isStockShape: Boolean
-        get() = roundness == CENTER
+        get() = cornerStyle == CornerStyle.Rounded
 
     /** Corner scale of the extraLarge ramp step, exposed so a preview can keep its
      *  corners proportional while it shrinks. */
-    val cornerMultiplier: Float
-        get() {
-            val r = roundness.coerceIn(SHARP_END, ROUND_END)
-            // Distance from centre, so the stock ramp is the slider's zero point.
-            val t = 2f * kotlin.math.abs(r - CENTER)
-            val extreme = if (r < CENTER) SHARP_MULTIPLIER else ROUND_MULTIPLIER
-            return lerp(CENTER_MULTIPLIER, extreme, t)
-        }
-
-    private fun lerp(from: Float, to: Float, t: Float): Float = from + (to - from) * t
+    val cornerMultiplier: Float get() = cornerStyle.multiplier
 
     /**
-     * A widget corner that tracks [roundness], from a radius the surface would
+     * A widget corner that tracks [cornerStyle], from a radius the surface would
      * have used on its own.
      *
      * Widgets cannot read [shapes] directly: the card surfaces are authored
      * against a 26dp radius that sits between the large and extraLarge ramp
      * steps, so scaling a ramp step moves them off the shape they were designed
      * for. Scaling the authored radius instead keeps the widget's proportions at
-     * the stock setting and puts the sharp and round ends on the same dial.
+     * the stock setting and moves every corner with the same preset.
      */
     fun widgetCorner(base: Dp): Shape = RoundedCornerShape(base * cornerMultiplier)
 
@@ -194,12 +194,12 @@ data class Personalization(
         RoundedCornerShape((base * cornerMultiplier).coerceAtMost(height / 2))
 
     /**
-     * The banner's corner follows the same roundness dial as every other card.
+     * The banner's corner follows the same [cornerStyle] as every other card.
      *
      * The banner is authored at the same 26dp radius as the cards around it, so
-     * reusing [widgetCorner] keeps them identical from sharp to fully round.
-     * A separate dial used to let the image drift away from the surrounding
-     * cards, which is why it was removed.
+     * reusing [widgetCorner] keeps them identical for every preset. A separate
+     * dial used to let the image drift away from the surrounding cards, which is
+     * why it was removed.
      */
     fun bannerCorner(): Shape = widgetCorner(BANNER_CORNER_DP.dp)
 
@@ -213,6 +213,24 @@ data class Personalization(
         const val PREF_NAV_VIBRANT = "pers_nav_vibrant"
         const val PREF_NAV_SCALE = "pers_nav_scale"
         const val PREF_NAV_SPACING = "pers_nav_spacing"
+
+        /**
+         * Reads the corner preset: an ordinal string for new installs, or a legacy
+         * slider float mapped to the nearest preset so an existing look survives.
+         */
+        private fun SharedPreferences.cornerStyle(): CornerStyle = when (val stored = all[PREF_ROUNDNESS]) {
+            is String -> CornerStyle.fromValue(stored.toIntOrNull() ?: CornerStyle.Rounded.ordinal)
+            is Float -> CornerStyle.fromMultiplier(legacyCornerMultiplier(stored))
+            else -> CornerStyle.Rounded
+        }
+
+        /** Maps the old dial's position onto the multiplier curve it used to produce. */
+        private fun legacyCornerMultiplier(value: Float): Float {
+            val r = value.coerceIn(LEGACY_SHARP_END, LEGACY_ROUND_END)
+            val t = 2f * kotlin.math.abs(r - LEGACY_CENTER)
+            val extreme = if (r < LEGACY_CENTER) LEGACY_SHARP_MULTIPLIER else LEGACY_ROUND_MULTIPLIER
+            return LEGACY_CENTER_MULTIPLIER + (extreme - LEGACY_CENTER_MULTIPLIER) * t
+        }
 
         /**
          * Reads a boolean a previous build may have stored as the string "1".
@@ -258,11 +276,9 @@ data class Personalization(
         fun read(context: Context): Personalization {
             val p = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
             return Personalization(
-                // Older builds wrote a preset ordinal and a trim into two keys; both
-                // collapsed onto the stock ramp only when neither was set, so any
-                // migrated value that is not exactly the default is dropped rather
-                // than guessed at.
-                roundness = p.floatOr(PREF_ROUNDNESS, CENTER),
+                // Ordinal for new installs; a legacy slider float is mapped to the
+                // nearest preset so an existing look is not thrown away.
+                cornerStyle = p.cornerStyle(),
                 textScale = p.floatOr(PREF_TEXT, 1f, 0.85f..1.3f),
                 accentIntensity = AccentIntensity.fromValue(
                     p.getString(PREF_ACCENT, null)?.toIntOrNull() ?: AccentIntensity.Balanced.ordinal
@@ -271,9 +287,7 @@ data class Personalization(
                 // only one shipped. Read as a constant so an install that saved
                 // Pinned comes back on the floating bar instead of an orphan mode.
                 navStyle = NavStyle.Floating,
-                // Nav corners used to be an enum ordinal written with putString,
-                // then a continuous fraction written with putFloat. getFloat casts
-                // the stored value unchecked, so read the stored Object and coerce.
+                // Nav corners keep their own continuous dial and slider.
                 navRadius = p.floatOr(PREF_NAV_SHAPE, NAV_CENTER_RADIUS),
                 navLabels = NavLabelMode.fromValue(
                     p.getString(PREF_NAV_LABELS, null)?.toIntOrNull() ?: NavLabelMode.SelectedOnly.ordinal

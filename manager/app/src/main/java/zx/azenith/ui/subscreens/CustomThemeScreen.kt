@@ -108,7 +108,7 @@ import kotlinx.coroutines.launch
 import zx.azenith.AZENITH_NAV_ITEMS
 import zx.azenith.BottomNavBar
 import zx.azenith.R
-import zx.azenith.ui.theme.CENTER
+import zx.azenith.ui.theme.CornerStyle
 import zx.azenith.ui.theme.NAV_CENTER
 import zx.azenith.ui.component.*
 import zx.azenith.ui.theme.ColorMode
@@ -211,7 +211,7 @@ fun ColorPaletteScreen(navController: NavController) {
         personalization = next
         prefs.edit()
             .putFloat(Personalization.PREF_TEXT, next.textScale)
-            .putFloat(Personalization.PREF_ROUNDNESS, next.roundness)
+            .putString(Personalization.PREF_ROUNDNESS, next.cornerStyle.ordinal.toString())
             .putString(Personalization.PREF_ACCENT, next.accentIntensity.ordinal.toString())
             .putFloat(Personalization.PREF_NAV_SHAPE, next.navRadius)
             .putString(Personalization.PREF_NAV_LABELS, next.navLabels.ordinal.toString())
@@ -832,17 +832,24 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     add {
                         CardItem {
                             JumpRow(activeId = jumpPulse, entryId = "pers.roundness") {
-                            LabeledSlider(
-                                icon = Icons.Filled.BorderAll,
-                                label = stringResource(R.string.pers_roundness),
-                                value = personalization.roundness,
-                                valueText = cornerLabel(personalization.roundness, CENTER),
-                                valueRange = 0f..1f,
-                                steps = 0,
-                                snapTo = CENTER,
-                                resetDefault = CENTER,
-                                onValueChange = { onPersonalizationChange(personalization.copy(roundness = it)) }
-                            )
+                                // One child, stacked: JumpRow's content is a Box, so a second
+                                // child would sit on top of the first instead of under it.
+                                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    LabeledControl(
+                                        icon = Icons.Filled.BorderAll,
+                                        label = stringResource(R.string.pers_roundness)
+                                    )
+                                    ConnectedToggleRow(
+                                        options = CornerStyle.entries,
+                                        selected = personalization.cornerStyle,
+                                        label = { stringResource(it.labelRes) },
+                                        onSelect = { style ->
+                                            onPersonalizationChange(
+                                                personalization.copy(cornerStyle = style)
+                                            )
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
