@@ -512,6 +512,9 @@ fun MainScreen(fromTileType: String? = null) {
 
             // Gamepad shortcuts: main pager context
             val currentPagerIndex = if (isOnMainPager) pagerState.currentPage else -1
+            GamepadShortcuts.isOnMainPager = isOnMainPager && rawRoute == "main"
+            GamepadShortcuts.canPagePrev = GamepadShortcuts.isOnMainPager && currentPagerIndex > 0
+            GamepadShortcuts.canPageNext = GamepadShortcuts.isOnMainPager && currentPagerIndex < pagerRoutes.lastIndex
             LaunchedEffect(isOnMainPager, currentPagerIndex, isAnyDialogOpen, showExitConfirm) {
                 GamepadShortcuts.isOnMainPager = isOnMainPager && rawRoute == "main"
                 GamepadShortcuts.canPagePrev = GamepadShortcuts.isOnMainPager && currentPagerIndex > 0
