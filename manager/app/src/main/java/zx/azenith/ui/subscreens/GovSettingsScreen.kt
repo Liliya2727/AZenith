@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.theme.azShape
+
 
 import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
@@ -178,7 +180,7 @@ fun GovSettings(
                 )
             }
 
-            item { JumpRow(activeId = jumpPulse, entryId = "gov.cpu", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) } }
+            item { JumpRow(activeId = jumpPulse, entryId = "gov.cpu", highlightShape = azShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) } }
             item {
                 if (isReady && viewModel.defaultGovIndex != null && 
                     viewModel.powersaveGovIndex != null && 
@@ -237,7 +239,7 @@ fun GovSettings(
                 }
             }
 
-            item { JumpRow(activeId = jumpPulse, entryId = "gov.io", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.io_settings)) } }
+            item { JumpRow(activeId = jumpPulse, entryId = "gov.io", highlightShape = azShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.io_settings)) } }
             item {
                 if (!isReady || viewModel.availableIOSchedulers == null) {
                     SectionLoadingIndicator()
@@ -295,7 +297,7 @@ fun GovSettings(
 
 
             if (viewModel.isMaliGpuAvailable == true) {
-                item { JumpRow(activeId = jumpPulse, entryId = "gov.mali", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(text = stringResource(R.string.section_mali_gpu)) } }
+                item { JumpRow(activeId = jumpPulse, entryId = "gov.mali", highlightShape = azShape(14.dp)) { TweaksSectionTitle(text = stringResource(R.string.section_mali_gpu)) } }
                 item {
                     if (!isReady || viewModel.availableMaliGovernors == null) {
                         SectionLoadingIndicator()

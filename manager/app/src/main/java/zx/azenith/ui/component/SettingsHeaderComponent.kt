@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 
 import android.os.SystemClock
 import androidx.compose.foundation.Image
@@ -99,24 +101,24 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp), 
+            .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
 
         Box(
             modifier = Modifier
-                .heightIn(max = 280.dp) 
-                .aspectRatio(0.48f) 
-                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp)) 
-                .padding(2.dp) 
-                .clip(RoundedCornerShape(15.dp)) 
-                .background(MaterialTheme.colorScheme.surfaceVariant) 
+                .heightIn(max = 280.dp)
+                .aspectRatio(0.48f)
+                .background(MaterialTheme.colorScheme.primary, azShape(18.dp))
+                .padding(2.dp)
+                .clip(azShape(15.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
 
             if (wallpaperBitmap != null) {
                 Image(
-                    bitmap = wallpaperBitmap!!, 
+                    bitmap = wallpaperBitmap!!,
                     contentDescription = stringResource(R.string.cd_wallpaper),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -132,7 +134,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                 Text(
                     text = hourFormat.format(time.time),
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 44.sp, 
+                    fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.displayMedium
                 )

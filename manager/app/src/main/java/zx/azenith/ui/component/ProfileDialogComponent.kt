@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 
 import android.content.Context
 import androidx.activity.compose.BackHandler
@@ -92,7 +94,7 @@ fun ProfileDialog(
             @Composable {
                 val isSelected = option.reason == currentProfile
                 ExpressiveListItemHighlight(
-                    modifier = Modifier.padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)),
+                    modifier = Modifier.padding(vertical = 4.dp).clip(azShape(20.dp)),
                     containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                     headlineContent = {
                         Text(

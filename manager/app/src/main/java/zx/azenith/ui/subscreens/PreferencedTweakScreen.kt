@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.theme.azShape
+
 
 import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
@@ -213,7 +215,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                 )
             }
 
-            item { JumpRow(activeId = jumpPulse, entryId = "prefs.section", highlightShape = RoundedCornerShape(14.dp)) { PrefSectionTitle(stringResource(R.string.section_prefstweaks)) } }
+            item { JumpRow(activeId = jumpPulse, entryId = "prefs.section", highlightShape = azShape(14.dp)) { PrefSectionTitle(stringResource(R.string.section_prefstweaks)) } }
                         item {
                             if (socType != null && schedTunes != null && sflstate != null && jitstate != null && 
                                 malischedstate != null && waltTunes != null && DTraces != null && dlogcat != null && distherm != null) {

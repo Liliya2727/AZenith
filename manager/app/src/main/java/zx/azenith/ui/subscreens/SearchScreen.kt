@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.theme.azShape
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -234,7 +236,7 @@ fun SearchScreen(
                                     }
                                 }
                             },
-                            shape = RoundedCornerShape(28.dp),
+                            shape = azShape(28.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(end = 12.dp)

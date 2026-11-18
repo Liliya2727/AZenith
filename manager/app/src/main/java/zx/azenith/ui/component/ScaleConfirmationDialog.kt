@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 import android.view.KeyEvent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -143,7 +145,7 @@ fun ScaleConfirmationDialog(
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
-                    shape = RoundedCornerShape(24.dp),
+                    shape = azShape(24.dp),
                     color = scheme.surfaceContainerHigh,
                     tonalElevation = 8.dp,
                     shadowElevation = 24.dp,

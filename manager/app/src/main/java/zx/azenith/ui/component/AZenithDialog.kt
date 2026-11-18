@@ -59,6 +59,7 @@ import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.blur.hazeBlur
 import zx.azenith.ui.theme.ACCENT_TINT_BLUR
 import zx.azenith.ui.theme.accentTint
+import zx.azenith.ui.theme.azShape
 
 /**
  * The one dialog shell. Every dialog in the app goes through here, so motion, layout and the
@@ -179,7 +180,7 @@ fun AZenithDialog(
                     modifier = Modifier
                         .widthIn(min = spec.minWidth, max = spec.maxWidth)
                         .onGloballyPositioned { cardSize = it.size }
-                        .clip(RoundedCornerShape(spec.cornerRadius))
+                        .clip(azShape(spec.cornerRadius))
                         .then(
                             if (isBlurEnabled && hazeState != null) {
                                 Modifier.hazeBlur(

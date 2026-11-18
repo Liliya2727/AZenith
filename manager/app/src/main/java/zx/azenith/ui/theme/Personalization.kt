@@ -118,7 +118,6 @@ data class Personalization(
     val roundness: Float = CENTER,
     val textScale: Float = 1f,
     val accentIntensity: AccentIntensity = AccentIntensity.Balanced,
-    val bannerRadius: Float = BANNER_CENTER_RADIUS,
     val navStyle: NavStyle = NavStyle.Floating,
     val navRadius: Float = NAV_CENTER_RADIUS,
     // SelectedOnly is the shipped behaviour: the pill interpolates its label open
@@ -195,21 +194,19 @@ data class Personalization(
         RoundedCornerShape((base * cornerMultiplier).coerceAtMost(height / 2))
 
     /**
-     * The banner's own corner at its current dial position.
+     * The banner's corner follows the same roundness dial as every other card.
      *
-     * The banner dial is not tied to the widget ramp, so it stays at
-     * [BANNER_CORNER_DP] at rest regardless of whether an image makes the
-     * banner taller. Reading the dial as a fraction of the banner height used
-     * to draw a ~40dp corner on the 20:9 image layout while the cards stayed at
-     * 26dp.
+     * The banner is authored at the same 26dp radius as the cards around it, so
+     * reusing [widgetCorner] keeps them identical from sharp to fully round.
+     * A separate dial used to let the image drift away from the surrounding
+     * cards, which is why it was removed.
      */
-    fun bannerCorner(): Shape = bannerCornerShape(bannerRadius)
+    fun bannerCorner(): Shape = widgetCorner(BANNER_CORNER_DP.dp)
 
     companion object {
         const val PREF_ROUNDNESS = "pers_roundness"
         const val PREF_TEXT = "pers_text_scale"
         const val PREF_ACCENT = "pers_accent_intensity"
-        const val PREF_BANNER_SHAPE = "pers_banner_shape"
         const val PREF_NAV_STYLE = "pers_nav_style"
         const val PREF_NAV_SHAPE = "pers_nav_shape"
         const val PREF_NAV_LABELS = "pers_nav_labels"
@@ -270,16 +267,13 @@ data class Personalization(
                 accentIntensity = AccentIntensity.fromValue(
                     p.getString(PREF_ACCENT, null)?.toIntOrNull() ?: AccentIntensity.Balanced.ordinal
                 ),
-                // Banner and nav corners used to be enum ordinals written with
-                // putString, then became continuous fractions written with
-                // putFloat. getFloat casts the stored value unchecked, so an
-                // install upgrading across that change would throw on every
-                // launch; read the stored Object and coerce instead.
-                bannerRadius = p.floatOr(PREF_BANNER_SHAPE, BANNER_CENTER_RADIUS),
                 // The style is no longer user-selectable: the floating bar is the
                 // only one shipped. Read as a constant so an install that saved
                 // Pinned comes back on the floating bar instead of an orphan mode.
                 navStyle = NavStyle.Floating,
+                // Nav corners used to be an enum ordinal written with putString,
+                // then a continuous fraction written with putFloat. getFloat casts
+                // the stored value unchecked, so read the stored Object and coerce.
                 navRadius = p.floatOr(PREF_NAV_SHAPE, NAV_CENTER_RADIUS),
                 navLabels = NavLabelMode.fromValue(
                     p.getString(PREF_NAV_LABELS, null)?.toIntOrNull() ?: NavLabelMode.SelectedOnly.ordinal
@@ -327,6 +321,38 @@ private fun Color.push(amount: Float): Color {
 @Composable
 @ReadOnlyComposable
 fun currentPersonalization(): Personalization = LocalPersonalization.current
+
+/**
+ * Scales an authored radius by the live roundness dial.
+ *
+ * Surfaces that used to hard-code `RoundedCornerShape(26.dp)` now call this, so
+ * one dial moves every card, sheet, dialog and list row together. At the stock
+ * position the multiplier is 1 and the original radius is unchanged.
+ */
+@Composable
+@ReadOnlyComposable
+fun azShape(base: Dp): Shape = scaledShape(base, currentPersonalization().cornerMultiplier)
+
+/** Corner-by-corner variant for surfaces that round only one side (sheets, tabs). */
+@Composable
+@ReadOnlyComposable
+fun azShapeCorners(
+    topStart: Dp = 0.dp,
+    topEnd: Dp = 0.dp,
+    bottomEnd: Dp = 0.dp,
+    bottomStart: Dp = 0.dp
+): Shape {
+    val m = currentPersonalization().cornerMultiplier
+    return RoundedCornerShape(
+        topStart = topStart * m,
+        topEnd = topEnd * m,
+        bottomEnd = bottomEnd * m,
+        bottomStart = bottomStart * m
+    )
+}
+
+/** Non-composable form for helpers that run outside composition (View updates, constants). */
+fun scaledShape(base: Dp, multiplier: Float): Shape = RoundedCornerShape(base * multiplier)
 
 /**
  * Scales saturation of every accent role while leaving neutrals alone.
@@ -444,37 +470,13 @@ enum class NavStyle(val labelRes: Int) {
  * surface's own height so a fully rounded bar stays a capsule at any bar height,
  * which a fixed dp radius cannot guarantee.
  */
-/** Radius the cards in the UI are authored against, in dp. */
+/** Radius the banner and the cards around it are authored against, in dp. */
 private const val BANNER_CORNER_DP = 26f
-
-/**
- * Far end of the banner corner dial, in dp. The dial is a plain fraction of this
- * radius rather than of the surface height, because the banner changes height
- * when an image is enabled while the cards around it do not.
- */
-private const val BANNER_MAX_CORNER_DP = 100f
-
-/**
- * The stock value each corner slider rests at, so the UI can snap to the same point.
- *
- * The banner rests on the same corner geometry as the rest of the UI: its dial
- * is read as a fraction of [BANNER_MAX_CORNER_DP], so this value draws exactly
- * [BANNER_CORNER_DP] -- the radius the cards are authored against. Keeping the
- * rest point in dp rather than as a fraction of the banner's height means the
- * default stays 26dp when the image layout makes the banner taller, instead of
- * growing with it.
- */
-const val BANNER_CENTER = BANNER_CORNER_DP / BANNER_MAX_CORNER_DP
-
-/** Banner corner for a raw dial value; the preview and the card use the same mapping. */
-fun bannerCornerShape(radius: Float): Shape =
-    RoundedCornerShape((radius.coerceIn(0f, 1f) * BANNER_MAX_CORNER_DP).dp)
 
 // Rest point of the bar-corners dial: fully rounded, which is the Material
 // capsule the stock floating bar uses.
 const val NAV_CENTER = 1f
 
-private const val BANNER_CENTER_RADIUS = BANNER_CENTER
 private const val NAV_CENTER_RADIUS = NAV_CENTER
 
 /**

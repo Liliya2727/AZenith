@@ -791,13 +791,6 @@ object SearchIndex {
             keywordsRes = listOf(R.string.str_pick_media, R.string.str_adjust_gradient)
         ),
         SearchEntry(
-            id = "pers.banner_shape",
-            titleRes = R.string.pers_banner_shape,
-            icon = Icons.Filled.Rectangle,
-            group = SearchGroup.Personalization,
-            target = SearchTarget.Route("color_palette")
-        ),
-        SearchEntry(
             id = "pers.blur",
             titleRes = R.string.str_expressive_blur,
             summaryRes = R.string.str_expressive_blur_summary,

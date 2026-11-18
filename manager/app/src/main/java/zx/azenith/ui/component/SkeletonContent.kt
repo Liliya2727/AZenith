@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -33,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -92,12 +95,13 @@ fun SkeletonContent(
 @Composable
 fun SkeletonBlock(
     modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = RoundedCornerShape(6.dp)
+    shape: Shape? = null
 ) {
     val alpha = LocalSkeletonAlpha.current
+    val resolvedShape = shape ?: azShape(6.dp)
     Box(
         modifier = modifier
-            .clip(shape)
+            .clip(resolvedShape)
             .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = alpha))
     )
 }
@@ -142,7 +146,7 @@ fun SkeletonListRow(
             modifier = Modifier
                 .width(38.dp)
                 .height(20.dp),
-            shape = RoundedCornerShape(20.dp)
+            shape = azShape(20.dp)
         )
     }
 }
@@ -189,7 +193,7 @@ fun SkeletonSettingsList(
                     modifier = Modifier
                         .width(46.dp)
                         .height(24.dp),
-                    shape = RoundedCornerShape(20.dp)
+                    shape = azShape(20.dp)
                 )
             }
         }
@@ -211,7 +215,7 @@ fun SkeletonPreviewTile(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth(0.55f)
                 .height(210.dp),
-            shape = RoundedCornerShape(26.dp)
+            shape = azShape(26.dp)
         )
         SkeletonBlock(
             modifier = Modifier

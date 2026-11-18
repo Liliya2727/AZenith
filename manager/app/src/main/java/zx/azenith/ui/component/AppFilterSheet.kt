@@ -18,6 +18,10 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+import zx.azenith.ui.theme.currentPersonalization
+import androidx.compose.ui.graphics.Shape
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
@@ -142,6 +146,7 @@ fun AppFilterSheet(
         }
         val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
         val sectionGap = if (isBlurEnabled) 2.dp else 16.dp
+        val m = currentPersonalization().cornerMultiplier
 
         Column(
             modifier = Modifier
@@ -157,7 +162,7 @@ fun AppFilterSheet(
             FilterGroup(
                 title = stringResource(R.string.filter_group_type),
                 boxed = isBlurEnabled,
-                shape = topShape
+                shape = topShape(m)
             ) {
                 FilterToggleButton(
                     label = stringResource(R.string.filter_games),
@@ -200,7 +205,7 @@ fun AppFilterSheet(
 
             Spacer(modifier = Modifier.height(if (isBlurEnabled) 2.dp else 24.dp))
             if (isBlurEnabled) {
-                SolidSectionBox(shape = bottomShape) {
+                SolidSectionBox(shape = bottomShape(m)) {
                     FilterActions(onReset = onReset, onDismiss = dismissSheet)
                 }
             } else {
@@ -227,12 +232,13 @@ private fun odometerSpecs(motion: MotionScheme): ContentTransform =
 private fun FilterGroup(
     title: String,
     boxed: Boolean,
-    shape: RoundedCornerShape = middleShape,
+    shape: Shape? = null,
     modifier: Modifier = Modifier,
     content: @Composable FlowRowScope.() -> Unit,
 ) {
+    val resolvedShape = shape ?: middleShape(currentPersonalization().cornerMultiplier)
     if (boxed) {
-        SolidSectionBox(shape = shape, modifier = modifier) {
+        SolidSectionBox(shape = resolvedShape, modifier = modifier) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
@@ -254,7 +260,7 @@ private fun FilterGroup(
                 modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
             )
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = azShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth()
             ) {

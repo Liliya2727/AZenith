@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.theme.azShape
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -105,7 +107,7 @@ fun LicensesScreen(navController: NavController) {
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(26.dp),
+                shape = azShape(26.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
                 )

@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.mainscreens
 
+import zx.azenith.ui.theme.azShape
+
 
 import android.content.ComponentName
 import android.content.Context
@@ -299,7 +301,7 @@ fun SettingsScreen(
                     )
                 }
 
-                item { JumpRow(activeId = jumpPulse, entryId = "settings.section_features", highlightShape = RoundedCornerShape(14.dp)) { SettingsSectionTitle(stringResource(R.string.section_features)) } }
+                item { JumpRow(activeId = jumpPulse, entryId = "settings.section_features", highlightShape = azShape(14.dp)) { SettingsSectionTitle(stringResource(R.string.section_features)) } }
 
                 item {
                     if (uiState.isLoaded) {
@@ -380,7 +382,7 @@ fun SettingsScreen(
                     }
                 }
 
-                item { JumpRow(activeId = jumpPulse, entryId = "settings.section_others", highlightShape = RoundedCornerShape(14.dp)) { SettingsSectionTitle(stringResource(R.string.section_others)) } }
+                item { JumpRow(activeId = jumpPulse, entryId = "settings.section_others", highlightShape = azShape(14.dp)) { SettingsSectionTitle(stringResource(R.string.section_others)) } }
                 item {
                     if (uiState.isLoaded) {
                         ExpressiveList(

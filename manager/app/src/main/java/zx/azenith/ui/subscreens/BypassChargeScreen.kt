@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.theme.azShape
+
 
 import zx.azenith.ui.navigation.safePopBackStack
 import android.annotation.SuppressLint
@@ -330,7 +332,7 @@ private fun LazyListScope.bypassIllustrationItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(illustrationHeight)
-                .clip(RoundedCornerShape(28.dp))
+                .clip(azShape(28.dp))
                 .graphicsLayer(alpha = if (isUnsupported) 0.5f else 1f),
             contentScale = ContentScale.Fit,
             colorFilter = ColorFilter.tint(colorScheme.primary)
@@ -407,7 +409,7 @@ private fun LazyListScope.bypassOptionItems(
                         modifier = Modifier
                             .fillMaxWidth()
                             .graphicsLayer(alpha = cardAlpha),
-                        shape = RoundedCornerShape(26.dp),
+                        shape = azShape(26.dp),
                         color = colorScheme.surfaceColorAtElevation(1.dp),
                         border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.5f))
                     ) {
@@ -462,7 +464,7 @@ private fun LazyListScope.bypassOptionItems(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(8.dp)
-                                        .clip(RoundedCornerShape(4.dp))
+                                        .clip(azShape(4.dp))
                                         .background(colorScheme.surfaceContainerHighest)
                                 )
 
@@ -471,7 +473,7 @@ private fun LazyListScope.bypassOptionItems(
                                         .fillMaxWidth(animatedBarProgress)
                                         .height(8.dp)
                                         .align(Alignment.CenterStart)
-                                        .clip(RoundedCornerShape(4.dp))
+                                        .clip(azShape(4.dp))
                                         .background(
                                             if (isUnsupported) {
                                                 SolidColor(colorScheme.outline)

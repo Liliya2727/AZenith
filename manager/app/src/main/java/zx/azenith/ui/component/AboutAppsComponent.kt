@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 
 import android.content.Context
 import androidx.compose.foundation.Image
@@ -66,7 +68,7 @@ import zx.azenith.ui.util.tapHaptic
 fun AboutCard() {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp)
+        shape = azShape(20.dp)
     ) {
         Row(
             modifier = Modifier

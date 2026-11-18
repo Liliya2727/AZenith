@@ -18,6 +18,10 @@
 
 package zx.azenith.ui.subscreens
 
+import androidx.compose.ui.graphics.Shape
+import zx.azenith.ui.theme.azShape
+import zx.azenith.ui.theme.azShapeCorners
+
 
 import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
@@ -155,7 +159,7 @@ fun AboutScreen(navController: NavController) {
                         contentDescription = stringResource(R.string.app_name),
                         modifier = Modifier
                             .size(96.dp)
-                            .clip(RoundedCornerShape(24.dp))
+                            .clip(azShape(24.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     )
 
@@ -216,12 +220,12 @@ fun AboutScreen(navController: NavController) {
             }
             item {
                 Column(
-                    modifier = Modifier.clip(RoundedCornerShape(26.dp)),
+                    modifier = Modifier.clip(azShape(26.dp)),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     JumpRow(activeId = jumpPulse, entryId = "about.licenses") {
                         OpenSourceRow(
-                                                shape = RoundedCornerShape(
+                                                shape = azShapeCorners(
                                                     topStart = 26.dp,
                                                     topEnd = 26.dp,
                                                     bottomStart = 4.dp,
@@ -235,7 +239,7 @@ fun AboutScreen(navController: NavController) {
                     }
                     JumpRow(activeId = jumpPulse, entryId = "about.libraries") {
                         OpenSourceRow(
-                                                shape = RoundedCornerShape(4.dp),
+                                                shape = azShape(4.dp),
                                                 icon = Icons.Rounded.LibraryBooks,
                                                 title = stringResource(R.string.str_libraries_used),
                                                 supporting = stringResource(R.string.str_libraries_hint),
@@ -244,7 +248,7 @@ fun AboutScreen(navController: NavController) {
                     }
                     JumpRow(activeId = jumpPulse, entryId = "about.source") {
                         OpenSourceRow(
-                                                shape = RoundedCornerShape(
+                                                shape = azShapeCorners(
                                                     topStart = 4.dp,
                                                     topEnd = 4.dp,
                                                     bottomStart = 26.dp,
@@ -308,7 +312,7 @@ fun AboutScreen(navController: NavController) {
 
 
             item { 
-                JumpRow(activeId = jumpPulse, entryId = "about.collaborators", highlightShape = RoundedCornerShape(14.dp)) {
+                JumpRow(activeId = jumpPulse, entryId = "about.collaborators", highlightShape = azShape(14.dp)) {
                     AboutSectionTitle(stringResource(R.string.str_collaborators)) 
                 }
             }
@@ -399,7 +403,7 @@ fun AboutScreen(navController: NavController) {
 
 @Composable
 private fun OpenSourceRow(
-    shape: RoundedCornerShape,
+    shape: Shape,
     icon: ImageVector,
     title: String,
     supporting: String,
@@ -416,7 +420,7 @@ private fun OpenSourceRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = azShape(12.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             modifier = Modifier.size(40.dp)

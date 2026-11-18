@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.animateColorAsState
@@ -95,25 +97,28 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.shape.CircleShape
 import zx.azenith.ExpressiveShapes
+import zx.azenith.ui.theme.currentPersonalization
 
 
 private val largeCorner = 26.dp
 private val smallCorner = 4.dp
 
-internal val topShape = RoundedCornerShape(
-    topStart = largeCorner,
-    topEnd = largeCorner,
-    bottomStart = smallCorner,
-    bottomEnd = smallCorner
+// Group outlines are built per composition so the single roundness dial moves
+// the first/last rows together instead of leaving hard-coded group corners.
+internal fun topShape(m: Float) = RoundedCornerShape(
+    topStart = largeCorner * m,
+    topEnd = largeCorner * m,
+    bottomStart = smallCorner * m,
+    bottomEnd = smallCorner * m
 )
-internal val middleShape = RoundedCornerShape(smallCorner)
-internal val bottomShape = RoundedCornerShape(
-    topStart = smallCorner,
-    topEnd = smallCorner,
-    bottomStart = largeCorner,
-    bottomEnd = largeCorner
+internal fun middleShape(m: Float) = RoundedCornerShape(smallCorner * m)
+internal fun bottomShape(m: Float) = RoundedCornerShape(
+    topStart = smallCorner * m,
+    topEnd = smallCorner * m,
+    bottomStart = largeCorner * m,
+    bottomEnd = largeCorner * m
 )
-private val singleShape = RoundedCornerShape(largeCorner)
+private fun singleShape(m: Float) = RoundedCornerShape(largeCorner * m)
 
 @Composable
 fun ExpressiveList(
@@ -122,6 +127,7 @@ fun ExpressiveList(
     content: List<@Composable () -> Unit>,
 ) {
     if (content.isEmpty()) return
+    val m = currentPersonalization().cornerMultiplier
 
     Column(modifier = modifier) {
         if (title.isNotEmpty()) {
@@ -134,16 +140,16 @@ fun ExpressiveList(
         }
         Column(
             modifier = Modifier.clip(
-                if (content.size == 1) singleShape else RoundedCornerShape(largeCorner)
+                singleShape(m)
             ),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             content.forEachIndexed { index, itemContent ->
                 val shape = when {
-                    content.size == 1 -> singleShape
-                    index == 0 -> topShape
-                    index == content.size - 1 -> bottomShape
-                    else -> middleShape
+                    content.size == 1 -> singleShape(m)
+                    index == 0 -> topShape(m)
+                    index == content.size - 1 -> bottomShape(m)
+                    else -> middleShape(m)
                 }
                 Column(
                     modifier = Modifier
@@ -167,6 +173,7 @@ fun <T> ExpressiveLazyList(
     items: List<T>,
     itemContent: @Composable (T) -> Unit
 ) {
+    val m = currentPersonalization().cornerMultiplier
     Column(modifier = modifier) {
         if (title.isNotEmpty()) {
             Text(
@@ -187,10 +194,10 @@ fun <T> ExpressiveLazyList(
                 key = if (key != null) { _, item -> key(item) } else null
             ) { index, item ->
                 val shape = when {
-                    items.size == 1 -> singleShape
-                    index == 0 -> topShape
-                    index == items.lastIndex -> bottomShape
-                    else -> middleShape
+                    items.size == 1 -> singleShape(m)
+                    index == 0 -> topShape(m)
+                    index == items.lastIndex -> bottomShape(m)
+                    else -> middleShape(m)
                 }
                 Column(
                     modifier = Modifier
@@ -547,7 +554,7 @@ fun ExpressiveDropdownItem(
                 }
                 Surface(
                     color = valueColor.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = azShape(14.dp),
                     modifier = if (summary != null) Modifier.padding(top = 4.dp) else Modifier
                 ) {
                     BlurCrossfadeText(
@@ -691,6 +698,7 @@ fun ExpressiveColumn(
     content: List<@Composable () -> Unit>,
 ) {
     if (content.isEmpty()) return
+    val m = currentPersonalization().cornerMultiplier
 
     Column(modifier = modifier) {
         if (title.isNotEmpty()) {
@@ -703,16 +711,16 @@ fun ExpressiveColumn(
         }
         Column(
             modifier = Modifier.clip(
-                if (content.size == 1) singleShape else RoundedCornerShape(largeCorner)
+                singleShape(m)
             ),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             content.forEachIndexed { index, itemContent ->
                 val shape = when {
-                    content.size == 1 -> singleShape
-                    index == 0 -> topShape
-                    index == content.size - 1 -> bottomShape
-                    else -> middleShape
+                    content.size == 1 -> singleShape(m)
+                    index == 0 -> topShape(m)
+                    index == content.size - 1 -> bottomShape(m)
+                    else -> middleShape(m)
                 }
                 Column(
                     modifier = Modifier
@@ -736,7 +744,7 @@ fun LeadingIcon(
     Box(
         modifier = Modifier
             .size(36.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(azShape(12.dp))
             .background(containerColor),
         contentAlignment = Alignment.Center
     ) {
@@ -753,7 +761,7 @@ fun LeadingIcon(
 fun SmallLeadingIcon(icon: ImageVector) {
     val cs = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = azShape(12.dp),
         color = cs.primary.copy(alpha = 0.12f),
         modifier = Modifier.size(36.dp)
     ) {
@@ -850,7 +858,7 @@ fun ExpressiveSliderItem(
 
             Surface(
                 color = colorScheme.primaryContainer,
-                shape = RoundedCornerShape(12.dp)
+                shape = azShape(12.dp)
             ) {
                 Text(
                     text = badgeText,

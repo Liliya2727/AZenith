@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.theme.azShape
+
 import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
 import android.content.Context
@@ -351,7 +353,7 @@ private fun LazyListScope.introItems(colorScheme: ColorScheme, illustrationHeigh
             modifier = Modifier
                 .fillMaxWidth()
                 .height(illustrationHeight),
-            shape = RoundedCornerShape(26.dp),
+            shape = azShape(26.dp),
             color = colorScheme.surfaceContainerLow
         ) {
             AsyncImage(
@@ -374,7 +376,7 @@ private fun LazyListScope.presetItems(
         JumpRow(
             activeId = jumpPulse,
             entryId = "colors.presets",
-            highlightShape = RoundedCornerShape(14.dp)
+            highlightShape = azShape(14.dp)
         ) { PrefSectionTitle(stringResource(R.string.presets)) }
     }
 
@@ -538,7 +540,7 @@ fun ColorSliderItem(
 
             Surface(
                 color = if (value == 1000f) colorScheme.surfaceVariant else colorScheme.primaryContainer,
-                shape = RoundedCornerShape(12.dp)
+                shape = azShape(12.dp)
             ) {
                 Text(
                     text = value.toInt().toString(),
@@ -560,7 +562,7 @@ fun ColorSliderItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(azShape(4.dp))
                     .background(colorScheme.surfaceContainerHighest)
             )
 
@@ -569,7 +571,7 @@ fun ColorSliderItem(
                     .fillMaxWidth(animatedProgress)
                     .height(8.dp)
                     .align(Alignment.CenterStart)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(azShape(4.dp))
                     .background(
                         Brush.horizontalGradient(
                             listOf(accentColor.copy(alpha = 0.6f), accentColor)

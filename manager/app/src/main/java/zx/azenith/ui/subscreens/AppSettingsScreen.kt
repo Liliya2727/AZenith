@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.theme.azShape
+
 
 import zx.azenith.ui.navigation.safePopBackStack
 import android.content.Context
@@ -632,7 +634,7 @@ fun AppHeader(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = azShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.size(tileSize),
             shadowElevation = 2.dp
@@ -648,7 +650,7 @@ fun AppHeader(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(azShape(8.dp))
                                 .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
                         )
                     } else {
@@ -658,7 +660,7 @@ fun AppHeader(
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(azShape(8.dp))
                         )
                     }
                 }

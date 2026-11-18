@@ -13,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import zx.azenith.ui.theme.currentPersonalization
+import zx.azenith.ui.theme.scaledShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -46,6 +48,7 @@ fun ScreenWrapper(
     content: @Composable () -> Unit
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val shapeMultiplier = currentPersonalization().cornerMultiplier
     
     // Lifecycle State
     val initialCurrentState = lifecycleOwner.lifecycle.currentStateAsState().value
@@ -193,7 +196,7 @@ fun ScreenWrapper(
                     CompositingStrategy.Auto
                 }
                 if (shouldRunDepthEffects && animatedCornerRadius > 0.5f) {
-                    this.shape = RoundedCornerShape(animatedCornerRadius.dp)
+                    this.shape = scaledShape(animatedCornerRadius.dp, shapeMultiplier)
                     this.clip = true
                 } else {
                     this.clip = false

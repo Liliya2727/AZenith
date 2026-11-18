@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -79,7 +81,7 @@ fun ResetConfirmDialog(
             contentAlignment = Alignment.Center
         ) {
             Surface(
-                shape = RoundedCornerShape(28.dp),
+                shape = azShape(28.dp),
                 color = sch.surfaceContainerHigh,
                 modifier = Modifier
                     .padding(24.dp)

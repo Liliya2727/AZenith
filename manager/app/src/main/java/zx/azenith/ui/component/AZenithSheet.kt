@@ -16,6 +16,10 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+import zx.azenith.ui.theme.azShapeCorners
+import zx.azenith.ui.theme.currentPersonalization
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,6 +40,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Checkbox
@@ -50,6 +55,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -227,7 +233,7 @@ private fun AZenithSheet(
     }
     val dismissSheet: () -> Unit = { hideSheet {} }
 
-    val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val shape = azShapeCorners(topStart = 28.dp, topEnd = 28.dp)
     val sheetSurface = rememberSheetSurface(style)
     val scheme = MaterialTheme.colorScheme
 
@@ -281,7 +287,7 @@ private fun AZenithSheet(
             // surface; the gate keeps it plain text on the opaque sheet.
             if (titleBlurBoxed && isBlurEnabled) {
                 SolidSectionBox(
-                    shape = RoundedCornerShape(24.dp),
+                    shape = azShape(24.dp),
                     modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 8.dp),
                     contentPadding = PaddingValues(14.dp),
                 ) {
@@ -445,7 +451,7 @@ private fun Modifier.sheetSurface(
  */
 @Composable
 fun SolidSectionBox(
-    shape: RoundedCornerShape,
+    shape: Shape,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(12.dp),
     content: @Composable ColumnScope.() -> Unit,
@@ -600,15 +606,18 @@ private fun RowRadioIndicator(selected: Boolean) {
     }
 }
 
-private val GroupShape = RoundedCornerShape(20.dp)
-
 /**
  * The row's own clip. The outer rows inherit the group's rounded outline; the
  * rows between them stay square so the group reads as one surface.
  */
-private fun rowShape(first: Boolean, last: Boolean): RoundedCornerShape = RoundedCornerShape(
-    topStart = if (first) 20.dp else 0.dp,
-    topEnd = if (first) 20.dp else 0.dp,
-    bottomStart = if (last) 20.dp else 0.dp,
-    bottomEnd = if (last) 20.dp else 0.dp,
-)
+@Composable
+@ReadOnlyComposable
+private fun rowShape(first: Boolean, last: Boolean): Shape {
+    val m = currentPersonalization().cornerMultiplier
+    return RoundedCornerShape(
+        topStart = if (first) 20.dp * m else 0.dp,
+        topEnd = if (first) 20.dp * m else 0.dp,
+        bottomStart = if (last) 20.dp * m else 0.dp,
+        bottomEnd = if (last) 20.dp * m else 0.dp,
+    )
+}

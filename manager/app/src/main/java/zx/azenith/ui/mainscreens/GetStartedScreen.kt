@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.mainscreens
 
+import zx.azenith.ui.theme.azShape
+
 
 import android.app.Activity
 import android.content.ComponentName
@@ -335,7 +337,7 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
                                         containerColor = MaterialTheme.colorScheme.surfaceVariant,
                                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                                     ),
-                                    shape = RoundedCornerShape(20.dp),
+                                    shape = azShape(20.dp),
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(56.dp)
@@ -369,7 +371,7 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
-                                shape = RoundedCornerShape(20.dp),
+                                shape = azShape(20.dp),
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(56.dp)
@@ -511,7 +513,7 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
                                         isCheckingRoot = false
                                     }
                                 },
-                                shape = RoundedCornerShape(20.dp),
+                                shape = azShape(20.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(64.dp)
@@ -547,7 +549,7 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
                                             MaterialTheme.colorScheme.primaryContainer
                                         else
                                             MaterialTheme.colorScheme.errorContainer,
-                                        shape = RoundedCornerShape(20.dp)
+                                        shape = azShape(20.dp)
                                     ) {
                                         Row(
                                             modifier = Modifier

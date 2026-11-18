@@ -18,6 +18,10 @@
 
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.theme.azShape
+import zx.azenith.ui.theme.currentPersonalization
+import zx.azenith.ui.theme.azShapeCorners
+
 
 import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
@@ -104,8 +108,6 @@ import kotlinx.coroutines.launch
 import zx.azenith.AZENITH_NAV_ITEMS
 import zx.azenith.BottomNavBar
 import zx.azenith.R
-import zx.azenith.ui.theme.BANNER_CENTER
-import zx.azenith.ui.theme.bannerCornerShape
 import zx.azenith.ui.theme.CENTER
 import zx.azenith.ui.theme.NAV_CENTER
 import zx.azenith.ui.component.*
@@ -211,7 +213,6 @@ fun ColorPaletteScreen(navController: NavController) {
             .putFloat(Personalization.PREF_TEXT, next.textScale)
             .putFloat(Personalization.PREF_ROUNDNESS, next.roundness)
             .putString(Personalization.PREF_ACCENT, next.accentIntensity.ordinal.toString())
-            .putFloat(Personalization.PREF_BANNER_SHAPE, next.bannerRadius)
             .putFloat(Personalization.PREF_NAV_SHAPE, next.navRadius)
             .putString(Personalization.PREF_NAV_LABELS, next.navLabels.ordinal.toString())
             .putBoolean(Personalization.PREF_NAV_VIBRANT, next.vibrantNav)
@@ -573,7 +574,7 @@ fun ColorPaletteScreen(navController: NavController) {
                         .weight(1f)
                         .fillMaxWidth()
                         .padding(top = 8.dp),
-                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                    shape = azShapeCorners(topStart = 28.dp, topEnd = 28.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     tonalElevation = 1.dp
                 ) {
@@ -680,7 +681,6 @@ private val PERS_ROW_ITEMS: Map<String, Int> = mapOf(
     "pers.nav_vibrant" to 2,
     "pers.nav_labels" to 2,
     "pers.banner" to 2,
-    "pers.banner_shape" to 2,
     "pers.blur" to 2,
     "pers.scroll_animation" to 2
 )
@@ -1050,6 +1050,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             }
 
                             AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
+                                val m = currentPersonalization().cornerMultiplier
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1059,7 +1060,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(middleShape)
+                                            .clip(middleShape(m))
                                             .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
                                             .padding(16.dp),
                                         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1116,66 +1117,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                         }
                                     }
                                 }
-                            }
-                        }
-                    }
-    
-                    // Banner: corners (selalu tampil)
-                    add {
-                        CardItem {
-                            JumpRow(activeId = jumpPulse, entryId = "pers.banner_shape") {
-                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                LabeledControl(
-                                    Icons.Filled.Rectangle,
-                                    stringResource(R.string.pers_banner_shape)
-                                )
-    
-                                Column {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.pers_roundness),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Text(
-                                                text = cornerLabel(personalization.bannerRadius, BANNER_CENTER),
-                                                style = MaterialTheme.typography.labelLarge,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                            IconButton(
-                                                onClick = { onPersonalizationChange(personalization.copy(bannerRadius = BANNER_CENTER)) },
-                                                modifier = Modifier.size(28.dp)
-                                            ) {
-                                                Icon(
-                                                    Icons.Filled.Restore,
-                                                    contentDescription = stringResource(R.string.reset),
-                                                    modifier = Modifier.size(18.dp),
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                    }
-                                    ZenithSlider(
-                                        value = personalization.bannerRadius,
-                                        onValueChange = { newValue ->
-                                            val snapped = if (kotlin.math.abs(newValue - BANNER_CENTER) < 0.03f) BANNER_CENTER else newValue
-                                            onPersonalizationChange(personalization.copy(bannerRadius = snapped))
-                                        },
-                                        onValueChangeFinished = {},
-                                        valueRange = 0f..1f,
-                                        modifier = Modifier.fillMaxWidth().height(40.dp)
-                                    )
-                                }
-                            }
                             }
                         }
                     }
@@ -1370,7 +1311,7 @@ private fun PinnedPreviewHeader(
         ) {
             val cornerScale = frameWidth / (420.dp / mockAspect)
             val base = (20.dp * cornerScale).coerceAtLeast(10.dp)
-            val scaledShape = RoundedCornerShape(base)
+            val scaledShape = azShape(base)
             MockCardFrame(
                 scheme = scheme,
                 shape = scaledShape,
@@ -1432,7 +1373,7 @@ private fun HalfMockPreview(
 
         val cornerScale = frameWidth / (420.dp / mockAspect)
         val base = (20.dp * cornerScale).coerceAtLeast(10.dp)
-        val shape = RoundedCornerShape(topStart = base, topEnd = base, bottomStart = 0.dp, bottomEnd = 0.dp)
+        val shape = azShapeCorners(topStart = base, topEnd = base, bottomStart = 0.dp, bottomEnd = 0.dp)
 
         // unbounded: biar frame yang lebih tinggi dari pane tetap top-anchored,
         // tidak di-center atau di-coerce ke tinggi pane.
@@ -1530,8 +1471,8 @@ private fun MockScreen(
         // and the lower card stands in for its device-info card. Home authors
         // them at 26dp, but the mock is drawn on a narrower design width and
         // then scaled down, so the radius is scaled by the same MOCK_W / 420
-        // factor as the banner below; at BANNER_CENTER both then read as the
-        // same radius in the preview.
+        // factor as the banner below, so both read as the same radius
+        // in the preview at every roundness setting.
         val k = personalization.cornerMultiplier
         val homeCardShape = personalization.widgetCorner(26.dp * (MOCK_W / 420.dp))
         // The blur demo needs a shared parent for the content and the dialog that
@@ -1586,7 +1527,7 @@ private fun MockScreen(
                 gradientAlpha = gradientAlpha,
                 customBannerUri = customBannerUri,
                 isBannerEnabled = isBannerEnabled,
-                bannerRadius = personalization.bannerRadius * (MOCK_W / 420.dp),
+                bannerShape = personalization.widgetCorner(26.dp * (MOCK_W / 420.dp)),
                 modifier = Modifier.height(76.dp)
             )
 
@@ -1632,11 +1573,10 @@ private fun BannerGradientPreview(
     gradientAlpha: Float,
     customBannerUri: String?,
     isBannerEnabled: Boolean = true,
-    bannerRadius: Float = BANNER_CENTER,
+    bannerShape: Shape,
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val bannerShape = bannerCornerShape(bannerRadius)
 
     if (!isBannerEnabled) {
         // Mirrors BannerCard's image-off branch: a solid secondaryContainer row with a
@@ -1903,7 +1843,7 @@ private fun MockBlurDialog(
             // Translucent like the real dialog's blurred container: opaque would
             // hide the blur the toggle is meant to demonstrate.
             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f),
-            shape = RoundedCornerShape((20.dp * cornerScale).coerceAtMost(40.dp))
+            shape = azShape((20.dp * cornerScale).coerceAtMost(40.dp))
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -1919,7 +1859,7 @@ private fun MockBlurDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(azShape(12.dp))
                             .background(
                                 if (index == 1) {
                                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
@@ -2011,7 +1951,7 @@ private fun ColorButton(
 
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = azShape(20.dp),
         color = colorScheme.surfaceContainer,
         modifier = Modifier.size(72.dp)
     ) {

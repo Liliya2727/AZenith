@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.mainscreens
 
+import zx.azenith.ui.theme.azShape
+
 
 import android.app.Activity
 import android.content.Context
@@ -193,7 +195,7 @@ fun TweakScreen(
                         pendingRestoreResult = result
                         optRestoreTweaks = result.hasTweaks
                         optRestoreApplist = result.hasApplist
-                        showRestoreDialog = true 
+                        showRestoreDialog = true
                     } else {
                         confirmDialog.showConfirm(context.getString(R.string.dialog_restore_fail_title), result.message, context.getString(android.R.string.ok), null)
                     }
@@ -301,7 +303,7 @@ fun TweakScreen(
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 ExpressiveList(
-                    content = listOf( 
+                    content = listOf(
                         {
                             ExpressiveInfoCard(
                                 supportingContent = { Text(text = stringResource(R.string.str_these_settings_apply_to_all_en)) },
@@ -314,7 +316,7 @@ fun TweakScreen(
                 )
             }
 
-            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_performance", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(text = stringResource(R.string.section_performance)) } }
+            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_performance", highlightShape = azShape(14.dp)) { TweaksSectionTitle(text = stringResource(R.string.section_performance)) } }
             item {
                 var socType by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(Unit) {
@@ -341,19 +343,19 @@ fun TweakScreen(
                                     Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
                                         ExpressiveListItem(
                                             leadingContent = { LeadingIcon(icon = Icons.Filled.Speed) },
-                                            onClick = { 
+                                            onClick = {
                                                 if (isMediaTek) {
-                                                    navController.navigate("fpsgoscreen") 
+                                                    navController.navigate("fpsgoscreen")
                                                 }
                                             },
                                             headlineContent = { Text(text = stringResource(R.string.str_fpsgo_settings)) },
-                                            supportingContent = { 
+                                            supportingContent = {
                                                 Text(
-                                                    text = if (isMediaTek) 
-                                                        stringResource(R.string.str_fpsgo_desc) 
-                                                    else 
+                                                    text = if (isMediaTek)
+                                                        stringResource(R.string.str_fpsgo_desc)
+                                                    else
                                                         stringResource(R.string.str_fpsgo_unavailable)
-                                                ) 
+                                                )
                                             },
                                             trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                                         )
@@ -367,12 +369,12 @@ fun TweakScreen(
                 }
             }
 
-            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_additional", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.section_additionalsettings)) } }
+            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_additional", highlightShape = azShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.section_additionalsettings)) } }
             item {
-                if (viewModel.preloadState != null && 
-                    viewModel.memKillerState != null && 
-                    viewModel.appPriorState != null && 
-                    viewModel.dndState != null && 
+                if (viewModel.preloadState != null &&
+                    viewModel.memKillerState != null &&
+                    viewModel.appPriorState != null &&
+                    viewModel.dndState != null &&
                     viewModel.fstrimState != null) {
                     ExpressiveList(
                         content = buildList {
@@ -505,7 +507,7 @@ fun TweakScreen(
                 }
             }
 
-            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_power_thermal", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(text = stringResource(R.string.section_power_thermal)) } }
+            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_power_thermal", highlightShape = azShape(14.dp)) { TweaksSectionTitle(text = stringResource(R.string.section_power_thermal)) } }
             item {
                 if (viewModel.thermalState != null) {
                     ExpressiveList(
@@ -539,7 +541,7 @@ fun TweakScreen(
                 }
             }
 
-            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_addons", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.section_addons)) } }
+            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_addons", highlightShape = azShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.section_addons)) } }
             item {
                 ExpressiveList(
                     content = listOf(
@@ -575,12 +577,12 @@ fun TweakScreen(
         BackupRestoreBottomSheet(
             show = showBackupRestoreSheet,
             onDismiss = { showBackupRestoreSheet = false },
-            onBackup = { 
+            onBackup = {
                 showBackupRestoreSheet = false
                 showBackupOptionsDialog = true
             },
-            onRestore = { 
-                openDocLauncher.launch(arrayOf("application/octet-stream", "*/*")) 
+            onRestore = {
+                openDocLauncher.launch(arrayOf("application/octet-stream", "*/*"))
             }
         )
     }
@@ -598,7 +600,7 @@ fun TweakScreen(
                 val sdf = java.text.SimpleDateFormat("ddMMyyyy_HHmmss", java.util.Locale.getDefault())
                 val timestamp = sdf.format(java.util.Date())
                 val dynamicFileName = "AZenithConfig_Backup_$timestamp.zx"
-                createDocLauncher.launch(dynamicFileName) 
+                createDocLauncher.launch(dynamicFileName)
             }
         ) {
             Column {
@@ -675,7 +677,7 @@ fun TweakScreen(
                     if (result.hasTweaks) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }) {
                             Checkbox(
-                                checked = optRestoreTweaks && !isSocMismatch, 
+                                checked = optRestoreTweaks && !isSocMismatch,
                                 onCheckedChange = { if (!isSocMismatch) optRestoreTweaks = it },
                                 enabled = !isSocMismatch
                             )
@@ -760,7 +762,7 @@ fun FreqLimitSliderItem(
             ) {
                 if (icon != null) {
                     LeadingIcon(icon = icon, contentDescription = stringResource(R.string.freq_offset))
-                    Spacer(modifier = Modifier.width(16.dp)) 
+                    Spacer(modifier = Modifier.width(16.dp))
                 }
                 Text(
                     text = stringResource(R.string.freq_offset),
@@ -771,7 +773,7 @@ fun FreqLimitSliderItem(
             
             Surface(
                 color = if (sliderValue.roundToInt() == 0) colorScheme.surfaceVariant else colorScheme.primaryContainer,
-                shape = RoundedCornerShape(12.dp)
+                shape = azShape(12.dp)
             ) {
                 Text(
                     text = if (sliderValue.roundToInt() == 0) stringResource(R.string.disabled) else labels[sliderValue.roundToInt()],
@@ -819,7 +821,7 @@ fun ExpressiveTile(
 
     val iconBoxBgColor by animateColorAsState(
         targetValue = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        animationSpec = tween(400), 
+        animationSpec = tween(400),
         label = "iconBoxBgColorAnim"
     )
 
@@ -831,38 +833,38 @@ fun ExpressiveTile(
 
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(26.dp))
+            .clip(azShape(26.dp))
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,
-        shape = RoundedCornerShape(26.dp)
+        shape = azShape(26.dp)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp) 
+            modifier = Modifier.padding(14.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(82.dp)  
-                    .clip(RoundedCornerShape(18.dp)) 
+                    .height(82.dp)
+                    .clip(azShape(18.dp))
                     .background(iconBoxBgColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = icon, 
-                    contentDescription = null, 
+                    imageVector = icon,
+                    contentDescription = null,
                     tint = iconColor,
-                    modifier = Modifier.size(36.dp) 
+                    modifier = Modifier.size(36.dp)
                 )
 
                 if (showArrow) {
                     Icon(
-                        imageVector = Icons.Rounded.ChevronRight, 
+                        imageVector = Icons.Rounded.ChevronRight,
                         contentDescription = null,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
-                            .size(20.dp), 
+                            .size(20.dp),
                         tint = iconColor.copy(alpha = 0.6f)
                     )
                 }
@@ -874,7 +876,7 @@ fun ExpressiveTile(
                 modifier = Modifier.padding(horizontal = 4.dp)
             ) {
                 Text(
-                    text = label, 
+                    text = label,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = colorScheme.onSurface,

@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 
 import android.content.Context
 import androidx.compose.material.icons.rounded.Check
@@ -96,7 +98,7 @@ fun RefreshRatePickerDialog(
             @Composable {
                 val isSelected = option.reason.equals(currentRefreshRate, ignoreCase = true)
                 ExpressiveListItemHighlight(
-                    modifier = Modifier.padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)),
+                    modifier = Modifier.padding(vertical = 4.dp).clip(azShape(20.dp)),
                     containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                     headlineContent = {
                         Text(

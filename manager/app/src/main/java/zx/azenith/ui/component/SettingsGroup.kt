@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -91,7 +93,7 @@ internal fun SettingsGroup(
             JumpRow(
                 activeId = activeId,
                 entryId = entryId,
-                highlightShape = RoundedCornerShape(14.dp)
+                highlightShape = azShape(14.dp)
             ) { header() }
         } else {
             header()

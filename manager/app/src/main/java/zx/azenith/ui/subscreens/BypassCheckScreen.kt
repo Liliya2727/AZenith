@@ -18,6 +18,8 @@
  
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.theme.azShape
+
 
 import zx.azenith.ui.navigation.safePopBackStack
 import android.content.BroadcastReceiver
@@ -544,7 +546,7 @@ private fun LazyListScope.bypassDiagnosticsItems(
             BypassCheckTitle(text = stringResource(R.string.section_diagnostics))
 
             Surface(
-                shape = RoundedCornerShape(26.dp),
+                shape = azShape(26.dp),
                 color = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -608,7 +610,7 @@ private fun LazyListScope.bypassDiagnosticsItems(
                         onClick = onStart,
                         enabled = isChargerConnected && !isRunning,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = azShape(16.dp)
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -746,7 +748,7 @@ private fun BypassConsole(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(26.dp),
+        shape = azShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {

@@ -18,6 +18,8 @@
 
 package zx.azenith.ui.mainscreens
 
+import zx.azenith.ui.theme.azShape
+
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
@@ -452,7 +454,7 @@ fun ApplistTopAppBar(
 fun LabelText(text: String, color: Color) {
     Surface(
         color = color.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(14.dp),
+        shape = azShape(14.dp),
         modifier = Modifier.padding(end = 6.dp)
     ) {
         Text(

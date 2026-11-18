@@ -16,6 +16,8 @@
 
 package zx.azenith.ui.component
 
+import zx.azenith.ui.theme.azShape
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -332,7 +334,7 @@ fun <T> ZXDropDownMenu(
             )
 
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = azShape(20.dp),
                 color = scheme.surfaceContainerHigh,
                 contentColor = scheme.onSurface,
                 tonalElevation = 3.dp,
@@ -398,7 +400,7 @@ private fun ZXDropDownItem(
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = azShape(14.dp)
 
     val itemTop = remember { mutableFloatStateOf(0f) }
     val itemHeight = remember { mutableFloatStateOf(0f) }
