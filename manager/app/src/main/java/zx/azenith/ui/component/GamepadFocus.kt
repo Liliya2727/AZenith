@@ -70,7 +70,7 @@ object GamepadKeymap {
         KeyEvent.KEYCODE_DPAD_RIGHT -> GamepadAction.DPAD_RIGHT
         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER,
         KeyEvent.KEYCODE_BUTTON_A -> GamepadAction.CONFIRM
-        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_ESCAPE -> GamepadAction.BACK
+        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.KEYCODE_ESCAPE -> GamepadAction.BACK
         KeyEvent.KEYCODE_BUTTON_X -> GamepadAction.SEARCH
         KeyEvent.KEYCODE_BUTTON_Y -> GamepadAction.TOP_ACTION
         KeyEvent.KEYCODE_BUTTON_L1 -> GamepadAction.PAGE_PREV
