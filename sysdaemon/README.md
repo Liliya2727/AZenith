@@ -210,10 +210,14 @@ skipped so name and pid always belong to the same app.
 ...
 ```
 
-One line per recently used user app, focused first. A live process is
-preferred; if it died but the task is still in recents, the last known
-pid/uid is kept. Entries are removed only when the task leaves recents
-**or** its last process dies. On Android 16 / several ROMs the task
+One line per recently used user app, focused first. For an app that is not
+focused, only its **main** process (the one without a ":suffix") is
+published: a surviving `:UnityKillsMe` / `:service` helper must never keep
+a game in this file, because archdaemon uses the pid to latch the
+performance profile. When the main process dies, the last known pid is
+kept for the short renderer-restart grace, then the line disappears even
+if helpers are still alive. Entries leave the list when the task leaves
+recents or its last process dies. On Android 16 / several ROMs the task
 parsers return only the focused task — a focused-only reply is then
 ignored instead of wiping the list.
 

@@ -77,8 +77,9 @@ pub(crate) struct St {
     /// package -> instant its main process died. The app is removed from the
     /// recent list once the grace expires, unless a new main process starts.
     pending_close: BTreeMap<String, Instant>,
-    /// package -> last seen (pid, uid). Kept when the process dies so a task
-    /// that is still in the recents stays in background_apps.
+    /// package -> last seen (pid, uid). Only used during the main-process
+    /// death grace: an auxiliary process alone must never keep a game in
+    /// background_apps (archdaemon uses that pid to latch performance).
     apps: BTreeMap<String, (i32, i32)>,
     /// true once the task manager returned its task list; from then on the
     /// task list, not process death, decides what leaves background_apps.
@@ -248,6 +249,11 @@ struct Snapshot {
     focused: Option<(String, i32, i32)>,
     recent: Vec<String>,
     procs: BTreeMap<i32, (String, i32)>,
+    /// Needed to tell the process that owns the UI from a ":suffix" helper.
+    main_pids: BTreeSet<i32>,
+    /// A main process may have just died while a renderer restart spawns a
+    /// new one. Keep publishing the last pid during that short grace only.
+    pending_close: BTreeMap<String, Instant>,
     apps: BTreeMap<String, (i32, i32)>,
     sys: SysStat,
 }
@@ -259,6 +265,8 @@ impl Snapshot {
             focused: s.focused.clone(),
             recent: s.recent.clone(),
             procs: s.procs.clone(),
+            main_pids: s.main_pids.clone(),
+            pending_close: s.pending_close.clone(),
             apps: s.apps.clone(),
             sys: s.sys,
         }
@@ -320,17 +328,31 @@ impl Snapshot {
                     continue;
                 }
             }
-            // A live process is preferred. If the app's cached process was
-            // killed but its task is still in the recents, keep the last known
-            // pid so the task does not disappear from background_apps.
-            if let Some((pid, (_p, uid))) = self.procs.iter().find(|(_pid, (p, _uid))| p == pkg) {
-                out.push_str(pkg);
-                out.push(' ');
-                out.push_str(&pid.to_string());
-                out.push(' ');
-                out.push_str(&uid.to_string());
-                out.push('\n');
-            } else if let Some(&(pid, uid)) = self.apps.get(pkg) {
+            // A non-focused app is published only while its *main* process is
+            // alive. Games keep helper processes (":UnityKillsMe", ":service")
+            // after the activity is gone; publishing one of those pids would
+            // make archdaemon believe the game is still running and latch the
+            // performance profile forever.
+            let find_proc = |main_only: bool| {
+                self.procs.iter().find(|(pid, (name, _))| {
+                    name == pkg && (!main_only || self.main_pids.contains(*pid))
+                })
+            };
+
+            let entry = if let Some((pid, (_name, uid))) = find_proc(true) {
+                Some((*pid, *uid))
+            } else if self.pending_close.contains_key(pkg) {
+                // The main process just died. Keep the last pid for the
+                // renderer-restart grace so a quick restart is not mistaken
+                // for the user leaving the game.
+                find_proc(false)
+                    .map(|(pid, (_name, uid))| (*pid, *uid))
+                    .or_else(|| self.apps.get(pkg).copied())
+            } else {
+                None
+            };
+
+            if let Some((pid, uid)) = entry {
                 out.push_str(pkg);
                 out.push(' ');
                 out.push_str(&pid.to_string());
@@ -686,15 +708,20 @@ mod tests {
         }
     }
 
-    fn snap(focused: Option<&str>, recent: &[&str], procs: &[(i32, &str)]) -> Snapshot {
-        let s = st(focused, recent, procs);
+    fn snapshot_of(s: St) -> Snapshot {
         Snapshot {
             focused: s.focused,
             recent: s.recent,
             procs: s.procs,
+            main_pids: s.main_pids,
+            pending_close: s.pending_close,
             apps: s.apps,
             sys: s.sys,
         }
+    }
+
+    fn snap(focused: Option<&str>, recent: &[&str], procs: &[(i32, &str)]) -> Snapshot {
+        snapshot_of(st(focused, recent, procs))
     }
 
     #[test]
@@ -723,19 +750,38 @@ mod tests {
     }
 
     #[test]
-    fn a_task_without_a_live_process_keeps_its_last_pid() {
+    fn a_task_without_a_live_process_is_not_listed() {
         let mut state = st(Some("com.a"), &["com.a", "com.b"], &[(1, "com.a")]);
-        // com.b was seen before, its process is gone but its task is still in
-        // the recents.
+        // com.b was seen before but nothing of it is alive any more. Its last
+        // pid must not be published: archdaemon would treat it as a live game.
         state.apps.insert("com.b".to_string(), (2, 10002));
-        let s = Snapshot {
-            focused: state.focused,
-            recent: state.recent,
-            procs: state.procs,
-            apps: state.apps,
-            sys: state.sys,
-        };
-        assert_eq!(s.background(), "com.a 1 10001\ncom.b 2 10002\n");
+        assert_eq!(snapshot_of(state).background(), "com.a 1 10001\n");
+    }
+
+    #[test]
+    fn an_auxiliary_process_does_not_keep_a_dead_main_app_listed() {
+        let mut state = st(None, &["com.a"], &[(2, "com.a")]);
+        // pid 2 is ":UnityKillsMe"; the main process that owned pid 1 is gone.
+        state.main_pids.remove(&2);
+        state.apps.insert("com.a".to_string(), (1, 10001));
+        assert_eq!(snapshot_of(state).background(), "");
+    }
+
+    #[test]
+    fn a_live_main_process_is_preferred_over_an_auxiliary_pid() {
+        let mut state = st(None, &["com.a"], &[(1, "com.a"), (2, "com.a")]);
+        // pid 1 is a helper, pid 2 owns the activity.
+        state.main_pids.remove(&1);
+        assert_eq!(snapshot_of(state).background(), "com.a 2 10002\n");
+    }
+
+    #[test]
+    fn the_last_pid_is_kept_during_a_main_process_restart_grace() {
+        let mut state = st(None, &["com.a"], &[(2, "com.a")]);
+        state.main_pids.remove(&2);
+        state.apps.insert("com.a".to_string(), (1, 10001));
+        state.pending_close.insert("com.a".to_string(), Instant::now());
+        assert_eq!(snapshot_of(state).background(), "com.a 2 10002\n");
     }
 
     #[test]
@@ -753,6 +799,8 @@ mod tests {
             focused: s.focused.clone(),
             recent: s.recent.clone(),
             procs: s.procs.clone(),
+            main_pids: s.main_pids.clone(),
+            pending_close: s.pending_close.clone(),
             apps: s.apps.clone(),
             sys: s.sys,
         };
