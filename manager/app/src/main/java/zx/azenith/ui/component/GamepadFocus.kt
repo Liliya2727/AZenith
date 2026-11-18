@@ -204,6 +204,7 @@ fun Modifier.gamepadFocusOutline(
         label = "GamepadFocusOutline"
     )
     return this
+        .focusable()
         .onFocusChanged {
             focused = it.isFocused
             if (it.isFocused && register) GamepadFocusNav.publishLastFocused(requester)
@@ -258,7 +259,12 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
 
     // Always mark dpad/gamepad mode on key events
     if (event.type == KeyEventType.KeyDown || event.type == KeyEventType.KeyUp) {
+        val wasActive = GamepadInput.active
         GamepadInput.onDpadKey()
+        if (!wasActive && event.type == KeyEventType.KeyDown) {
+            // Try to enter content focus on first gamepad press
+            GamepadFocusNav.restoreFocus()
+        }
     }
 
     if (event.type == KeyEventType.KeyUp) {
@@ -337,16 +343,11 @@ fun GamepadFocusRoot(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         while (true) {
             GamepadInput.onControllerPresence(GamepadInput.hasDpadDevice())
             delay(3000)
         }
-    }
-    LaunchedEffect(Unit) {
-        delay(100)
-        runCatching { focusRequester.requestFocus() }
     }
 
     val activeDialogCount = LocalActiveDialogCount.current
@@ -354,9 +355,6 @@ fun GamepadFocusRoot(
 
     Box(
         modifier = modifier
-            .focusRequester(focusRequester)
-            .focusable()
-            .onFocusChanged { }
             .gamepadKeyWatch()
             .pointerInput(Unit) {
                 awaitPointerEventScope {
