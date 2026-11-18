@@ -88,6 +88,7 @@ import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.component.GamepadStickScrollEffect
 
 
 /**
@@ -105,6 +106,9 @@ private val ABOUT_ROW_ITEMS: Map<String, Int> = mapOf(
 fun AboutScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    GamepadStickScrollEffect(listState) { delta ->
+        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
+    }
 
     // Search results land here: entry id -> the LazyColumn item
     // holding that row.

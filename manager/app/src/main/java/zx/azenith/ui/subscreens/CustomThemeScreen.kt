@@ -222,6 +222,7 @@ fun ColorPaletteScreen(navController: NavController) {
     }
     
     val lazyListState = rememberLazyListState()
+    GamepadStickScrollEffect(lazyListState)
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(canScroll = { lazyListState.canScrollBackward })
     var isPreviewExpanded by rememberSaveable { mutableStateOf(true) }
 
