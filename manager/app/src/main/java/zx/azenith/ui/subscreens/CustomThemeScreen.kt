@@ -1369,7 +1369,7 @@ private fun PinnedPreviewHeader(
             contentAlignment = Alignment.Center
         ) {
             val cornerScale = frameWidth / (420.dp / mockAspect)
-            val base = (28.dp * cornerScale * personalization.cornerMultiplier).coerceAtLeast(10.dp)
+            val base = (20.dp * cornerScale).coerceAtLeast(10.dp)
             val scaledShape = RoundedCornerShape(base)
             MockCardFrame(
                 scheme = scheme,
@@ -1431,7 +1431,7 @@ private fun HalfMockPreview(
         val frameHeight = maxOf(fullHeight, maxHeight + 8.dp)
 
         val cornerScale = frameWidth / (420.dp / mockAspect)
-        val base = (28.dp * cornerScale * personalization.cornerMultiplier).coerceAtLeast(10.dp)
+        val base = (20.dp * cornerScale).coerceAtLeast(10.dp)
         val shape = RoundedCornerShape(topStart = base, topEnd = base, bottomStart = 0.dp, bottomEnd = 0.dp)
 
         // unbounded: biar frame yang lebih tinggi dari pane tetap top-anchored,
