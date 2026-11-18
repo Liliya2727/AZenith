@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusable
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.KeyEventType
@@ -336,20 +337,26 @@ fun GamepadFocusRoot(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         while (true) {
             GamepadInput.onControllerPresence(GamepadInput.hasDpadDevice())
             delay(3000)
         }
     }
+    LaunchedEffect(Unit) {
+        delay(100)
+        runCatching { focusRequester.requestFocus() }
+    }
 
-    var hasFocus by remember { mutableStateOf(false) }
     val activeDialogCount = LocalActiveDialogCount.current
     GamepadShortcuts.isDialogOpen = activeDialogCount.value > 0
 
     Box(
         modifier = modifier
-            .onFocusChanged { hasFocus = it.hasFocus }
+            .focusRequester(focusRequester)
+            .focusable()
+            .onFocusChanged { }
             .gamepadKeyWatch()
             .pointerInput(Unit) {
                 awaitPointerEventScope {
