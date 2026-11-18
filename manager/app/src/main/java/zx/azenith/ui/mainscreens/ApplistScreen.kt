@@ -408,6 +408,9 @@ fun ApplistTopAppBar(
                         }
                     },
                     actions = {
+                        IconButton(onClick = { onSearchModeChange(true) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                            Icon(Icons.Default.Search, stringResource(R.string.cd_search))
+                        }
                         IconButton(onClick = onOpenFilters, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                             BadgedBox(
                                 badge = {
@@ -438,9 +441,6 @@ fun ApplistTopAppBar(
                                            else colorScheme.onSurfaceVariant
                                 )
                             }
-                        }
-                        IconButton(onClick = { onSearchModeChange(true) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
-                            Icon(Icons.Default.Search, stringResource(R.string.cd_search))
                         }
                     }
                 )
