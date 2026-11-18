@@ -217,8 +217,16 @@ class MainActivity : ComponentActivity() {
             val rz = event.getAxisValue(MotionEvent.AXIS_RZ)
             val ry = event.getAxisValue(MotionEvent.AXIS_RY)
             val axis = if (kotlin.math.abs(rz) > 0.001f) rz else ry
-            if (kotlin.math.abs(axis) > 0.001f || axis == 0f) {
-                GamepadInput.onDpadKey() // treat stick movement as gamepad activity
+
+            // Left stick navigates focus like a D-pad. Threshold lives in onStick so
+            // resting noise never moves the selection.
+            GamepadStickNav.onStick(
+                event.getAxisValue(MotionEvent.AXIS_X),
+                event.getAxisValue(MotionEvent.AXIS_Y)
+            )
+
+            if (kotlin.math.abs(axis) > 0.15f) {
+                GamepadInput.onDpadKey() // real stick deflection -> gamepad mode
             }
             GamepadStickScroll.onAxisY(axis)
             return true
@@ -638,15 +646,12 @@ fun MainScreen(fromTileType: String? = null) {
                                 else -> if (absOffset < 0.5f) 1f else 0f
                             }
 
-                            // One entry point per page: the bar jumps to the page on
-                            // screen so a d-pad can leave the bottom bar.
-                            val pageEntry = remember(page) { androidx.compose.ui.focus.FocusRequester() }
-                            LaunchedEffect(page, pagerState.currentPage) {
-                                if (page == pagerState.currentPage) {
-                                    zx.azenith.ui.component.GamepadFocusNav.publishPageEntry(pageEntry)
-                                    zx.azenith.ui.component.GamepadFocusNav.publishLastEntry(pageEntry)
-                                }
-                            }
+                            // Only the page on screen may be reached by d-pad search:
+                            // the pager keeps all four pages composed, so without this
+                            // the search sees four candidate subtrees at the same
+                            // geometry and cannot pick one. Entry focus comes from each
+                            // screen's gamepadScreenEntry(), which is a real focus
+                            // target, so no container-level requester is needed here.
                             
                             val pageModifier = if (!useScrollAnimation) {
                                 Modifier.graphicsLayer {
@@ -690,9 +695,6 @@ fun MainScreen(fromTileType: String? = null) {
                             Box(
                                 modifier = pageModifier
                                     .fillMaxSize()
-                                    // The d-pad entry point into this page, published to the
-                                    // bottom bar while this page is the one on screen.
-                                    .focusRequester(pageEntry)
                                     .focusGroup()
                                     // Only the page on screen may be reached by d-pad search:
                                     // the pager keeps all four pages composed, so without this

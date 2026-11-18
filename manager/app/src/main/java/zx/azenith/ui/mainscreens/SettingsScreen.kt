@@ -166,11 +166,11 @@ fun SettingsScreen(
             GamepadShortcuts.hasSearch = true
             GamepadShortcuts.isSearchOpen = false
             GamepadShortcuts.onSearchOpen = {
-                navController.navigate("search/${SearchTab.Settings.name}")
+                navController.navigate(SearchTab.Settings.searchRoute)
             }
             GamepadShortcuts.onSearchClose = null
             GamepadShortcuts.onSearchToggle = {
-                navController.navigate("search/${SearchTab.Settings.name}")
+                navController.navigate(SearchTab.Settings.searchRoute)
             }
             GamepadShortcuts.hasTopAction = true
             GamepadShortcuts.onTopAction = { showChangelogSheet = true }

@@ -1,5 +1,6 @@
 package zx.azenith.ui.component
 
+import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -7,12 +8,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -21,9 +24,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.KeyEventType
@@ -126,6 +129,63 @@ object GamepadStickScroll {
 }
 
 /**
+ * Left stick as a D-pad: converts deflection into focus moves. Registered from
+ * [GamepadFocusRoot] because the FocusManager only exists in composition; the
+ * Activity feeds raw axes in.
+ *
+ * A direction has to cross [THRESHOLD] to fire, so resting noise never moves
+ * focus, and it repeats only after a delay while the stick is held.
+ */
+object GamepadStickNav {
+    private const val THRESHOLD = 0.55f
+    private const val REPEAT_MS = 260L
+
+    var focusManager: FocusManager? = null
+
+    private var lastDx = 0
+    private var lastDy = 0
+    private var nextRepeatAt = 0L
+
+    /** Move focus one step in [direction]; used by the first-press fallback. */
+    fun moveFocus(direction: FocusDirection): Boolean =
+        runCatching { focusManager?.moveFocus(direction) == true }.getOrDefault(false)
+
+    fun moveFocusNext(): Boolean = moveFocus(FocusDirection.Next)
+
+    fun onStick(x: Float, y: Float) {
+        val dx = if (abs(x) > THRESHOLD) if (x > 0f) 1 else -1 else 0
+        val dy = if (abs(y) > THRESHOLD) if (y > 0f) 1 else -1 else 0
+        if (dx == 0 && dy == 0) {
+            reset()
+            return
+        }
+
+        val now = SystemClock.uptimeMillis()
+        val changed = dx != lastDx || dy != lastDy
+        if (!changed && now < nextRepeatAt) return
+
+        val direction = if (abs(x) > abs(y)) {
+            if (dx > 0) FocusDirection.Right else FocusDirection.Left
+        } else {
+            if (dy > 0) FocusDirection.Down else FocusDirection.Up
+        }
+
+        GamepadInput.onDpadKey()
+        moveFocus(direction)
+
+        lastDx = dx
+        lastDy = dy
+        nextRepeatAt = now + REPEAT_MS
+    }
+
+    fun reset() {
+        lastDx = 0
+        lastDy = 0
+        nextRepeatAt = 0L
+    }
+}
+
+/**
  * Registry for the currently active screen's gamepad shortcuts.
  * Only the foreground/active screen should register handlers (use DisposableEffect).
  */
@@ -186,7 +246,10 @@ object GamepadFocusNav {
 
     fun restoreFocus(): Boolean {
         val candidates = focusHistory.toList().asReversed() + listOfNotNull(lastEntry, pageEntry)
-        return candidates.any { runCatching { it.requestFocus() }.getOrDefault(false) }
+        val restored = candidates.any { runCatching { it.requestFocus() }.getOrDefault(false) }
+        // Nothing was focusable through a requester (fresh page, rotated screen,
+        // disposed nodes): fall back to letting the focus system pick an entry.
+        return restored || GamepadStickNav.moveFocusNext()
     }
 }
 
@@ -204,12 +267,12 @@ fun Modifier.gamepadFocusOutline(
         label = "GamepadFocusOutline"
     )
     return this
-        .focusTarget()
+        .focusRequester(requester)
+        .focusable()
         .onFocusChanged {
             focused = it.isFocused
             if (it.isFocused && register) GamepadFocusNav.publishLastFocused(requester)
         }
-        .then(if (register) focusRequester(requester) else Modifier)
         .then(
             if (alpha > 0.01f) {
                 Modifier.border(
@@ -241,8 +304,9 @@ fun Modifier.gamepadScreenEntry(): Modifier {
         }
     }
     return this
-        .onFocusChanged { if (it.hasFocus) entered = true }
         .focusRequester(requester)
+        .focusable()
+        .onFocusChanged { if (it.hasFocus) entered = true }
         .focusGroup()
 }
 
@@ -258,13 +322,22 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
     if (action == GamepadAction.NONE) return@onPreviewKeyEvent false
 
     // Always mark dpad/gamepad mode on key events
+    var focusEstablished = false
     if (event.type == KeyEventType.KeyDown || event.type == KeyEventType.KeyUp) {
         val wasActive = GamepadInput.active
         GamepadInput.onDpadKey()
         if (!wasActive && event.type == KeyEventType.KeyDown) {
-            // Try to enter content focus on first gamepad press
-            GamepadFocusNav.restoreFocus()
+            // No focus yet (fresh page, rotation): establish it from the first press.
+            focusEstablished = GamepadFocusNav.restoreFocus()
         }
+    }
+
+    if (focusEstablished && (action == GamepadAction.DPAD_UP || action == GamepadAction.DPAD_DOWN ||
+            action == GamepadAction.DPAD_LEFT || action == GamepadAction.DPAD_RIGHT)
+    ) {
+        // The press that established focus already moved it one step; consuming it
+        // stops Compose from moving a second time.
+        return@onPreviewKeyEvent true
     }
 
     if (event.type == KeyEventType.KeyUp) {
@@ -347,6 +420,17 @@ fun GamepadFocusRoot(
         while (true) {
             GamepadInput.onControllerPresence(GamepadInput.hasDpadDevice())
             delay(3000)
+        }
+    }
+
+    val focusManager = LocalFocusManager.current
+    DisposableEffect(focusManager) {
+        GamepadStickNav.focusManager = focusManager
+        onDispose {
+            if (GamepadStickNav.focusManager === focusManager) {
+                GamepadStickNav.focusManager = null
+                GamepadStickNav.reset()
+            }
         }
     }
 

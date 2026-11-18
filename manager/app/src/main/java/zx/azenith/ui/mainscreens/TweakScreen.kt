@@ -181,11 +181,11 @@ fun TweakScreen(
             GamepadShortcuts.hasSearch = true
             GamepadShortcuts.isSearchOpen = false
             GamepadShortcuts.onSearchOpen = {
-                navController.navigate("search/${SearchTab.Tweaks.name}")
+                navController.navigate(SearchTab.Tweaks.searchRoute)
             }
             GamepadShortcuts.onSearchClose = null
             GamepadShortcuts.onSearchToggle = {
-                navController.navigate("search/${SearchTab.Tweaks.name}")
+                navController.navigate(SearchTab.Tweaks.searchRoute)
             }
             GamepadShortcuts.hasTopAction = true
             GamepadShortcuts.onTopAction = { showBackupRestoreSheet = true }

@@ -280,6 +280,7 @@ fun ApplistScreen(navController: NavController) {
                 ) {
                 ExpressiveLazyList(
                 state = listState,
+                modifier = Modifier.gamepadScreenEntry(),
                 items = appsToDisplay,
                 key = { it.packageName },
                 contentPadding = listContentPadding
