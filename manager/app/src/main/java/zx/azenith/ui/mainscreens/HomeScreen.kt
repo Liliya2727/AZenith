@@ -160,7 +160,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource(),
+            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding() + 16.dp,
                 start = 16.dp + safeAreaStartInset(),
