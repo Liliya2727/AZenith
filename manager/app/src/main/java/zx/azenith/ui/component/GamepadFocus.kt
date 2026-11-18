@@ -382,8 +382,9 @@ fun GamepadStickScrollEffect(
     listState: LazyListState,
     deadzone: Float = 0.15f,
     speedPxPerSecond: Float = 2200f,
+    onScrollDelta: ((Float) -> Unit)? = null,
 ) {
-    LaunchedEffect(listState) {
+    LaunchedEffect(listState, onScrollDelta) {
         var lastNanos = 0L
         while (isActive) {
             withFrameNanos { frameNanos ->
@@ -398,6 +399,7 @@ fun GamepadStickScrollEffect(
                     GamepadInput.onDpadKey()
                     val magnitude = (abs(value) - deadzone) / (1f - deadzone)
                     val delta = kotlin.math.sign(value) * magnitude * speedPxPerSecond * dt
+                    onScrollDelta?.invoke(delta)
                     this.launch {
                         runCatching { listState.scrollBy(delta) }
                     }

@@ -133,7 +133,9 @@ fun TweakScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val listState = rememberLazyListState()
-    GamepadStickScrollEffect(listState)
+    GamepadStickScrollEffect(listState) { delta ->
+        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
+    }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val colorScheme = MaterialTheme.colorScheme

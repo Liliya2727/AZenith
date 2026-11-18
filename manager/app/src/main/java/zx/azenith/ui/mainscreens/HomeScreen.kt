@@ -89,7 +89,9 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         viewModel.refreshAiMode()
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     }
-    GamepadStickScrollEffect(listState)
+    GamepadStickScrollEffect(listState) { delta ->
+        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
+    }
 
     // Gamepad shortcuts for Home page
     val isCurrentPage = LocalIsCurrentPagerPage.current
