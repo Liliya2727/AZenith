@@ -74,8 +74,18 @@ object GamepadInput {
     var controllerConnected: Boolean by mutableStateOf(false)
         private set
 
-    /** Whether the focus outline should be drawn at all. */
-    val active: Boolean get() = dpadMode || controllerConnected
+    /**
+     * Whether the focus outline should be drawn at all.
+     *
+     * Driven by [dpadMode] only, not by [controllerConnected]. Device detection
+     * only says a pad *might* be plugged in, and some phones expose virtual or
+     * internal devices that claim gamepad/d-pad sources (key remappers, game-mode
+     * services, BT accessories). With those, `controllerConnected` stayed true on
+     * a purely touch-driven phone and any node holding focus drew a thick outline
+     * (seen on sliders). A real d-pad press sets [dpadMode] on the first key, and
+     * a finger going down clears it, so a real controller still gets its outline.
+     */
+    val active: Boolean get() = dpadMode
 
     private val DPAD_KEYCODES = setOf(
         KeyEvent.KEYCODE_DPAD_UP,
@@ -116,11 +126,12 @@ object GamepadInput {
      * `mtk-kpd` keypad advertises `KEYBOARD | DPAD` while being an internal
      * keypad, which would leave the outline permanently enabled on a phone with
      * no controller attached. A real pad reports SOURCE_GAMEPAD, and a remote is
-     * an external device.
+     * an external device. Virtual devices (key remappers, input injectors) are
+     * skipped too: they are software, not a controller in anyone's hands.
      */
     fun hasDpadDevice(): Boolean = InputDevice.getDeviceIds().any { id ->
         val device = InputDevice.getDevice(id) ?: return@any false
-        if (!device.isEnabled) return@any false
+        if (!device.isEnabled || device.isVirtual) return@any false
         val sources = device.sources
         sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
             (sources and InputDevice.SOURCE_DPAD == InputDevice.SOURCE_DPAD && device.isExternal)

@@ -55,6 +55,10 @@ import zx.azenith.ui.util.sliderTick
  *
  * Only the colour is customised, via the [SliderDefaults.colors] arguments, so
  * screens that tint a slider keep working while the geometry stays Material's.
+ *
+ * The focus outline comes from [gamepadFocusOutline], which only draws while
+ * [GamepadInput.active] is true (a real d-pad/gamepad key was pressed), so touch
+ * sessions never show it.
  */
 @Composable
 internal fun ZenithSlider(
