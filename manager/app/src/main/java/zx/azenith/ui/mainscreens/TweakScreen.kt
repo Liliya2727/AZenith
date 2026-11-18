@@ -56,6 +56,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
 
@@ -132,6 +133,7 @@ fun TweakScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val listState = rememberLazyListState()
+    GamepadStickScrollEffect(listState)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val colorScheme = MaterialTheme.colorScheme
@@ -169,6 +171,45 @@ fun TweakScreen(
     
     LoadingDialogHost(handle = loadingDialog)
     ConfirmDialogHost(handle = confirmDialog)
+
+    // Gamepad shortcuts
+    val isCurrentPage = LocalIsCurrentPagerPage.current
+    DisposableEffect(isCurrentPage, showBackupRestoreSheet, showRendererDialog, showRefreshRateDialog, showBackupOptionsDialog, showRestoreDialog) {
+        if (isCurrentPage) {
+            GamepadShortcuts.hasSearch = true
+            GamepadShortcuts.isSearchOpen = false
+            GamepadShortcuts.onSearchOpen = {
+                navController.navigate("search/${SearchTab.Tweaks.name}")
+            }
+            GamepadShortcuts.onSearchClose = null
+            GamepadShortcuts.onSearchToggle = {
+                navController.navigate("search/${SearchTab.Tweaks.name}")
+            }
+            GamepadShortcuts.hasTopAction = true
+            GamepadShortcuts.onTopAction = { showBackupRestoreSheet = true }
+            GamepadShortcuts.onCloseOverlay = {
+                var closed = false
+                if (showBackupRestoreSheet) { showBackupRestoreSheet = false; closed = true }
+                if (showRendererDialog) { showRendererDialog = false; closed = true }
+                if (showRefreshRateDialog) { showRefreshRateDialog = false; closed = true }
+                if (showBackupOptionsDialog) { showBackupOptionsDialog = false; closed = true }
+                if (showRestoreDialog) { showRestoreDialog = false; closed = true }
+                closed
+            }
+            GamepadShortcuts.onBack = null
+        }
+        onDispose {
+            if (isCurrentPage) {
+                GamepadShortcuts.hasSearch = false
+                GamepadShortcuts.onSearchOpen = null
+                GamepadShortcuts.onSearchClose = null
+                GamepadShortcuts.onSearchToggle = null
+                GamepadShortcuts.hasTopAction = false
+                GamepadShortcuts.onTopAction = null
+                GamepadShortcuts.onCloseOverlay = null
+            }
+        }
+    }
 
     val createDocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         uri?.let {
@@ -958,13 +999,13 @@ fun TweakScreenTopAppBar(
             actions = {
                 IconButton(
                     onClick = onSearchClick,
-                    modifier = Modifier.gamepadFocusOutline(shape = CircleShape)
+                    modifier = Modifier.focusProperties { canFocus = false }
                 ) {
                     Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
                 }
                 IconButton(
                     onClick = onMoreClick,
-                    modifier = onMoreModifier.gamepadFocusOutline(shape = CircleShape)
+                    modifier = onMoreModifier.focusProperties { canFocus = false }
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Cloud,

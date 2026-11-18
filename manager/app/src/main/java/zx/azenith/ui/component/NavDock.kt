@@ -296,12 +296,7 @@ fun NavDock(
                     .fillMaxSize()
                     .innerEdgeHairline(scheme.outlineVariant.copy(alpha = 0.6f))
                     .windowInsetsPadding(safeInsets)
-                    .gamepadFocusOutline(shape = RoundedCornerShape(0.dp))
-                    .focusProperties {
-                        if (interactive) {
-                            right = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                        }
-                    }
+                    .focusProperties { canFocus = false }
                     .then(
                         if (interactive) Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -547,16 +542,7 @@ private fun DockActionButton(
             .height(NAV_DOCK_ACTION_HEIGHT * scale)
             .clip(RoundedCornerShape(percent = 50))
             .background(background)
-            .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
-            .focusProperties {
-                if (interactive) {
-                    val pageEntry = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                    // The actions are the dock's last stop: up is the rows above,
-                    // and the way back into the page is sideways.
-                    left = pageEntry
-                    right = pageEntry
-                }
-            }
+            .focusProperties { canFocus = false }
             .then(
                 if (interactive) Modifier.clickable(
                     interactionSource = interactionSource,
@@ -617,7 +603,7 @@ private fun DockIconButton(
             .size(NAV_DOCK_ICON_BUTTON_SIZE * scale)
             .clip(shape)
             .background(layer)
-            .gamepadFocusOutline(shape = shape)
+            .focusProperties { canFocus = false }
             .then(
                 if (interactive) Modifier.clickable(
                     interactionSource = interactionSource,
@@ -682,20 +668,8 @@ private fun DockRow(
         modifier = Modifier
             .fillMaxWidth()
             .height((if (compact) NAV_DOCK_ROW_HEIGHT_COMPACT else NAV_DOCK_ROW_HEIGHT) * scale)
-            // The row's own feedback is shaped like the selection pill, not a rectangle:
-            // a focus or press tint with different corners lands on the pill visibly
-            // mismatched.
             .background(background, RoundedCornerShape(percent = 50))
-            .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
-            .focusProperties {
-                if (interactive) {
-                    // A dock's up/down belong to its own rows; the way out is
-                    // sideways, back into the page.
-                    val pageEntry = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                    left = pageEntry
-                    right = pageEntry
-                }
-            }
+            .focusProperties { canFocus = false }
             .then(
                 if (interactive) Modifier.clickable(
                     interactionSource = interactionSource,

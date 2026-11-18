@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -88,6 +89,7 @@ fun ApplistScreen(navController: NavController) {
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
+    GamepadStickScrollEffect(listState)
     val lifecycleOwner = LocalLifecycleOwner.current
     
     val topAppBarState = rememberSaveable(saver = TopAppBarState.Saver) {
@@ -122,6 +124,48 @@ fun ApplistScreen(navController: NavController) {
         } else {
             viewModel.clearSearch()
             focusManager.clearFocus()
+        }
+    }
+
+    // Gamepad shortcuts (Square=search toggle, Triangle=filter)
+    val isCurrentPage = LocalIsCurrentPagerPage.current
+    DisposableEffect(isCurrentPage, isSearchMode, showFilterSheet) {
+        if (isCurrentPage) {
+            GamepadShortcuts.hasSearch = true
+            GamepadShortcuts.isSearchOpen = isSearchMode
+            GamepadShortcuts.onSearchOpen = {
+                isSearchMode = true
+            }
+            GamepadShortcuts.onSearchClose = {
+                isSearchMode = false
+                viewModel.updateSearch(TextFieldValue(""))
+            }
+            GamepadShortcuts.onSearchToggle = {
+                if (isSearchMode) {
+                    isSearchMode = false
+                    viewModel.updateSearch(TextFieldValue(""))
+                } else {
+                    isSearchMode = true
+                }
+            }
+            GamepadShortcuts.hasTopAction = true
+            GamepadShortcuts.onTopAction = { showFilterSheet = true }
+            GamepadShortcuts.onCloseOverlay = {
+                if (showFilterSheet) { showFilterSheet = false; true } else false
+            }
+            GamepadShortcuts.onBack = null
+        }
+        onDispose {
+            if (isCurrentPage) {
+                GamepadShortcuts.hasSearch = false
+                GamepadShortcuts.isSearchOpen = false
+                GamepadShortcuts.onSearchOpen = null
+                GamepadShortcuts.onSearchClose = null
+                GamepadShortcuts.onSearchToggle = null
+                GamepadShortcuts.hasTopAction = false
+                GamepadShortcuts.onTopAction = null
+                GamepadShortcuts.onCloseOverlay = null
+            }
         }
     }
 
@@ -408,10 +452,16 @@ fun ApplistTopAppBar(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { onSearchModeChange(true) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                        IconButton(
+                            onClick = { onSearchModeChange(true) },
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             Icon(Icons.Default.Search, stringResource(R.string.cd_search))
                         }
-                        IconButton(onClick = onOpenFilters, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                        IconButton(
+                            onClick = onOpenFilters,
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             BadgedBox(
                                 badge = {
                                     AnimatedContent(

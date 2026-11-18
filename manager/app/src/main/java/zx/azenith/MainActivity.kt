@@ -22,6 +22,8 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -205,6 +207,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_MOVE && (
+                event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK ||
+                event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
+            )
+        ) {
+            // Right stick vertical: prefer AXIS_RZ, fallback to AXIS_RY
+            val rz = event.getAxisValue(MotionEvent.AXIS_RZ)
+            val ry = event.getAxisValue(MotionEvent.AXIS_RY)
+            val axis = if (kotlin.math.abs(rz) > 0.001f) rz else ry
+            if (kotlin.math.abs(axis) > 0.001f || axis == 0f) {
+                GamepadInput.onDpadKey() // treat stick movement as gamepad activity
+            }
+            GamepadStickScroll.onAxisY(axis)
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -354,6 +375,8 @@ fun MainScreen(fromTileType: String? = null) {
     }
 
     val coroutineScope = rememberCoroutineScope()
+
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val appPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
@@ -486,6 +509,55 @@ fun MainScreen(fromTileType: String? = null) {
     ) {
         RootDialogsProvider {
             val isAnyDialogOpen = zx.azenith.ui.component.LocalActiveDialogCount.current.value > 0 || installingDialog.isShown || updateDialog.isShown || rebootDialog.isShown
+
+            // Gamepad shortcuts: main pager context
+            val currentPagerIndex = if (isOnMainPager) pagerState.currentPage else -1
+            LaunchedEffect(isOnMainPager, currentPagerIndex, isAnyDialogOpen, showExitConfirm) {
+                GamepadShortcuts.isOnMainPager = isOnMainPager && rawRoute == "main"
+                GamepadShortcuts.canPagePrev = GamepadShortcuts.isOnMainPager && currentPagerIndex > 0
+                GamepadShortcuts.canPageNext = GamepadShortcuts.isOnMainPager && currentPagerIndex < pagerRoutes.lastIndex
+            }
+            DisposableEffect(isOnMainPager, currentPagerIndex) {
+                if (isOnMainPager) {
+                    GamepadShortcuts.onPagePrev = {
+                        val target = (pagerState.currentPage - 1).coerceAtLeast(0)
+                        if (target != pagerState.currentPage) {
+                            coroutineScope.launch { pagerState.animateScrollToPage(target) }
+                            GamepadFocusNav.restoreFocus()
+                        }
+                    }
+                    GamepadShortcuts.onPageNext = {
+                        val target = (pagerState.currentPage + 1).coerceAtMost(pagerRoutes.lastIndex)
+                        if (target != pagerState.currentPage) {
+                            coroutineScope.launch { pagerState.animateScrollToPage(target) }
+                            GamepadFocusNav.restoreFocus()
+                        }
+                    }
+                    GamepadShortcuts.onBack = {
+                        if (isAnyDialogOpen) {
+                            false
+                        } else if (pagerState.currentPage != 0) {
+                            coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                            true
+                        } else {
+                            showExitConfirm = true
+                            true
+                        }
+                    }
+                }
+                onDispose { }
+            }
+            DisposableEffect(isOnMainPager) {
+                if (!isOnMainPager) {
+                    GamepadShortcuts.isOnMainPager = false
+                    GamepadShortcuts.canPagePrev = false
+                    GamepadShortcuts.canPageNext = false
+                    GamepadShortcuts.onPagePrev = null
+                    GamepadShortcuts.onPageNext = null
+                    GamepadShortcuts.onBack = null
+                }
+                onDispose { }
+            }
             
             androidx.activity.compose.BackHandler(enabled = isOnMainPager && !isAnyDialogOpen) {
                 if (showExitConfirm) {
@@ -1430,15 +1502,7 @@ private fun NavPill(
                 .defaultMinSize(minWidth = 48.dp * sizeScale)
                 .clip(shape)
                 .background(bgColor)
-                .gamepadFocusOutline(shape = shape)
-                .focusProperties {
-                    // The bar is the last stop on its own edge, and the search cannot
-                    // cross from it into the pager's page, so the way out is explicit:
-                    // Up, which is the direction the page is in from here.
-                    if (interactive) {
-                        up = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                    }
-                }
+                .focusProperties { canFocus = false }
                 .then(
                     if (interactive) Modifier.clickable(
                         interactionSource = interactionSource,
@@ -1486,13 +1550,7 @@ private fun NavPill(
                 .defaultMinSize(minWidth = 48.dp * sizeScale)
                 .clip(shape)
                 .background(bgColor)
-                .gamepadFocusOutline(shape = shape)
-                .focusProperties {
-                    // Same escape as the stacked pill above: up, into the page.
-                    if (interactive) {
-                        up = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                    }
-                }
+                .focusProperties { canFocus = false }
                 .then(
                     if (interactive) Modifier.clickable(
                         interactionSource = interactionSource,

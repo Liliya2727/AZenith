@@ -67,6 +67,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -281,7 +282,10 @@ fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> 
                 scrolledContainerColor = Color.Transparent,
             ),
             actions = {
-                IconButton(onClick = onRebootClick) {
+                IconButton(
+                    onClick = onRebootClick,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(imageVector = Icons.Filled.PowerSettingsNew, contentDescription = stringResource(R.string.reboot))
                 }
             },

@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -92,6 +93,8 @@ import zx.azenith.ui.component.LeadingIcon
 import zx.azenith.ui.component.SearchJump
 import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
+import zx.azenith.ui.component.GamepadShortcuts
+import zx.azenith.ui.component.GamepadStickScrollEffect
 import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.component.hazePageSource
 import zx.azenith.ui.navigation.safePopBackStack
@@ -124,6 +127,8 @@ fun SearchScreen(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+    val listState = rememberLazyListState()
+    GamepadStickScrollEffect(listState)
     val colorScheme = MaterialTheme.colorScheme
     val motionScheme = MaterialTheme.motionScheme
     var query by rememberSaveable { mutableStateOf("") }
@@ -176,6 +181,20 @@ fun SearchScreen(
     }
 
     BackHandler { dismissEditor(); navController.safePopBackStack() }
+
+    DisposableEffect(Unit) {
+        GamepadShortcuts.onBack = {
+            dismissEditor()
+            navController.safePopBackStack()
+            true
+        }
+        GamepadShortcuts.hasSearch = false
+        GamepadShortcuts.hasTopAction = false
+        GamepadShortcuts.onCloseOverlay = null
+        onDispose {
+            GamepadShortcuts.onBack = null
+        }
+    }
 
     LaunchedEffect(Unit) {
         // Requesting focus before the field is attached throws, and on the first
@@ -318,6 +337,7 @@ fun SearchScreen(
                 )
 
                 SearchPhase.Results -> LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding(),

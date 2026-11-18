@@ -89,6 +89,35 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         viewModel.refreshAiMode()
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     }
+    GamepadStickScrollEffect(listState)
+
+    // Gamepad shortcuts for Home page
+    val isCurrentPage = LocalIsCurrentPagerPage.current
+    DisposableEffect(isCurrentPage, showRebootSheet, showProfileDialog) {
+        if (isCurrentPage) {
+            GamepadShortcuts.hasSearch = false
+            GamepadShortcuts.onSearchOpen = null
+            GamepadShortcuts.onSearchClose = null
+            GamepadShortcuts.onSearchToggle = null
+            GamepadShortcuts.hasTopAction = true
+            GamepadShortcuts.onTopAction = { showRebootSheet = true }
+            GamepadShortcuts.onCloseOverlay = {
+                when {
+                    showRebootSheet -> { showRebootSheet = false; true }
+                    showProfileDialog -> { showProfileDialog = false; true }
+                    else -> false
+                }
+            }
+            GamepadShortcuts.onBack = null // handled by MainScreen when on root page
+        }
+        onDispose {
+            if (isCurrentPage) {
+                GamepadShortcuts.hasTopAction = false
+                GamepadShortcuts.onTopAction = null
+                GamepadShortcuts.onCloseOverlay = null
+            }
+        }
+    }
 
     // Turning auto mode back on takes manual switching away, so a dialog left
     // open across that change would keep offering a choice that no longer applies.

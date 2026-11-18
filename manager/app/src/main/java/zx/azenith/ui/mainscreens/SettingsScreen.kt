@@ -46,6 +46,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -113,6 +114,7 @@ fun SettingsScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    GamepadStickScrollEffect(listState)
 
     // Search results land here: entry id -> the LazyColumn item
     // holding that row.
@@ -155,6 +157,44 @@ fun SettingsScreen(
         onDismiss = {}
     )
 
+    // Gamepad shortcuts
+    val isCurrentPage = LocalIsCurrentPagerPage.current
+    DisposableEffect(isCurrentPage, showChangelogSheet, showLogBottomSheet, loadingDialog.isShown, uninstallDialog.isShown) {
+        if (isCurrentPage) {
+            GamepadShortcuts.hasSearch = true
+            GamepadShortcuts.isSearchOpen = false
+            GamepadShortcuts.onSearchOpen = {
+                navController.navigate("search/${SearchTab.Settings.name}")
+            }
+            GamepadShortcuts.onSearchClose = null
+            GamepadShortcuts.onSearchToggle = {
+                navController.navigate("search/${SearchTab.Settings.name}")
+            }
+            GamepadShortcuts.hasTopAction = true
+            GamepadShortcuts.onTopAction = { showChangelogSheet = true }
+            GamepadShortcuts.onCloseOverlay = {
+                var closed = false
+                if (showChangelogSheet) { showChangelogSheet = false; closed = true }
+                if (showLogBottomSheet) { showLogBottomSheet = false; closed = true }
+                if (loadingDialog.isShown) { loadingDialog.hide(); closed = true }
+                if (uninstallDialog.isShown) { uninstallDialog.cancel(); closed = true }
+                closed
+            }
+            GamepadShortcuts.onBack = null
+        }
+        onDispose {
+            if (isCurrentPage) {
+                GamepadShortcuts.hasSearch = false
+                GamepadShortcuts.onSearchOpen = null
+                GamepadShortcuts.onSearchClose = null
+                GamepadShortcuts.onSearchToggle = null
+                GamepadShortcuts.hasTopAction = false
+                GamepadShortcuts.onTopAction = null
+                GamepadShortcuts.onCloseOverlay = null
+            }
+        }
+    }
+
     // --- Reboot confirm dialog plumbing ---
     var pendingToggle by remember { mutableStateOf<(() -> Unit)?>(null) }
     val rebootDialog = rememberConfirmDialog(
@@ -164,6 +204,18 @@ fun SettingsScreen(
         },
         onDismiss = { pendingToggle = null }
     )
+
+    DisposableEffect(isCurrentPage, rebootDialog.isShown) {
+        if (isCurrentPage) {
+            val prev = GamepadShortcuts.onCloseOverlay
+            GamepadShortcuts.onCloseOverlay = {
+                var closed = prev?.invoke() == true
+                if (rebootDialog.isShown) { rebootDialog.cancel(); closed = true }
+                closed
+            }
+        }
+        onDispose { }
+    }
 
     fun toggleWithRebootCheck(key: String, isChecked: Boolean, apply: () -> Unit) {
         if (RebootManager.wouldRequireReboot(key, isChecked)) {
@@ -644,13 +696,13 @@ fun SettingsScreenTopAppBar(
             actions = {
                 IconButton(
                     onClick = onSearchClick,
-                    modifier = Modifier.gamepadFocusOutline(shape = CircleShape)
+                    modifier = Modifier.focusProperties { canFocus = false }
                 ) {
                     Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
                 }
                 IconButton(
                     onClick = onChangelogClick,
-                    modifier = Modifier.gamepadFocusOutline(shape = CircleShape)
+                    modifier = Modifier.focusProperties { canFocus = false }
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.TextSnippet,
