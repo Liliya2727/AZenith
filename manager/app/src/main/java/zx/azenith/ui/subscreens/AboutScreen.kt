@@ -106,6 +106,7 @@ private val ABOUT_ROW_ITEMS: Map<String, Int> = mapOf(
 fun AboutScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     GamepadStickScrollEffect(listState) { delta ->
         scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
     }
@@ -116,7 +117,6 @@ fun AboutScreen(navController: NavController) {
         owns = { it.startsWith("about.") },
         indexOf = { id -> ABOUT_ROW_ITEMS[id] }
     )
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     val coroutineScope = rememberCoroutineScope()
 

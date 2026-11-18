@@ -89,9 +89,6 @@ fun ApplistScreen(navController: NavController) {
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
-    GamepadStickScrollEffect(listState) { delta ->
-        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
-    }
     val lifecycleOwner = LocalLifecycleOwner.current
     
     val topAppBarState = rememberSaveable(saver = TopAppBarState.Saver) {
@@ -102,6 +99,9 @@ fun ApplistScreen(navController: NavController) {
         )
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+    GamepadStickScrollEffect(listState) { delta ->
+        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
+    }
     
     val pullToRefreshState = rememberPullToRefreshState()
 
