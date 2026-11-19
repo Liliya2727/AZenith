@@ -977,11 +977,11 @@ fun RegisterGamepadActions(
         holder.scrollState = scrollState
         holder.shiftableScrollState = columnScrollState
         holder.onScrollDelta = onScrollDelta
-        if (enabled) GamepadShortcuts.register(token, holder)
-        else GamepadShortcuts.unregister(token)
     }
 
-    DisposableEffect(token) {
+    DisposableEffect(token, enabled) {
+        if (enabled) GamepadShortcuts.register(token, holder)
+        else GamepadShortcuts.unregister(token)
         onDispose { GamepadShortcuts.unregister(token) }
     }
 }

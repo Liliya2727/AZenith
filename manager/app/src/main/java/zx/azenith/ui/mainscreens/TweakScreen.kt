@@ -148,6 +148,7 @@ fun TweakScreen(
         indexOf = { id -> TWEAK_ROW_ITEMS[id] }
     )
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
+    var requestHideBackupRestoreSheet by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
     val rendererOrigin = rememberDialogOrigin()
     var showRefreshRateDialog by remember { mutableStateOf(false) }
@@ -186,7 +187,7 @@ fun TweakScreen(
         onTopAction = { showBackupRestoreSheet = !showBackupRestoreSheet },
         onCloseOverlay = {
             var closed = false
-            if (showBackupRestoreSheet) { showBackupRestoreSheet = false; closed = true }
+            if (showBackupRestoreSheet && !requestHideBackupRestoreSheet) { requestHideBackupRestoreSheet = true; closed = true }
             if (showRendererDialog) { showRendererDialog = false; closed = true }
             if (showRefreshRateDialog) { showRefreshRateDialog = false; closed = true }
             if (showBackupOptionsDialog) { showBackupOptionsDialog = false; closed = true }
@@ -607,14 +608,20 @@ fun TweakScreen(
     RootAppDialog {
         BackupRestoreBottomSheet(
             show = showBackupRestoreSheet,
-            onDismiss = { showBackupRestoreSheet = false },
+            onDismiss = {
+                showBackupRestoreSheet = false
+                requestHideBackupRestoreSheet = false
+            },
             onBackup = {
                 showBackupRestoreSheet = false
+                requestHideBackupRestoreSheet = false
                 showBackupOptionsDialog = true
             },
             onRestore = {
                 openDocLauncher.launch(arrayOf("application/octet-stream", "*/*"))
-            }
+            },
+            externalHideRequest = requestHideBackupRestoreSheet,
+            onExternalHideConsumed = { requestHideBackupRestoreSheet = false }
         )
     }
 

@@ -123,6 +123,7 @@ fun SettingsScreen(
     )
     
     var showLogBottomSheet by remember { mutableStateOf(false) }
+    var requestHideLogSheet by remember { mutableStateOf(false) }
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
     
@@ -132,6 +133,7 @@ fun SettingsScreen(
         mutableStateOf(isLauncherIconEnabled(context)) 
     }
     var showChangelogSheet by remember { mutableStateOf(false) }
+    var requestHideChangelogSheet by remember { mutableStateOf(false) }
     var changelogText by remember { mutableStateOf("") }
     
     LaunchedEffect(Unit) {
@@ -181,8 +183,8 @@ fun SettingsScreen(
         onTopAction = { showChangelogSheet = !showChangelogSheet },
         onCloseOverlay = {
             var closed = false
-            if (showChangelogSheet) { showChangelogSheet = false; closed = true }
-            if (showLogBottomSheet) { showLogBottomSheet = false; closed = true }
+            if (showChangelogSheet && !requestHideChangelogSheet) { requestHideChangelogSheet = true; closed = true }
+            if (showLogBottomSheet && !requestHideLogSheet) { requestHideLogSheet = true; closed = true }
             if (loadingDialog.isShown) { loadingDialog.hide(); closed = true }
             if (uninstallDialog.isShown) { uninstallDialog.cancel(); closed = true }
             if (rebootDialog.isShown) { rebootDialog.cancel(); closed = true }
@@ -544,7 +546,10 @@ fun SettingsScreen(
         RootAppDialog {
             AZenithSheet(
                 show = showLogBottomSheet,
-                onDismiss = { showLogBottomSheet = false },
+                onDismiss = {
+                    showLogBottomSheet = false
+                    requestHideLogSheet = false
+                },
                 title = stringResource(R.string.str_logs_diagnostics),
                 style = SheetRowStyle.Action,
                 items = listOf(
@@ -580,13 +585,20 @@ fun SettingsScreen(
                         }
                     }
                 },
+                externalHideRequest = requestHideLogSheet,
+                onExternalHideConsumed = { requestHideLogSheet = false },
             )
         }
         RootAppDialog {
             AZenithSheetContent(
                 show = showChangelogSheet,
-                onDismiss = { showChangelogSheet = false },
+                onDismiss = {
+                    showChangelogSheet = false
+                    requestHideChangelogSheet = false
+                },
                 title = stringResource(R.string.str_changelog),
+                externalHideRequest = requestHideChangelogSheet,
+                onExternalHideConsumed = { requestHideChangelogSheet = false },
                 content = {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 24.dp),

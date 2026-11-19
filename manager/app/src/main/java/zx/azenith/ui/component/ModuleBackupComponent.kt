@@ -45,7 +45,9 @@ fun BackupRestoreBottomSheet(
     show: Boolean,
     onDismiss: () -> Unit,
     onBackup: () -> Unit,
-    onRestore: () -> Unit
+    onRestore: () -> Unit,
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
     AZenithSheet(
         show = show,
@@ -67,5 +69,7 @@ fun BackupRestoreBottomSheet(
         onItemClick = { index ->
             if (index == 0) onBackup() else onRestore()
         },
+        externalHideRequest = externalHideRequest,
+        onExternalHideConsumed = onExternalHideConsumed,
     )
 }

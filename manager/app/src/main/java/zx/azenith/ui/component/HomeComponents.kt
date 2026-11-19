@@ -938,7 +938,9 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
 fun RebootBottomSheet(
     show: Boolean,
     onDismiss: () -> Unit,
-    onReboot: (String) -> Unit
+    onReboot: (String) -> Unit,
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
 
     val context = LocalContext.current
@@ -969,6 +971,8 @@ fun RebootBottomSheet(
             val reason = options.getOrNull(index)?.second ?: return@AZenithSheet
             onReboot(reason)
         },
+        externalHideRequest = externalHideRequest,
+        onExternalHideConsumed = onExternalHideConsumed,
     )
 }
 

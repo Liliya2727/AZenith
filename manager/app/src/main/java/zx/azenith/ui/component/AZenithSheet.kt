@@ -227,8 +227,9 @@ private fun AZenithSheet(
     // Hides the sheet with an animation, then calls the caller's onDismiss and the
     // afterHide callback. Material invokes onDismissRequest only after its own
     // scrim/drag hide has completed, so that callback must not try to hide again.
-    // This helper is only for in-content dismissals (Done and option selection).
-    val hideSheet: (() -> Unit) -> Unit = { afterHide ->
+    // This helper is only for in-content/programmatic dismissals.
+    val hideSheet: (() -> Unit) -> Unit = hideSheet@{ afterHide ->
+        if (sheetState.targetValue == SheetValue.Hidden) return@hideSheet
         scope.launch {
             try {
                 sheetState.hide()

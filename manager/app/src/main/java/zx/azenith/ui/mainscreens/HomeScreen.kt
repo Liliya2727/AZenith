@@ -74,6 +74,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     val coroutineScope = rememberCoroutineScope()
 
     var showRebootSheet by remember { mutableStateOf(false) }
+    var requestHideRebootSheet by remember { mutableStateOf(false) }
     var showProfileDialog by remember { mutableStateOf(false) }
     val profileDialogOrigin = rememberDialogOrigin()
     val profileTileModifier = profileDialogOrigin.trackedModifier()
@@ -103,7 +104,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         onTopAction = { showRebootSheet = !showRebootSheet },
         onCloseOverlay = {
             when {
-                showRebootSheet -> { showRebootSheet = false; true }
+                showRebootSheet && !requestHideRebootSheet -> { requestHideRebootSheet = true; true }
                 showProfileDialog -> { showProfileDialog = false; true }
                 else -> false
             }
@@ -362,8 +363,13 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     RootAppDialog {
         RebootBottomSheet(
             show = showRebootSheet,
-            onDismiss = { showRebootSheet = false },
-            onReboot = { reason -> viewModel.rebootDevice(reason) }
+            onDismiss = {
+                showRebootSheet = false
+                requestHideRebootSheet = false
+            },
+            onReboot = { reason -> viewModel.rebootDevice(reason) },
+            externalHideRequest = requestHideRebootSheet,
+            onExternalHideConsumed = { requestHideRebootSheet = false }
         )
     }
 
