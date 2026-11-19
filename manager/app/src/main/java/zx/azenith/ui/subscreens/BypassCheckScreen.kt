@@ -779,7 +779,10 @@ private fun BypassConsole(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            SelectionContainer {
+            // SelectionContainer is focusable for keyboard text selection, but it
+            // has no gamepad outline or activation — a dead d-pad stop. Touch
+            // selection still works; only d-pad focus search skips it.
+            SelectionContainer(modifier = Modifier.gamepadNotFocusable()) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
