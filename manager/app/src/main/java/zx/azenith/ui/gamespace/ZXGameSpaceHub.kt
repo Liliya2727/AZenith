@@ -82,7 +82,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -248,6 +250,7 @@ fun ZXGameSpaceHub(
     val overlayHazeState = remember { HazeState() }
     val backdropHazeState = remember { HazeState() }
     val baseDensity = LocalDensity.current
+    val focusManager = LocalFocusManager.current
     val scaleFactor = appScalePercent.coerceIn(60, 150) / 100f
 
     val handleBack: () -> Unit = {
@@ -346,17 +349,58 @@ fun ZXGameSpaceHub(
                                 false
                             }
                         }
+                        KeyEvent.KEYCODE_DPAD_UP,
+                        KeyEvent.KEYCODE_DPAD_DOWN,
                         KeyEvent.KEYCODE_DPAD_LEFT,
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            // In the Games category the pad's horizontal axis only
-                            // walks the ribbon to locate a game. Repeats arrive from
-                            // GamepadDirectionRepeat accelerating, so holding right
-                            // sweeps through games quickly. Other categories leave
-                            // the key to their own handlers.
-                            if (category != TopCategory.Games || searchOpen) {
+                            val keyCode = event.nativeKeyEvent.keyCode
+                            // With the Bento wall open, every direction belongs to
+                            // focus navigation between the cards: no outline ring is
+                            // drawn, the lift is the cue, and Cross activates. Move
+                            // focus ourselves and consume the key — letting it fall
+                            // through would hit gamepadKeyWatch's pager block rule.
+                            if (category == TopCategory.Games &&
+                                !searchOpen && activeEntry == RibbonEntry.Welcome && homeExpanded
+                            ) {
+                                val direction = when (keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
+                                    KeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
+                                    else -> FocusDirection.Right
+                                }
+                                focusManager.moveFocus(direction)
+                                true
+                            } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                                // Vertical is only for the Bento cards; the game
+                                // ribbon itself is horizontal-only.
+                                false
+                            } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                                // Up collapses an expanded Welcome or Library stage;
+                                // otherwise let the focus system handle it.
+                                if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
+                                    homeExpanded = false
+                                    scope.launch {
+                                        welcomeScroll.animateScrollTo(0)
+                                        delay(50)
+                                        runCatching { ribbonFocusRequester.requestFocus() }
+                                    }
+                                    true
+                                } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
+                                    libraryExpanded = false
+                                    scope.launch {
+                                        delay(50)
+                                        runCatching { ribbonFocusRequester.requestFocus() }
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            } else if (category != TopCategory.Games || searchOpen) {
                                 false
                             } else {
-                                val forward = event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                                // Horizontal pad walks the ribbon to locate a game.
+                                // Repeats arrive from GamepadDirectionRepeat accelerating.
+                                val forward = keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
                                 val next = (safeIndex + if (forward) 1 else -1)
                                     .coerceIn(0, ribbonEntries.lastIndex)
                                 if (next != safeIndex) {
@@ -367,26 +411,6 @@ fun ZXGameSpaceHub(
                                     AudioUtil.playScroll(context)
                                 }
                                 true
-                            }
-                        }
-                        KeyEvent.KEYCODE_DPAD_UP -> {
-                            if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
-                                homeExpanded = false
-                                scope.launch {
-                                    welcomeScroll.animateScrollTo(0)
-                                    delay(50)
-                                    runCatching { ribbonFocusRequester.requestFocus() }
-                                }
-                                true
-                            } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
-                                libraryExpanded = false
-                                scope.launch {
-                                    delay(50)
-                                    runCatching { ribbonFocusRequester.requestFocus() }
-                                }
-                                true
-                            } else {
-                                false
                             }
                         }
                         else -> false

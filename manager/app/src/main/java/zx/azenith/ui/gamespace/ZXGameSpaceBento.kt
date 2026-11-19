@@ -84,7 +84,6 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -121,6 +120,7 @@ import kotlinx.coroutines.delay
 import zx.azenith.R
 import zx.azenith.ui.component.GamepadFocusNav
 import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.GamepadShortcuts
 import zx.azenith.ui.component.ZXDropDownState
 import zx.azenith.ui.component.zxDropDownAnchor
 import kotlin.math.roundToInt
@@ -199,12 +199,21 @@ internal fun BentoTile(
         Modifier
             .onFocusChanged {
                 focused = it.isFocused
-                if (it.isFocused) GamepadFocusNav.publishLastFocused(requester)
+                if (it.isFocused) {
+                    GamepadFocusNav.publishLastFocused(requester)
+                    // Cross activates the focused card; no outline ring is drawn
+                    // in GameSpace, the slight lift above is the focus cue.
+                    GamepadShortcuts.publishActivation(requester) { onClick() }
+                } else {
+                    GamepadShortcuts.clearActivation(requester)
+                }
             }
             .focusRequester(requester)
             .clickable(
                 interactionSource = interaction,
-                indication = ripple(color = contentColor),
+                // No ripple: the press squish below is the only feedback, and a
+                // ripple/focus indication would be the unwanted highlight.
+                indication = null,
                 onClick = onClick
             )
     } else {
