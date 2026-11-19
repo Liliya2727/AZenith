@@ -226,13 +226,14 @@ fun BypassChargeScreen(navController: NavController) {
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Illustration pane: no focus targets, so it must not claim the
+                // screen entry — the controls pane below owns the d-pad seed.
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
                         .weight(0.42f)
                         .fillMaxHeight()
-                        .hazePageSource()
-                        .gamepadScreenEntry(scopeKey = "subscreen:bypass_charge"),
+                        .hazePageSource(),
                     contentPadding = PaddingValues(
                         top = topPad,
                         bottom = bottomPad

@@ -576,11 +576,20 @@ object GamepadFocusNav {
         val restored = candidates.any { runCatching { it.requestFocus() }.getOrDefault(false) }
         if (restored) {
             if (scope != null) clearRestorePending(scope)
-            Log.d("PAD", "restoreFocus candidate scope=$scope")
+            // A screen entry is focusable but invisible: stepping into the first
+            // outlined row is what actually puts the ring on screen. Without it
+            // focus sits on the container and no row ever lights up (landscape
+            // two-pane screens with an empty illustration pane were hit hardest).
+            if (!GamepadShortcuts.hasRowFocus) {
+                GamepadStickNav.moveFocus(FocusDirection.Next) ||
+                    GamepadStickNav.moveFocus(FocusDirection.Down) ||
+                    GamepadStickNav.moveFocus(FocusDirection.Enter)
+            }
+            Log.d("PAD", "restoreFocus candidate scope=$scope rowFocus=${GamepadShortcuts.hasRowFocus}")
             return true
         }
         val moved = GamepadStickNav.moveFocusNext()
-        Log.d("PAD", "restoreFocus fallback scope=$scope moved=$moved")
+        Log.d("PAD", "restoreFocus fallback scope=$scope moved=$moved rowFocus=${GamepadShortcuts.hasRowFocus}")
         return moved
     }
 }
@@ -746,21 +755,33 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
         if (GamepadFocusNav.restoreFocus()) {
             Log.d(
                 "PAD",
-                "screenEntry restored scope=$scope page=$page ms=${SystemClock.uptimeMillis() - seedStart}"
+                "screenEntry restored scope=$scope page=$page rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                    "ms=${SystemClock.uptimeMillis() - seedStart}"
             )
             return@LaunchedEffect
         }
 
         val tryFocus = {
-            runCatching { requester.requestFocus() }.getOrDefault(false) ||
+            val gotEntry = runCatching { requester.requestFocus() }.getOrDefault(false)
+            if (gotEntry) {
+                // requestPageEntry steps into the first row for pager pages; the
+                // standalone screen entry has to do the same. Focusing only the
+                // container shows no ring and leaves the first row unfocused.
                 runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
-                runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
+                    runCatching { focusManager.moveFocus(FocusDirection.Down) }.getOrDefault(false) ||
+                    runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
+                true
+            } else {
+                runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
+                    runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
+            }
         }
 
         if (tryFocus()) {
             Log.d(
                 "PAD",
-                "screenEntry focused scope=$scope page=$page ms=${SystemClock.uptimeMillis() - seedStart}"
+                "screenEntry focused scope=$scope page=$page rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                    "ms=${SystemClock.uptimeMillis() - seedStart}"
             )
             return@LaunchedEffect
         }
@@ -772,14 +793,16 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
             if (tryFocus()) {
                 Log.d(
                     "PAD",
-                    "screenEntry focused scope=$scope page=$page ms=${SystemClock.uptimeMillis() - seedStart}"
+                    "screenEntry focused scope=$scope page=$page rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                        "ms=${SystemClock.uptimeMillis() - seedStart}"
                 )
                 return@LaunchedEffect
             }
         }
         Log.d(
             "PAD",
-            "screenEntry timeout scope=$scope page=$page ms=${SystemClock.uptimeMillis() - seedStart}"
+            "screenEntry timeout scope=$scope page=$page rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                "ms=${SystemClock.uptimeMillis() - seedStart}"
         )
     }
     return this

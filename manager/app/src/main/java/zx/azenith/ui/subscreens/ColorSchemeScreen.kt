@@ -270,13 +270,14 @@ fun ColorSchemeSettings(navController: NavController) {
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Info/illustration pane: no focus targets, so the d-pad
+                    // entry belongs to the controls pane on the right.
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
                             .weight(0.42f)
                             .fillMaxHeight()
-                            .hazePageSource()
-                            .gamepadScreenEntry(scopeKey = "subscreen:colorscheme"),
+                            .hazePageSource(),
                         contentPadding = PaddingValues(
                             top = innerPadding.calculateTopPadding(),
                             bottom = bottomPad
