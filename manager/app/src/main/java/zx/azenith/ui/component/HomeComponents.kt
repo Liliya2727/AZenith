@@ -581,7 +581,12 @@ fun InfoTile(
     Surface(
         modifier = modifier
             .clip(cardShape)
-            .gamepadFocusOutline(onActivate = onClick, register = true, horizontalNav = horizontalNav)
+            .gamepadFocusOutline(
+                shape = cardShape,
+                onActivate = onClick,
+                register = true,
+                horizontalNav = horizontalNav
+            )
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,
