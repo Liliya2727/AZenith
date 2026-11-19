@@ -1074,6 +1074,7 @@ fun TweakScreenTopAppBar(
                 scrolledContainerColor = Color.Transparent
             ),
             actions = {
+                GamepadFaceHints()
                 IconButton(
                     onClick = onSearchClick,
                     modifier = Modifier.focusProperties { canFocus = false }

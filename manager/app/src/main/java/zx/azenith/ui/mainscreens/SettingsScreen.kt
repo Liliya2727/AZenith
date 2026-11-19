@@ -713,6 +713,7 @@ fun SettingsScreenTopAppBar(
                 )
             },
             actions = {
+                GamepadFaceHints()
                 IconButton(
                     onClick = onSearchClick,
                     modifier = Modifier.focusProperties { canFocus = false }

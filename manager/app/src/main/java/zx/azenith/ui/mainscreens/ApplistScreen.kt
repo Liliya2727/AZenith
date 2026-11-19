@@ -421,6 +421,7 @@ fun ApplistTopAppBar(
                         }
                     },
                     actions = {
+                        GamepadFaceHints()
                         if (searchQuery.text.isNotEmpty()) {
                             IconButton(
                                 onClick = { onSearchChange(TextFieldValue("")) },
@@ -467,6 +468,7 @@ fun ApplistTopAppBar(
                         }
                     },
                     actions = {
+                        GamepadFaceHints()
                         IconButton(
                             onClick = { onSearchModeChange(true) },
                             modifier = Modifier.focusProperties { canFocus = false }

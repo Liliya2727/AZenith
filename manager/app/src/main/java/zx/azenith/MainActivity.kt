@@ -1398,6 +1398,9 @@ fun BottomNavBar(
                     ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // L1 / R1 hints at the bar's two ends while a controller is in
+                    // use. Decoration only — the bar root is pruned from d-pad focus.
+                    zx.azenith.ui.component.GamepadShoulderHint(left = true)
                     // Pinned divides the screen evenly. Floating sizes every tab to
                     // its own label, so the row hugs and the slider shrinks the
                     // icons, the gaps and the margins together. Weighting them
@@ -1409,6 +1412,7 @@ fun BottomNavBar(
                     navItemsContent(
                         if (pinnedProgress > 0.01f) Modifier.weight(pinnedProgress) else Modifier
                     )
+                    zx.azenith.ui.component.GamepadShoulderHint(left = false)
             }
         }
     }

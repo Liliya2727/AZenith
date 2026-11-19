@@ -332,6 +332,10 @@ fun NavDock(
                     bottom = NAV_DOCK_BOTTOM_PAD * scale
                 )
         ) {
+            // L1 at the dock's top edge while a controller is in use. The dock is
+            // vertical, so the two shoulders map to its top and bottom ends.
+            GamepadShoulderHint(left = true)
+
             // M3 separates a navigation surface's headline from its destinations with
             // type and space rather than a rule, so the header is a name block: the
             // eyebrow is the app, the headline is the page, because landscape has no app
@@ -456,6 +460,15 @@ fun NavDock(
                     color = scheme.outlineVariant.copy(alpha = 0.5f),
                     thickness = 1.dp
                 )
+                // Triangle / Square stand for the page actions a top bar would
+                // carry in portrait (top action and search).
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    GamepadFaceHints()
+                }
                 DockActionBar(
                     actions = actions,
                     content = rowContent,
@@ -464,6 +477,14 @@ fun NavDock(
                     shape = rowShape,
                     scale = scale
                 )
+            }
+            // R1 at the dock's bottom edge.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GamepadShoulderHint(left = false)
             }
         }
     }
