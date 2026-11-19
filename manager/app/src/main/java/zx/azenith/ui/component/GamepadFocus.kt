@@ -778,19 +778,28 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
             // Always try the screen's overlay closer first (sheets, in-composition
             // dialogs, etc.), then search, then screen/global back.
             val closedOverlay = shortcuts?.onCloseOverlay?.invoke() == true
-            if (closedOverlay) return@onPreviewKeyEvent true
+            if (closedOverlay) {
+                Log.d("PAD", "BACK: closedOverlay dialog=$dialogOpen search=${shortcuts?.isSearchOpen}")
+                return@onPreviewKeyEvent true
+            }
             if (dialogOpen) {
-                GamepadShortcuts.onGlobalBack?.invoke()
+                val global = GamepadShortcuts.onGlobalBack?.invoke() == true
+                Log.d("PAD", "BACK: dialogOpen globalBack=$global")
                 return@onPreviewKeyEvent true
             }
             if (shortcuts?.isSearchOpen == true) {
                 val close = shortcuts.onSearchClose ?: shortcuts.onSearchToggle
                 close?.invoke()
+                Log.d("PAD", "BACK: closedSearch")
                 return@onPreviewKeyEvent true
             }
             val screenBack = shortcuts?.onBack?.invoke() == true
-            if (screenBack) return@onPreviewKeyEvent true
-            GamepadShortcuts.onGlobalBack?.invoke()
+            if (screenBack) {
+                Log.d("PAD", "BACK: screenBack")
+                return@onPreviewKeyEvent true
+            }
+            val globalBack = GamepadShortcuts.onGlobalBack?.invoke() == true
+            Log.d("PAD", "BACK: globalBack=$globalBack dialog=$dialogOpen search=${shortcuts?.isSearchOpen}")
             return@onPreviewKeyEvent true
         }
 

@@ -185,10 +185,7 @@ fun SearchScreen(
         enabled = true,
         hasSearch = false,
         hasTopAction = false,
-        onCloseOverlay = {
-            dismissEditor()
-            true
-        },
+        onCloseOverlay = { false },
         onBack = {
             dismissEditor()
             navController.safePopBackStack()
