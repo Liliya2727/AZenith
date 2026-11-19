@@ -464,6 +464,12 @@ fun Modifier.gamepadFocusOutline(
         animationSpec = tween(durationMillis = 180),
         label = "GamepadFocusOutline"
     )
+    SideEffect {
+        if (focused) {
+            GamepadShortcuts.publishActivation(requester, activation)
+            if (slider) GamepadFocusNav.publishFocusedSlider(true)
+        }
+    }
     return this
         .focusRequester(requester)
         .focusable()
