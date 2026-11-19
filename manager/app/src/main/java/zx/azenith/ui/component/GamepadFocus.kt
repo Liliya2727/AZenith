@@ -790,13 +790,23 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
         Log.d("PAD", "screenEntry seed start scope=$scope page=$page")
 
         // Try to restore the last focused content row first (important when returning
-        // from subscreens/dialogs). Prefer saved key for this scope. Only treat it
-        // as done when a content row actually has focus — landing on the invisible
-        // entry container leaves no ring and X cannot activate anything.
-        if (GamepadFocusNav.restoreFocus() && GamepadShortcuts.hasRowFocus) {
+        // from subscreens/dialogs). Prefer saved key for this scope. Two results mean
+        // restore is in charge and generic seeding must NOT run:
+        //  - a content row already has focus; or
+        //  - a saved key is pending because its row has not recomposed yet (leaving
+        //    search, where the pager page was disposed). Falling through to tryFocus
+        //    here would focus the entry container and its first row, whose focus event
+        //    overwrites the saved key and cancels the pending claim — the last row is
+        //    never restored.
+        // Only an invisible entry container with nothing pending needs tryFocus.
+        if (GamepadFocusNav.restoreFocus() &&
+            (GamepadShortcuts.hasRowFocus || GamepadFocusNav.isRestorePending(scope))
+        ) {
             Log.d(
                 "PAD",
-                "screenEntry restored scope=$scope page=$page rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                "screenEntry restored scope=$scope page=$page " +
+                    "rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                    "pending=${GamepadFocusNav.isRestorePending(scope)} " +
                     "ms=${SystemClock.uptimeMillis() - seedStart}"
             )
             return@LaunchedEffect
