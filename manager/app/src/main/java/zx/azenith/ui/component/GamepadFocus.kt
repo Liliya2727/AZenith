@@ -842,6 +842,10 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
                 false
             } else if (GamepadFocusNav.focusedSlider) {
                 false
+            } else if (!GamepadShortcuts.isOnMainPager) {
+                // Subscreens have no pager underneath: let the focus system
+                // walk side-by-side rows/swatches. BLOCK_BOTH is a pager rule.
+                false
             } else if (!GamepadShortcuts.hasRowFocus) {
                 true
             } else {
@@ -850,6 +854,7 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
             Log.d(
                 "PAD",
                 "LR key=${event.nativeKeyEvent.keyCode} type=UP repeat=${event.nativeKeyEvent.repeatCount} " +
+                    "isOnMainPager=${GamepadShortcuts.isOnMainPager} dialogOpen=$dialogOpen " +
                     "slider=${GamepadFocusNav.focusedSlider} rowFocus=${GamepadShortcuts.hasRowFocus} " +
                     "nav=${GamepadFocusNav.horizontalNav} decision=${if (consumed) "blocked" else "passed"} " +
                     "pageBefore=$pageBefore pageAfter=${GamepadShortcuts.pageIndex}"
@@ -865,6 +870,10 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
                 false
             } else if (GamepadFocusNav.focusedSlider) {
                 false
+            } else if (!GamepadShortcuts.isOnMainPager) {
+                // Subscreens have no pager underneath: let the focus system
+                // walk side-by-side rows/swatches. BLOCK_BOTH is a pager rule.
+                false
             } else if (!GamepadShortcuts.hasRowFocus) {
                 true
             } else {
@@ -873,6 +882,7 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
             Log.d(
                 "PAD",
                 "LR key=${event.nativeKeyEvent.keyCode} type=DOWN repeat=${event.nativeKeyEvent.repeatCount} " +
+                    "isOnMainPager=${GamepadShortcuts.isOnMainPager} dialogOpen=$dialogOpen " +
                     "slider=${GamepadFocusNav.focusedSlider} rowFocus=${GamepadShortcuts.hasRowFocus} " +
                     "nav=${GamepadFocusNav.horizontalNav} decision=${if (consumed) "blocked" else "passed"} " +
                     "pageBefore=$pageBefore pageAfter=${GamepadShortcuts.pageIndex}"
@@ -989,6 +999,10 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
                 false
             } else if (GamepadFocusNav.focusedSlider) {
                 false
+            } else if (!GamepadShortcuts.isOnMainPager) {
+                // Subscreens have no pager underneath: let the focus system
+                // walk side-by-side rows/swatches. BLOCK_BOTH is a pager rule.
+                false
             } else if (!GamepadShortcuts.hasRowFocus) {
                 true
             } else {
@@ -997,6 +1011,7 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
             Log.d(
                 "PAD",
                 "LR key=${event.nativeKeyEvent.keyCode} type=DOWN repeat=${event.nativeKeyEvent.repeatCount} " +
+                    "isOnMainPager=${GamepadShortcuts.isOnMainPager} dialogOpen=$dialogOpen " +
                     "slider=${GamepadFocusNav.focusedSlider} rowFocus=${GamepadShortcuts.hasRowFocus} " +
                     "nav=${GamepadFocusNav.horizontalNav} decision=${if (consumed) "blocked" else "passed"} " +
                     "pageBefore=$pageBefore pageAfter=${GamepadShortcuts.pageIndex}"
