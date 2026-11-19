@@ -343,7 +343,10 @@ fun SearchScreen(
 
                 SearchPhase.Results -> LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazePageSource()
+                        .gamepadScreenEntry(scopeKey = "subscreen:search"),
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding(),
                         start = 16.dp,

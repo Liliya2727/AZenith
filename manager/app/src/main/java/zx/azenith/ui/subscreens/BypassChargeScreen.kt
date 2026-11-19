@@ -60,6 +60,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -132,6 +133,14 @@ fun BypassChargeScreen(navController: NavController) {
 
     val listState = rememberLazyListState()
     val rightListState = rememberLazyListState()
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            navController.safePopBackStack()
+            true
+        },
+        scrollState = if (isLandscape) rightListState else listState,
+    )
 
     // Search results land here: entry id -> the LazyColumn item holding that row.
     val jumpPulse = listState.searchJumpTarget(
@@ -223,7 +232,7 @@ fun BypassChargeScreen(navController: NavController) {
                         .weight(0.42f)
                         .fillMaxHeight()
                         .hazePageSource()
-                        .gamepadScreenEntry(),
+                        .gamepadScreenEntry(scopeKey = "subscreen:bypass_charge"),
                     contentPadding = PaddingValues(
                         top = topPad,
                         bottom = bottomPad
@@ -243,8 +252,7 @@ fun BypassChargeScreen(navController: NavController) {
                     modifier = Modifier
                         .weight(0.58f)
                         .fillMaxHeight()
-                        .hazePageSource()
-                        .gamepadScreenEntry(),
+                        .gamepadScreenEntry(scopeKey = "subscreen:bypass_charge"),
                     contentPadding = PaddingValues(
                         top = topPad,
                         bottom = bottomPad
@@ -269,7 +277,10 @@ fun BypassChargeScreen(navController: NavController) {
         } else {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazePageSource()
+                    .gamepadScreenEntry(scopeKey = "subscreen:bypass_charge"),
                 contentPadding = PaddingValues(
                     top = topPad,
                     start = 16.dp,
@@ -552,7 +563,10 @@ fun BypassChgTopAppBar(
                 ) 
             },
             navigationIcon = {
-                IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },       

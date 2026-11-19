@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -54,6 +55,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -100,8 +102,19 @@ fun BypassChargeCheckScreen(navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val coroutineScope = rememberCoroutineScope()
+    val portraitListState = rememberLazyListState()
+    val landscapeRightListState = rememberLazyListState()
 
     val confirmDialogHandle = rememberConfirmDialog()
+
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            navController.safePopBackStack()
+            true
+        },
+        scrollState = if (isLandscape) landscapeRightListState else portraitListState,
+    )
 
 
     var activePath by remember { mutableStateOf("") }
@@ -426,11 +439,12 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 )
 
                 LazyColumn(
+                    state = landscapeRightListState,
                     modifier = Modifier
                         .weight(0.58f)
                         .fillMaxHeight()
                         .hazePageSource()
-                        .gamepadScreenEntry(),
+                        .gamepadScreenEntry(scopeKey = "subscreen:bypass_check"),
                     contentPadding = PaddingValues(
                         top = topPad,
                         bottom = bottomPad
@@ -461,7 +475,11 @@ fun BypassChargeCheckScreen(navController: NavController) {
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+                state = portraitListState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazePageSource()
+                    .gamepadScreenEntry(scopeKey = "subscreen:bypass_check"),
                 contentPadding = PaddingValues(
                     top = topPad,
                     start = 16.dp,
@@ -832,7 +850,10 @@ fun BypassChgCheckTopAppBar(
                 ) 
             },
             navigationIcon = {
-                IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },       

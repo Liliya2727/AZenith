@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.RocketLaunch
@@ -52,9 +53,11 @@ import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveListItem
 import zx.azenith.ui.component.ExpressiveSwitchItem
 import zx.azenith.ui.component.LeadingIcon
+import zx.azenith.ui.component.RegisterGamepadActions
 import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
 import zx.azenith.ui.component.gamepadScreenEntry
+import zx.azenith.ui.component.hazePageSource
 import zx.azenith.ui.gamespace.ZXGameSpaceEntry
 import zx.azenith.ui.gamespace.isGameSpaceLauncherEnabled
 import zx.azenith.ui.gamespace.setGameSpaceLauncherEnabled
@@ -69,6 +72,7 @@ import zx.azenith.ui.navigation.safePopBackStack
 fun ExperimentalScreen(navController: NavController) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val listState = rememberLazyListState()
     var launcherOn by remember { mutableStateOf(isGameSpaceLauncherEnabled(context)) }
     var sidepanelOn by remember {
         mutableStateOf(
@@ -77,6 +81,19 @@ fun ExperimentalScreen(navController: NavController) {
         )
     }
     var enteringGameSpace by remember { mutableStateOf(false) }
+
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            if (enteringGameSpace) {
+                enteringGameSpace = false
+            } else {
+                navController.safePopBackStack()
+            }
+            true
+        },
+        scrollState = listState,
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -91,7 +108,11 @@ fun ExperimentalScreen(navController: NavController) {
             containerColor = ScaffoldContainerColor(MaterialTheme.colorScheme.surface)
         ) { innerPadding ->
             LazyColumn(
-                modifier = Modifier.fillMaxSize().gamepadScreenEntry(),
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazePageSource()
+                    .gamepadScreenEntry(scopeKey = "subscreen:experimental"),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding() + 8.dp,
                     start = 16.dp,
@@ -108,6 +129,7 @@ fun ExperimentalScreen(navController: NavController) {
                                     title = stringResource(R.string.gamespace_enable),
                                     summary = stringResource(R.string.gamespace_enable_desc),
                                     checked = launcherOn,
+                                    focusKey = "experimental.gamespace_enable",
                                     onCheckedChange = { checked ->
                                         launcherOn = checked
                                         setGameSpaceLauncherEnabled(context, checked)
@@ -120,6 +142,7 @@ fun ExperimentalScreen(navController: NavController) {
                                     title = "Sidepanel",
                                     summary = "Show the in-game sidepanel overlay.",
                                     checked = sidepanelOn,
+                                    focusKey = "experimental.gamespace_sidepanel",
                                     onCheckedChange = { checked ->
                                         sidepanelOn = checked
                                         context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
@@ -130,6 +153,7 @@ fun ExperimentalScreen(navController: NavController) {
                             {
                                 ExpressiveListItem(
                                     onClick = { enteringGameSpace = true },
+                                    focusKey = "experimental.gamespace_enter",
                                     headlineContent = { Text(stringResource(R.string.gamespace_enter)) },
                                     leadingContent = { LeadingIcon(icon = Icons.Rounded.RocketLaunch) },
                                     trailingContent = { Icon(Icons.Rounded.OpenInNew, null) }

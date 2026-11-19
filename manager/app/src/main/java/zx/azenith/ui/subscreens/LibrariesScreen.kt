@@ -51,6 +51,15 @@ fun LibrariesScreen(navController: NavController) {
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            navController.safePopBackStack()
+            true
+        },
+        scrollState = listState,
+    )
+
     Scaffold(
         topBar = {
             AboutTopAppBar(
@@ -66,7 +75,7 @@ fun LibrariesScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .hazePageSource()
-                .gamepadScreenEntry()
+                .gamepadScreenEntry(scopeKey = "subscreen:libraries")
                 .padding(top = innerPadding.calculateTopPadding())
         ) {
             if (libraries == null) {

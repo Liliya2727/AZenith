@@ -224,6 +224,10 @@ fun ColorPaletteScreen(navController: NavController) {
     val lazyListState = rememberLazyListState()
     RegisterGamepadActions(
         enabled = true,
+        onBack = {
+            navController.safePopBackStack()
+            true
+        },
         scrollState = lazyListState,
     )
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(canScroll = { lazyListState.canScrollBackward })
@@ -490,7 +494,8 @@ fun ColorPaletteScreen(navController: NavController) {
                     modifier = Modifier
                         .weight(0.6f) 
                         .fillMaxHeight()
-                        .gamepadScreenEntry(),
+                        .hazePageSource()
+                        .gamepadScreenEntry(scopeKey = "subscreen:color_palette"),
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding() + 8.dp, 
                         bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -594,7 +599,7 @@ fun ColorPaletteScreen(navController: NavController) {
                                 .weight(1f)
                                 .fillMaxWidth()
                                 .hazePageSource()
-                                .gamepadScreenEntry(),
+                                .gamepadScreenEntry(scopeKey = "subscreen:color_palette"),
                             state = lazyListState,
                             contentPadding = PaddingValues(
                                 top = 4.dp,
@@ -1240,7 +1245,10 @@ fun PaletteTopAppBar(
                 ) 
             },
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },       

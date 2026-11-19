@@ -74,6 +74,16 @@ import zx.azenith.ui.navigation.safePopBackStack
 fun LicensesScreen(navController: NavController) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollState = rememberScrollState()
+
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            navController.safePopBackStack()
+            true
+        },
+        columnScrollState = scrollState,
+    )
 
     val openLink = { url: String ->
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -94,10 +104,10 @@ fun LicensesScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .hazePageSource()
-                .gamepadScreenEntry()
+                .gamepadScreenEntry(scopeKey = "subscreen:licenses")
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(
                     bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 ),
