@@ -279,18 +279,21 @@ object GamepadShortcuts {
         var scrollSpeedPxPerSecond: Float = 2200f
     }
 
-    private val registrations = ArrayList<Pair<Any, Actions>>()
+    private var currentToken: Any? = null
+    private var currentActions: Actions? = null
 
-    val actions: Actions? get() = registrations.lastOrNull()?.second
+    val actions: Actions? get() = currentActions
 
     fun register(token: Any, actions: Actions) {
-        val index = registrations.indexOfFirst { it.first === token }
-        if (index >= 0) registrations[index] = token to actions
-        else registrations.add(token to actions)
+        currentToken = token
+        currentActions = actions
     }
 
     fun unregister(token: Any) {
-        registrations.removeAll { it.first === token }
+        if (currentToken === token) {
+            currentToken = null
+            currentActions = null
+        }
     }
 
     // --- Global state, published by the root / main screen -------------------
