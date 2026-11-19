@@ -110,6 +110,7 @@ fun ApplistScreen(navController: NavController) {
 
     var isSearchMode by remember { mutableStateOf(false) }
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
+    var requestHideFilterSheet by rememberSaveable { mutableStateOf(false) }
     
     BackHandler(enabled = isSearchMode) {
         viewModel.clearSearch()
@@ -151,7 +152,10 @@ fun ApplistScreen(navController: NavController) {
         isTopActionOpen = showFilterSheet,
         onTopAction = { showFilterSheet = !showFilterSheet },
         onCloseOverlay = {
-            if (showFilterSheet) { showFilterSheet = false; true } else false
+            if (showFilterSheet && !requestHideFilterSheet) {
+                requestHideFilterSheet = true
+                true
+            } else false
         },
         scrollState = listState,
         onScrollDelta = { delta ->
@@ -336,10 +340,18 @@ fun ApplistScreen(navController: NavController) {
 
     AppFilterSheet(
         show = showFilterSheet,
-        onDismiss = { showFilterSheet = false },
+        onDismiss = {
+            requestHideFilterSheet = false
+            showFilterSheet = false
+        },
         viewModel = viewModel,
         onSystemFilterChange = { viewModel.systemFilter = it },
-        onReset = { viewModel.resetFilters() }
+        onReset = { viewModel.resetFilters() },
+        externalHideRequest = requestHideFilterSheet,
+        onExternalHideConsumed = {
+            requestHideFilterSheet = false
+            showFilterSheet = false
+        }
     )
 }
 

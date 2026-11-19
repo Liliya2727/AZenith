@@ -166,8 +166,8 @@ fun SettingsScreen(
         onDismiss = { pendingToggle = null }
     )
 
-    // Gamepad shortcuts: Square opens Settings search, Triangle toggles the log
-    // sheet beside it (log, not changelog — that is the page's action here).
+    // Gamepad shortcuts: Square opens Settings search, Triangle toggles the
+    // changelog sheet.
     val isCurrentPage = LocalIsCurrentPagerPage.current
     val isPagerActive = LocalMainPagerActive.current
     val pageIndex = LocalPagerPageIndex.current
@@ -177,8 +177,8 @@ fun SettingsScreen(
         isSearchOpen = false,
         onSearchToggle = { navController.navigate(SearchTab.Settings.searchRoute) },
         hasTopAction = true,
-        isTopActionOpen = showLogBottomSheet,
-        onTopAction = { showLogBottomSheet = !showLogBottomSheet },
+        isTopActionOpen = showChangelogSheet,
+        onTopAction = { showChangelogSheet = !showChangelogSheet },
         onCloseOverlay = {
             var closed = false
             if (showChangelogSheet) { showChangelogSheet = false; closed = true }

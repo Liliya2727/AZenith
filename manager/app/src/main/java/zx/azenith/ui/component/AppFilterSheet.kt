@@ -122,6 +122,8 @@ fun AppFilterSheet(
     viewModel: ApplistViewmodel,
     onSystemFilterChange: (ApplistViewmodel.SystemFilter) -> Unit,
     onReset: () -> Unit,
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
     if (!show) return
 
@@ -136,6 +138,8 @@ fun AppFilterSheet(
         title = stringResource(R.string.filter_sheet_title),
         subtitle = stringResource(R.string.filter_sheet_subtitle),
         titleBlurBoxed = true,
+        externalHideRequest = externalHideRequest,
+        onExternalHideConsumed = onExternalHideConsumed,
     ) { dismissSheet ->
         val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         // Gate mirrors the sheet's own read: solid split sections exist only

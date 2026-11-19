@@ -140,6 +140,8 @@ fun AZenithSheet(
     style: SheetRowStyle = SheetRowStyle.Action,
     onItemClick: (Int) -> Unit = {},
     items: List<SheetItem> = emptyList(),
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
     AZenithSheet(
         show = show,
@@ -152,6 +154,8 @@ fun AZenithSheet(
         onItemClick = onItemClick,
         items = items,
         content = null,
+        externalHideRequest = externalHideRequest,
+        onExternalHideConsumed = onExternalHideConsumed,
     )
 }
 
@@ -172,6 +176,8 @@ fun AZenithSheetContent(
     subtitle: String? = null,
     titleBlurBoxed: Boolean = false,
     content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit,
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
     AZenithSheet(
         show = show,
@@ -184,6 +190,8 @@ fun AZenithSheetContent(
         onItemClick = {},
         items = emptyList(),
         content = content,
+        externalHideRequest = externalHideRequest,
+        onExternalHideConsumed = onExternalHideConsumed,
     )
 }
 
@@ -200,6 +208,8 @@ private fun AZenithSheet(
     onItemClick: (Int) -> Unit,
     items: List<SheetItem>,
     content: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)?,
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
     if (!show) return
 
@@ -229,6 +239,11 @@ private fun AZenithSheet(
                 currentOnDismiss()
                 afterHide()
             }
+        }
+    }
+    LaunchedEffect(externalHideRequest) {
+        if (externalHideRequest && show) {
+            hideSheet { onExternalHideConsumed() }
         }
     }
     val dismissSheet: () -> Unit = { hideSheet {} }

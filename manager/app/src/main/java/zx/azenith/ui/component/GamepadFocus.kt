@@ -530,6 +530,11 @@ fun Modifier.gamepadScreenEntry(page: Int = -1): Modifier {
         // The pager keeps every page composed; only the visible one may take
         // focus, or the D-pad would seed the wrong page.
         if (page >= 0 && page != GamepadFocusNav.currentPage) return@LaunchedEffect
+        // Try to restore the last focused content row first (important when returning
+        // from subscreens/dialogs).
+        delay(120)
+        if (entered) return@LaunchedEffect
+        if (GamepadFocusNav.restoreFocus()) return@LaunchedEffect
         repeat(8) {
             delay(150)
             if (entered) return@LaunchedEffect

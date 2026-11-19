@@ -561,8 +561,8 @@ fun MainScreen(fromTileType: String? = null) {
             GamepadFocusNav.currentPage = if (isOnMainPager) pagerState.currentPage else -1
             LaunchedEffect(isOnMainPager) {
                 if (isOnMainPager && GamepadInput.dpadMode) {
-                    delay(150)
-                    GamepadFocusNav.requestPageEntry(pagerState.currentPage)
+                    delay(200)
+                    GamepadFocusNav.restoreFocus()
                 }
             }
 
