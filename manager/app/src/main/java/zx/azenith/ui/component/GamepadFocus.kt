@@ -78,6 +78,14 @@ val LocalPagerPageIndex = compositionLocalOf { -1 }
 val LocalGamepadFocusScope = compositionLocalOf<String?> { null }
 
 /**
+ * False for subtrees that must not participate in gamepad focus at all (e.g.
+ * GameSpace while it is being reworked). The outline stays off, no activation
+ * is published and screen entries do not seed focus. D-pad shortcuts and the
+ * Activity's back/search keys are unaffected.
+ */
+val LocalGamepadFocusEnabled = compositionLocalOf { true }
+
+/**
  * Every action a controller button can ask the UI to take.
  *
  * This enum is the vocabulary; [GamepadKeymap] is the only place a physical
@@ -730,6 +738,9 @@ fun Modifier.gamepadFocusOutline(
     onActivate: (() -> Unit)? = null,
     onHoldActivate: (() -> Unit)? = null,
 ): Modifier {
+    // Opted-out subtrees (GameSpace) get no focusable node, ring or activation.
+    // Returning the bare modifier keeps touch clickable handlers intact.
+    if (!LocalGamepadFocusEnabled.current) return this
     val requester = remember { FocusRequester() }
     val activationState = rememberUpdatedState(onActivate)
     val holdActivationState = rememberUpdatedState(onHoldActivate)
@@ -816,6 +827,7 @@ fun Modifier.gamepadFocusOutline(
  */
 @Composable
 fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modifier {
+    val focusEnabled = LocalGamepadFocusEnabled.current
     val requester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     var entered by remember { mutableStateOf(false) }
@@ -833,7 +845,7 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
     LaunchedEffect(isActiveScreen) {
         if (!isActiveScreen) {
             entered = false
-        } else if (GamepadInput.dpadMode || GamepadInput.controllerConnected) {
+        } else if (focusEnabled && (GamepadInput.dpadMode || GamepadInput.controllerConnected)) {
             // When this screen/page becomes active again (e.g. returning from a
             // subscreen) and its rows are already composed, explicitly restore the
             // saved focus for this scope before falling back to generic seeding.
@@ -852,7 +864,8 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
     ) {
         GamepadFocusNav.publishLastEntry(requester)
         if (page < 0) GamepadFocusNav.lastEntryScope = scope
-        val canSeed = (GamepadInput.dpadMode || GamepadInput.controllerConnected) && isActiveScreen
+        val canSeed = focusEnabled &&
+            (GamepadInput.dpadMode || GamepadInput.controllerConnected) && isActiveScreen
         if (!canSeed) return@LaunchedEffect
 
         val seedStart = SystemClock.uptimeMillis()
@@ -941,7 +954,7 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
         // deactivated node is searched into, not pruned. Rows are still reached
         // by restore-by-key (their own requesters) and by moveFocus seeding.
         // Pager pages keep the stop.
-        .focusProperties { if (page < 0) canFocus = false }
+        .focusProperties { if (!focusEnabled || page < 0) canFocus = false }
         .onFocusChanged { focusState ->
             entered = focusState.hasFocus
         }
@@ -1189,15 +1202,19 @@ fun GamepadFocusRoot(
         }
     }
 
+    val focusEnabled = LocalGamepadFocusEnabled.current
+
     // A press that arrives after a rotation or a page swap has no focused row
     // to move from; seed one once the first frame is laid out.
     LaunchedEffect(Unit) {
         withFrameNanos { }
-        if (GamepadInput.dpadMode) GamepadFocusNav.restoreFocus()
+        if (focusEnabled && GamepadInput.dpadMode) GamepadFocusNav.restoreFocus()
     }
 
     LaunchedEffect(GamepadShortcuts.rootHasFocus, GamepadInput.dpadMode, GamepadShortcuts.isDialogOpen) {
-        if (GamepadInput.dpadMode && !GamepadShortcuts.rootHasFocus && !GamepadShortcuts.isDialogOpen) {
+        if (focusEnabled && GamepadInput.dpadMode &&
+            !GamepadShortcuts.rootHasFocus && !GamepadShortcuts.isDialogOpen
+        ) {
             repeat(5) {
                 delay(120)
                 if (GamepadShortcuts.rootHasFocus) return@LaunchedEffect

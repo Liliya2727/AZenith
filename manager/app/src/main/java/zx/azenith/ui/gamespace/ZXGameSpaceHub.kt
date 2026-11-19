@@ -107,6 +107,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.ui.component.GamepadFocusRoot
+import zx.azenith.ui.component.LocalGamepadFocusEnabled
 import zx.azenith.ui.component.ZXDropDownNav
 import zx.azenith.ui.util.TapHapticState
 import zx.azenith.ui.util.AudioUtil
@@ -284,7 +285,11 @@ fun ZXGameSpaceHub(
         LocalDensity provides Density(
             density = baseDensity.density * scaleFactor,
             fontScale = baseDensity.fontScale
-        )
+        ),
+        // GameSpace is being reworked: opt the whole subtree out of gamepad
+        // focus (no ring, no activation, no focus seeding) while keeping the
+        // Activity's back/search and the hub's own L1/R1 keys working.
+        LocalGamepadFocusEnabled provides false
     ) {
     GamepadFocusRoot(
         modifier = Modifier
@@ -311,6 +316,29 @@ fun ZXGameSpaceHub(
                                 handleBack()
                             }
                             true
+                        }
+                        KeyEvent.KEYCODE_DPAD_LEFT,
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            // In the Games category the pad's horizontal axis only
+                            // walks the ribbon to locate a game. Repeats arrive from
+                            // GamepadDirectionRepeat accelerating, so holding right
+                            // sweeps through games quickly. Other categories leave
+                            // the key to their own handlers.
+                            if (category != TopCategory.Games || searchOpen) {
+                                false
+                            } else {
+                                val forward = event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                                val next = (safeIndex + if (forward) 1 else -1)
+                                    .coerceIn(0, ribbonEntries.lastIndex)
+                                if (next != safeIndex) {
+                                    selectedRibbonIndex = next
+                                    if (ribbonEntries.getOrNull(next) != RibbonEntry.Welcome) {
+                                        homeExpanded = false
+                                    }
+                                    AudioUtil.playScroll(context)
+                                }
+                                true
+                            }
                         }
                         KeyEvent.KEYCODE_DPAD_UP -> {
                             if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
