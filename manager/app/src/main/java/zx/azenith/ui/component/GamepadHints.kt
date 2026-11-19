@@ -28,10 +28,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import zx.azenith.R
 
-private val HintSize = 16.dp
+private val HintSize = 18.dp
 // A badge sits at the action icon's lower-left corner, small enough to read as a
 // controller hint rather than a second button.
-private val BadgeSize = 11.dp
+private val BadgeSize = 13.dp
 
 /**
  * True while a controller is attached or has been used. The hints are pure
@@ -77,7 +77,7 @@ fun GamepadActionBadge(
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .offset(x = (-2).dp, y = 3.dp)
+                    .offset(x = (-1).dp, y = 1.dp)
                     .size(BadgeSize),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
             )
