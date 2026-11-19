@@ -624,10 +624,19 @@ private fun LazyListScope.bypassDiagnosticsItems(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    val canStart = isChargerConnected && !isRunning
                     Button(
                         onClick = onStart,
-                        enabled = isChargerConnected && !isRunning,
-                        modifier = Modifier.fillMaxWidth(),
+                        enabled = canStart,
+                        // A plain Button never publishes activation, so Cross could
+                        // not launch the test even while the ring sat on it.
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .gamepadFocusOutline(
+                                shape = azShape(16.dp),
+                                focusKey = "bypass_check.launch_test",
+                                onActivate = { if (canStart) onStart() }
+                            ),
                         shape = azShape(16.dp)
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null)
