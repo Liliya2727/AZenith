@@ -376,6 +376,7 @@ fun ApplistTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (!isSearchMode) Modifier.gamepadNotFocusable() else Modifier)
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
@@ -412,13 +413,19 @@ fun ApplistTopAppBar(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { onSearchModeChange(false) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape, onActivate = { onSearchModeChange(false) })) {
+                        IconButton(
+                            onClick = { onSearchModeChange(false) },
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back))
                         }
                     },
                     actions = {
                         if (searchQuery.text.isNotEmpty()) {
-                            IconButton(onClick = { onSearchChange(TextFieldValue("")) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape, onActivate = { onSearchChange(TextFieldValue("")) })) {
+                            IconButton(
+                                onClick = { onSearchChange(TextFieldValue("")) },
+                                modifier = Modifier.focusProperties { canFocus = false }
+                            ) {
                                 Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear))
                             }
                         }

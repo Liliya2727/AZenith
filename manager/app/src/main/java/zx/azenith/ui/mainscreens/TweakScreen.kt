@@ -1002,6 +1002,7 @@ fun TweakScreenTopAppBar(
     Box(
     modifier = modifier
         .fillMaxWidth()
+        .gamepadNotFocusable()
         .appBarFade(MaterialTheme.colorScheme.surface, scrollBehavior.state.overlappedFraction)
         .statusBarsPadding()
     ) {

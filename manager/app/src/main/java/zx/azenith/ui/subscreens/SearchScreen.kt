@@ -73,6 +73,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -245,7 +246,10 @@ fun SearchScreen(
                             },
                             trailingIcon = {
                                 if (query.isNotEmpty()) {
-                                    IconButton(onClick = { query = "" }) {
+                                    IconButton(
+                                        onClick = { query = "" },
+                                        modifier = Modifier.focusProperties { canFocus = false }
+                                    ) {
                                         Icon(
                                             Icons.Default.Clear,
                                             contentDescription = stringResource(R.string.cd_clear)
@@ -270,10 +274,13 @@ fun SearchScreen(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            dismissEditor()
-                            navController.safePopBackStack()
-                        }) {
+                        IconButton(
+                            onClick = {
+                                dismissEditor()
+                                navController.safePopBackStack()
+                            },
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.cd_back)

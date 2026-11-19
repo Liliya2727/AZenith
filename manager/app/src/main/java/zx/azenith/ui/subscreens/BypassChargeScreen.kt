@@ -540,6 +540,7 @@ fun BypassChgTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadNotFocusable()
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {

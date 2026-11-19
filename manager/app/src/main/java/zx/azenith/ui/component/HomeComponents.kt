@@ -256,6 +256,7 @@ fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> 
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadNotFocusable()
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
