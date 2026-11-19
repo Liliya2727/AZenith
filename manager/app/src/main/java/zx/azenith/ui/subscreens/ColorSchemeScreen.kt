@@ -281,9 +281,12 @@ fun ColorSchemeSettings(navController: NavController) {
                         contentPadding = PaddingValues(
                             top = innerPadding.calculateTopPadding(),
                             bottom = bottomPad
-                        )
+                        ),
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        illustrationItem(colorScheme, illustrationHeight = 120.dp)
+                        // Landscape: fill the pane instead of a fixed 120dp so the
+                        // illustration scales with the available height.
+                        illustrationItem(colorScheme, illustrationHeight = null)
                     }
 
                     LazyColumn(
@@ -374,13 +377,24 @@ private fun LazyListScope.infoCardItem(colorScheme: ColorScheme) {
     }
 }
 
-/** The illustration. Pure decoration, never a focus target. */
-private fun LazyListScope.illustrationItem(colorScheme: ColorScheme, illustrationHeight: Dp) {
+/**
+ * The illustration. Pure decoration, never a focus target.
+ *
+ * A null [illustrationHeight] fills the lazy list's viewport (landscape), so the
+ * pane decides the size instead of a hardcoded dp; portrait keeps its fixed height.
+ */
+private fun LazyListScope.illustrationItem(
+    colorScheme: ColorScheme,
+    illustrationHeight: Dp? = null,
+) {
     item {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(illustrationHeight),
+                .then(
+                    if (illustrationHeight != null) Modifier.height(illustrationHeight)
+                    else Modifier.fillParentMaxHeight(0.82f)
+                ),
             shape = azShape(26.dp),
             color = colorScheme.surfaceContainerLow
         ) {
