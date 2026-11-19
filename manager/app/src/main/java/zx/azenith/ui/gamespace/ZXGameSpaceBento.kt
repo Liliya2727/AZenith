@@ -97,7 +97,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -535,7 +537,15 @@ internal fun HubBentoGrid(
     BentoMorphLayout(
         progress = expandProgress,
         compactHeight = compactHeight,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            // While the wall is open, keep d-pad focus inside the cards: Up on the
+            // top row and Down on the bottom row must stay put instead of jumping
+            // out to the wordmark pen above. Same group-exit guard the dialog uses.
+            .focusGroup()
+            .focusProperties {
+                if (expandProgress > 0.5f) onExit = { cancelFocusChange() }
+            }
     ) {
         MorphedProfileTile(
             progress = expandProgress,
