@@ -322,22 +322,14 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
     if (action == GamepadAction.NONE) return@onPreviewKeyEvent false
 
     // Always mark dpad/gamepad mode on key events
-    var focusEstablished = false
     if (event.type == KeyEventType.KeyDown || event.type == KeyEventType.KeyUp) {
         val wasActive = GamepadInput.active
         GamepadInput.onDpadKey()
         if (!wasActive && event.type == KeyEventType.KeyDown) {
-            // No focus yet (fresh page, rotation): establish it from the first press.
-            focusEstablished = GamepadFocusNav.restoreFocus()
+            // No focus yet (fresh page, rotation): try to enter content, then let
+            // this key press move focus normally.
+            GamepadFocusNav.restoreFocus()
         }
-    }
-
-    if (focusEstablished && (action == GamepadAction.DPAD_UP || action == GamepadAction.DPAD_DOWN ||
-            action == GamepadAction.DPAD_LEFT || action == GamepadAction.DPAD_RIGHT)
-    ) {
-        // The press that established focus already moved it one step; consuming it
-        // stops Compose from moving a second time.
-        return@onPreviewKeyEvent true
     }
 
     if (event.type == KeyEventType.KeyUp) {
@@ -402,6 +394,12 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
                 return@onPreviewKeyEvent true
             }
             return@onPreviewKeyEvent true
+        }
+        GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT -> {
+            // Pages switch only via L1/R1 on the main pager; block D-pad horizontal nav to avoid
+            // unexpected page changes or cross-page focus jumps.
+            if (GamepadShortcuts.isOnMainPager) return@onPreviewKeyEvent true
+            return@onPreviewKeyEvent false
         }
         GamepadAction.CONFIRM -> {
             // Let Compose handle A/Enter for clicks/focus activation; just ensure dpadMode set.
