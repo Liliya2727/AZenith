@@ -790,8 +790,10 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
         Log.d("PAD", "screenEntry seed start scope=$scope page=$page")
 
         // Try to restore the last focused content row first (important when returning
-        // from subscreens/dialogs). Prefer saved key for this scope.
-        if (GamepadFocusNav.restoreFocus()) {
+        // from subscreens/dialogs). Prefer saved key for this scope. Only treat it
+        // as done when a content row actually has focus — landing on the invisible
+        // entry container leaves no ring and X cannot activate anything.
+        if (GamepadFocusNav.restoreFocus() && GamepadShortcuts.hasRowFocus) {
             Log.d(
                 "PAD",
                 "screenEntry restored scope=$scope page=$page rowFocus=${GamepadShortcuts.hasRowFocus} " +
@@ -802,18 +804,18 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
 
         val tryFocus = {
             val gotEntry = runCatching { requester.requestFocus() }.getOrDefault(false)
-            if (gotEntry) {
+            val stepped = if (gotEntry) {
                 // requestPageEntry steps into the first row for pager pages; the
                 // standalone screen entry has to do the same. Focusing only the
                 // container shows no ring and leaves the first row unfocused.
                 runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
                     runCatching { focusManager.moveFocus(FocusDirection.Down) }.getOrDefault(false) ||
                     runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
-                true
             } else {
                 runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
                     runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
             }
+            stepped || GamepadShortcuts.hasRowFocus
         }
 
         if (tryFocus()) {
@@ -826,9 +828,12 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
         }
 
         while (SystemClock.uptimeMillis() - seedStart < 500) {
-            if (entered) return@LaunchedEffect
+            // `entered` only means the invisible entry container has focus. Keep
+            // retrying until an actual content row is focused, otherwise a screen
+            // whose rows compose a bit later (loading -> content) stays ring-less.
+            if (entered && GamepadShortcuts.hasRowFocus) return@LaunchedEffect
             delay(32)
-            if (entered) return@LaunchedEffect
+            if (entered && GamepadShortcuts.hasRowFocus) return@LaunchedEffect
             if (tryFocus()) {
                 Log.d(
                     "PAD",
