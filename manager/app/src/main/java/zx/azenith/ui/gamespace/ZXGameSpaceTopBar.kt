@@ -105,6 +105,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -303,7 +304,11 @@ internal fun ZXGameSpaceTopBar(
                                         tabBounds = tabBounds + (tab to (parentX to width))
                                     }
                                 }
-                                .gamepadFocusOutline(shape = shape, register = true)
+                                // GameSpace is opted out of gamepad focus. clickable still
+                                // makes this focusable and M3 paints its own focus ring, so
+                                // keep the tab touch-clickable but never a focus target —
+                                // category switching is handled by L1/R1 on the pad.
+                                .focusProperties { canFocus = false }
                                 .clickable {
                                     if (searchOpen) onSearchClose()
                                     AudioUtil.playOk(context)
