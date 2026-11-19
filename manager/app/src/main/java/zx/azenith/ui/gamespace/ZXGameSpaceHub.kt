@@ -311,6 +311,41 @@ fun ZXGameSpaceHub(
                             category = TopCategory.Settings
                             true
                         }
+                        // Face buttons: Triangle = the stage's primary action,
+                        // Square = wallpaper settings, Start = launch the game.
+                        // Only meaningful on the Games category stages.
+                        KeyEvent.KEYCODE_BUTTON_Y -> {
+                            if (category != TopCategory.Games) {
+                                false
+                            } else {
+                                when (activeEntry) {
+                                    RibbonEntry.Welcome -> homeExpanded = true
+                                    is RibbonEntry.Game -> tuningPkg = lastGameApp?.packageName
+                                    else -> Unit
+                                }
+                                true
+                            }
+                        }
+                        KeyEvent.KEYCODE_BUTTON_X -> {
+                            if (category != TopCategory.Games) {
+                                false
+                            } else {
+                                wallpaperPkg = if (activeEntry is RibbonEntry.Game) {
+                                    lastGameApp?.packageName
+                                } else {
+                                    "home"
+                                }
+                                true
+                            }
+                        }
+                        KeyEvent.KEYCODE_BUTTON_START -> {
+                            if (category == TopCategory.Games && activeEntry is RibbonEntry.Game) {
+                                lastGameApp?.let { requestAppLaunch(it) }
+                                true
+                            } else {
+                                false
+                            }
+                        }
                         KeyEvent.KEYCODE_DPAD_LEFT,
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
                             // In the Games category the pad's horizontal axis only
