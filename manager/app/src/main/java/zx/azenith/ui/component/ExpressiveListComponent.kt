@@ -16,6 +16,7 @@
 
 package zx.azenith.ui.component
 
+import android.util.Log
 import zx.azenith.ui.theme.azShape
 
 
@@ -75,11 +76,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
@@ -564,18 +566,37 @@ fun ExpressiveDropdownItem(
     }
     val selectedLabel = if (hasItems && safeIndex >= 0) items[safeIndex] else ""
 
+    val latestEnabled by rememberUpdatedState(enabled)
+    val openMenu: () -> Unit = remember(menuState) {
+        {
+            if (latestEnabled) {
+                Log.d("PAD", "dropdown activate title=$title enabled=$latestEnabled state=${menuState.expanded}")
+                menuState.show()
+            } else {
+                Log.d("PAD", "dropdown activate ignored title=$title enabled=$latestEnabled")
+            }
+            Unit
+        }
+    }
+    var seenMenuState by remember { mutableStateOf(false) }
+    LaunchedEffect(menuState.expanded) {
+        if (!seenMenuState) {
+            seenMenuState = true
+            if (!menuState.expanded) return@LaunchedEffect
+        }
+        Log.d("PAD", "dropdown popup ${if (menuState.expanded) "opened" else "closed"} title=$title")
+        if (!menuState.expanded) {
+            // Return focus to the dropdown row after the sheet/popup closes.
+            GamepadFocusNav.restoreFocus()
+            Log.d("PAD", "dropdown focus restore requested title=$title focusKey=$focusKey")
+        }
+    }
+
     ExpressiveListItem(
-        modifier = Modifier
-            .then(modifier)
-            .then(
-                if (enabled) {
-                    Modifier.clickable { menuState.show() }
-                } else {
-                    Modifier
-                }
-            ),
+        modifier = modifier,
         focusKey = focusKey,
         focusIndex = focusIndex,
+        onClick = if (enabled) openMenu else null,
         leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
         headlineContent = { Text(text = title) },
         supportingContent = {
@@ -623,11 +644,15 @@ fun ExpressiveDropdownItem(
             selectedIndex = safeIndex,
             accent = MaterialTheme.colorScheme.primary,
             onSelect = { index ->
+                Log.d("PAD", "dropdown option selected title=$title index=$index")
                 if (index in items.indices) {
                     onItemSelected(index)
                 }
             },
-            onDismiss = { menuState.dismiss() },
+            onDismiss = {
+                Log.d("PAD", "dropdown sheet dismiss title=$title")
+                menuState.dismiss()
+            },
         )
     }
 }

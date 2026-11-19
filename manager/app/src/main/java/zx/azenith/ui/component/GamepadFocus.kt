@@ -663,12 +663,14 @@ fun Modifier.gamepadFocusOutline(
                     }
                 }
                 GamepadShortcuts.publishActivation(requester) { activationState.value?.invoke() }
+                Log.d("PAD", "activation published focusKey=${focusKeyState.value} hasCallback=${activationState.value != null}")
                 GamepadFocusNav.publishHorizontalNav(requester, horizontalNavState.value)
                 if (slider) GamepadFocusNav.publishFocusedSlider(true)
             } else {
                 if (slider) GamepadFocusNav.publishFocusedSlider(false)
                 GamepadFocusNav.clearHorizontalNav(requester)
                 GamepadShortcuts.clearActivation(requester)
+                Log.d("PAD", "activation cleared focusKey=${focusKeyState.value}")
             }
         }
         .focusRequester(requester)
@@ -936,7 +938,9 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
             // Cross: click/toggle whatever content row currently holds focus.
             // Falls through when there is no activation, so a focused text
             // field can still receive Enter / D-pad centre itself.
-            return@onPreviewKeyEvent GamepadShortcuts.activateFocused()
+            val result = GamepadShortcuts.activateFocused()
+            Log.d("PAD", "CONFIRM activate result=$result dialog=$dialogOpen hasRowFocus=${GamepadShortcuts.hasRowFocus}")
+            return@onPreviewKeyEvent result
         }
 
         GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT -> {
