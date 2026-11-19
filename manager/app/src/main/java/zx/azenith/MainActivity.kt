@@ -23,6 +23,7 @@ import android.content.res.Configuration
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.InputDevice
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -108,6 +109,9 @@ import zx.azenith.ui.gamespace.isGameSpaceEnabled
 import zx.azenith.ui.gamespace.isHandoffDone
 import zx.azenith.ui.gamespace.setHandoffDone
 import zx.azenith.ui.gamespace.launchGameSpaceDirectly
+import zx.azenith.ui.component.GamepadAction
+import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.GamepadKeymap
 import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.navigation.safePopBackStack
 import zx.azenith.ui.subscreens.*
@@ -207,6 +211,13 @@ class MainActivity : ComponentActivity() {
         if (isStandingByForGameSpace) {
             isStandingByForGameSpace = false
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (GamepadKeymap.map(event.keyCode) != GamepadAction.NONE) {
+            GamepadInput.onDpadKey()
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
