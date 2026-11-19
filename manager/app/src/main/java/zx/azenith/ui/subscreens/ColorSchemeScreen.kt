@@ -119,16 +119,16 @@ private val COLORS_ROW_ITEMS: Map<String, Int> = mapOf(
 
 /**
  * Landscape splits the screen in two lists, so each has its own index space.
- * Left: info(0) illustration(1).
- * Right: presets title(0) presets(1) scheme title(2) rgb(3) saturation(4).
+ * Left: illustration(0) — no searchable rows.
+ * Right: info card(0) presets title(1) presets(2) scheme title(3) rgb(4) saturation(5).
  */
 private val COLORS_LEFT_ITEMS: Map<String, Int> = emptyMap()
 private val COLORS_RIGHT_ITEMS: Map<String, Int> = mapOf(
-    "colors.presets" to 0,
-    "colors.red" to 3,
-    "colors.green" to 3,
-    "colors.blue" to 3,
-    "colors.saturation" to 4
+    "colors.presets" to 1,
+    "colors.red" to 4,
+    "colors.green" to 4,
+    "colors.blue" to 4,
+    "colors.saturation" to 5
 )
 
 @Composable
@@ -262,16 +262,16 @@ fun ColorSchemeSettings(navController: NavController) {
             val bottomPad = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
             if (isLandscape) {
-                // Two panes: info + illustration on the left, the presets and
-                // sliders on the right, so neither side needs a long scroll.
+                // Two panes: illustration on the left, the info card and presets
+                // on the right, so neither side needs a long scroll.
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Info/illustration pane: no focus targets, so the d-pad
-                    // entry belongs to the controls pane on the right.
+                    // Illustration pane: no focus targets, so the d-pad entry
+                    // belongs to the controls pane on the right.
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
@@ -283,7 +283,7 @@ fun ColorSchemeSettings(navController: NavController) {
                             bottom = bottomPad
                         )
                     ) {
-                        introItems(colorScheme, illustrationHeight = 120.dp)
+                        illustrationItem(colorScheme, illustrationHeight = 120.dp)
                     }
 
                     LazyColumn(
@@ -298,6 +298,9 @@ fun ColorSchemeSettings(navController: NavController) {
                             bottom = bottomPad
                         )
                     ) {
+                        // Info card first, in the same scrolling list, but not a
+                        // focus target: seeding must land on the first preset.
+                        infoCardItem(colorScheme)
                         presetItems(rightJumpPulse, selectedPreset ?: matchingPreset, onPreset)
                         schemeItems(
                             jumpPulse = rightJumpPulse,
@@ -325,7 +328,8 @@ fun ColorSchemeSettings(navController: NavController) {
                         bottom = bottomPad
                     )
                 ) {
-                    introItems(colorScheme, illustrationHeight = 200.dp)
+                    infoCardItem(colorScheme)
+                    illustrationItem(colorScheme, illustrationHeight = 200.dp)
                     presetItems(jumpPulse, selectedPreset ?: matchingPreset, onPreset)
                     schemeItems(
                         jumpPulse = jumpPulse,
@@ -343,8 +347,13 @@ fun ColorSchemeSettings(navController: NavController) {
     }
 }
 
-/** Items 0 and 1: the info card and the illustration. */
-private fun LazyListScope.introItems(colorScheme: ColorScheme, illustrationHeight: Dp) {
+/**
+ * The info card. Not an action: `canFocus = false` keeps it out of d-pad
+ * search even though the shared card applies a focus outline for clickable
+ * callers. Portrait places it before the illustration; landscape places it
+ * at the top of the right pane's scrolling list.
+ */
+private fun LazyListScope.infoCardItem(colorScheme: ColorScheme) {
     item {
         ExpressiveList(
             content = listOf(
@@ -355,14 +364,18 @@ private fun LazyListScope.introItems(colorScheme: ColorScheme, illustrationHeigh
                         },
                         leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                         containerColor = colorScheme.surfaceContainerLow,
-                        onClick = {}
+                        onClick = {},
+                        modifier = Modifier.gamepadNotFocusable()
                     )
                 }
             )
         )
         Spacer(modifier = Modifier.height(16.dp))
     }
+}
 
+/** The illustration. Pure decoration, never a focus target. */
+private fun LazyListScope.illustrationItem(colorScheme: ColorScheme, illustrationHeight: Dp) {
     item {
         Surface(
             modifier = Modifier
