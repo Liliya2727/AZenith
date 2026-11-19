@@ -558,7 +558,11 @@ fun MainScreen(fromTileType: String? = null) {
             GamepadShortcuts.isOnMainPager = isOnMainPager
             GamepadShortcuts.pageCount = pagerRoutes.size
             GamepadShortcuts.pageIndex = pagerState.currentPage
-            GamepadFocusNav.currentPage = if (isOnMainPager) pagerState.currentPage else -1
+            val targetCurrentPage = if (isOnMainPager) pagerState.currentPage else -1
+            if (GamepadFocusNav.currentPage != targetCurrentPage) {
+                android.util.Log.d("PAD", "pageChange current=${GamepadFocusNav.currentPage} target=$targetCurrentPage")
+                GamepadFocusNav.currentPage = targetCurrentPage
+            }
             LaunchedEffect(isOnMainPager) {
                 if (isOnMainPager && GamepadInput.dpadMode) {
                     delay(200)

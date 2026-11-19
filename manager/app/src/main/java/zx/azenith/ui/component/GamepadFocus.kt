@@ -1,6 +1,7 @@
 package zx.azenith.ui.component
 
 import android.os.SystemClock
+import android.util.Log
 import android.view.InputDevice
 import android.view.KeyEvent
 import androidx.compose.animation.core.animateFloatAsState
@@ -22,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -380,7 +382,7 @@ object GamepadFocusNav {
         private set
 
     /** Index of the pager page on screen; -1 when not on the pager. */
-    var currentPage: Int = -1
+    var currentPage by mutableIntStateOf(-1)
 
     fun publishPageEntry(page: Int, requester: FocusRequester) {
         if (page >= 0) pageEntries[page] = requester else publishLastEntry(requester)
@@ -677,19 +679,52 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
         if (page < 0) GamepadFocusNav.lastEntryScope = scope
         val canSeed = (GamepadInput.dpadMode || GamepadInput.controllerConnected) && isActiveScreen
         if (!canSeed) return@LaunchedEffect
+
+        val seedStart = SystemClock.uptimeMillis()
+        withFrameNanos { }
+        if (entered) return@LaunchedEffect
+        Log.d("PAD", "screenEntry seed start scope=$scope page=$page")
+
         // Try to restore the last focused content row first (important when returning
         // from subscreens/dialogs). Prefer saved key for this scope.
-        delay(120)
-        if (entered) return@LaunchedEffect
-        if (GamepadFocusNav.restoreFocus()) return@LaunchedEffect
-        repeat(8) {
-            delay(150)
-            if (entered) return@LaunchedEffect
-            val focused = runCatching { requester.requestFocus() }.getOrDefault(false) ||
+        if (GamepadFocusNav.restoreFocus()) {
+            Log.d(
+                "PAD",
+                "screenEntry restored scope=$scope page=$page ms=${SystemClock.uptimeMillis() - seedStart}"
+            )
+            return@LaunchedEffect
+        }
+
+        val tryFocus = {
+            runCatching { requester.requestFocus() }.getOrDefault(false) ||
                 runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
                 runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
-            if (focused) return@LaunchedEffect
         }
+
+        if (tryFocus()) {
+            Log.d(
+                "PAD",
+                "screenEntry focused scope=$scope page=$page ms=${SystemClock.uptimeMillis() - seedStart}"
+            )
+            return@LaunchedEffect
+        }
+
+        while (SystemClock.uptimeMillis() - seedStart < 500) {
+            if (entered) return@LaunchedEffect
+            delay(32)
+            if (entered) return@LaunchedEffect
+            if (tryFocus()) {
+                Log.d(
+                    "PAD",
+                    "screenEntry focused scope=$scope page=$page ms=${SystemClock.uptimeMillis() - seedStart}"
+                )
+                return@LaunchedEffect
+            }
+        }
+        Log.d(
+            "PAD",
+            "screenEntry timeout scope=$scope page=$page ms=${SystemClock.uptimeMillis() - seedStart}"
+        )
     }
     return this
         .focusRequester(requester)
