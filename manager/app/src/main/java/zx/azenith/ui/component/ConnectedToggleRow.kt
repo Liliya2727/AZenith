@@ -69,7 +69,8 @@ internal fun <T> ConnectedToggleRow(
     selected: T,
     label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    focusKeyPrefix: String? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -79,9 +80,17 @@ internal fun <T> ConnectedToggleRow(
             ToggleButton(
                 checked = selected == option,
                 onCheckedChange = { checked -> if (checked) onSelect(option) },
+                // Plain ToggleButtons never publish activation, so Cross did
+                // nothing on the personalization option rows. The outline is
+                // applied before the button's own clickable/focusable node.
                 modifier = Modifier
                     .weight(1f)
-                    .semantics { role = Role.RadioButton },
+                    .semantics { role = Role.RadioButton }
+                    .gamepadFocusOutline(
+                        shape = RoundedCornerShape(percent = 50),
+                        focusKey = focusKeyPrefix?.let { "$it.$option" },
+                        onActivate = { onSelect(option) }
+                    ),
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                     options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()

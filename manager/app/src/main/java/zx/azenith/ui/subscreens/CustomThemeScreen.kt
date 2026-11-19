@@ -745,7 +745,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         onSelect = onColorSpecChange,
                         // Kept on the older elevation-derived surface rather than the
                         // shared default: this row sits in its own group.
-                        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+                        focusKeyPrefix = "pers.color_spec"
                     )
                 },
                 accentSwatchContent = {
@@ -774,7 +775,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 isDark = isDark,
                                 colorSpec = currentColorSpec,
                                 schemeCache = swatchSchemeCache,
-                                onClick = { onKeyColorChange(0) }
+                                onClick = { onKeyColorChange(0) },
+                                focusKey = "pers.swatch.dynamic"
                             )
                         }
 
@@ -785,7 +787,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 isDark = isDark,
                                 colorSpec = currentColorSpec,
                                 schemeCache = swatchSchemeCache,
-                                onClick = { onKeyColorChange(colorInt) }
+                                onClick = { onKeyColorChange(colorInt) },
+                                focusKey = "pers.swatch.$colorInt"
                             )
                         }
                     }
@@ -804,7 +807,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 onCheckedChange = { checked ->
                                     if (checked) onColorModeChange(mode)
                                 },
-                                modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton }
+                                    .gamepadFocusOutline(
+                                        shape = azShape(14.dp),
+                                        focusKey = "pers.color_mode.${mode.name}",
+                                        onActivate = { onColorModeChange(mode) }
+                                    ),
                                 shapes = when (index) {
                                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                                     options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
@@ -856,7 +866,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                             onPersonalizationChange(
                                                 personalization.copy(cornerStyle = style)
                                             )
-                                        }
+                                        },
+                                        focusKeyPrefix = "pers.roundness"
                                     )
                                 }
                             }
@@ -1004,7 +1015,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                         options = NavLabelMode.entries,
                                         selected = personalization.navLabels,
                                         label = { stringResource(it.labelRes) },
-                                        onSelect = { onPersonalizationChange(personalization.copy(navLabels = it)) }
+                                        onSelect = { onPersonalizationChange(personalization.copy(navLabels = it)) },
+                                        focusKeyPrefix = "pers.nav_labels"
                                     )
                                 }
                             }
@@ -1031,7 +1043,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 ) {
                                     OutlinedButton(
                                         onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .gamepadFocusOutline(
+                                                shape = azShape(14.dp),
+                                                focusKey = "pers.banner.pick_media",
+                                                onActivate = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
+                                            ),
                                         shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                         colors = ButtonDefaults.outlinedButtonColors(
@@ -1051,7 +1069,19 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                                 snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
                                             }
                                         },
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .gamepadFocusOutline(
+                                                shape = azShape(14.dp),
+                                                focusKey = "pers.banner.default",
+                                                onActivate = {
+                                                    context.clearHeaderImage()
+                                                    onBannerUpdated(null)
+                                                    coroutineScope.launch {
+                                                        snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
+                                                    }
+                                                }
+                                            ),
                                         shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 50.dp, bottomEnd = 50.dp),
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                         colors = ButtonDefaults.outlinedButtonColors(
@@ -1109,7 +1139,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                                     )
                                                     IconButton(
                                                         onClick = { onBannerGradientAlphaChange(0.5f) },
-                                                        modifier = Modifier.size(28.dp)
+                                                        modifier = Modifier
+                                                            .size(28.dp)
+                                                            .gamepadFocusOutline(
+                                                                shape = CircleShape,
+                                                                focusKey = "pers.gradient.reset",
+                                                                onActivate = { onBannerGradientAlphaChange(0.5f) }
+                                                            )
                                                     ) {
                                                         Icon(
                                                             Icons.Filled.Restore,
@@ -1338,7 +1374,15 @@ private fun PinnedPreviewHeader(
                 modifier = Modifier
                     .width(frameWidth)
                     .fillMaxHeight()
-                    .gamepadFocusOutline(shape = scaledShape, register = true),
+                    // The preview card has a click but no activation callback, so
+                    // Cross published a null callback and did nothing. Wire the
+                    // same toggle the tap runs.
+                    .gamepadFocusOutline(
+                        shape = scaledShape,
+                        register = true,
+                        focusKey = "pers.preview.toggle",
+                        onActivate = onToggle
+                    ),
                 // Passed to the Surface itself rather than chained as .clickable() on the
                 // modifier: Surface(onClick) applies its click handling after its shape
                 // clip, so the ripple follows the rounded corners.
@@ -1924,7 +1968,8 @@ private fun ColorButton(
     isDark: Boolean,
     colorSpec: ColorEngine,
     schemeCache: HashMap<SwatchKey, ColorScheme>,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    focusKey: String? = null,
 ) {
     val context = LocalContext.current
 
@@ -1973,7 +2018,15 @@ private fun ColorButton(
         onClick = onClick,
         shape = azShape(20.dp),
         color = colorScheme.surfaceContainer,
-        modifier = Modifier.size(72.dp)
+        // The outline goes before Surface's own clickable/focusable node so the
+        // ring is drawn on the swatch and Cross runs the same action as a tap.
+        modifier = Modifier
+            .size(72.dp)
+            .gamepadFocusOutline(
+                shape = azShape(20.dp),
+                focusKey = focusKey,
+                onActivate = onClick
+            )
     ) {
         Box(contentAlignment = Alignment.Center) {
             Canvas(modifier = Modifier.size(48.dp)) {
