@@ -225,17 +225,29 @@ class MainActivity : ComponentActivity() {
         val isJoystick = source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
         val isGamepad = source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
         if (event.action == MotionEvent.ACTION_MOVE && (isJoystick || isGamepad)) {
-            // Right stick vertical scroll. A controller reports the vertical
-            // right-stick axis as RZ; some report RY instead, and a few report
-            // both, so take whichever is deflected further instead of blindly
-            // trusting RZ (an idle RZ of 0 would mask a real RY deflection).
+            // Hat/D-pad axes (common on gamepads): convert to focus nav and keys.
+            val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+            val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+            if (abs(hatX) > 0.5f || abs(hatY) > 0.5f) {
+                GamepadInput.onDpadKey()
+                // Vertical hat moves focus via stick nav logic; horizontal is for sliders (handled by key watch).
+                GamepadStickNav.onStick(hatX, hatY)
+                // For horizontal, synthesize DPAD keys so sliders/gamepadKeyWatch see them.
+                if (abs(hatX) > 0.5f) {
+                    val keyCode = if (hatX < 0f) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+                }
+                return true
+            }
+
+            // Right stick vertical scroll.
             val rz = event.getAxisValue(MotionEvent.AXIS_RZ)
             val ry = event.getAxisValue(MotionEvent.AXIS_RY)
             val vertical = if (abs(rz) >= abs(ry)) rz else ry
             GamepadStickScroll.onAxisY(vertical)
 
-            // Left stick walks focus like a D-pad. The threshold lives in
-            // onStick, so resting noise never moves the selection.
+            // Left stick walks focus like a D-pad (vertical only in our nav).
             GamepadStickNav.onStick(
                 event.getAxisValue(MotionEvent.AXIS_X),
                 event.getAxisValue(MotionEvent.AXIS_Y)

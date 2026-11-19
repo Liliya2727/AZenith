@@ -459,26 +459,19 @@ fun Modifier.gamepadFocusOutline(
     slider: Boolean = false,
     onActivate: (() -> Unit)? = null,
 ): Modifier {
-    var focused by remember { mutableStateOf(false) }
     val requester = remember { FocusRequester() }
     val activation by rememberUpdatedState(onActivate)
+    var focused by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(
         targetValue = if (focused && GamepadInput.active) 1f else 0f,
         animationSpec = tween(durationMillis = 180),
         label = "GamepadFocusOutline"
     )
-    SideEffect {
-        if (focused) {
-            GamepadShortcuts.publishActivation(requester, activation)
-            if (slider) GamepadFocusNav.publishFocusedSlider(true)
-        }
-    }
     return this
-        .focusRequester(requester)
-        .focusable()
-        .onFocusChanged {
-            focused = it.isFocused
-            if (it.isFocused) {
+        .onFocusChanged { focusState ->
+            focused = focusState.isFocused
+            android.util.Log.d("PAD", "focus=${focusState.isFocused} active=${GamepadInput.active}")
+            if (focusState.isFocused) {
                 if (register) GamepadFocusNav.publishLastFocused(requester)
                 GamepadShortcuts.publishActivation(requester, activation)
                 if (slider) GamepadFocusNav.publishFocusedSlider(true)
@@ -487,6 +480,8 @@ fun Modifier.gamepadFocusOutline(
                 GamepadShortcuts.clearActivation(requester)
             }
         }
+        .focusRequester(requester)
+        .focusable()
         .then(
             if (alpha > 0.01f) {
                 Modifier.border(
@@ -550,6 +545,7 @@ fun Modifier.gamepadScreenEntry(page: Int = -1): Modifier {
  */
 fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
     val keyCode = event.nativeKeyEvent.keyCode
+    android.util.Log.d("PAD", "key=$keyCode type=${event.type}")
     val action = GamepadKeymap.map(keyCode)
     if (action == GamepadAction.NONE) return@onPreviewKeyEvent false
 
