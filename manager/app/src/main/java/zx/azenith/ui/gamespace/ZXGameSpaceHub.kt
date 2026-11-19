@@ -251,7 +251,12 @@ fun ZXGameSpaceHub(
     val scaleFactor = appScalePercent.coerceIn(60, 150) / 100f
 
     val handleBack: () -> Unit = {
-        if (exitPrompt) {
+        // Circle is a plain BackHandler: dismiss an open dropdown first, then
+        // walk the shell's own back stack. This used to live in a manual
+        // onPreviewKeyEvent branch that the Activity consumed before it fired.
+        if (ZXDropDownNav.isActive) {
+            ZXDropDownNav.dismissTop()
+        } else if (exitPrompt) {
             exitPrompt = false
         } else if (sidePanelPromptOpen) {
             sidePanelPromptOpen = false
@@ -304,17 +309,6 @@ fun ZXGameSpaceHub(
                         }
                         KeyEvent.KEYCODE_BUTTON_R1 -> {
                             category = TopCategory.Settings
-                            true
-                        }
-                        KeyEvent.KEYCODE_BUTTON_B,
-                        KeyEvent.KEYCODE_ESCAPE -> {
-                            // A menu overlays the shell, so the pad's back closes the menu
-                            // instead of walking out of the screen underneath it.
-                            if (ZXDropDownNav.isActive) {
-                                ZXDropDownNav.dismissTop()
-                            } else {
-                                handleBack()
-                            }
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT,
