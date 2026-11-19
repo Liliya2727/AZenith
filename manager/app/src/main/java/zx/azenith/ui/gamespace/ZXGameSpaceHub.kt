@@ -81,6 +81,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
@@ -157,6 +158,7 @@ fun ZXGameSpaceHub(
 
     val scope = rememberCoroutineScope()
     val ribbonFocusRequester = remember { FocusRequester() }
+    val libraryFilterFocusRequester = remember { FocusRequester() }
     var category by rememberSaveable { mutableStateOf(TopCategory.Games) }
     var selectedSettingsTab by rememberSaveable { mutableStateOf(SettingsSidebarTab.General) }
 
@@ -324,6 +326,15 @@ fun ZXGameSpaceHub(
                                 when (activeEntry) {
                                     RibbonEntry.Welcome -> homeExpanded = true
                                     is RibbonEntry.Game -> tuningPkg = lastGameApp?.packageName
+                                    RibbonEntry.Library -> {
+                                        // Collapse the ribbon and drop focus straight into the
+                                        // filter bar / applist below it.
+                                        libraryExpanded = true
+                                        scope.launch {
+                                            withFrameNanos { }
+                                            runCatching { libraryFilterFocusRequester.requestFocus() }
+                                        }
+                                    }
                                     else -> Unit
                                 }
                                 true
@@ -820,7 +831,8 @@ fun ZXGameSpaceHub(
                                                 onExpandedChange = { if (activeEntry == RibbonEntry.Library) libraryExpanded = it },
                                                 onClose = { selectedRibbonIndex = 0 },
                                                 onNavigateUp = { ribbonFocusRequester.requestFocus() },
-                                                loading = loading
+                                                loading = loading,
+                                                filterFocusRequester = libraryFilterFocusRequester
                                             )
 
                                             RibbonStageType.WrapToFirst -> WrapToFirstStage(

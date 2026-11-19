@@ -131,7 +131,8 @@ internal fun LibraryGridStage(
     onExpandedChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     onNavigateUp: () -> Unit = {},
-    loading: Boolean = false
+    loading: Boolean = false,
+    filterFocusRequester: FocusRequester? = null
 ) {
     // Null until the user picks: the default follows whether games exist once the load lands.
     var scopeChoice by remember { mutableStateOf<Boolean?>(null) }
@@ -174,7 +175,8 @@ internal fun LibraryGridStage(
             onlyEnabled = onlyEnabled,
             onScopeChange = { scopeChoice = it },
             onToggleEnabled = { onlyEnabled = !onlyEnabled },
-            onNavigateUp = onNavigateUp
+            onNavigateUp = onNavigateUp,
+            focusRequester = filterFocusRequester
         )
 
         Spacer(Modifier.height(12.dp))
@@ -248,7 +250,8 @@ private fun LibraryFilterBar(
     onlyEnabled: Boolean,
     onScopeChange: (Boolean) -> Unit,
     onToggleEnabled: () -> Unit,
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit,
+    focusRequester: FocusRequester? = null
 ) {
     Row(
         modifier = Modifier
@@ -270,7 +273,8 @@ private fun LibraryFilterBar(
                 icon = Icons.Rounded.SportsEsports,
                 label = "${stringResource(R.string.gamespace_tab_games)} ($gamesCount)",
                 shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
-                onClick = { onScopeChange(false) }
+                onClick = { onScopeChange(false) },
+                focusRequester = focusRequester
             )
             LibraryScopeButton(
                 checked = showAllApps,
@@ -296,7 +300,8 @@ private fun LibraryScopeButton(
     icon: ImageVector,
     label: String,
     shapes: ToggleButtonShapes,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     ToggleButton(
@@ -312,6 +317,7 @@ private fun LibraryScopeButton(
         ),
         modifier = Modifier
             .semantics { role = Role.RadioButton }
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .gamepadFocusOutline(shape = CircleShape)
     ) {
         Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp))
