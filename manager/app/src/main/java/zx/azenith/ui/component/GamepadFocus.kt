@@ -654,8 +654,12 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
         }
 
         GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT -> {
-            // Let horizontal keys reach focused controls (sliders, tile options).
-            return@onPreviewKeyEvent false
+            // Let horizontal keys reach focused sliders; otherwise consume to block
+            // the pager from handling them (pager switch is L1/R1 only).
+            if (GamepadFocusNav.focusedSlider) {
+                return@onPreviewKeyEvent false
+            }
+            return@onPreviewKeyEvent true
         }
 
         // Vertical focus movement is the focus system's own job.
