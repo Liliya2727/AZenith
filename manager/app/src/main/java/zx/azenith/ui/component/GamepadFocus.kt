@@ -805,11 +805,50 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
     // Any real gamepad/d-pad key means the user is on a controller.
     GamepadInput.onDpadKey()
 
+    val pageBefore = GamepadShortcuts.pageIndex
+    val isLeftRight = action == GamepadAction.DPAD_LEFT || action == GamepadAction.DPAD_RIGHT
+
     if (event.type == KeyEventType.KeyUp) {
+        if (isLeftRight) {
+            val consumed = if (GamepadFocusNav.focusedSlider) {
+                false
+            } else if (!GamepadShortcuts.hasRowFocus) {
+                true
+            } else {
+                GamepadFocusNav.isHorizontalBlocked(action == GamepadAction.DPAD_LEFT)
+            }
+            Log.d(
+                "PAD",
+                "LR key=${event.nativeKeyEvent.keyCode} type=UP repeat=${event.nativeKeyEvent.repeatCount} " +
+                    "slider=${GamepadFocusNav.focusedSlider} rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                    "nav=${GamepadFocusNav.horizontalNav} decision=${if (consumed) "blocked" else "passed"} " +
+                    "pageBefore=$pageBefore pageAfter=${GamepadShortcuts.pageIndex}"
+            )
+            return@onPreviewKeyEvent consumed
+        }
         return@onPreviewKeyEvent GamepadKeymap.consumesKeyUp(action)
     }
     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-    if (event.nativeKeyEvent.repeatCount != 0) return@onPreviewKeyEvent false
+    if (event.nativeKeyEvent.repeatCount != 0) {
+        if (isLeftRight) {
+            val consumed = if (GamepadFocusNav.focusedSlider) {
+                false
+            } else if (!GamepadShortcuts.hasRowFocus) {
+                true
+            } else {
+                GamepadFocusNav.isHorizontalBlocked(action == GamepadAction.DPAD_LEFT)
+            }
+            Log.d(
+                "PAD",
+                "LR key=${event.nativeKeyEvent.keyCode} type=DOWN repeat=${event.nativeKeyEvent.repeatCount} " +
+                    "slider=${GamepadFocusNav.focusedSlider} rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                    "nav=${GamepadFocusNav.horizontalNav} decision=${if (consumed) "blocked" else "passed"} " +
+                    "pageBefore=$pageBefore pageAfter=${GamepadShortcuts.pageIndex}"
+            )
+            return@onPreviewKeyEvent consumed
+        }
+        return@onPreviewKeyEvent false
+    }
 
     // Nothing focused yet (fresh page, rotation, a dialog just closed): seed
     // focus before this press is interpreted.
@@ -901,23 +940,26 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
         }
 
         GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT -> {
-            // Focused slider owns horizontal input. Otherwise try to move focus to a
-            // horizontal neighbor (generic multi-column support); at an edge consume
-            // the event so the pager does not switch pages. PASS_BOTH keeps the
-            // previous pass-through behavior.
-            if (GamepadFocusNav.focusedSlider) {
-                return@onPreviewKeyEvent false
-            }
-            if (GamepadFocusNav.horizontalNav == HorizontalNav.PASS_BOTH) {
-                return@onPreviewKeyEvent false
-            }
-            val direction = if (action == GamepadAction.DPAD_LEFT) {
-                FocusDirection.Left
+            // Only sliders own horizontal input. Edge-aware policy is published by the
+            // focused outlined row: block when required so the pager cannot react,
+            // otherwise pass through and let the focus system move. Never use a generic
+            // moveFocus fallback (it can land on an adjacent pager page). Default when
+            // no outlined row owns focus is BLOCK_BOTH.
+            val consumed = if (GamepadFocusNav.focusedSlider) {
+                false
+            } else if (!GamepadShortcuts.hasRowFocus) {
+                true
             } else {
-                FocusDirection.Right
+                GamepadFocusNav.isHorizontalBlocked(action == GamepadAction.DPAD_LEFT)
             }
-            GamepadStickNav.moveFocus(direction)
-            return@onPreviewKeyEvent true
+            Log.d(
+                "PAD",
+                "LR key=${event.nativeKeyEvent.keyCode} type=DOWN repeat=${event.nativeKeyEvent.repeatCount} " +
+                    "slider=${GamepadFocusNav.focusedSlider} rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                    "nav=${GamepadFocusNav.horizontalNav} decision=${if (consumed) "blocked" else "passed"} " +
+                    "pageBefore=$pageBefore pageAfter=${GamepadShortcuts.pageIndex}"
+            )
+            return@onPreviewKeyEvent consumed
         }
 
         // Vertical focus movement is the focus system's own job.

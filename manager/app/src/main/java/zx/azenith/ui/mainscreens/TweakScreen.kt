@@ -526,7 +526,8 @@ fun TweakScreen(
                                 highlight = true,
                                 isLoading = viewModel.isRefreshRateLoading,
                                 focusKey = "tweaks.refresh_rate",
-                                focusIndex = 5
+                                focusIndex = 5,
+                                horizontalNav = HorizontalNav.BLOCK_LEFT
                             ) {
                                 showRefreshRateDialog = true
                             }
@@ -548,7 +549,8 @@ fun TweakScreen(
                                 highlight = true,
                                 isLoading = viewModel.isRendererLoading,
                                 focusKey = "tweaks.renderer",
-                                focusIndex = 5
+                                focusIndex = 5,
+                                horizontalNav = HorizontalNav.BLOCK_RIGHT
                             ) {
                                 showRendererDialog = true
                             }
@@ -881,6 +883,7 @@ fun ExpressiveTile(
     isLoading: Boolean = false,
     focusKey: String? = null,
     focusIndex: Int? = null,
+    horizontalNav: HorizontalNav = HorizontalNav.BLOCK_BOTH,
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -905,7 +908,8 @@ fun ExpressiveTile(
             .gamepadFocusOutline(
                 onActivate = onClick,
                 focusKey = focusKey,
-                focusIndex = focusIndex
+                focusIndex = focusIndex,
+                horizontalNav = horizontalNav
             )
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),

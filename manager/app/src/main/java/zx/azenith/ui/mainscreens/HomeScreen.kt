@@ -220,7 +220,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     isBannerEnabled = uiState.isBannerEnabled,
                                     isBlurEnabled = isBlurEnabled,
                                     modifier = Modifier.fillMaxSize(),
-                                    tone = bannerTone
+                                    tone = bannerTone,
+                                    horizontalNav = HorizontalNav.PASS_BOTH
                                 ) { }
                             }
 
@@ -236,7 +237,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     highlight = (uiState.currentProfileRes != R.string.status_initializing), 
                                     showArrow = uiState.autoMode == "0",
                                     isLoading = uiState.isProfileApplying,
-                                    horizontalNav = HorizontalNav.BLOCK_LEFT
+                                    horizontalNav = HorizontalNav.PASS_BOTH
                                 ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                                 InfoTile(

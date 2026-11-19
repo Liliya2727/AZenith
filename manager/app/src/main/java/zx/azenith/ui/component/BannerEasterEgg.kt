@@ -98,6 +98,7 @@ fun BannerWithEasterEgg(
     isBlurEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     tone: BannerTone = BannerTone.Neutral,
+    horizontalNav: HorizontalNav = HorizontalNav.BLOCK_BOTH,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -131,7 +132,11 @@ fun BannerWithEasterEgg(
                 scaleY = pressScale
             }
             .clip(currentPersonalization().bannerCorner())
-            .gamepadFocusOutline(register = true, onActivate = onClick)
+            .gamepadFocusOutline(
+                register = true,
+                horizontalNav = horizontalNav,
+                onActivate = onClick
+            )
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = androidx.compose.foundation.LocalIndication.current,
