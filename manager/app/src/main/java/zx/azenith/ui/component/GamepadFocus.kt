@@ -204,20 +204,12 @@ object GamepadStickScroll {
 }
 
 /**
- * Left stick as a D-pad. Only the vertical axis moves focus: rows are the only
- * focus targets, and horizontal input is left to the focused slider.
- *
- * A direction has to cross [THRESHOLD] to fire, so resting noise never moves
- * focus, and it repeats only after a delay while the stick is held.
+ * Left stick as a D-pad. Kept for the focus-manager helpers used by focus
+ * restoration; the stick's movement itself now goes through [GamepadDirectionRepeat]
+ * as synthesized D-pad keys so it behaves identically to the physical D-pad.
  */
 object GamepadStickNav {
-    private const val THRESHOLD = 0.55f
-    private const val REPEAT_MS = 260L
-
     var focusManager: FocusManager? = null
-
-    private var lastDy = 0
-    private var nextRepeatAt = 0L
 
     /** Move focus one step in [direction]. */
     fun moveFocus(direction: FocusDirection): Boolean =
@@ -225,26 +217,64 @@ object GamepadStickNav {
 
     fun moveFocusNext(): Boolean = moveFocus(FocusDirection.Next)
 
-    fun onStick(x: Float, y: Float) {
-        val dy = if (abs(y) > THRESHOLD) if (y > 0f) 1 else -1 else 0
-        if (dy == 0) {
-            reset()
-            return
-        }
+    fun reset() {
+        GamepadDirectionRepeat.release()
+    }
+}
 
-        val now = SystemClock.uptimeMillis()
-        if (dy == lastDy && now < nextRepeatAt) return
+/**
+ * One direction pipeline for every gamepad source: physical D-pad, hat switch
+ * and the left analogue stick. Each emits the same synthesized D-pad key events
+ * through [sendKey], so all three follow the identical [gamepadKeyWatch] path —
+ * focus movement, horizontal policy, slider ticks and hold repeats included.
+ *
+ * Holding a direction repeats with an accelerating interval, which is what
+ * makes a held Up/Down walk rows quickly and a held Left/Right sweep a slider
+ * that has no steps.
+ */
+object GamepadDirectionRepeat {
+    private const val FIRST_REPEAT_MS = 260L
+    private const val MIN_REPEAT_MS = 45L
+    private const val ACCEL_STEPS = 9
 
-        GamepadInput.onDpadKey()
-        moveFocus(if (dy > 0) FocusDirection.Down else FocusDirection.Up)
+    /** Delivered as (keyCode, KeyEvent.ACTION_*, repeatCount) to the Activity. */
+    var sendKey: ((Int, Int, Int) -> Unit)? = null
 
-        lastDy = dy
-        nextRepeatAt = now + REPEAT_MS
+    var active: Int? by mutableStateOf(null)
+        private set
+
+    private var nextAt = 0L
+    private var repeat = 0
+
+    fun onDirectionDown(keyCode: Int, now: Long = SystemClock.uptimeMillis()) {
+        if (active == keyCode) return
+        if (active != null) release()
+        active = keyCode
+        repeat = 0
+        nextAt = now + FIRST_REPEAT_MS
+        sendKey?.invoke(keyCode, KeyEvent.ACTION_DOWN, 0)
     }
 
-    fun reset() {
-        lastDy = 0
-        nextRepeatAt = 0L
+    /** Called once per frame while a direction is held. */
+    fun tick(now: Long = SystemClock.uptimeMillis()) {
+        val key = active ?: return
+        if (now < nextAt) return
+        repeat++
+        sendKey?.invoke(key, KeyEvent.ACTION_DOWN, repeat)
+        val progress = repeat.coerceAtMost(ACCEL_STEPS).toFloat() / ACCEL_STEPS
+        val interval = FIRST_REPEAT_MS - (FIRST_REPEAT_MS - MIN_REPEAT_MS) * progress
+        nextAt = now + interval.toLong()
+    }
+
+    fun releaseIf(keyCode: Int) {
+        if (active == keyCode) release()
+    }
+
+    fun release() {
+        val key = active ?: return
+        sendKey?.invoke(key, KeyEvent.ACTION_UP, 0)
+        active = null
+        repeat = 0
     }
 }
 
@@ -903,6 +933,15 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
     return this
         .focusRequester(requester)
         .focusable()
+        // On standalone screens this container spans the whole content area. If
+        // it stays a focus stop, d-pad search from a control above it (e.g. the
+        // personalization preview card) lands on this invisible node and the ring
+        // vanishes until another key seeds a row. Deactivating it only for focus
+        // search lets Compose descend straight into the first content row: a
+        // deactivated node is searched into, not pruned. Rows are still reached
+        // by restore-by-key (their own requesters) and by moveFocus seeding.
+        // Pager pages keep the stop.
+        .focusProperties { if (page < 0) canFocus = false }
         .onFocusChanged { focusState ->
             entered = focusState.hasFocus
         }
@@ -1169,6 +1208,18 @@ fun GamepadFocusRoot(
 
     val activeDialogCount = LocalActiveDialogCount.current
     GamepadShortcuts.isDialogOpen = activeDialogCount.value > 0
+
+    // Drives the shared direction repeat: one accelerated D-pad key per frame
+    // while any source (physical pad, hat, analogue stick) holds a direction.
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            snapshotFlow { GamepadDirectionRepeat.active }
+                .first { it != null }
+            while (isActive && GamepadDirectionRepeat.active != null) {
+                withFrameNanos { GamepadDirectionRepeat.tick() }
+            }
+        }
+    }
 
     // The right stick's per-frame driver. It suspends entirely while the stick
     // is centred (`snapshotFlow.first`), so at rest there is no frame work and

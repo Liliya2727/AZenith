@@ -130,7 +130,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
+        // Synthesized D-pad keys are fed straight into the view hierarchy, so
+        // hat / analogue stick / physical pad share one focus + repeat path.
+        GamepadDirectionRepeat.sendKey = { code, action, repeat ->
+            val now = android.os.SystemClock.uptimeMillis()
+            super@MainActivity.dispatchKeyEvent(
+                KeyEvent(now, now, action, code, repeat)
+            )
+        }
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
@@ -217,7 +226,37 @@ class MainActivity : ComponentActivity() {
         if (GamepadKeymap.map(event.keyCode) != GamepadAction.NONE) {
             GamepadInput.onDpadKey()
         }
+        // Physical D-pad directions are folded into the same synthesized-key
+        // pipeline as the hat and analogue stick, so all three drive focus, the
+        // horizontal policy and slider ticks identically. OS key repeats are
+        // swallowed; GamepadDirectionRepeat supplies an accelerated sequence.
+        val code = event.keyCode
+        if (code == KeyEvent.KEYCODE_DPAD_UP || code == KeyEvent.KEYCODE_DPAD_DOWN ||
+            code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT
+        ) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> GamepadDirectionRepeat.onDirectionDown(code)
+                KeyEvent.ACTION_UP -> GamepadDirectionRepeat.releaseIf(code)
+            }
+            return true
+        }
         return super.dispatchKeyEvent(event)
+    }
+
+    /**
+     * Map an analogue axis pair to one D-pad key. The dominant axis wins, so a
+     * mostly-vertical stick walks rows and a mostly-horizontal one ticks sliders.
+     * Both the hat and the left stick use this, then feed [GamepadDirectionRepeat]
+     * exactly like the physical pad.
+     */
+    private fun axisDirection(x: Float, y: Float): Int? {
+        val threshold = 0.5f
+        if (abs(x) <= threshold && abs(y) <= threshold) return null
+        return if (abs(x) >= abs(y)) {
+            if (x < 0f) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+        } else {
+            if (y < 0f) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
+        }
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
@@ -225,19 +264,14 @@ class MainActivity : ComponentActivity() {
         val isJoystick = source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
         val isGamepad = source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
         if (event.action == MotionEvent.ACTION_MOVE && (isJoystick || isGamepad)) {
-            // Hat/D-pad axes (common on gamepads): convert to focus nav and keys.
-            val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
-            val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-            if (abs(hatX) > 0.5f || abs(hatY) > 0.5f) {
+            // Hat/D-pad axes first: one synthesized D-pad key, same as the pad.
+            val hatDir = axisDirection(
+                event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+            )
+            if (hatDir != null) {
                 GamepadInput.onDpadKey()
-                // Vertical hat moves focus via stick nav logic; horizontal is for sliders (handled by key watch).
-                GamepadStickNav.onStick(hatX, hatY)
-                // For horizontal, synthesize DPAD keys so sliders/gamepadKeyWatch see them.
-                if (abs(hatX) > 0.5f) {
-                    val keyCode = if (hatX < 0f) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
-                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
-                }
+                GamepadDirectionRepeat.onDirectionDown(hatDir)
                 return true
             }
 
@@ -247,11 +281,17 @@ class MainActivity : ComponentActivity() {
             val vertical = if (abs(rz) >= abs(ry)) rz else ry
             GamepadStickScroll.onAxisY(vertical)
 
-            // Left stick walks focus like a D-pad (vertical only in our nav).
-            GamepadStickNav.onStick(
+            // Left stick: identical behaviour to the D-pad via the same pipeline.
+            val stickDir = axisDirection(
                 event.getAxisValue(MotionEvent.AXIS_X),
                 event.getAxisValue(MotionEvent.AXIS_Y)
             )
+            if (stickDir != null) {
+                GamepadInput.onDpadKey()
+                GamepadDirectionRepeat.onDirectionDown(stickDir)
+            } else {
+                GamepadDirectionRepeat.release()
+            }
 
             if (abs(vertical) > GamepadStickScroll.DEADZONE) {
                 GamepadInput.onDpadKey()
