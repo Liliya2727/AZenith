@@ -119,7 +119,10 @@ data class NavDockAction(
     val contentDescription: String,
     val onClick: () -> Unit,
     val badgeCount: Int = 0,
-    val highlighted: Boolean = false
+    val highlighted: Boolean = false,
+    // Which face-glyph badge to draw on the tile: Triangle/Y for a page's top
+    // action, Square/X (the default) for search.
+    val topActionBadge: Boolean = false
 )
 
 /**
@@ -332,10 +335,6 @@ fun NavDock(
                     bottom = NAV_DOCK_BOTTOM_PAD * scale
                 )
         ) {
-            // L1 at the dock's top edge while a controller is in use. The dock is
-            // vertical, so the two shoulders map to its top and bottom ends.
-            GamepadShoulderHint(left = true)
-
             // M3 separates a navigation surface's headline from its destinations with
             // type and space rather than a rule, so the header is a name block: the
             // eyebrow is the app, the headline is the page, because landscape has no app
@@ -397,6 +396,11 @@ fun NavDock(
                     .padding(top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(rowGap)
             ) {
+                // L1 sits directly above the first destination (Home), R1 directly
+                // below the last (Settings). They live in the scrolling column so
+                // they stay next to those rows when the list overflows.
+                GamepadShoulderHint(left = true)
+
                 // The travelling selection pill. Drawn inside the scrolling column so it
                 // travels with the rows. Its own corner radius is half the row height, which
                 // is what makes it a pill at any row height; mid-travel it stretches along
@@ -450,6 +454,8 @@ fun NavDock(
                                 onClick = { onItemSelected(item.route) }
                             )
                         }
+                        // R1 below the last destination (Settings).
+                        GamepadShoulderHint(left = false)
                     }
                 }
             }
@@ -460,15 +466,6 @@ fun NavDock(
                     color = scheme.outlineVariant.copy(alpha = 0.5f),
                     thickness = 1.dp
                 )
-                // Triangle / Square stand for the page actions a top bar would
-                // carry in portrait (top action and search).
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    GamepadFaceHints()
-                }
                 DockActionBar(
                     actions = actions,
                     content = rowContent,
@@ -477,14 +474,6 @@ fun NavDock(
                     shape = rowShape,
                     scale = scale
                 )
-            }
-            // R1 at the dock's bottom edge.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                GamepadShoulderHint(left = false)
             }
         }
     }
@@ -576,8 +565,18 @@ private fun DockActionButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (action.badgeCount > 0) {
-            BadgedBox(badge = { Badge { Text(action.badgeCount.toString()) } }) {
+        // Same lower-left controller badge as the portrait top-bar actions.
+        GamepadActionBadge(topAction = action.topActionBadge) {
+            if (action.badgeCount > 0) {
+                BadgedBox(badge = { Badge { Text(action.badgeCount.toString()) } }) {
+                    Icon(
+                        imageVector = action.icon,
+                        contentDescription = action.contentDescription,
+                        tint = tint,
+                        modifier = Modifier.size(24.dp * scale)
+                    )
+                }
+            } else {
                 Icon(
                     imageVector = action.icon,
                     contentDescription = action.contentDescription,
@@ -585,13 +584,6 @@ private fun DockActionButton(
                     modifier = Modifier.size(24.dp * scale)
                 )
             }
-        } else {
-            Icon(
-                imageVector = action.icon,
-                contentDescription = action.contentDescription,
-                tint = tint,
-                modifier = Modifier.size(24.dp * scale)
-            )
         }
     }
 }

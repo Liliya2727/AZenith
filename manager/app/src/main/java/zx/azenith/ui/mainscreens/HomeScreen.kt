@@ -139,7 +139,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     NavDockAction(
                         icon = Icons.Rounded.PowerSettingsNew,
                         contentDescription = stringResource(R.string.reboot),
-                        onClick = { showRebootSheet = true }
+                        onClick = { showRebootSheet = true },
+                        topActionBadge = true
                     )
                 )
             )

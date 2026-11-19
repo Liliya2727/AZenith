@@ -303,7 +303,8 @@ fun TweakScreen(
                     NavDockAction(
                         icon = Icons.Outlined.Cloud,
                         contentDescription = stringResource(R.string.cd_menu),
-                        onClick = { showBackupRestoreSheet = true }
+                        onClick = { showBackupRestoreSheet = true },
+                        topActionBadge = true
                     )
                 )
             )
@@ -1074,21 +1075,24 @@ fun TweakScreenTopAppBar(
                 scrolledContainerColor = Color.Transparent
             ),
             actions = {
-                GamepadFaceHints()
-                IconButton(
-                    onClick = onSearchClick,
-                    modifier = Modifier.focusProperties { canFocus = false }
-                ) {
-                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                GamepadActionBadge(topAction = false) {
+                    IconButton(
+                        onClick = onSearchClick,
+                        modifier = Modifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                    }
                 }
-                IconButton(
-                    onClick = onMoreClick,
-                    modifier = onMoreModifier.focusProperties { canFocus = false }
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Cloud,
-                        contentDescription = stringResource(R.string.cd_menu)
-                    )
+                GamepadActionBadge(topAction = true) {
+                    IconButton(
+                        onClick = onMoreClick,
+                        modifier = onMoreModifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Cloud,
+                            contentDescription = stringResource(R.string.cd_menu)
+                        )
+                    }
                 }
             },
             scrollBehavior = scrollBehavior,

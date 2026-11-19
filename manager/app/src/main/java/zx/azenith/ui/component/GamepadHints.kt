@@ -16,7 +16,8 @@
 
 package zx.azenith.ui.component
 
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +29,9 @@ import androidx.compose.ui.unit.dp
 import zx.azenith.R
 
 private val HintSize = 16.dp
+// A badge sits at the action icon's lower-left corner, small enough to read as a
+// controller hint rather than a second button.
+private val BadgeSize = 11.dp
 
 /**
  * True while a controller is attached or has been used. The hints are pure
@@ -50,25 +54,33 @@ fun GamepadShoulderHint(left: Boolean, modifier: Modifier = Modifier) {
 }
 
 /**
- * Triangle / Square for the top bar's action area (top action and search).
- * Both are decorative — they are not clickable and never take focus.
+ * A small controller badge pinned to the lower-left of one action icon, so the
+ * glyph reads as belonging to that button instead of floating in the top bar.
+ *
+ * [topAction] picks the glyph: Triangle/Y for the page's top action (backup,
+ * changelog, reboot), Square/X for search. The hint is decorative — it never
+ * takes focus or intercepts a click.
  */
 @Composable
-fun GamepadFaceHints(modifier: Modifier = Modifier) {
-    if (!hintsVisible()) return
-    val tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter = painterResource(R.drawable.ic_gp_triangle),
-            contentDescription = null,
-            modifier = Modifier.size(HintSize),
-            tint = tint,
-        )
-        Icon(
-            painter = painterResource(R.drawable.ic_gp_square),
-            contentDescription = null,
-            modifier = Modifier.size(HintSize),
-            tint = tint,
-        )
+fun GamepadActionBadge(
+    topAction: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Box(modifier) {
+        content()
+        if (hintsVisible()) {
+            Icon(
+                painter = painterResource(
+                    if (topAction) R.drawable.ic_gp_triangle else R.drawable.ic_gp_square
+                ),
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-2).dp, y = 3.dp)
+                    .size(BadgeSize),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+            )
+        }
     }
 }

@@ -283,12 +283,13 @@ fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> 
                 scrolledContainerColor = Color.Transparent,
             ),
             actions = {
-                GamepadFaceHints()
-                IconButton(
-                    onClick = onRebootClick,
-                    modifier = Modifier.focusProperties { canFocus = false }
-                ) {
-                    Icon(imageVector = Icons.Filled.PowerSettingsNew, contentDescription = stringResource(R.string.reboot))
+                GamepadActionBadge(topAction = true) {
+                    IconButton(
+                        onClick = onRebootClick,
+                        modifier = Modifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(imageVector = Icons.Filled.PowerSettingsNew, contentDescription = stringResource(R.string.reboot))
+                    }
                 }
             },
             scrollBehavior = scrollBehavior,

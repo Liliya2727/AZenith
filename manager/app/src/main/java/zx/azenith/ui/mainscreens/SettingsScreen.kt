@@ -288,7 +288,8 @@ fun SettingsScreen(
                         NavDockAction(
                             icon = Icons.AutoMirrored.Rounded.TextSnippet,
                             contentDescription = stringResource(R.string.cd_changelog),
-                            onClick = { showChangelogSheet = true }
+                            onClick = { showChangelogSheet = true },
+                            topActionBadge = true
                         )
                     )
                 )
@@ -713,21 +714,24 @@ fun SettingsScreenTopAppBar(
                 )
             },
             actions = {
-                GamepadFaceHints()
-                IconButton(
-                    onClick = onSearchClick,
-                    modifier = Modifier.focusProperties { canFocus = false }
-                ) {
-                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                GamepadActionBadge(topAction = false) {
+                    IconButton(
+                        onClick = onSearchClick,
+                        modifier = Modifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                    }
                 }
-                IconButton(
-                    onClick = onChangelogClick,
-                    modifier = Modifier.focusProperties { canFocus = false }
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.TextSnippet,
-                        contentDescription = stringResource(R.string.cd_changelog)
-                    )
+                GamepadActionBadge(topAction = true) {
+                    IconButton(
+                        onClick = onChangelogClick,
+                        modifier = Modifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.TextSnippet,
+                            contentDescription = stringResource(R.string.cd_changelog)
+                        )
+                    }
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(

@@ -204,7 +204,8 @@ fun ApplistScreen(navController: NavController) {
                         contentDescription = stringResource(R.string.cd_filter),
                         onClick = { showFilterSheet = true },
                         badgeCount = viewModel.activeFilterCount,
-                        highlighted = viewModel.activeFilterCount > 0
+                        highlighted = viewModel.activeFilterCount > 0,
+                        topActionBadge = true
                     ),
                     NavDockAction(
                         icon = Icons.Default.Search,
@@ -421,13 +422,14 @@ fun ApplistTopAppBar(
                         }
                     },
                     actions = {
-                        GamepadFaceHints()
                         if (searchQuery.text.isNotEmpty()) {
-                            IconButton(
-                                onClick = { onSearchChange(TextFieldValue("")) },
-                                modifier = Modifier.focusProperties { canFocus = false }
-                            ) {
-                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear))
+                            GamepadActionBadge(topAction = false) {
+                                IconButton(
+                                    onClick = { onSearchChange(TextFieldValue("")) },
+                                    modifier = Modifier.focusProperties { canFocus = false }
+                                ) {
+                                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear))
+                                }
                             }
                         }
                     },
@@ -468,45 +470,49 @@ fun ApplistTopAppBar(
                         }
                     },
                     actions = {
-                        GamepadFaceHints()
-                        IconButton(
-                            onClick = { onSearchModeChange(true) },
-                            modifier = Modifier.focusProperties { canFocus = false }
-                        ) {
-                            Icon(Icons.Default.Search, stringResource(R.string.cd_search))
+                        // Square/X = search, Triangle/Y = the filter (top action).
+                        GamepadActionBadge(topAction = false) {
+                            IconButton(
+                                onClick = { onSearchModeChange(true) },
+                                modifier = Modifier.focusProperties { canFocus = false }
+                            ) {
+                                Icon(Icons.Default.Search, stringResource(R.string.cd_search))
+                            }
                         }
-                        IconButton(
-                            onClick = onOpenFilters,
-                            modifier = Modifier.focusProperties { canFocus = false }
-                        ) {
-                            BadgedBox(
-                                badge = {
-                                    AnimatedContent(
-                                        targetState = activeFilterCount,
-                                        transitionSpec = {
-                                            (scaleIn(
-                                                animationSpec = motionScheme.defaultSpatialSpec(),
-                                                initialScale = 0.4f
-                                            ) + fadeIn(motionScheme.defaultEffectsSpec())) togetherWith
-                                                (scaleOut(
+                        GamepadActionBadge(topAction = true) {
+                            IconButton(
+                                onClick = onOpenFilters,
+                                modifier = Modifier.focusProperties { canFocus = false }
+                            ) {
+                                BadgedBox(
+                                    badge = {
+                                        AnimatedContent(
+                                            targetState = activeFilterCount,
+                                            transitionSpec = {
+                                                (scaleIn(
                                                     animationSpec = motionScheme.defaultSpatialSpec(),
-                                                    targetScale = 0.4f
-                                                ) + fadeOut(motionScheme.defaultEffectsSpec()))
-                                        },
-                                        label = "filterBadge"
-                                    ) { count ->
-                                        if (count > 0) {
-                                            Badge { Text(count.toString()) }
+                                                    initialScale = 0.4f
+                                                ) + fadeIn(motionScheme.defaultEffectsSpec())) togetherWith
+                                                    (scaleOut(
+                                                        animationSpec = motionScheme.defaultSpatialSpec(),
+                                                        targetScale = 0.4f
+                                                    ) + fadeOut(motionScheme.defaultEffectsSpec()))
+                                            },
+                                            label = "filterBadge"
+                                        ) { count ->
+                                            if (count > 0) {
+                                                Badge { Text(count.toString()) }
+                                            }
                                         }
                                     }
+                                ) {
+                                    Icon(
+                                        Icons.Default.FilterList,
+                                        contentDescription = stringResource(R.string.cd_filter),
+                                        tint = if (activeFilterCount > 0) colorScheme.primary
+                                               else colorScheme.onSurfaceVariant
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    Icons.Default.FilterList,
-                                    contentDescription = stringResource(R.string.cd_filter),
-                                    tint = if (activeFilterCount > 0) colorScheme.primary
-                                           else colorScheme.onSurfaceVariant
-                                )
                             }
                         }
                     }
