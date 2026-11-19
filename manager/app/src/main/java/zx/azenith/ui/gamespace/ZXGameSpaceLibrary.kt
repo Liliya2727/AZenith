@@ -107,6 +107,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.GamepadFocusNav
 import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.gamepadActivation
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
@@ -319,6 +320,7 @@ private fun LibraryScopeButton(
             .semantics { role = Role.RadioButton }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .gamepadFocusOutline(shape = CircleShape)
+            .gamepadActivation(onClick)
     ) {
         Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
@@ -365,6 +367,7 @@ internal fun ExpressiveFilterChip(
         modifier = Modifier
             .animateContentSize(spatialSpec)
             .gamepadFocusOutline(shape = CircleShape)
+            .gamepadActivation(onClick)
             .semantics { this.selected = isSelected }
     ) {
         Row(
@@ -480,6 +483,7 @@ private fun LibraryAppTile(
                 if (it.isFocused) GamepadFocusNav.publishLastFocused(requester)
             }
             .focusRequester(requester)
+            .gamepadActivation(onClick)
             .clickable(
                 interactionSource = interaction,
                 indication = ripple(color = titleColor),

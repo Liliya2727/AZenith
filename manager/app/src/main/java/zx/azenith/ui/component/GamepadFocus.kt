@@ -713,6 +713,36 @@ object GamepadFocusNav {
 fun Modifier.gamepadNotFocusable(): Modifier = this.focusProperties { canFocus = false }
 
 /**
+ * Publishes [onActivate] as the focused node's Cross action, independent of
+ * [gamepadFocusOutline]. Needed for subtrees that opt out of the focus ring
+ * (GameSpace) but still want Cross to activate the focused control: the ring
+ * helper is a no-op there, so it cannot publish the activation itself.
+ *
+ * The callback is read through [rememberUpdatedState], so a recomposition never
+ * leaves a stale click behind.
+ */
+@Composable
+fun Modifier.gamepadActivation(onActivate: () -> Unit): Modifier {
+    val requester = remember { FocusRequester() }
+    val activationState = rememberUpdatedState(onActivate)
+    DisposableEffect(requester) {
+        onDispose {
+            GamepadShortcuts.clearActivation(requester)
+            GamepadShortcuts.forgetActivation(requester)
+        }
+    }
+    return this
+        .onFocusChanged { focusState ->
+            if (focusState.isFocused) {
+                GamepadShortcuts.publishActivation(requester) { activationState.value() }
+            } else {
+                GamepadShortcuts.clearActivation(requester)
+            }
+        }
+        .focusRequester(requester)
+}
+
+/**
  * The gamepad focus ring and activation for a content row, switch, slider or
  * dialog button.
  *
