@@ -930,6 +930,7 @@ fun ExpressiveTile(
     val colorScheme = MaterialTheme.colorScheme
 
     val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
+    val tileShape = azShape(26.dp)
 
     val iconBoxBgColor by animateColorAsState(
         targetValue = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -945,8 +946,9 @@ fun ExpressiveTile(
 
     Surface(
         modifier = modifier
-            .clip(azShape(26.dp))
+            .clip(tileShape)
             .gamepadFocusOutline(
+                shape = tileShape,
                 onActivate = onClick,
                 focusKey = focusKey,
                 focusIndex = focusIndex,
@@ -955,7 +957,7 @@ fun ExpressiveTile(
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,
-        shape = azShape(26.dp)
+        shape = tileShape
     ) {
         Column(
             modifier = Modifier.padding(14.dp)

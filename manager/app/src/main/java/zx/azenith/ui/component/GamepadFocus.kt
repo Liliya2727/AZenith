@@ -376,6 +376,43 @@ object GamepadShortcuts {
         callback()
         return true
     }
+
+    // --- Held CONFIRM (Cross) -------------------------------------------------
+    // A normal Cross press activates the row on KeyDown. Holding it past
+    // HOLD_MS instead runs the row's optional long action (e.g. the banner's
+    // easter egg) when Cross is released. Kept here because gamepadKeyWatch is
+    // a plain Modifier extension with no Composition to remember state in.
+
+    private const val HOLD_MS = 350L
+    private var confirmDownAt = 0L
+    private var holdActivation: (() -> Unit)? = null
+
+    fun noteConfirmDown() {
+        confirmDownAt = SystemClock.uptimeMillis()
+    }
+
+    /** True when the just-released Cross had been held past [HOLD_MS]. */
+    fun consumeConfirmHeld(): Boolean {
+        val held = confirmDownAt != 0L && SystemClock.uptimeMillis() - confirmDownAt >= HOLD_MS
+        confirmDownAt = 0L
+        return held
+    }
+
+    fun publishHoldActivation(token: Any, callback: (() -> Unit)?) {
+        if (activationToken === token) holdActivation = callback
+    }
+
+    fun clearHoldActivation(token: Any) {
+        if (activationToken === token) holdActivation = null
+    }
+
+    /** Invoke the focused row's held action, if it has one. */
+    fun activateHeld(): Boolean {
+        val callback = holdActivation ?: return false
+        holdActivation = null
+        callback()
+        return true
+    }
 }
 
 /**
@@ -661,9 +698,11 @@ fun Modifier.gamepadFocusOutline(
     focusKey: String? = null,
     focusIndex: Int? = null,
     onActivate: (() -> Unit)? = null,
+    onHoldActivate: (() -> Unit)? = null,
 ): Modifier {
     val requester = remember { FocusRequester() }
     val activationState = rememberUpdatedState(onActivate)
+    val holdActivationState = rememberUpdatedState(onHoldActivate)
     val horizontalNavState = rememberUpdatedState(horizontalNav)
     val pagerPage = LocalPagerPageIndex.current
     val scope = if (pagerPage >= 0) "page:$pagerPage" else GamepadFocusNav.lastEntryScope
@@ -711,12 +750,14 @@ fun Modifier.gamepadFocusOutline(
                     }
                 }
                 GamepadShortcuts.publishActivation(requester) { activationState.value?.invoke() }
+                GamepadShortcuts.publishHoldActivation(requester) { holdActivationState.value?.invoke() }
                 Log.d("PAD", "activation published focusKey=${focusKeyState.value} hasCallback=${activationState.value != null}")
                 GamepadFocusNav.publishHorizontalNav(requester, horizontalNavState.value)
                 if (slider) GamepadFocusNav.publishFocusedSlider(true)
             } else {
                 if (slider) GamepadFocusNav.publishFocusedSlider(false)
                 GamepadFocusNav.clearHorizontalNav(requester)
+                GamepadShortcuts.clearHoldActivation(requester)
                 GamepadShortcuts.clearActivation(requester)
                 Log.d("PAD", "activation cleared focusKey=${focusKeyState.value}")
             }
@@ -915,6 +956,13 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
             )
             return@onPreviewKeyEvent consumed
         }
+        // Held Cross: a long press runs the focused row's hold action instead of
+        // doing nothing extra. A short Cross fires on KeyDown (below) as before.
+        if (action == GamepadAction.CONFIRM && GamepadShortcuts.consumeConfirmHeld()) {
+            val result = GamepadShortcuts.activateHeld()
+            Log.d("PAD", "CONFIRM hold result=$result dialog=$dialogOpen")
+            if (result) return@onPreviewKeyEvent true
+        }
         return@onPreviewKeyEvent GamepadKeymap.consumesKeyUp(action)
     }
     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -1038,6 +1086,7 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
             // Cross: click/toggle whatever content row currently holds focus.
             // Falls through when there is no activation, so a focused text
             // field can still receive Enter / D-pad centre itself.
+            GamepadShortcuts.noteConfirmDown()
             val result = GamepadShortcuts.activateFocused()
             Log.d("PAD", "CONFIRM activate result=$result dialog=$dialogOpen hasRowFocus=${GamepadShortcuts.hasRowFocus}")
             return@onPreviewKeyEvent result
