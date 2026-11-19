@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -45,9 +46,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -68,6 +71,9 @@ val LocalMainPagerActive = compositionLocalOf { true }
 
 /** Index of the pager page a screen is composed as; -1 outside the pager. */
 val LocalPagerPageIndex = compositionLocalOf { -1 }
+
+/** Active focus scope key for the current screen (e.g. "page:0" or per-screen id). */
+val LocalGamepadFocusScope = compositionLocalOf<String?> { null }
 
 /**
  * Every action a controller button can ask the UI to take.
@@ -356,6 +362,9 @@ enum class HorizontalNav {
     PASS_BOTH
 }
 
+/** Saved focus identity for a scope so it can be restored after recomposition. */
+data class SavedFocus(val key: String, val index: Int? = null)
+
 /**
  * Where the bottom bar and the pages hand focus back to content.
  *
@@ -424,6 +433,54 @@ object GamepadFocusNav {
         HorizontalNav.PASS_BOTH -> false
     }
 
+    /** Last focused row key per scope ("page:<index>" or standalone screen scope). */
+    val lastKeyByScope = mutableStateMapOf<String, String>()
+    private val lastIndexByScope = HashMap<String, Int>()
+    private val pendingRestoreScopes = mutableStateMapOf<String, Boolean>()
+
+    fun currentScope(): String? =
+        if (currentPage >= 0) "page:$currentPage" else lastEntryScope
+
+    /** Scope associated with the active standalone screen entry, if any. */
+    var lastEntryScope: String? = null
+
+    fun saveFocusKey(scope: String, key: String, index: Int?) {
+        lastKeyByScope[scope] = key
+        if (index != null) lastIndexByScope[scope] = index else lastIndexByScope.remove(scope)
+    }
+
+    fun savedKey(scope: String): String? = lastKeyByScope[scope]
+    fun savedIndex(scope: String): Int? = lastIndexByScope[scope]
+
+    fun markRestorePending(scope: String) {
+        pendingRestoreScopes[scope] = true
+    }
+
+    fun clearRestorePending(scope: String) {
+        pendingRestoreScopes.remove(scope)
+    }
+
+    fun isRestorePending(scope: String): Boolean = pendingRestoreScopes[scope] == true
+
+    /**
+     * Restore a saved focus key for [scope]. If the matching node is not yet
+     * composed, scroll the active list to the saved index (when known) and mark
+     * the scope pending so the node can claim focus once composed.
+     */
+    fun restoreSavedFocus(scope: String): Boolean {
+        val key = lastKeyByScope[scope] ?: return false
+        markRestorePending(scope)
+        val index = lastIndexByScope[scope]
+        if (index != null) {
+            val ls = GamepadShortcuts.actions?.scrollState
+            if (ls != null) {
+                MainScope().launch { runCatching { ls.scrollToItem(index) } }
+            }
+        }
+        // A composed matching node will claim focus via gamepadFocusOutline.
+        return false
+    }
+
     private val focusHistory = ArrayDeque<FocusRequester>()
 
     fun publishLastFocused(requester: FocusRequester) {
@@ -469,11 +526,20 @@ object GamepadFocusNav {
     }
 
     fun restoreFocus(): Boolean {
+        val scope = currentScope()
         val currentPageEntry = pageEntries[currentPage]
         val candidates = focusHistory.toList().asReversed() +
             listOfNotNull(currentPageEntry, lastEntry, pageEntry)
         val restored = candidates.any { runCatching { it.requestFocus() }.getOrDefault(false) }
-        return restored || GamepadStickNav.moveFocusNext()
+        if (restored) {
+            if (scope != null) clearRestorePending(scope)
+            return true
+        }
+        if (scope != null && lastKeyByScope.containsKey(scope)) {
+            restoreSavedFocus(scope)
+            return true
+        }
+        return GamepadStickNav.moveFocusNext()
     }
 }
 
@@ -505,11 +571,17 @@ fun Modifier.gamepadFocusOutline(
     register: Boolean = false,
     slider: Boolean = false,
     horizontalNav: HorizontalNav = HorizontalNav.BLOCK_BOTH,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
     onActivate: (() -> Unit)? = null,
 ): Modifier {
     val requester = remember { FocusRequester() }
     val activationState = rememberUpdatedState(onActivate)
     val horizontalNavState = rememberUpdatedState(horizontalNav)
+    val pagerPage = LocalPagerPageIndex.current
+    val scope = if (pagerPage >= 0) "page:$pagerPage" else GamepadFocusNav.lastEntryScope
+    val focusKeyState = rememberUpdatedState(focusKey)
+    val focusIndexState = rememberUpdatedState(focusIndex)
     var focused by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(
         targetValue = if (focused && GamepadInput.active) 1f else 0f,
@@ -519,11 +591,30 @@ fun Modifier.gamepadFocusOutline(
     DisposableEffect(requester) {
         onDispose { GamepadFocusNav.forget(requester) }
     }
+
+    if (scope != null && focusKey != null) {
+        LaunchedEffect(scope, focusKey, GamepadFocusNav.savedKey(scope), GamepadFocusNav.isRestorePending(scope)) {
+            val saved = GamepadFocusNav.savedKey(scope)
+            if (saved == focusKey && GamepadFocusNav.isRestorePending(scope)) {
+                delay(16)
+                val got = runCatching { requester.requestFocus() }.getOrDefault(false)
+                if (got) GamepadFocusNav.clearRestorePending(scope)
+            }
+        }
+    }
+
     return this
         .onFocusChanged { focusState ->
             focused = focusState.isFocused
             if (focusState.isFocused) {
                 if (register) GamepadFocusNav.publishLastFocused(requester)
+                if (scope != null) {
+                    val key = focusKeyState.value
+                    if (key != null) {
+                        GamepadFocusNav.saveFocusKey(scope, key, focusIndexState.value)
+                        GamepadFocusNav.clearRestorePending(scope)
+                    }
+                }
                 GamepadShortcuts.publishActivation(requester) { activationState.value?.invoke() }
                 GamepadFocusNav.publishHorizontalNav(requester, horizontalNavState.value)
                 if (slider) GamepadFocusNav.publishFocusedSlider(true)
@@ -556,18 +647,22 @@ fun Modifier.gamepadFocusOutline(
  * pager keeps all four composed at once.
  */
 @Composable
-fun Modifier.gamepadScreenEntry(page: Int = -1): Modifier {
+fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modifier {
     val requester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     var entered by remember { mutableStateOf(false) }
+    val standaloneScope = remember { "screen:${System.identityHashCode(Any())}" }
+    val scope = scopeKey ?: if (page >= 0) "page:$page" else standaloneScope
 
-    DisposableEffect(page, requester) {
+    DisposableEffect(page, requester, scope) {
         GamepadFocusNav.publishPageEntry(page, requester)
+        if (page < 0) GamepadFocusNav.lastEntryScope = scope
         onDispose { GamepadFocusNav.clearPageEntry(page, requester) }
     }
 
     LaunchedEffect(GamepadInput.dpadMode, page) {
         GamepadFocusNav.publishLastEntry(requester)
+        if (page < 0) GamepadFocusNav.lastEntryScope = scope
         if (!GamepadInput.dpadMode) return@LaunchedEffect
         // The pager keeps every page composed; only the visible one may take
         // focus, or the D-pad would seed the wrong page.
