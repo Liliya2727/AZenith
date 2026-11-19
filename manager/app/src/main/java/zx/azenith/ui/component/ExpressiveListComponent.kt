@@ -239,7 +239,7 @@ fun ExpressiveListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .gamepadFocusOutline(register = true)
+            .gamepadFocusOutline(register = true, onActivate = onClick ?: onLongClick)
             .let {
                 if (onClick != null || onLongClick != null) {
                     it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
@@ -304,7 +304,7 @@ fun ExpressiveListItemHighlight(
         modifier = Modifier
             .fillMaxWidth()
             .background(containerColor) 
-            .gamepadFocusOutline(register = true)
+            .gamepadFocusOutline(register = true, onActivate = onClick ?: onLongClick)
             .let {
                 if (onClick != null || onLongClick != null) {
                     it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
@@ -368,7 +368,7 @@ fun ExpressiveInfoCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(containerColor) 
-            .gamepadFocusOutline(register = true)
+            .gamepadFocusOutline(register = true, onActivate = onClick ?: onLongClick)
             .let {
                 if (onClick != null || onLongClick != null) {
                     it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)

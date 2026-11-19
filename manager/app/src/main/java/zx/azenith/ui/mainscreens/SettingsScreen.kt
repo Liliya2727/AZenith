@@ -114,9 +114,6 @@ fun SettingsScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
-    GamepadStickScrollEffect(listState) { delta ->
-        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
-    }
 
     // Search results land here: entry id -> the LazyColumn item
     // holding that row.
@@ -159,44 +156,6 @@ fun SettingsScreen(
         onDismiss = {}
     )
 
-    // Gamepad shortcuts
-    val isCurrentPage = LocalIsCurrentPagerPage.current
-    DisposableEffect(isCurrentPage, showChangelogSheet, showLogBottomSheet, loadingDialog.isShown, uninstallDialog.isShown) {
-        if (isCurrentPage) {
-            GamepadShortcuts.hasSearch = true
-            GamepadShortcuts.isSearchOpen = false
-            GamepadShortcuts.onSearchOpen = {
-                navController.navigate(SearchTab.Settings.searchRoute)
-            }
-            GamepadShortcuts.onSearchClose = null
-            GamepadShortcuts.onSearchToggle = {
-                navController.navigate(SearchTab.Settings.searchRoute)
-            }
-            GamepadShortcuts.hasTopAction = true
-            GamepadShortcuts.onTopAction = { showChangelogSheet = true }
-            GamepadShortcuts.onCloseOverlay = {
-                var closed = false
-                if (showChangelogSheet) { showChangelogSheet = false; closed = true }
-                if (showLogBottomSheet) { showLogBottomSheet = false; closed = true }
-                if (loadingDialog.isShown) { loadingDialog.hide(); closed = true }
-                if (uninstallDialog.isShown) { uninstallDialog.cancel(); closed = true }
-                closed
-            }
-            GamepadShortcuts.onBack = null
-        }
-        onDispose {
-            if (isCurrentPage) {
-                GamepadShortcuts.hasSearch = false
-                GamepadShortcuts.onSearchOpen = null
-                GamepadShortcuts.onSearchClose = null
-                GamepadShortcuts.onSearchToggle = null
-                GamepadShortcuts.hasTopAction = false
-                GamepadShortcuts.onTopAction = null
-                GamepadShortcuts.onCloseOverlay = null
-            }
-        }
-    }
-
     // --- Reboot confirm dialog plumbing ---
     var pendingToggle by remember { mutableStateOf<(() -> Unit)?>(null) }
     val rebootDialog = rememberConfirmDialog(
@@ -207,17 +166,35 @@ fun SettingsScreen(
         onDismiss = { pendingToggle = null }
     )
 
-    DisposableEffect(isCurrentPage, rebootDialog.isShown) {
-        if (isCurrentPage) {
-            val prev = GamepadShortcuts.onCloseOverlay
-            GamepadShortcuts.onCloseOverlay = {
-                var closed = prev?.invoke() == true
-                if (rebootDialog.isShown) { rebootDialog.cancel(); closed = true }
-                closed
-            }
+    // Gamepad shortcuts: Square opens Settings search, Triangle toggles the log
+    // sheet beside it (log, not changelog — that is the page's action here).
+    val isCurrentPage = LocalIsCurrentPagerPage.current
+    val isPagerActive = LocalMainPagerActive.current
+    val pageIndex = LocalPagerPageIndex.current
+    RegisterGamepadActions(
+        enabled = isCurrentPage && isPagerActive,
+        hasSearch = true,
+        isSearchOpen = false,
+        onSearchToggle = { navController.navigate(SearchTab.Settings.searchRoute) },
+        hasTopAction = true,
+        isTopActionOpen = showLogBottomSheet,
+        onTopAction = { showLogBottomSheet = !showLogBottomSheet },
+        onCloseOverlay = {
+            var closed = false
+            if (showChangelogSheet) { showChangelogSheet = false; closed = true }
+            if (showLogBottomSheet) { showLogBottomSheet = false; closed = true }
+            if (loadingDialog.isShown) { loadingDialog.hide(); closed = true }
+            if (uninstallDialog.isShown) { uninstallDialog.cancel(); closed = true }
+            if (rebootDialog.isShown) { rebootDialog.cancel(); closed = true }
+            closed
+        },
+        scrollState = listState,
+        onScrollDelta = { delta ->
+            scrollBehavior.state.heightOffset =
+                (scrollBehavior.state.heightOffset - delta)
+                    .coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
         }
-        onDispose { }
-    }
+    )
 
     fun toggleWithRebootCheck(key: String, isChecked: Boolean, apply: () -> Unit) {
         if (RebootManager.wouldRequireReboot(key, isChecked)) {
@@ -326,7 +303,7 @@ fun SettingsScreen(
         ) { innerPadding ->
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+                modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(page = pageIndex),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
                     start = 16.dp + safeAreaStartInset(),

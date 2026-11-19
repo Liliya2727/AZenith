@@ -96,6 +96,7 @@ import kotlin.math.abs
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
@@ -108,6 +109,7 @@ import zx.azenith.ui.gamespace.isHandoffDone
 import zx.azenith.ui.gamespace.setHandoffDone
 import zx.azenith.ui.gamespace.launchGameSpaceDirectly
 import zx.azenith.ui.mainscreens.*
+import zx.azenith.ui.navigation.safePopBackStack
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.*
@@ -208,30 +210,39 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_MOVE && (
-                event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK ||
-                event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
-            )
-        ) {
-            // Right stick vertical: prefer AXIS_RZ, fallback to AXIS_RY
+        val source = event.source
+        val isJoystick = source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+        val isGamepad = source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
+        if (event.action == MotionEvent.ACTION_MOVE && (isJoystick || isGamepad)) {
+            // Right stick vertical scroll. A controller reports the vertical
+            // right-stick axis as RZ; some report RY instead, and a few report
+            // both, so take whichever is deflected further instead of blindly
+            // trusting RZ (an idle RZ of 0 would mask a real RY deflection).
             val rz = event.getAxisValue(MotionEvent.AXIS_RZ)
             val ry = event.getAxisValue(MotionEvent.AXIS_RY)
-            val axis = if (kotlin.math.abs(rz) > 0.001f) rz else ry
+            val vertical = if (abs(rz) >= abs(ry)) rz else ry
+            GamepadStickScroll.onAxisY(vertical)
 
-            // Left stick navigates focus like a D-pad. Threshold lives in onStick so
-            // resting noise never moves the selection.
+            // Left stick walks focus like a D-pad. The threshold lives in
+            // onStick, so resting noise never moves the selection.
             GamepadStickNav.onStick(
                 event.getAxisValue(MotionEvent.AXIS_X),
                 event.getAxisValue(MotionEvent.AXIS_Y)
             )
 
-            if (kotlin.math.abs(axis) > 0.15f) {
-                GamepadInput.onDpadKey() // real stick deflection -> gamepad mode
+            if (abs(vertical) > GamepadStickScroll.DEADZONE) {
+                GamepadInput.onDpadKey()
             }
-            GamepadStickScroll.onAxisY(axis)
             return true
         }
         return super.dispatchGenericMotionEvent(event)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // A controller that disappears mid-deflection would otherwise leave a
+        // constant scroll axis behind; drop it when we leave the foreground.
+        GamepadStickScroll.reset()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -518,57 +529,16 @@ fun MainScreen(fromTileType: String? = null) {
         RootDialogsProvider {
             val isAnyDialogOpen = zx.azenith.ui.component.LocalActiveDialogCount.current.value > 0 || installingDialog.isShown || updateDialog.isShown || rebootDialog.isShown
 
-            // Gamepad shortcuts: main pager context
-            val currentPagerIndex = if (isOnMainPager) pagerState.currentPage else -1
-            GamepadShortcuts.isOnMainPager = isOnMainPager && rawRoute == "main"
-            GamepadShortcuts.canPagePrev = GamepadShortcuts.isOnMainPager && currentPagerIndex > 0
-            GamepadShortcuts.canPageNext = GamepadShortcuts.isOnMainPager && currentPagerIndex < pagerRoutes.lastIndex
-            LaunchedEffect(isOnMainPager, currentPagerIndex, isAnyDialogOpen, showExitConfirm) {
-                GamepadShortcuts.isOnMainPager = isOnMainPager && rawRoute == "main"
-                GamepadShortcuts.canPagePrev = GamepadShortcuts.isOnMainPager && currentPagerIndex > 0
-                GamepadShortcuts.canPageNext = GamepadShortcuts.isOnMainPager && currentPagerIndex < pagerRoutes.lastIndex
-            }
-            DisposableEffect(isOnMainPager, currentPagerIndex) {
-                if (isOnMainPager) {
-                    GamepadShortcuts.onPagePrev = {
-                        val target = (pagerState.currentPage - 1).coerceAtLeast(0)
-                        if (target != pagerState.currentPage) {
-                            coroutineScope.launch { pagerState.animateScrollToPage(target) }
-                            GamepadFocusNav.restoreFocus()
-                        }
-                    }
-                    GamepadShortcuts.onPageNext = {
-                        val target = (pagerState.currentPage + 1).coerceAtMost(pagerRoutes.lastIndex)
-                        if (target != pagerState.currentPage) {
-                            coroutineScope.launch { pagerState.animateScrollToPage(target) }
-                            GamepadFocusNav.restoreFocus()
-                        }
-                    }
-                    GamepadShortcuts.onBack = {
-                        if (isAnyDialogOpen) {
-                            false
-                        } else if (pagerState.currentPage != 0) {
-                            coroutineScope.launch { pagerState.animateScrollToPage(0) }
-                            true
-                        } else {
-                            showExitConfirm = true
-                            true
-                        }
-                    }
-                }
-                onDispose { }
-            }
-            DisposableEffect(isOnMainPager) {
-                if (!isOnMainPager) {
-                    GamepadShortcuts.isOnMainPager = false
-                    GamepadShortcuts.canPagePrev = false
-                    GamepadShortcuts.canPageNext = false
-                    GamepadShortcuts.onPagePrev = null
-                    GamepadShortcuts.onPageNext = null
-                    GamepadShortcuts.onBack = null
-                }
-                onDispose { }
-            }
+            // Gamepad shortcuts: main pager context. L1/R1 and the global Circle
+            // fallback are published here once; the pages publish their own
+            // search/top-action handlers through RegisterGamepadActions.
+            GamepadShortcuts.isOnMainPager = isOnMainPager
+            GamepadShortcuts.pageCount = pagerRoutes.size
+            GamepadShortcuts.pageIndex = pagerState.currentPage
+            GamepadFocusNav.currentPage = if (isOnMainPager) pagerState.currentPage else -1
+
+            // L1/R1 and the global Circle fallback are published below, once
+            // onNavSelected exists (it owns the animated page switch).
             
             androidx.activity.compose.BackHandler(enabled = isOnMainPager && !isAnyDialogOpen) {
                 if (showExitConfirm) {
@@ -703,10 +673,30 @@ fun MainScreen(fromTileType: String? = null) {
                                     .focusProperties { canFocus = page == pagerState.currentPage }
                             ) {
                                 when (pagerRoutes[page]) {
-                                    "home" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { HomeScreen() }
-                                    "applist" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { ApplistScreen(navController) }
-                                    "tweaks" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { TweakScreen(navController) }
-                                    "settings" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { SettingsScreen(navController) }
+                                    "home" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) {
+                                        CompositionLocalProvider(
+                                            zx.azenith.ui.component.LocalPagerPageIndex provides page,
+                                            zx.azenith.ui.component.LocalMainPagerActive provides isOnMainPager
+                                        ) { HomeScreen() }
+                                    }
+                                    "applist" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) {
+                                        CompositionLocalProvider(
+                                            zx.azenith.ui.component.LocalPagerPageIndex provides page,
+                                            zx.azenith.ui.component.LocalMainPagerActive provides isOnMainPager
+                                        ) { ApplistScreen(navController) }
+                                    }
+                                    "tweaks" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) {
+                                        CompositionLocalProvider(
+                                            zx.azenith.ui.component.LocalPagerPageIndex provides page,
+                                            zx.azenith.ui.component.LocalMainPagerActive provides isOnMainPager
+                                        ) { TweakScreen(navController) }
+                                    }
+                                    "settings" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) {
+                                        CompositionLocalProvider(
+                                            zx.azenith.ui.component.LocalPagerPageIndex provides page,
+                                            zx.azenith.ui.component.LocalMainPagerActive provides isOnMainPager
+                                        ) { SettingsScreen(navController) }
+                                    }
                                 }
                             }
                             
@@ -927,6 +917,51 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     }
                     highlightRoute.value = route
+                }
+
+                // L1/R1: switch pager pages, clamped at both ends, and land the
+                // ring on the new page's first row. Only live on the main pager
+                // (subscreens and open dialogs are excluded by the key handler).
+                DisposableEffect(isOnMainPager, pagerState, pagerRoutes) {
+                    if (isOnMainPager) {
+                        GamepadShortcuts.onPageTarget = { rawTarget ->
+                            val target = rawTarget.coerceIn(0, pagerRoutes.lastIndex)
+                            if (target != pagerState.currentPage || pagerState.isScrollInProgress) {
+                                onNavSelected(pagerRoutes[target])
+                                coroutineScope.launch {
+                                    // Wait for the animated switch to settle, then
+                                    // put the ring on the new page's first row.
+                                    snapshotFlow {
+                                        pagerState.settledPage to pagerState.isScrollInProgress
+                                    }.first { (settled, scrolling) -> !scrolling && settled == target }
+                                    withFrameNanos { }
+                                    GamepadFocusNav.requestPageEntry(target)
+                                }
+                            } else {
+                                coroutineScope.launch {
+                                    withFrameNanos { }
+                                    GamepadFocusNav.requestPageEntry(target)
+                                }
+                            }
+                        }
+                    } else {
+                        GamepadShortcuts.onPageTarget = null
+                    }
+
+                    // Circle on a spread-out subscreen pops it through the same
+                    // safe path the back arrow uses. On the root pager this is a
+                    // no-op, so Circle never exits the app.
+                    GamepadShortcuts.onGlobalBack = {
+                        if (!isOnMainPager) {
+                            navController.safePopBackStack()
+                        }
+                        true
+                    }
+
+                    onDispose {
+                        GamepadShortcuts.onPageTarget = null
+                        GamepadShortcuts.onGlobalBack = null
+                    }
                 }
 
                 if (isLandscape) {
@@ -1192,6 +1227,9 @@ fun BottomNavBar(
 
     Box(
         modifier = modifier
+            // The bar is chrome, never a D-pad destination: pruning focus at
+            // this root removes the whole bar and every tab inside it.
+            .focusProperties { canFocus = false }
             // The bar is a full-width strip; it hugs its own content vertically.
             .fillMaxWidth()
             .then(insetPadding)

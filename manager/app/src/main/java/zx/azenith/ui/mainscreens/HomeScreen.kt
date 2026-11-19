@@ -89,37 +89,32 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         viewModel.refreshAiMode()
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     }
-    GamepadStickScrollEffect(listState) { delta ->
-        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
-    }
 
-    // Gamepad shortcuts for Home page
+    // Gamepad: Home has no search, so Square does nothing. Triangle toggles the
+    // power action (the reboot sheet) that sits beside search.
     val isCurrentPage = LocalIsCurrentPagerPage.current
-    DisposableEffect(isCurrentPage, showRebootSheet, showProfileDialog) {
-        if (isCurrentPage) {
-            GamepadShortcuts.hasSearch = false
-            GamepadShortcuts.onSearchOpen = null
-            GamepadShortcuts.onSearchClose = null
-            GamepadShortcuts.onSearchToggle = null
-            GamepadShortcuts.hasTopAction = true
-            GamepadShortcuts.onTopAction = { showRebootSheet = true }
-            GamepadShortcuts.onCloseOverlay = {
-                when {
-                    showRebootSheet -> { showRebootSheet = false; true }
-                    showProfileDialog -> { showProfileDialog = false; true }
-                    else -> false
-                }
+    val isPagerActive = LocalMainPagerActive.current
+    val pageIndex = LocalPagerPageIndex.current
+    RegisterGamepadActions(
+        enabled = isCurrentPage && isPagerActive,
+        hasSearch = false,
+        hasTopAction = true,
+        isTopActionOpen = showRebootSheet,
+        onTopAction = { showRebootSheet = !showRebootSheet },
+        onCloseOverlay = {
+            when {
+                showRebootSheet -> { showRebootSheet = false; true }
+                showProfileDialog -> { showProfileDialog = false; true }
+                else -> false
             }
-            GamepadShortcuts.onBack = null // handled by MainScreen when on root page
+        },
+        scrollState = listState,
+        onScrollDelta = { delta ->
+            scrollBehavior.state.heightOffset =
+                (scrollBehavior.state.heightOffset - delta)
+                    .coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
         }
-        onDispose {
-            if (isCurrentPage) {
-                GamepadShortcuts.hasTopAction = false
-                GamepadShortcuts.onTopAction = null
-                GamepadShortcuts.onCloseOverlay = null
-            }
-        }
-    }
+    )
 
     // Turning auto mode back on takes manual switching away, so a dialog left
     // open across that change would keep offering a choice that no longer applies.
@@ -160,7 +155,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(page = pageIndex),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding() + 16.dp,
                 start = 16.dp + safeAreaStartInset(),

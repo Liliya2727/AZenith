@@ -99,9 +99,6 @@ fun ApplistScreen(navController: NavController) {
         )
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-    GamepadStickScrollEffect(listState) { delta ->
-        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
-    }
     
     val pullToRefreshState = rememberPullToRefreshState()
 
@@ -129,47 +126,40 @@ fun ApplistScreen(navController: NavController) {
         }
     }
 
-    // Gamepad shortcuts (Square=search toggle, Triangle=filter)
+    // Gamepad shortcuts: Square toggles the inline search, Triangle toggles the
+    // filter sheet. The page only registers while it is the visible pager page.
     val isCurrentPage = LocalIsCurrentPagerPage.current
-    DisposableEffect(isCurrentPage, isSearchMode, showFilterSheet) {
-        if (isCurrentPage) {
-            GamepadShortcuts.hasSearch = true
-            GamepadShortcuts.isSearchOpen = isSearchMode
-            GamepadShortcuts.onSearchOpen = {
-                isSearchMode = true
-            }
-            GamepadShortcuts.onSearchClose = {
+    val isPagerActive = LocalMainPagerActive.current
+    val pageIndex = LocalPagerPageIndex.current
+    RegisterGamepadActions(
+        enabled = isCurrentPage && isPagerActive,
+        hasSearch = true,
+        isSearchOpen = isSearchMode,
+        onSearchToggle = {
+            if (isSearchMode) {
                 isSearchMode = false
                 viewModel.updateSearch(TextFieldValue(""))
+            } else {
+                isSearchMode = true
             }
-            GamepadShortcuts.onSearchToggle = {
-                if (isSearchMode) {
-                    isSearchMode = false
-                    viewModel.updateSearch(TextFieldValue(""))
-                } else {
-                    isSearchMode = true
-                }
-            }
-            GamepadShortcuts.hasTopAction = true
-            GamepadShortcuts.onTopAction = { showFilterSheet = true }
-            GamepadShortcuts.onCloseOverlay = {
-                if (showFilterSheet) { showFilterSheet = false; true } else false
-            }
-            GamepadShortcuts.onBack = null
+        },
+        onSearchClose = {
+            isSearchMode = false
+            viewModel.updateSearch(TextFieldValue(""))
+        },
+        hasTopAction = true,
+        isTopActionOpen = showFilterSheet,
+        onTopAction = { showFilterSheet = !showFilterSheet },
+        onCloseOverlay = {
+            if (showFilterSheet) { showFilterSheet = false; true } else false
+        },
+        scrollState = listState,
+        onScrollDelta = { delta ->
+            scrollBehavior.state.heightOffset =
+                (scrollBehavior.state.heightOffset - delta)
+                    .coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
         }
-        onDispose {
-            if (isCurrentPage) {
-                GamepadShortcuts.hasSearch = false
-                GamepadShortcuts.isSearchOpen = false
-                GamepadShortcuts.onSearchOpen = null
-                GamepadShortcuts.onSearchClose = null
-                GamepadShortcuts.onSearchToggle = null
-                GamepadShortcuts.hasTopAction = false
-                GamepadShortcuts.onTopAction = null
-                GamepadShortcuts.onCloseOverlay = null
-            }
-        }
-    }
+    )
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -280,7 +270,7 @@ fun ApplistScreen(navController: NavController) {
                 ) {
                 ExpressiveLazyList(
                 state = listState,
-                modifier = Modifier.gamepadScreenEntry(),
+                modifier = Modifier.gamepadScreenEntry(page = pageIndex),
                 items = appsToDisplay,
                 key = { it.packageName },
                 contentPadding = listContentPadding
@@ -407,13 +397,13 @@ fun ApplistTopAppBar(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { onSearchModeChange(false) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                        IconButton(onClick = { onSearchModeChange(false) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape, onActivate = { onSearchModeChange(false) })) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back))
                         }
                     },
                     actions = {
                         if (searchQuery.text.isNotEmpty()) {
-                            IconButton(onClick = { onSearchChange(TextFieldValue("")) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                            IconButton(onClick = { onSearchChange(TextFieldValue("")) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape, onActivate = { onSearchChange(TextFieldValue("")) })) {
                                 Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear))
                             }
                         }

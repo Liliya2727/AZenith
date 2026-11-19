@@ -430,7 +430,7 @@ private fun ZXDropDownItem(
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .springPressBounce(pressedScale = 0.97f)
-            .gamepadFocusOutline(shape = shape)
+            .gamepadFocusOutline(shape = shape, onActivate = onClick)
             .clip(shape)
             .background(fill, shape)
             .onGloballyPositioned { coordinates ->

@@ -235,7 +235,7 @@ fun ScaleConfirmationDialog(
                         ) {
                             TextButton(
                                 onClick = onRevert,
-                                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true)
+                                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true, onActivate = onRevert)
                             ) {
                                 Text(
                                     text = stringResource(R.string.scale_confirm_revert),
@@ -247,7 +247,7 @@ fun ScaleConfirmationDialog(
                                 onClick = onConfirm,
                                 modifier = Modifier
                                     .focusRequester(confirmRequester)
-                                    .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true)
+                                    .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true, onActivate = onConfirm)
                             ) {
                                 Text(
                                     text = stringResource(R.string.scale_confirm_keep),

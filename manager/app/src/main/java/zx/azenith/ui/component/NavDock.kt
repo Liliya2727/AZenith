@@ -265,6 +265,9 @@ fun NavDock(
 
     Box(
         modifier = modifier
+            // The dock is chrome: never a D-pad destination, and every row
+            // inside it inherits the exclusion from this root.
+            .gamepadNotFocusable()
             // Read in the layout block, not in this body: a frame of the spring then
             // invalidates layout alone, instead of recomposing the panel's rows, labels
             // and action tiles sixty times a second.

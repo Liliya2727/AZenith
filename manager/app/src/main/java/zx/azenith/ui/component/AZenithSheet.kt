@@ -505,7 +505,7 @@ private fun SheetRow(
                     else -> Color.Transparent
                 }
             )
-            .gamepadFocusOutline(shape = rowShape(first && paintsGroupFill, last && paintsGroupFill))
+            .gamepadFocusOutline(shape = rowShape(first && paintsGroupFill, last && paintsGroupFill), onActivate = onClick)
             .clickable(enabled = item.enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,

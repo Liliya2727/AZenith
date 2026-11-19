@@ -3,29 +3,36 @@ package zx.azenith.ui.component
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
-import android.view.MotionEvent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Shape
@@ -38,13 +45,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.lazy.LazyListState
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.withFrameNanos
 import kotlin.math.abs
+import kotlin.math.sign
 
 /**
  * The shape of the row being composed, so a focus outline can follow the row's
@@ -52,33 +57,82 @@ import kotlin.math.abs
  */
 val LocalRowShape = compositionLocalOf<Shape> { RoundedCornerShape(4.dp) }
 
-/** Remappable gamepad actions (single mapping point). */
+/**
+ * True while the main pager is the screen on top of the nav stack.
+ *
+ * The pager's pages stay composed even when a subscreen is pushed over them, so
+ * `LocalIsCurrentPagerPage` alone would let a hidden page keep answering
+ * shortcut keys and scroll requests. Screens combine both before registering.
+ */
+val LocalMainPagerActive = compositionLocalOf { true }
+
+/** Index of the pager page a screen is composed as; -1 outside the pager. */
+val LocalPagerPageIndex = compositionLocalOf { -1 }
+
+/**
+ * Every action a controller button can ask the UI to take.
+ *
+ * This enum is the vocabulary; [GamepadKeymap] is the only place a physical
+ * keycode is turned into one of these, so remapping a button later means
+ * editing that one `when` and nothing else.
+ */
 enum class GamepadAction {
     DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT,
-    CONFIRM, // A / CENTER
-    BACK,    // B
-    SEARCH,  // X
-    TOP_ACTION, // Y
-    PAGE_PREV, // L1
-    PAGE_NEXT, // R1
+    CONFIRM,      // Cross / A          -> click or toggle the focused row
+    BACK,         // Circle / B         -> close overlay -> close search -> pop
+    SEARCH,       // Square / X         -> toggle search
+    TOP_ACTION,   // Triangle / Y       -> toggle the action beside search
+    PAGE_PREV,    // L1                 -> previous pager page
+    PAGE_NEXT,    // R1                 -> next pager page
     NONE
 }
 
-/** Central mapping from keycode -> action. Edit here to remap later. */
+/**
+ * The single keycode -> action map.
+ *
+ * Android's standard gamepad keycodes are used, and the keyboard equivalents
+ * (arrows, Enter, Escape) are aliases so a TV remote or a keyboard behaves the
+ * same way. Remap a button by changing its line here.
+ */
 object GamepadKeymap {
     fun map(keyCode: Int): GamepadAction = when (keyCode) {
         KeyEvent.KEYCODE_DPAD_UP -> GamepadAction.DPAD_UP
         KeyEvent.KEYCODE_DPAD_DOWN -> GamepadAction.DPAD_DOWN
         KeyEvent.KEYCODE_DPAD_LEFT -> GamepadAction.DPAD_LEFT
         KeyEvent.KEYCODE_DPAD_RIGHT -> GamepadAction.DPAD_RIGHT
-        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER,
-        KeyEvent.KEYCODE_BUTTON_A -> GamepadAction.CONFIRM
-        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.KEYCODE_ESCAPE -> GamepadAction.BACK
+
+        // Cross / A. D-pad centre and Enter are the keyboard aliases, so a
+        // focused row can also be activated from a remote.
+        KeyEvent.KEYCODE_BUTTON_A,
+        KeyEvent.KEYCODE_DPAD_CENTER,
+        KeyEvent.KEYCODE_ENTER,
+        KeyEvent.KEYCODE_NUMPAD_ENTER -> GamepadAction.CONFIRM
+
+        // Circle / B.
+        KeyEvent.KEYCODE_BUTTON_B,
+        KeyEvent.KEYCODE_BUTTON_SELECT,
+        KeyEvent.KEYCODE_ESCAPE -> GamepadAction.BACK
+
+        // Square / X.
         KeyEvent.KEYCODE_BUTTON_X -> GamepadAction.SEARCH
+
+        // Triangle / Y.
         KeyEvent.KEYCODE_BUTTON_Y -> GamepadAction.TOP_ACTION
+
         KeyEvent.KEYCODE_BUTTON_L1 -> GamepadAction.PAGE_PREV
         KeyEvent.KEYCODE_BUTTON_R1 -> GamepadAction.PAGE_NEXT
         else -> GamepadAction.NONE
+    }
+
+    /** KeyUps that have to be swallowed so a handled shortcut cannot fire twice. */
+    fun consumesKeyUp(action: GamepadAction): Boolean = when (action) {
+        GamepadAction.BACK,
+        GamepadAction.SEARCH,
+        GamepadAction.TOP_ACTION,
+        GamepadAction.PAGE_PREV,
+        GamepadAction.PAGE_NEXT,
+        GamepadAction.CONFIRM -> true
+        else -> false
     }
 }
 
@@ -117,21 +171,33 @@ object GamepadInput {
     }
 }
 
-/** Right stick scroll axis (vertical). Positive = scroll down. */
+/**
+ * Right stick scroll (vertical). Positive = scroll down.
+ *
+ * Values below [REST_SNAP] are treated as rest, so a worn stick that never
+ * quite returns to zero cannot make the list creep.
+ */
 object GamepadStickScroll {
+    const val DEADZONE = 0.15f
+    private const val REST_SNAP = 0.04f
+
     var axisY by mutableStateOf(0f)
         private set
 
-    /** Called from Activity.dispatchGenericMotionEvent. */
+    /** Called from the Activity's dispatchGenericMotionEvent. */
     fun onAxisY(value: Float) {
-        axisY = value
+        axisY = if (abs(value) < REST_SNAP) 0f else value
+    }
+
+    /** Centres the axis, e.g. when the app is paused or a controller detaches. */
+    fun reset() {
+        if (axisY != 0f) axisY = 0f
     }
 }
 
 /**
- * Left stick as a D-pad: converts deflection into focus moves. Registered from
- * [GamepadFocusRoot] because the FocusManager only exists in composition; the
- * Activity feeds raw axes in.
+ * Left stick as a D-pad. Only the vertical axis moves focus: rows are the only
+ * focus targets, and horizontal input is left to the focused slider.
  *
  * A direction has to cross [THRESHOLD] to fire, so resting noise never moves
  * focus, and it repeats only after a delay while the stick is held.
@@ -142,84 +208,140 @@ object GamepadStickNav {
 
     var focusManager: FocusManager? = null
 
-    private var lastDx = 0
     private var lastDy = 0
     private var nextRepeatAt = 0L
 
-    /** Move focus one step in [direction]; used by the first-press fallback. */
+    /** Move focus one step in [direction]. */
     fun moveFocus(direction: FocusDirection): Boolean =
         runCatching { focusManager?.moveFocus(direction) == true }.getOrDefault(false)
 
     fun moveFocusNext(): Boolean = moveFocus(FocusDirection.Next)
 
     fun onStick(x: Float, y: Float) {
-        val dx = if (abs(x) > THRESHOLD) if (x > 0f) 1 else -1 else 0
         val dy = if (abs(y) > THRESHOLD) if (y > 0f) 1 else -1 else 0
-        if (dx == 0 && dy == 0) {
+        if (dy == 0) {
             reset()
             return
         }
 
         val now = SystemClock.uptimeMillis()
-        val changed = dx != lastDx || dy != lastDy
-        if (!changed && now < nextRepeatAt) return
-
-        val direction = if (abs(x) > abs(y)) {
-            if (dx > 0) FocusDirection.Right else FocusDirection.Left
-        } else {
-            if (dy > 0) FocusDirection.Down else FocusDirection.Up
-        }
+        if (dy == lastDy && now < nextRepeatAt) return
 
         GamepadInput.onDpadKey()
-        moveFocus(direction)
+        moveFocus(if (dy > 0) FocusDirection.Down else FocusDirection.Up)
 
-        lastDx = dx
         lastDy = dy
         nextRepeatAt = now + REPEAT_MS
     }
 
     fun reset() {
-        lastDx = 0
         lastDy = 0
         nextRepeatAt = 0L
     }
 }
 
 /**
- * Registry for the currently active screen's gamepad shortcuts.
- * Only the foreground/active screen should register handlers (use DisposableEffect).
+ * Registry for the *currently active screen's* gamepad behaviour.
+ *
+ * The pager keeps all four pages composed, so a screen cannot rely on its own
+ * composition to know it is the one on screen. Screens register through
+ * [RegisterGamepadActions] while they are active and drop their registration in
+ * `onDispose`; the map is keyed by a per-screen token so a page that goes out of
+ * date can never clear a newer page's handlers.
+ *
+ * Pager-level behaviour (L1/R1 and the global back fallback) is published once
+ * by the main screen, not by the pages.
  */
 object GamepadShortcuts {
-    /** If true, a dialog is considered open by global counter; pages may also use onCloseOverlay. */
+    /** One screen's handlers. Mutated in place by [RegisterGamepadActions]. */
+    class Actions {
+        var hasSearch: Boolean = false
+        var isSearchOpen: Boolean = false
+        var onSearchToggle: (() -> Unit)? = null
+        var onSearchClose: (() -> Unit)? = null
+
+        var hasTopAction: Boolean = false
+        var isTopActionOpen: Boolean = false
+        /** Implemented as a toggle by the screen (open when closed, close when open). */
+        var onTopAction: (() -> Unit)? = null
+
+        /** Close a dialog/sheet owned by this screen. Returns true when something closed. */
+        var onCloseOverlay: (() -> Boolean)? = null
+        /** Screen-specific back, e.g. a search screen popping itself. */
+        var onBack: (() -> Boolean)? = null
+
+        /** The screen's list, scrolled by the right stick post-frame. */
+        var scrollState: LazyListState? = null
+        var shiftableScrollState: ScrollState? = null
+        /** Also called with the per-frame delta, so app bars can collapse/expand. */
+        var onScrollDelta: ((Float) -> Unit)? = null
+        var scrollDeadzone: Float = GamepadStickScroll.DEADZONE
+        var scrollSpeedPxPerSecond: Float = 2200f
+    }
+
+    private val registrations = ArrayList<Pair<Any, Actions>>()
+
+    val actions: Actions? get() = registrations.lastOrNull()?.second
+
+    fun register(token: Any, actions: Actions) {
+        val index = registrations.indexOfFirst { it.first === token }
+        if (index >= 0) registrations[index] = token to actions
+        else registrations.add(token to actions)
+    }
+
+    fun unregister(token: Any) {
+        registrations.removeAll { it.first === token }
+    }
+
+    // --- Global state, published by the root / main screen -------------------
+
+    /** True while any dialog (in-composition or its own window) is up. */
     var isDialogOpen: Boolean = false
 
-    // Search
-    var hasSearch: Boolean = false
-    var isSearchOpen: Boolean = false
-    var onSearchOpen: (() -> Unit)? = null
-    var onSearchClose: (() -> Unit)? = null
-    var onSearchToggle: (() -> Unit)? = null
-
-    // Top action (beside search)
-    var hasTopAction: Boolean = false
-    var onTopAction: (() -> Unit)? = null
-
-    // Back / overlay close
-    /** Try to close an overlay (dialog/sheet) owned by current screen. Return true if consumed. */
-    var onCloseOverlay: (() -> Boolean)? = null
-    /** Generic back handler; return true if consumed. */
-    var onBack: (() -> Boolean)? = null
-
-    // Pager (only active on main pager)
+    /** Main pager state, only meaningful while [isOnMainPager]. */
     var isOnMainPager: Boolean = false
-    var canPagePrev: Boolean = false
-    var canPageNext: Boolean = false
-    var onPagePrev: (() -> Unit)? = null
-    var onPageNext: (() -> Unit)? = null
+    var pageIndex: Int = 0
+    var pageCount: Int = 0
+    /** Ask the main screen to animate to a page; null outside the pager. */
+    var onPageTarget: ((Int) -> Unit)? = null
+    /** Last-resort Circle: pop the current subscreen. Returns true when handled. */
+    var onGlobalBack: (() -> Boolean)? = null
+
+    // --- Focused row activation ---------------------------------------------
+
+    private var activationToken: Any? = null
+    private var activation: (() -> Unit)? = null
+
+    /** True when focus sits on an outlined content row / switch / slider / button. */
+    val hasRowFocus: Boolean get() = activationToken != null
+
+    fun publishActivation(token: Any, callback: (() -> Unit)?) {
+        activationToken = token
+        activation = callback
+        GamepadFocusNav.publishLastFocusedToken(token)
+    }
+
+    fun clearActivation(token: Any) {
+        if (activationToken === token) {
+            activationToken = null
+            activation = null
+        }
+    }
+
+    /** Invoke the focused row's click, if it has one. */
+    fun activateFocused(): Boolean {
+        val callback = activation ?: return false
+        callback()
+        return true
+    }
 }
 
 /**
- * Where the bottom bar hands focus back to the page.
+ * Where the bottom bar and the pages hand focus back to content.
+ *
+ * Page entries are kept per pager index, because the pager keeps every page
+ * composed: a single "entry" requester would always point at whichever page
+ * happened to compose last.
  */
 object GamepadFocusNav {
     var pageEntry: FocusRequester? by mutableStateOf(null)
@@ -228,39 +350,115 @@ object GamepadFocusNav {
     var lastEntry: FocusRequester? by mutableStateOf(null)
         private set
 
-    fun publishPageEntry(requester: FocusRequester?) {
-        if (pageEntry !== requester) pageEntry = requester
+    /** Index of the pager page on screen; -1 when not on the pager. */
+    var currentPage: Int = -1
+
+    fun publishPageEntry(page: Int, requester: FocusRequester) {
+        if (page >= 0) pageEntries[page] = requester else publishLastEntry(requester)
+    }
+
+    fun clearPageEntry(page: Int, requester: FocusRequester) {
+        if (page >= 0) {
+            if (pageEntries[page] === requester) pageEntries.remove(page)
+        } else if (lastEntry === requester) {
+            lastEntry = null
+        }
     }
 
     fun publishLastEntry(requester: FocusRequester?) {
         if (lastEntry !== requester) lastEntry = requester
+        if (requester != null) pageEntry = requester
+    }
+
+    private val pageEntries = HashMap<Int, FocusRequester>()
+
+    /** True when the focused node is a slider, which owns D-pad left/right. */
+    var focusedSlider: Boolean = false
+        private set
+
+    fun publishFocusedSlider(focused: Boolean) {
+        focusedSlider = focused
     }
 
     private val focusHistory = ArrayDeque<FocusRequester>()
 
     fun publishLastFocused(requester: FocusRequester) {
-        focusHistory.remove(requester)
-        focusHistory.addLast(requester)
-        while (focusHistory.size > 8) focusHistory.removeFirst()
+        publishLastFocusedToken(requester)
     }
 
+    fun publishLastFocusedToken(token: Any) {
+        if (token is FocusRequester) {
+            focusHistory.remove(token)
+            focusHistory.addLast(token)
+            while (focusHistory.size > 8) focusHistory.removeFirst()
+        }
+    }
+
+    /**
+     * Focus the first row of [page] after a pager switch.
+     *
+     * Requests the page's list container and then steps into it, so the outline
+     * lands on the first content row rather than on the invisible container.
+     */
+    fun requestPageEntry(page: Int): Boolean {
+        val requester = pageEntries[page]
+        val focused = requester != null &&
+            runCatching { requester.requestFocus() }.getOrDefault(false)
+        if (!focused) return restoreFocus()
+        GamepadStickNav.moveFocus(FocusDirection.Next) ||
+            GamepadStickNav.moveFocus(FocusDirection.Down) ||
+            GamepadStickNav.moveFocus(FocusDirection.Enter)
+        return true
+    }
+
+    /**
+     * Re-seed focus after a page swap, a dialog closing or a rotation.
+     *
+     * Prefers the requested page's entry, then the last focused row, then the
+     * last screen entry, and finally lets the focus system pick any candidate.
+     */
     fun restoreFocus(): Boolean {
-        val candidates = focusHistory.toList().asReversed() + listOfNotNull(lastEntry, pageEntry)
+        val currentPageEntry = pageEntries[currentPage]
+        val candidates = listOfNotNull(currentPageEntry) +
+            focusHistory.toList().asReversed() +
+            listOfNotNull(lastEntry, pageEntry)
         val restored = candidates.any { runCatching { it.requestFocus() }.getOrDefault(false) }
-        // Nothing was focusable through a requester (fresh page, rotated screen,
-        // disposed nodes): fall back to letting the focus system pick an entry.
         return restored || GamepadStickNav.moveFocusNext()
     }
 }
 
+/**
+ * Makes a container (the navbar, the landscape dock) and everything inside it
+ * unreachable by D-pad. Applied to the bar's root node, which prunes the whole
+ * subtree from focus search.
+ */
+fun Modifier.gamepadNotFocusable(): Modifier = this.focusProperties { canFocus = false }
+
+/**
+ * The gamepad focus ring and activation for a content row, switch, slider or
+ * dialog button.
+ *
+ * The ring only ever draws while [GamepadInput.active] is true — i.e. after a
+ * real gamepad/d-pad key press — so a touch session never shows it.
+ *
+ * [onActivate] is what Cross runs while this node is focused. Compose's
+ * `clickable` does not know BUTTON_A, so the focused node publishes its click
+ * here and [gamepadKeyWatch] invokes it.
+ *
+ * [slider] marks the node as owning D-pad left/right, so the global handler
+ * leaves those keys for the slider itself.
+ */
 @Composable
 fun Modifier.gamepadFocusOutline(
     shape: Shape = LocalRowShape.current,
     width: Dp = 2.dp,
     register: Boolean = false,
+    slider: Boolean = false,
+    onActivate: (() -> Unit)? = null,
 ): Modifier {
     var focused by remember { mutableStateOf(false) }
     val requester = remember { FocusRequester() }
+    val activation by rememberUpdatedState(onActivate)
     val alpha by animateFloatAsState(
         targetValue = if (focused && GamepadInput.active) 1f else 0f,
         animationSpec = tween(durationMillis = 180),
@@ -271,7 +469,14 @@ fun Modifier.gamepadFocusOutline(
         .focusable()
         .onFocusChanged {
             focused = it.isFocused
-            if (it.isFocused && register) GamepadFocusNav.publishLastFocused(requester)
+            if (it.isFocused) {
+                if (register) GamepadFocusNav.publishLastFocused(requester)
+                GamepadShortcuts.publishActivation(requester, activation)
+                if (slider) GamepadFocusNav.publishFocusedSlider(true)
+            } else {
+                if (slider) GamepadFocusNav.publishFocusedSlider(false)
+                GamepadShortcuts.clearActivation(requester)
+            }
         }
         .then(
             if (alpha > 0.01f) {
@@ -286,14 +491,30 @@ fun Modifier.gamepadFocusOutline(
         )
 }
 
+/**
+ * Marks a list/screen container as an entry point for focus.
+ *
+ * [page] is the pager index for the four main pages, or -1 for a standalone
+ * screen. Only the page that is currently on screen requests focus, because the
+ * pager keeps all four composed at once.
+ */
 @Composable
-fun Modifier.gamepadScreenEntry(): Modifier {
+fun Modifier.gamepadScreenEntry(page: Int = -1): Modifier {
     val requester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     var entered by remember { mutableStateOf(false) }
-    LaunchedEffect(GamepadInput.dpadMode) {
+
+    DisposableEffect(page, requester) {
+        GamepadFocusNav.publishPageEntry(page, requester)
+        onDispose { GamepadFocusNav.clearPageEntry(page, requester) }
+    }
+
+    LaunchedEffect(GamepadInput.dpadMode, page) {
         GamepadFocusNav.publishLastEntry(requester)
         if (!GamepadInput.dpadMode) return@LaunchedEffect
+        // The pager keeps every page composed; only the visible one may take
+        // focus, or the D-pad would seed the wrong page.
+        if (page >= 0 && page != GamepadFocusNav.currentPage) return@LaunchedEffect
         repeat(8) {
             delay(150)
             if (entered) return@LaunchedEffect
@@ -311,100 +532,112 @@ fun Modifier.gamepadScreenEntry(): Modifier {
 }
 
 /**
- * Handles gamepad shortcut keys at the window/content level.
- * - KeyDown repeatCount==0 triggers actions.
- * - Also consumes matching KeyUp for those shortcut keys to avoid double-fire.
- * - Sets dpadMode for any mapped gamepad key.
+ * Handles every gamepad shortcut key at the window/content level.
+ *
+ * - KeyDown with repeatCount == 0 triggers actions; KeyUp of a handled shortcut
+ *   is consumed so nothing fires twice.
+ * - Every mapped key sets dpadMode, which is what turns the focus ring on.
+ * - While a dialog is open only Circle is live; it closes the dialog.
  */
 fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
     val keyCode = event.nativeKeyEvent.keyCode
     val action = GamepadKeymap.map(keyCode)
     if (action == GamepadAction.NONE) return@onPreviewKeyEvent false
 
-    // Always mark dpad/gamepad mode on key events
-    if (event.type == KeyEventType.KeyDown || event.type == KeyEventType.KeyUp) {
-        val wasActive = GamepadInput.active
-        GamepadInput.onDpadKey()
-        if (!wasActive && event.type == KeyEventType.KeyDown) {
-            // No focus yet (fresh page, rotation): try to enter content, then let
-            // this key press move focus normally.
-            GamepadFocusNav.restoreFocus()
-        }
-    }
+    // Any real gamepad/d-pad key means the user is on a controller.
+    GamepadInput.onDpadKey()
 
     if (event.type == KeyEventType.KeyUp) {
-        // Consume up for shortcut keys we handle to prevent double firing
-        return@onPreviewKeyEvent when (action) {
-            GamepadAction.BACK, GamepadAction.SEARCH, GamepadAction.TOP_ACTION,
-            GamepadAction.PAGE_PREV, GamepadAction.PAGE_NEXT -> true
-            else -> false
-        }
+        return@onPreviewKeyEvent GamepadKeymap.consumesKeyUp(action)
     }
-
     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
     if (event.nativeKeyEvent.repeatCount != 0) return@onPreviewKeyEvent false
 
+    // Nothing focused yet (fresh page, rotation, a dialog just closed): seed
+    // focus before this press is interpreted.
+    if (!GamepadShortcuts.hasRowFocus &&
+        action in setOf(
+            GamepadAction.DPAD_UP, GamepadAction.DPAD_DOWN,
+            GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT,
+            GamepadAction.CONFIRM
+        )
+    ) {
+        GamepadFocusNav.restoreFocus()
+    }
+
     val dialogOpen = GamepadShortcuts.isDialogOpen
+    val shortcuts = GamepadShortcuts.actions
+
     when (action) {
+        // Circle. Priority: dialog/sheet -> open search -> subscreen -> nothing.
         GamepadAction.BACK -> {
-            // Priority: close overlay (dialog/sheet) -> close search -> custom back -> pop handled by caller
-            val closedOverlay = GamepadShortcuts.onCloseOverlay?.invoke() == true
-            if (closedOverlay) return@onPreviewKeyEvent true
-            if (GamepadShortcuts.isSearchOpen) {
-                GamepadShortcuts.onSearchClose?.invoke()
+            if (dialogOpen) {
+                val closed = shortcuts?.onCloseOverlay?.invoke() == true ||
+                    GamepadShortcuts.onGlobalBack?.invoke() == true
+                return@onPreviewKeyEvent closed
+            }
+            if (shortcuts?.isSearchOpen == true) {
+                val close = shortcuts.onSearchClose ?: shortcuts.onSearchToggle
+                close?.invoke()
                 return@onPreviewKeyEvent true
             }
-            val handled = GamepadShortcuts.onBack?.invoke() == true
-            return@onPreviewKeyEvent handled
+            val screenBack = shortcuts?.onBack?.invoke() == true
+            if (screenBack) return@onPreviewKeyEvent true
+            // A root page has nothing to close: never let Circle exit the app.
+            GamepadShortcuts.onGlobalBack?.invoke()
+            return@onPreviewKeyEvent true
         }
+
+        // Square.
         GamepadAction.SEARCH -> {
             if (dialogOpen) return@onPreviewKeyEvent true
-            if (GamepadShortcuts.hasSearch) {
-                if (GamepadShortcuts.onSearchToggle != null) {
-                    GamepadShortcuts.onSearchToggle?.invoke()
-                } else if (GamepadShortcuts.isSearchOpen) {
-                    GamepadShortcuts.onSearchClose?.invoke()
+            val s = shortcuts
+            if (s != null && s.hasSearch) {
+                if (s.onSearchToggle != null) {
+                    s.onSearchToggle?.invoke()
+                } else if (s.isSearchOpen) {
+                    (s.onSearchClose ?: s.onSearchToggle)?.invoke()
                 } else {
-                    GamepadShortcuts.onSearchOpen?.invoke()
+                    s.onSearchToggle?.invoke()
                 }
-                return@onPreviewKeyEvent true
             }
-            return@onPreviewKeyEvent true // consume even if nothing
+            return@onPreviewKeyEvent true
         }
+
+        // Triangle.
         GamepadAction.TOP_ACTION -> {
             if (dialogOpen) return@onPreviewKeyEvent true
-            if (GamepadShortcuts.hasTopAction) {
-                GamepadShortcuts.onTopAction?.invoke()
-                return@onPreviewKeyEvent true
-            }
+            val s = shortcuts
+            if (s != null && s.hasTopAction) s.onTopAction?.invoke()
             return@onPreviewKeyEvent true
         }
-        GamepadAction.PAGE_PREV -> {
+
+        GamepadAction.PAGE_PREV, GamepadAction.PAGE_NEXT -> {
             if (dialogOpen) return@onPreviewKeyEvent true
-            if (GamepadShortcuts.isOnMainPager && GamepadShortcuts.canPagePrev) {
-                GamepadShortcuts.onPagePrev?.invoke()
-                return@onPreviewKeyEvent true
+            val onPageTarget = GamepadShortcuts.onPageTarget
+            if (GamepadShortcuts.isOnMainPager && onPageTarget != null) {
+                val delta = if (action == GamepadAction.PAGE_PREV) -1 else 1
+                val target = (GamepadShortcuts.pageIndex + delta)
+                    .coerceIn(0, GamepadShortcuts.pageCount - 1)
+                if (target != GamepadShortcuts.pageIndex) onPageTarget(target)
             }
             return@onPreviewKeyEvent true
         }
-        GamepadAction.PAGE_NEXT -> {
-            if (dialogOpen) return@onPreviewKeyEvent true
-            if (GamepadShortcuts.isOnMainPager && GamepadShortcuts.canPageNext) {
-                GamepadShortcuts.onPageNext?.invoke()
-                return@onPreviewKeyEvent true
-            }
-            return@onPreviewKeyEvent true
-        }
-        GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT -> {
-            // Pages switch only via L1/R1 on the main pager; block D-pad horizontal nav to avoid
-            // unexpected page changes or cross-page focus jumps.
-            if (GamepadShortcuts.isOnMainPager) return@onPreviewKeyEvent true
-            return@onPreviewKeyEvent false
-        }
+
         GamepadAction.CONFIRM -> {
-            // Let Compose handle A/Enter for clicks/focus activation; just ensure dpadMode set.
-            return@onPreviewKeyEvent false
+            // Cross: click/toggle whatever content row currently holds focus.
+            // Falls through when there is no activation, so a focused text
+            // field can still receive Enter / D-pad centre itself.
+            return@onPreviewKeyEvent GamepadShortcuts.activateFocused()
         }
+
+        GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT -> {
+            // Rows are a vertical list: horizontal input must not hop between
+            // rows. A focused slider has claimed these keys for its own value.
+            return@onPreviewKeyEvent !GamepadFocusNav.focusedSlider
+        }
+
+        // Vertical focus movement is the focus system's own job.
         else -> return@onPreviewKeyEvent false
     }
 }
@@ -432,8 +665,61 @@ fun GamepadFocusRoot(
         }
     }
 
+    // A press that arrives after a rotation or a page swap has no focused row
+    // to move from; seed one once the first frame is laid out.
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        if (GamepadInput.dpadMode) GamepadFocusNav.restoreFocus()
+    }
+
     val activeDialogCount = LocalActiveDialogCount.current
     GamepadShortcuts.isDialogOpen = activeDialogCount.value > 0
+
+    // The right stick's per-frame driver. It suspends entirely while the stick
+    // is centred (`snapshotFlow.first`), so at rest there is no frame work and
+    // no drift, and it only scrolls the list the active screen registered.
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            snapshotFlow { GamepadStickScroll.axisY }
+                .first { abs(it) > GamepadStickScroll.DEADZONE }
+
+            var lastNanos = 0L
+            while (isActive) {
+                var delta = 0f
+                var deadzone = GamepadStickScroll.DEADZONE
+                withFrameNanos { frameNanos ->
+                    val current = GamepadShortcuts.actions
+                    deadzone = current?.scrollDeadzone ?: GamepadStickScroll.DEADZONE
+                    val value = GamepadStickScroll.axisY
+                    if (lastNanos != 0L && abs(value) > deadzone) {
+                        val dt = (frameNanos - lastNanos) / 1_000_000_000f
+                        val magnitude = (abs(value) - deadzone) / (1f - deadzone)
+                        val speed = current?.scrollSpeedPxPerSecond ?: 2200f
+                        delta = sign(value) * magnitude * speed * dt
+                    }
+                    lastNanos = frameNanos
+                }
+
+                val value = GamepadStickScroll.axisY
+                if (abs(value) <= deadzone) break
+                if (GamepadShortcuts.isDialogOpen) break
+
+                if (delta != 0f) {
+                    GamepadInput.onDpadKey()
+                    val current = GamepadShortcuts.actions
+                    current?.onScrollDelta?.invoke(delta)
+                    val ls = current?.scrollState
+                    if (ls != null) {
+                        try { ls.scrollBy(delta) } catch (_: Throwable) {}
+                    }
+                    val cs = current?.shiftableScrollState
+                    if (cs != null) {
+                        try { cs.scrollBy(delta) } catch (_: Throwable) {}
+                    }
+                }
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -442,7 +728,11 @@ fun GamepadFocusRoot(
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
-                        if (event.type == PointerEventType.Press) GamepadInput.onTouch()
+                        if (event.type == PointerEventType.Press) {
+                            GamepadInput.onTouch()
+                            // Touch is not the stick: stop any in-flight scroll.
+                            GamepadStickScroll.reset()
+                        }
                     }
                 }
             }
@@ -456,37 +746,84 @@ fun ProvideRowShape(shape: Shape, content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalRowShape provides shape) { content() }
 }
 
-/** Scrolls a LazyList using the right stick axisY from GamepadStickScroll. */
+/**
+ * Registers this screen's gamepad behaviour while [enabled].
+ *
+ * A token is allocated per screen instance, and the registration is removed on
+ * dispose; a screen that drops out (pager page no longer selected, subscreen
+ * popped, activity recreated) can never leave a stale handler behind or clear a
+ * newer screen's registration.
+ *
+ * The handler object is mutated in a [SideEffect] rather than captured, so
+ * changing `showFilterSheet` etc. does not churn the registration.
+ */
+@Composable
+fun RegisterGamepadActions(
+    enabled: Boolean = true,
+    hasSearch: Boolean = false,
+    isSearchOpen: Boolean = false,
+    onSearchToggle: (() -> Unit)? = null,
+    onSearchClose: (() -> Unit)? = null,
+    hasTopAction: Boolean = false,
+    isTopActionOpen: Boolean = false,
+    onTopAction: (() -> Unit)? = null,
+    onCloseOverlay: (() -> Boolean)? = null,
+    onBack: (() -> Boolean)? = null,
+    scrollState: LazyListState? = null,
+    columnScrollState: ScrollState? = null,
+    onScrollDelta: ((Float) -> Unit)? = null,
+) {
+    val token = remember { Any() }
+    val holder = remember { GamepadShortcuts.Actions() }
+
+    SideEffect {
+        holder.hasSearch = hasSearch
+        holder.isSearchOpen = isSearchOpen
+        holder.onSearchToggle = onSearchToggle
+        holder.onSearchClose = onSearchClose
+        holder.hasTopAction = hasTopAction
+        holder.isTopActionOpen = isTopActionOpen
+        holder.onTopAction = onTopAction
+        holder.onCloseOverlay = onCloseOverlay
+        holder.onBack = onBack
+        holder.scrollState = scrollState
+        holder.shiftableScrollState = columnScrollState
+        holder.onScrollDelta = onScrollDelta
+        if (enabled) GamepadShortcuts.register(token, holder)
+        else GamepadShortcuts.unregister(token)
+    }
+
+    DisposableEffect(token) {
+        onDispose { GamepadShortcuts.unregister(token) }
+    }
+}
+
+/**
+ * Registers a list as the right stick's scroll target.
+ *
+ * Kept as a composable so screens that need nothing else (a plain list) can opt
+ * in with one line. Screens that also have search/top actions should pass
+ * `scrollState` to [RegisterGamepadActions] instead of using both.
+ */
 @Composable
 fun GamepadStickScrollEffect(
     listState: LazyListState,
-    deadzone: Float = 0.15f,
+    deadzone: Float = GamepadStickScroll.DEADZONE,
     speedPxPerSecond: Float = 2200f,
     onScrollDelta: ((Float) -> Unit)? = null,
 ) {
-    LaunchedEffect(listState, onScrollDelta) {
-        var lastNanos = 0L
-        while (isActive) {
-            withFrameNanos { frameNanos ->
-                if (lastNanos == 0L) {
-                    lastNanos = frameNanos
-                    return@withFrameNanos
-                }
-                val dt = (frameNanos - lastNanos) / 1_000_000_000f
-                lastNanos = frameNanos
-                val value = GamepadStickScroll.axisY
-                if (abs(value) > deadzone) {
-                    GamepadInput.onDpadKey()
-                    val magnitude = (abs(value) - deadzone) / (1f - deadzone)
-                    val delta = kotlin.math.sign(value) * magnitude * speedPxPerSecond * dt
-                    onScrollDelta?.invoke(delta)
-                    this.launch {
-                        runCatching { listState.scrollBy(delta) }
-                    }
-                } else {
-                    lastNanos = frameNanos
-                }
-            }
-        }
+    val token = remember(listState) { Any() }
+    val holder = remember(listState) { GamepadShortcuts.Actions() }
+
+    SideEffect {
+        holder.scrollState = listState
+        holder.onScrollDelta = onScrollDelta
+        holder.scrollDeadzone = deadzone
+        holder.scrollSpeedPxPerSecond = speedPxPerSecond
+        GamepadShortcuts.register(token, holder)
+    }
+
+    DisposableEffect(token) {
+        onDispose { GamepadShortcuts.unregister(token) }
     }
 }

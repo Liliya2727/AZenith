@@ -133,9 +133,6 @@ fun TweakScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val listState = rememberLazyListState()
-    GamepadStickScrollEffect(listState) { delta ->
-        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset - delta).coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
-    }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val colorScheme = MaterialTheme.colorScheme
@@ -174,44 +171,35 @@ fun TweakScreen(
     LoadingDialogHost(handle = loadingDialog)
     ConfirmDialogHost(handle = confirmDialog)
 
-    // Gamepad shortcuts
+    // Gamepad shortcuts: Square opens Tweaks search, Triangle toggles the cloud
+    // (backup/restore) sheet beside it.
     val isCurrentPage = LocalIsCurrentPagerPage.current
-    DisposableEffect(isCurrentPage, showBackupRestoreSheet, showRendererDialog, showRefreshRateDialog, showBackupOptionsDialog, showRestoreDialog) {
-        if (isCurrentPage) {
-            GamepadShortcuts.hasSearch = true
-            GamepadShortcuts.isSearchOpen = false
-            GamepadShortcuts.onSearchOpen = {
-                navController.navigate(SearchTab.Tweaks.searchRoute)
-            }
-            GamepadShortcuts.onSearchClose = null
-            GamepadShortcuts.onSearchToggle = {
-                navController.navigate(SearchTab.Tweaks.searchRoute)
-            }
-            GamepadShortcuts.hasTopAction = true
-            GamepadShortcuts.onTopAction = { showBackupRestoreSheet = true }
-            GamepadShortcuts.onCloseOverlay = {
-                var closed = false
-                if (showBackupRestoreSheet) { showBackupRestoreSheet = false; closed = true }
-                if (showRendererDialog) { showRendererDialog = false; closed = true }
-                if (showRefreshRateDialog) { showRefreshRateDialog = false; closed = true }
-                if (showBackupOptionsDialog) { showBackupOptionsDialog = false; closed = true }
-                if (showRestoreDialog) { showRestoreDialog = false; closed = true }
-                closed
-            }
-            GamepadShortcuts.onBack = null
+    val isPagerActive = LocalMainPagerActive.current
+    val pageIndex = LocalPagerPageIndex.current
+    RegisterGamepadActions(
+        enabled = isCurrentPage && isPagerActive,
+        hasSearch = true,
+        isSearchOpen = false,
+        onSearchToggle = { navController.navigate(SearchTab.Tweaks.searchRoute) },
+        hasTopAction = true,
+        isTopActionOpen = showBackupRestoreSheet,
+        onTopAction = { showBackupRestoreSheet = !showBackupRestoreSheet },
+        onCloseOverlay = {
+            var closed = false
+            if (showBackupRestoreSheet) { showBackupRestoreSheet = false; closed = true }
+            if (showRendererDialog) { showRendererDialog = false; closed = true }
+            if (showRefreshRateDialog) { showRefreshRateDialog = false; closed = true }
+            if (showBackupOptionsDialog) { showBackupOptionsDialog = false; closed = true }
+            if (showRestoreDialog) { showRestoreDialog = false; closed = true }
+            closed
+        },
+        scrollState = listState,
+        onScrollDelta = { delta ->
+            scrollBehavior.state.heightOffset =
+                (scrollBehavior.state.heightOffset - delta)
+                    .coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
         }
-        onDispose {
-            if (isCurrentPage) {
-                GamepadShortcuts.hasSearch = false
-                GamepadShortcuts.onSearchOpen = null
-                GamepadShortcuts.onSearchClose = null
-                GamepadShortcuts.onSearchToggle = null
-                GamepadShortcuts.hasTopAction = false
-                GamepadShortcuts.onTopAction = null
-                GamepadShortcuts.onCloseOverlay = null
-            }
-        }
-    }
+    )
 
     val createDocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         uri?.let {
@@ -332,7 +320,7 @@ fun TweakScreen(
 
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(page = pageIndex),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp + safeAreaStartInset(),

@@ -131,7 +131,7 @@ fun BannerWithEasterEgg(
                 scaleY = pressScale
             }
             .clip(currentPersonalization().bannerCorner())
-            .gamepadFocusOutline(register = true)
+            .gamepadFocusOutline(register = true, onActivate = onClick)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = androidx.compose.foundation.LocalIndication.current,

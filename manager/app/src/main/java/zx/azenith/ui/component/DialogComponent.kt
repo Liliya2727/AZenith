@@ -360,14 +360,14 @@ private fun ConfirmDialog(
         ) {
             TextButton(
                 onClick = dismiss,
-                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), onActivate = dismiss)
             ) {
                 Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             TextButton(
                 onClick = confirm,
-                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), onActivate = confirm)
             ) {
                 Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
             }
@@ -412,7 +412,7 @@ fun CustomContentDialog(
         ) {
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), onActivate = onDismiss)
             ) {
                 Text(text = dismissText)
             }
@@ -420,7 +420,7 @@ fun CustomContentDialog(
             TextButton(
                 onClick = onConfirm,
                 enabled = confirmEnabled,
-                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), onActivate = onConfirm)
             ) {
                 Text(text = confirmText)
             }

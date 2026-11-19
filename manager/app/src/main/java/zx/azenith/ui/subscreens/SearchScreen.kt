@@ -94,7 +94,7 @@ import zx.azenith.ui.component.SearchJump
 import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
 import zx.azenith.ui.component.GamepadShortcuts
-import zx.azenith.ui.component.GamepadStickScrollEffect
+import zx.azenith.ui.component.RegisterGamepadActions
 import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.component.hazePageSource
 import zx.azenith.ui.navigation.safePopBackStack
@@ -128,7 +128,6 @@ fun SearchScreen(
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
-    GamepadStickScrollEffect(listState)
     val colorScheme = MaterialTheme.colorScheme
     val motionScheme = MaterialTheme.motionScheme
     var query by rememberSaveable { mutableStateOf("") }
@@ -182,19 +181,21 @@ fun SearchScreen(
 
     BackHandler { dismissEditor(); navController.safePopBackStack() }
 
-    DisposableEffect(Unit) {
-        GamepadShortcuts.onBack = {
+    RegisterGamepadActions(
+        enabled = true,
+        hasSearch = false,
+        hasTopAction = false,
+        onCloseOverlay = {
+            dismissEditor()
+            true
+        },
+        onBack = {
             dismissEditor()
             navController.safePopBackStack()
             true
-        }
-        GamepadShortcuts.hasSearch = false
-        GamepadShortcuts.hasTopAction = false
-        GamepadShortcuts.onCloseOverlay = null
-        onDispose {
-            GamepadShortcuts.onBack = null
-        }
-    }
+        },
+        scrollState = listState,
+    )
 
     LaunchedEffect(Unit) {
         // Requesting focus before the field is attached throws, and on the first
