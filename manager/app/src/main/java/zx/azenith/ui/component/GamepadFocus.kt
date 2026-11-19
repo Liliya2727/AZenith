@@ -832,10 +832,15 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
 
     val pageBefore = GamepadShortcuts.pageIndex
     val isLeftRight = action == GamepadAction.DPAD_LEFT || action == GamepadAction.DPAD_RIGHT
+    // Alphabetical navigation is private to an open dialog: its buttons sit side
+    // by side and there is no pager underneath to protect.
+    val dialogOpen = GamepadShortcuts.isDialogOpen
 
     if (event.type == KeyEventType.KeyUp) {
         if (isLeftRight) {
-            val consumed = if (GamepadFocusNav.focusedSlider) {
+            val consumed = if (dialogOpen) {
+                false
+            } else if (GamepadFocusNav.focusedSlider) {
                 false
             } else if (!GamepadShortcuts.hasRowFocus) {
                 true
@@ -856,7 +861,9 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
     if (event.nativeKeyEvent.repeatCount != 0) {
         if (isLeftRight) {
-            val consumed = if (GamepadFocusNav.focusedSlider) {
+            val consumed = if (dialogOpen) {
+                false
+            } else if (GamepadFocusNav.focusedSlider) {
                 false
             } else if (!GamepadShortcuts.hasRowFocus) {
                 true
@@ -876,8 +883,9 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
     }
 
     // Nothing focused yet (fresh page, rotation, a dialog just closed): seed
-    // focus before this press is interpreted.
-    if (!GamepadShortcuts.rootHasFocus &&
+    // focus before this press is interpreted. While a dialog is up this must not
+    // pull focus onto the rows behind it.
+    if (!dialogOpen && !GamepadShortcuts.rootHasFocus &&
         action in setOf(
             GamepadAction.DPAD_UP, GamepadAction.DPAD_DOWN,
             GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT,
@@ -887,12 +895,17 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
         GamepadFocusNav.restoreFocus()
     }
 
-    val dialogOpen = GamepadShortcuts.isDialogOpen
     val shortcuts = GamepadShortcuts.actions
 
     when (action) {
         // Circle. Priority: dialog/sheet (overlay) -> open search -> subscreen -> nothing.
         GamepadAction.BACK -> {
+            // The dialog shell owns dismissal (its animated hide path). Defer to
+            // it instead of letting Circle fall through to the global screen pop.
+            if (dialogOpen) {
+                Log.d("PAD", "BACK: dialogOpen deferring to dialog shell")
+                return@onPreviewKeyEvent false
+            }
             // Always try the screen's overlay closer first (sheets, in-composition
             // dialogs, etc.), then search, then screen/global back.
             val closedOverlay = shortcuts?.onCloseOverlay?.invoke() == true
@@ -972,7 +985,9 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
             // otherwise pass through and let the focus system move. Never use a generic
             // moveFocus fallback (it can land on an adjacent pager page). Default when
             // no outlined row owns focus is BLOCK_BOTH.
-            val consumed = if (GamepadFocusNav.focusedSlider) {
+            val consumed = if (dialogOpen) {
+                false
+            } else if (GamepadFocusNav.focusedSlider) {
                 false
             } else if (!GamepadShortcuts.hasRowFocus) {
                 true

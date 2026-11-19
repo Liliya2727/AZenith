@@ -678,11 +678,31 @@ fun TweakScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupTweaks = !optBackupTweaks }) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .gamepadFocusOutline(
+                            shape = RoundedCornerShape(12.dp),
+                            focusKey = "dialog.backup.tweaks",
+                            onActivate = { optBackupTweaks = !optBackupTweaks }
+                        )
+                        .clickable { optBackupTweaks = !optBackupTweaks }
+                ) {
                     Checkbox(checked = optBackupTweaks, onCheckedChange = { optBackupTweaks = it })
                     Text(stringResource(R.string.str_tweak_configuration_settings), color = MaterialTheme.colorScheme.onSurface)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupApplist = !optBackupApplist }) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .gamepadFocusOutline(
+                            shape = RoundedCornerShape(12.dp),
+                            focusKey = "dialog.backup.applist",
+                            onActivate = { optBackupApplist = !optBackupApplist }
+                        )
+                        .clickable { optBackupApplist = !optBackupApplist }
+                ) {
                     Checkbox(checked = optBackupApplist, onCheckedChange = { optBackupApplist = it })
                     Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -743,7 +763,17 @@ fun TweakScreen(
                     }
 
                     if (result.hasTweaks) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .gamepadFocusOutline(
+                                    shape = RoundedCornerShape(12.dp),
+                                    focusKey = "dialog.restore.tweaks",
+                                    onActivate = { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }
+                                )
+                                .clickable { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }
+                        ) {
                             Checkbox(
                                 checked = optRestoreTweaks && !isSocMismatch,
                                 onCheckedChange = { if (!isSocMismatch) optRestoreTweaks = it },
@@ -753,7 +783,17 @@ fun TweakScreen(
                         }
                     }
                     if (result.hasApplist) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optRestoreApplist = !optRestoreApplist }) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .gamepadFocusOutline(
+                                    shape = RoundedCornerShape(12.dp),
+                                    focusKey = "dialog.restore.applist",
+                                    onActivate = { optRestoreApplist = !optRestoreApplist }
+                                )
+                                .clickable { optRestoreApplist = !optRestoreApplist }
+                        ) {
                             Checkbox(checked = optRestoreApplist, onCheckedChange = { optRestoreApplist = it })
                             Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
                         }

@@ -18,6 +18,7 @@ package zx.azenith.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -131,11 +132,23 @@ fun DialogActions(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End
     ) {
-        TextButton(onClick = onDismiss) { Text(dismissText) }
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.gamepadFocusOutline(
+                shape = RoundedCornerShape(percent = 50),
+                focusKey = "dialog.dismiss",
+                onActivate = onDismiss
+            )
+        ) { Text(dismissText) }
         Spacer(modifier = Modifier.width(8.dp))
         Button(
             onClick = onConfirm,
             enabled = confirmEnabled,
+            modifier = Modifier.gamepadFocusOutline(
+                shape = RoundedCornerShape(percent = 50),
+                focusKey = "dialog.confirm",
+                onActivate = onConfirm
+            ),
             colors = if (destructive) {
                 ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
