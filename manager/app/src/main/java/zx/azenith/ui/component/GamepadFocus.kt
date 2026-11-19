@@ -318,6 +318,9 @@ object GamepadShortcuts {
     /** True when focus sits on an outlined content row / switch / slider / button. */
     val hasRowFocus: Boolean get() = activationToken != null
 
+    /** True when the root gamepad container has any focus (for restore heuristics). */
+    var rootHasFocus: Boolean by mutableStateOf(false)
+
     fun publishActivation(token: Any, callback: (() -> Unit)?) {
         activationToken = token
         activation = callback
@@ -420,11 +423,17 @@ object GamepadFocusNav {
      * Prefers the requested page's entry, then the last focused row, then the
      * last screen entry, and finally lets the focus system pick any candidate.
      */
+    fun forget(requester: FocusRequester) {
+        focusHistory.remove(requester)
+        if (lastEntry === requester) lastEntry = null
+        if (pageEntry === requester) pageEntry = null
+        pageEntries.values.remove(requester)
+    }
+
     fun restoreFocus(): Boolean {
         val currentPageEntry = pageEntries[currentPage]
-        val candidates = listOfNotNull(currentPageEntry) +
-            focusHistory.toList().asReversed() +
-            listOfNotNull(lastEntry, pageEntry)
+        val candidates = focusHistory.toList().asReversed() +
+            listOfNotNull(currentPageEntry, lastEntry, pageEntry)
         val restored = candidates.any { runCatching { it.requestFocus() }.getOrDefault(false) }
         return restored || GamepadStickNav.moveFocusNext()
     }
@@ -460,20 +469,22 @@ fun Modifier.gamepadFocusOutline(
     onActivate: (() -> Unit)? = null,
 ): Modifier {
     val requester = remember { FocusRequester() }
-    val activation by rememberUpdatedState(onActivate)
+    val activationState = rememberUpdatedState(onActivate)
     var focused by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(
         targetValue = if (focused && GamepadInput.active) 1f else 0f,
         animationSpec = tween(durationMillis = 180),
         label = "GamepadFocusOutline"
     )
+    DisposableEffect(requester) {
+        onDispose { GamepadFocusNav.forget(requester) }
+    }
     return this
         .onFocusChanged { focusState ->
             focused = focusState.isFocused
-            android.util.Log.d("PAD", "focus=${focusState.isFocused} active=${GamepadInput.active}")
             if (focusState.isFocused) {
                 if (register) GamepadFocusNav.publishLastFocused(requester)
-                GamepadShortcuts.publishActivation(requester, activation)
+                GamepadShortcuts.publishActivation(requester) { activationState.value?.invoke() }
                 if (slider) GamepadFocusNav.publishFocusedSlider(true)
             } else {
                 if (slider) GamepadFocusNav.publishFocusedSlider(false)
@@ -545,7 +556,6 @@ fun Modifier.gamepadScreenEntry(page: Int = -1): Modifier {
  */
 fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
     val keyCode = event.nativeKeyEvent.keyCode
-    android.util.Log.d("PAD", "key=$keyCode type=${event.type}")
     val action = GamepadKeymap.map(keyCode)
     if (action == GamepadAction.NONE) return@onPreviewKeyEvent false
 
@@ -560,7 +570,7 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
 
     // Nothing focused yet (fresh page, rotation, a dialog just closed): seed
     // focus before this press is interpreted.
-    if (!GamepadShortcuts.hasRowFocus &&
+    if (!GamepadShortcuts.rootHasFocus &&
         action in setOf(
             GamepadAction.DPAD_UP, GamepadAction.DPAD_DOWN,
             GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT,
@@ -637,9 +647,8 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
         }
 
         GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT -> {
-            // Rows are a vertical list: horizontal input must not hop between
-            // rows. A focused slider has claimed these keys for its own value.
-            return@onPreviewKeyEvent !GamepadFocusNav.focusedSlider
+            // Let horizontal keys reach focused controls (sliders, tile options).
+            return@onPreviewKeyEvent false
         }
 
         // Vertical focus movement is the focus system's own job.
@@ -675,6 +684,16 @@ fun GamepadFocusRoot(
     LaunchedEffect(Unit) {
         withFrameNanos { }
         if (GamepadInput.dpadMode) GamepadFocusNav.restoreFocus()
+    }
+
+    LaunchedEffect(GamepadShortcuts.rootHasFocus, GamepadInput.dpadMode, GamepadShortcuts.isDialogOpen) {
+        if (GamepadInput.dpadMode && !GamepadShortcuts.rootHasFocus && !GamepadShortcuts.isDialogOpen) {
+            repeat(5) {
+                delay(120)
+                if (GamepadShortcuts.rootHasFocus) return@LaunchedEffect
+                GamepadFocusNav.restoreFocus()
+            }
+        }
     }
 
     val activeDialogCount = LocalActiveDialogCount.current
@@ -728,6 +747,9 @@ fun GamepadFocusRoot(
 
     Box(
         modifier = modifier
+            .onFocusChanged { focusState ->
+                GamepadShortcuts.rootHasFocus = focusState.hasFocus || focusState.isFocused
+            }
             .gamepadKeyWatch()
             .pointerInput(Unit) {
                 awaitPointerEventScope {
