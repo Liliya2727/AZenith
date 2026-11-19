@@ -22,6 +22,8 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -36,6 +38,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import zx.azenith.ui.component.GamepadDirectionRepeat
+import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
@@ -49,6 +53,14 @@ import zx.azenith.ui.util.tapHaptic
  */
 class ZXGameSpaceActivity : ComponentActivity() {
 
+    /** Synthesized direction keys must dispatch through this window, not the manager's. */
+    private fun wireGamepadDirectionRepeat() {
+        GamepadDirectionRepeat.sendKey = { code, action, repeat ->
+            val now = android.os.SystemClock.uptimeMillis()
+            super@ZXGameSpaceActivity.dispatchKeyEvent(KeyEvent(now, now, action, code, repeat))
+        }
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_BUTTON_B || event.keyCode == KeyEvent.KEYCODE_ESCAPE) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
@@ -56,11 +68,50 @@ class ZXGameSpaceActivity : ComponentActivity() {
             }
             return true
         }
+        // Physical left/right feed the same accelerating pipeline as the stick
+        // and hat so a held direction sweeps the game ribbon. R1/L1 and other
+        // keys still reach the hub's own onPreviewKeyEvent handler.
+        if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+            event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+        ) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    GamepadInput.onDpadKey()
+                    GamepadDirectionRepeat.onDirectionDown(event.keyCode)
+                }
+                KeyEvent.ACTION_UP -> GamepadDirectionRepeat.releaseIf(event.keyCode)
+            }
+            return true
+        }
         return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        val source = event.source
+        val isJoystick = source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+        val isGamepad = source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
+        if (event.action == MotionEvent.ACTION_MOVE && (isJoystick || isGamepad)) {
+            // Games only use the horizontal axis to locate a game. Hat X takes
+            // priority, then the left stick; holding right accelerates repeats.
+            val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+            val stickX = event.getAxisValue(MotionEvent.AXIS_X)
+            val x = if (kotlin.math.abs(hatX) >= kotlin.math.abs(stickX)) hatX else stickX
+            if (kotlin.math.abs(x) > 0.5f) {
+                GamepadInput.onDpadKey()
+                GamepadDirectionRepeat.onDirectionDown(
+                    if (x < 0f) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+                )
+            } else {
+                GamepadDirectionRepeat.release()
+            }
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        wireGamepadDirectionRepeat()
         TapHapticState.init(this)
         zx.azenith.ui.util.AudioUtil.isGameHubActive = true
         zx.azenith.ui.util.AudioUtil.init(this)
@@ -121,12 +172,15 @@ class ZXGameSpaceActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // This window owns direction-key dispatch while GameSpace is foreground.
+        wireGamepadDirectionRepeat()
         ZXSidePanelService.hide(this)
         BgmManager.onActivityResume(this)
     }
 
     override fun onPause() {
         super.onPause()
+        GamepadDirectionRepeat.release()
         BgmManager.onActivityPause()
     }
 

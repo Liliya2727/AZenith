@@ -131,14 +131,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Synthesized D-pad keys are fed straight into the view hierarchy, so
-        // hat / analogue stick / physical pad share one focus + repeat path.
-        GamepadDirectionRepeat.sendKey = { code, action, repeat ->
-            val now = android.os.SystemClock.uptimeMillis()
-            super@MainActivity.dispatchKeyEvent(
-                KeyEvent(now, now, action, code, repeat)
-            )
-        }
+        wireGamepadDirectionRepeat()
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
@@ -214,8 +207,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Route synthesized direction keys through this window's view hierarchy. */
+    private fun wireGamepadDirectionRepeat() {
+        GamepadDirectionRepeat.sendKey = { code, action, repeat ->
+            val now = android.os.SystemClock.uptimeMillis()
+            super@MainActivity.dispatchKeyEvent(KeyEvent(now, now, action, code, repeat))
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        // GameSpace is a separate Activity that rebinds sendKey to its own window;
+        // take it back when the manager comes to the foreground again.
+        wireGamepadDirectionRepeat()
         zx.azenith.ui.gamespace.ZXSidePanelService.hide(this)
         if (isStandingByForGameSpace) {
             isStandingByForGameSpace = false
