@@ -366,7 +366,9 @@ fun TweakScreen(
                                         title = stringResource(R.string.perf_lite_mode),
                                         summary = stringResource(R.string.perf_lite_mode_desc),
                                         checked = viewModel.liteState!!,
-                                        onCheckedChange = { viewModel.updateLiteMode(it) }
+                                        onCheckedChange = { viewModel.updateLiteMode(it) },
+                                        focusKey = "tweaks.perf_lite",
+                                        focusIndex = 2
                                     )
                                 }
                             },
@@ -389,7 +391,9 @@ fun TweakScreen(
                                                         stringResource(R.string.str_fpsgo_unavailable)
                                                 )
                                             },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                            focusKey = "tweaks.fpsgo",
+                                            focusIndex = 2
                                         )
                                     }
                                 }
@@ -417,7 +421,9 @@ fun TweakScreen(
                                         title = stringResource(R.string.game_preload),
                                         summary = stringResource(R.string.game_preload_desc),
                                         checked = viewModel.preloadState!!,
-                                        onCheckedChange = { viewModel.updatePreloadMode(it) }
+                                        onCheckedChange = { viewModel.updatePreloadMode(it) },
+                                        focusKey = "tweaks.game_preload",
+                                        focusIndex = 4
                                     )
                                 }
                             }
@@ -429,7 +435,9 @@ fun TweakScreen(
                                             title = stringResource(R.string.memory_killer),
                                             summary = stringResource(R.string.memory_killer_desc),
                                             checked = viewModel.memKillerState!!,
-                                            onCheckedChange = { viewModel.updateMemoryKiller(it) }
+                                            onCheckedChange = { viewModel.updateMemoryKiller(it) },
+                                            focusKey = "tweaks.memory_killer",
+                                            focusIndex = 4
                                         )
                                     }
                                 }
@@ -442,7 +450,9 @@ fun TweakScreen(
                                             title = stringResource(R.string.app_priority_control),
                                             summary = stringResource(R.string.app_priority_control_desc),
                                             checked = viewModel.appPriorState!!,
-                                            onCheckedChange = { viewModel.updateAppPriority(it) }
+                                            onCheckedChange = { viewModel.updateAppPriority(it) },
+                                            focusKey = "tweaks.app_priority",
+                                            focusIndex = 4
                                         )
                                     }
                                 }
@@ -454,7 +464,9 @@ fun TweakScreen(
                                         title = stringResource(R.string.dnd_mode_gaming),
                                         summary = stringResource(R.string.dnd_mode_gaming_desc),
                                         checked = viewModel.dndState!!,
-                                        onCheckedChange = { viewModel.updateDndMode(it) }
+                                        onCheckedChange = { viewModel.updateDndMode(it) },
+                                        focusKey = "tweaks.dnd",
+                                        focusIndex = 4
                                     )
                                 }
                             }
@@ -466,7 +478,9 @@ fun TweakScreen(
                                             title = stringResource(R.string.trim_filesystem),
                                             summary = stringResource(R.string.trim_filesystem_desc),
                                             checked = viewModel.fstrimState!!,
-                                            onCheckedChange = { viewModel.updateFstrim(it) }
+                                            onCheckedChange = { viewModel.updateFstrim(it) },
+                                            focusKey = "tweaks.fstrim",
+                                            focusIndex = 4
                                         )
                                     }
                                 }
@@ -478,7 +492,9 @@ fun TweakScreen(
                                         onClick = { navController.navigate("governorsettings") },
                                         headlineContent = { Text(stringResource(R.string.gov_settings)) },
                                         supportingContent = { Text(stringResource(R.string.gov_settingsdesc)) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                        focusKey = "tweaks.governors",
+                                        focusIndex = 4
                                     )
                                 }
                             }
@@ -508,7 +524,9 @@ fun TweakScreen(
                                 value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
                                 showArrow = true,
                                 highlight = true,
-                                isLoading = viewModel.isRefreshRateLoading
+                                isLoading = viewModel.isRefreshRateLoading,
+                                focusKey = "tweaks.refresh_rate",
+                                focusIndex = 5
                             ) {
                                 showRefreshRateDialog = true
                             }
@@ -528,7 +546,9 @@ fun TweakScreen(
                                 }.uppercase(),
                                 showArrow = true,
                                 highlight = true,
-                                isLoading = viewModel.isRendererLoading
+                                isLoading = viewModel.isRendererLoading,
+                                focusKey = "tweaks.renderer",
+                                focusIndex = 5
                             ) {
                                 showRendererDialog = true
                             }
@@ -551,7 +571,9 @@ fun TweakScreen(
                                         onClick = { navController.navigate("bypasschg") },
                                         headlineContent = { Text(stringResource(R.string.bcharging)) },
                                         supportingContent = { Text(stringResource(R.string.bcharging_desc)) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                        focusKey = "tweaks.bypass_charge",
+                                        focusIndex = 7
                                     )
                                 }
                             },
@@ -562,7 +584,9 @@ fun TweakScreen(
                                         title = stringResource(R.string.thermalcore_service),
                                         summary = stringResource(R.string.thermalcore_service_desc),
                                         checked = viewModel.thermalState!!,
-                                        onCheckedChange = { viewModel.updateThermalCore(it) }
+                                        onCheckedChange = { viewModel.updateThermalCore(it) },
+                                        focusKey = "tweaks.thermalcore",
+                                        focusIndex = 7
                                     )
                                 }
                             }
@@ -584,7 +608,9 @@ fun TweakScreen(
                                     onClick = { navController.navigate("colorscheme") },
                                     headlineContent = { Text(stringResource(R.string.color_scheme)) },
                                     supportingContent = { Text(stringResource(R.string.schemecolordesc)) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                    focusKey = "tweaks.colors",
+                                    focusIndex = 9
                                 )
                             }
                         },
@@ -595,7 +621,9 @@ fun TweakScreen(
                                     onClick = { navController.navigate("preferenced") },
                                     headlineContent = { Text(stringResource(R.string.prefs)) },
                                     supportingContent = { Text(stringResource(R.string.prefsdesc)) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                    focusKey = "tweaks.prefs",
+                                    focusIndex = 9
                                 )
                             }
                         }
@@ -851,6 +879,8 @@ fun ExpressiveTile(
     highlight: Boolean,
     showArrow: Boolean = false,
     isLoading: Boolean = false,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -872,7 +902,11 @@ fun ExpressiveTile(
     Surface(
         modifier = modifier
             .clip(azShape(26.dp))
-            .gamepadFocusOutline(onActivate = onClick)
+            .gamepadFocusOutline(
+                onActivate = onClick,
+                focusKey = focusKey,
+                focusIndex = focusIndex
+            )
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,

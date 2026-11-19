@@ -171,7 +171,8 @@ fun <T> ExpressiveLazyList(
     title: String = "",
     key: ((T) -> Any)? = null,
     items: List<T>,
-    itemContent: @Composable (T) -> Unit
+    itemContent: (@Composable (T) -> Unit)? = null,
+    itemContentIndexed: (@Composable (index: Int, T) -> Unit)? = null,
 ) {
     val m = currentPersonalization().cornerMultiplier
     Column(modifier = modifier) {
@@ -216,7 +217,13 @@ fun <T> ExpressiveLazyList(
                     CompositionLocalProvider(
                         LocalContentColor provides MaterialTheme.colorScheme.onSurface
                     ) {
-                        ProvideRowShape(shape) { itemContent(item) }
+                        ProvideRowShape(shape) {
+                            if (itemContentIndexed != null) {
+                                itemContentIndexed(index, item)
+                            } else {
+                                itemContent?.invoke(item)
+                            }
+                        }
                     }
                 }
             }
@@ -235,11 +242,18 @@ fun ExpressiveListItem(
     supportingContent: @Composable (() -> Unit)? = null,
     leadingContent: @Composable (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .gamepadFocusOutline(register = true, onActivate = onClick ?: onLongClick)
+            .gamepadFocusOutline(
+                register = true,
+                focusKey = focusKey,
+                focusIndex = focusIndex,
+                onActivate = onClick ?: onLongClick
+            )
             .let {
                 if (onClick != null || onLongClick != null) {
                     it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
@@ -299,12 +313,19 @@ fun ExpressiveListItemHighlight(
     supportingContent: @Composable (() -> Unit)? = null,
     leadingContent: @Composable (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(containerColor) 
-            .gamepadFocusOutline(register = true, onActivate = onClick ?: onLongClick)
+            .gamepadFocusOutline(
+                register = true,
+                focusKey = focusKey,
+                focusIndex = focusIndex,
+                onActivate = onClick ?: onLongClick
+            )
             .let {
                 if (onClick != null || onLongClick != null) {
                     it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
@@ -363,12 +384,19 @@ fun ExpressiveInfoCard(
     supportingContent: @Composable (() -> Unit)? = null,
     leadingContent: @Composable (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(containerColor) 
-            .gamepadFocusOutline(register = true, onActivate = onClick ?: onLongClick)
+            .gamepadFocusOutline(
+                register = true,
+                focusKey = focusKey,
+                focusIndex = focusIndex,
+                onActivate = onClick ?: onLongClick
+            )
             .let {
                 if (onClick != null || onLongClick != null) {
                     it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
@@ -435,6 +463,8 @@ fun ExpressiveSwitchItem(
     // when this is set and the tap does not reach onCheckedChange.
     onDisabledClick: (() -> Unit)? = null,
     onCheckedChange: (Boolean) -> Unit,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -448,6 +478,8 @@ fun ExpressiveSwitchItem(
         } else {
             onDisabledClick
         },
+        focusKey = focusKey,
+        focusIndex = focusIndex,
         modifier = Modifier.toggleable(
             value = checked,
             interactionSource = interactionSource,
@@ -516,6 +548,8 @@ fun ExpressiveDropdownItem(
     selectedIndex: Int,
     onItemSelected: (Int) -> Unit,
     externalMenuState: ZXDropDownState? = null,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
 ) {
     // With an external state the caller renders the menu outside whatever scrolls this row,
     // because an in-window overlay inside a lazy item is clipped to the list viewport.
@@ -540,6 +574,8 @@ fun ExpressiveDropdownItem(
                     Modifier
                 }
             ),
+        focusKey = focusKey,
+        focusIndex = focusIndex,
         leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
         headlineContent = { Text(text = title) },
         supportingContent = {
@@ -636,9 +672,13 @@ fun ExpressiveRadioItem(
     selected: Boolean,
     enabled: Boolean = true,
     onClick: () -> Unit,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
 ) {
     ExpressiveListItem(
         onClick = onClick,
+        focusKey = focusKey,
+        focusIndex = focusIndex,
         modifier = Modifier.toggleable(
             value = selected,
             onValueChange = { onClick() },
@@ -664,11 +704,15 @@ fun ExpressiveCheckboxItem(
     checked: Boolean,
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
     ExpressiveListItem(
         onClick = { onCheckedChange(!checked) },
+        focusKey = focusKey,
+        focusIndex = focusIndex,
         modifier = Modifier.toggleable(
             value = checked,
             interactionSource = interactionSource,

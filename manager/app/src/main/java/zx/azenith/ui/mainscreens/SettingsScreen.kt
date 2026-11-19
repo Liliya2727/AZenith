@@ -346,7 +346,9 @@ fun SettingsScreen(
                                                                                 icon = Icons.Filled.Vibration,
                                                                                 title = stringResource(R.string.tap_haptic_feedback),
                                                                                 checked = uiState.tapHaptic,
-                                                                                onCheckedChange = settingsViewModel::onTapHapticToggle
+                                                                                onCheckedChange = settingsViewModel::onTapHapticToggle,
+                                                                                focusKey = "settings.tap_haptic",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -356,7 +358,9 @@ fun SettingsScreen(
                                                                                 icon = Icons.Filled.Notifications,
                                                                                 title = stringResource(R.string.show_toast),
                                                                                 checked = uiState.stateToast,
-                                                                                onCheckedChange = settingsViewModel::setShowToast
+                                                                                onCheckedChange = settingsViewModel::setShowToast,
+                                                                                focusKey = "settings.show_toast",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -366,7 +370,9 @@ fun SettingsScreen(
                                                                                 icon = Icons.Filled.NotificationsActive,
                                                                                 title = stringResource(R.string.show_notifications),
                                                                                 checked = uiState.profileNotifications,
-                                                                                onCheckedChange = settingsViewModel::setProfileNotifications
+                                                                                onCheckedChange = settingsViewModel::setProfileNotifications,
+                                                                                focusKey = "settings.profile_notifications",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -377,7 +383,9 @@ fun SettingsScreen(
                                                                                 title = stringResource(R.string.disable_auto_mode),
                                                                                 summary = stringResource(R.string.disable_auto_mode_desc),
                                                                                 checked = uiState.autoMode,
-                                                                                onCheckedChange = settingsViewModel::setAutoMode
+                                                                                onCheckedChange = settingsViewModel::setAutoMode,
+                                                                                focusKey = "settings.disable_auto_mode",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -393,7 +401,9 @@ fun SettingsScreen(
                                                                                         settingsViewModel.setDisableTweak(isChecked)
                                                                                         RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
                                                                                     }
-                                                                                }
+                                                                                },
+                                                                                focusKey = "settings.disable_tweak",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -404,7 +414,9 @@ fun SettingsScreen(
                                                                                 title = stringResource(R.string.profile_timeout),
                                                                                 summary = stringResource(R.string.profile_timeout_desc),
                                                                                 checked = uiState.profileTimeout,
-                                                                                onCheckedChange = settingsViewModel::setProfileTimeout
+                                                                                onCheckedChange = settingsViewModel::setProfileTimeout,
+                                                                                focusKey = "settings.profile_timeout",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 }
@@ -438,7 +450,9 @@ fun SettingsScreen(
                                                                                     }
                                         
                                                                                     pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
-                                                                                }
+                                                                                },
+                                                                                focusKey = "settings.show_icon",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 },
@@ -457,7 +471,9 @@ fun SettingsScreen(
                                                                                 headlineContent = { Text(stringResource(R.string.restart_service)) },
                                                                                 supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
                                                                                 leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
-                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                                                                focusKey = "settings.restart_service",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 },
@@ -468,7 +484,9 @@ fun SettingsScreen(
                                                                                 headlineContent = { Text(stringResource(R.string.save_log)) },
                                                                                 supportingContent = { Text(stringResource(R.string.save_log_desc)) },
                                                                                 leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
-                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                                                                focusKey = "settings.save_log",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 },
@@ -478,7 +496,9 @@ fun SettingsScreen(
                                                                                 icon = Icons.Filled.BugReport,
                                                                                 title = stringResource(R.string.allow_verbose_log),
                                                                                 checked = uiState.debugMode,
-                                                                                onCheckedChange = settingsViewModel::setDebugMode
+                                                                                onCheckedChange = settingsViewModel::setDebugMode,
+                                                                                focusKey = "settings.verbose_log",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 },
@@ -489,7 +509,9 @@ fun SettingsScreen(
                                             headlineContent = { Text(stringResource(R.string.section_experimental)) },
                                             supportingContent = { Text(stringResource(R.string.experimental_menu_desc)) },
                                             leadingContent = { LeadingIcon(icon = Icons.Rounded.Science) },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                            focusKey = "settings.experimental",
+                                            focusIndex = 4
                                         )
                                     }
                                 },
@@ -506,7 +528,9 @@ fun SettingsScreen(
                                                                                 },
                                                                                 headlineContent = { Text(stringResource(R.string.uninstall)) },
                                                                                 leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
-                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                                                                focusKey = "settings.uninstall",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 }
@@ -529,7 +553,9 @@ fun SettingsScreen(
                                                                     Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
                                                                 },
                                                                 leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) },
-                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                                                focusKey = "settings.about",
+                                                                focusIndex = 6
                                                             )
                             }
                         }

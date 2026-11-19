@@ -439,6 +439,7 @@ object GamepadFocusNav {
     val lastKeyByScope = mutableStateMapOf<String, String>()
     private val lastIndexByScope = HashMap<String, Int>()
     private val pendingRestoreScopes = mutableStateMapOf<String, Boolean>()
+    private val requestersByScope = HashMap<String, MutableMap<String, FocusRequester>>()
 
     fun currentScope(): String? =
         if (currentPage >= 0) "page:$currentPage" else lastEntryScope
@@ -446,9 +447,26 @@ object GamepadFocusNav {
     /** Scope associated with the active standalone screen entry, if any. */
     var lastEntryScope: String? = null
 
+    fun registerFocusRequester(scope: String, key: String, requester: FocusRequester) {
+        val bucket = requestersByScope.getOrPut(scope) { HashMap() }
+        bucket[key] = requester
+    }
+
+    fun unregisterFocusRequester(scope: String, key: String, requester: FocusRequester) {
+        val bucket = requestersByScope[scope] ?: return
+        if (bucket[key] === requester) {
+            bucket.remove(key)
+            if (bucket.isEmpty()) requestersByScope.remove(scope)
+        }
+    }
+
+    fun requesterFor(scope: String, key: String): FocusRequester? =
+        requestersByScope[scope]?.get(key)
+
     fun saveFocusKey(scope: String, key: String, index: Int?) {
         lastKeyByScope[scope] = key
         if (index != null) lastIndexByScope[scope] = index else lastIndexByScope.remove(scope)
+        Log.d("PAD", "saveFocus scope=$scope key=$key index=$index")
     }
 
     fun savedKey(scope: String): String? = lastKeyByScope[scope]
@@ -465,14 +483,25 @@ object GamepadFocusNav {
     fun isRestorePending(scope: String): Boolean = pendingRestoreScopes[scope] == true
 
     /**
-     * Restore a saved focus key for [scope]. If the matching node is not yet
-     * composed, scroll the active list to the saved index (when known) and mark
-     * the scope pending so the node can claim focus once composed.
+     * Restore a saved focus key for [scope]. Tries the registered requester
+     * first (node still composed), otherwise scrolls to the saved index and
+     * marks the scope pending so the node can claim focus once composed.
+     * Returns true when focus was requested or a restore was initiated.
      */
     fun restoreSavedFocus(scope: String): Boolean {
         val key = lastKeyByScope[scope] ?: return false
+        val requester = requesterFor(scope, key)
+        if (requester != null) {
+            val got = runCatching { requester.requestFocus() }.getOrDefault(false)
+            Log.d("PAD", "restoreSavedFocus direct scope=$scope key=$key got=$got")
+            if (got) {
+                clearRestorePending(scope)
+                return true
+            }
+        }
         markRestorePending(scope)
         val index = lastIndexByScope[scope]
+        Log.d("PAD", "restoreSavedFocus pending scope=$scope key=$key index=$index")
         if (index != null) {
             val ls = GamepadShortcuts.actions?.scrollState
             if (ls != null) {
@@ -480,7 +509,7 @@ object GamepadFocusNav {
             }
         }
         // A composed matching node will claim focus via gamepadFocusOutline.
-        return false
+        return true
     }
 
     private val focusHistory = ArrayDeque<FocusRequester>()
@@ -529,19 +558,30 @@ object GamepadFocusNav {
 
     fun restoreFocus(): Boolean {
         val scope = currentScope()
+        if (scope != null && lastKeyByScope.containsKey(scope)) {
+            val restoredByKey = restoreSavedFocus(scope)
+            if (restoredByKey && !isRestorePending(scope)) {
+                Log.d("PAD", "restoreFocus saved-key scope=$scope")
+                return true
+            }
+            if (isRestorePending(scope)) {
+                Log.d("PAD", "restoreFocus saved-key pending scope=$scope")
+                return true
+            }
+        }
+
         val currentPageEntry = pageEntries[currentPage]
         val candidates = focusHistory.toList().asReversed() +
             listOfNotNull(currentPageEntry, lastEntry, pageEntry)
         val restored = candidates.any { runCatching { it.requestFocus() }.getOrDefault(false) }
         if (restored) {
             if (scope != null) clearRestorePending(scope)
+            Log.d("PAD", "restoreFocus candidate scope=$scope")
             return true
         }
-        if (scope != null && lastKeyByScope.containsKey(scope)) {
-            restoreSavedFocus(scope)
-            return true
-        }
-        return GamepadStickNav.moveFocusNext()
+        val moved = GamepadStickNav.moveFocusNext()
+        Log.d("PAD", "restoreFocus fallback scope=$scope moved=$moved")
+        return moved
     }
 }
 
@@ -595,11 +635,16 @@ fun Modifier.gamepadFocusOutline(
     }
 
     if (scope != null && focusKey != null) {
+        DisposableEffect(scope, focusKey, requester) {
+            GamepadFocusNav.registerFocusRequester(scope, focusKey, requester)
+            onDispose { GamepadFocusNav.unregisterFocusRequester(scope, focusKey, requester) }
+        }
         LaunchedEffect(scope, focusKey, GamepadFocusNav.savedKey(scope), GamepadFocusNav.isRestorePending(scope)) {
             val saved = GamepadFocusNav.savedKey(scope)
             if (saved == focusKey && GamepadFocusNav.isRestorePending(scope)) {
-                delay(16)
+                withFrameNanos { }
                 val got = runCatching { requester.requestFocus() }.getOrDefault(false)
+                Log.d("PAD", "claimFocus scope=$scope key=$focusKey got=$got")
                 if (got) GamepadFocusNav.clearRestorePending(scope)
             }
         }
@@ -665,7 +710,16 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
     }
 
     LaunchedEffect(isActiveScreen) {
-        if (!isActiveScreen) entered = false
+        if (!isActiveScreen) {
+            entered = false
+        } else if (GamepadInput.dpadMode || GamepadInput.controllerConnected) {
+            // When this screen/page becomes active again (e.g. returning from a
+            // subscreen) and its rows are already composed, explicitly restore the
+            // saved focus for this scope before falling back to generic seeding.
+            Log.d("PAD", "screenEntry reactivate scope=$scope page=$page")
+            withFrameNanos { }
+            GamepadFocusNav.restoreFocus()
+        }
     }
 
     LaunchedEffect(

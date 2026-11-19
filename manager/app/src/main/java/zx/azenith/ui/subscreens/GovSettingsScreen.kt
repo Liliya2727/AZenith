@@ -56,9 +56,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -87,6 +85,7 @@ import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.TweakViewModel
 import zx.azenith.ui.navigation.rememberScopedStoreOwner
+import zx.azenith.ui.component.gamepadScreenEntry
 
 /**
  * Which LazyColumn item holds each searchable row, so a search result can scroll
@@ -127,8 +126,6 @@ fun GovSettings(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    val listRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-
     val isReady by produceState(false) {
         // Allow navigation slide animation to finish smoothly
         delay(200)
@@ -136,10 +133,6 @@ fun GovSettings(
         if (!viewModel.isUiLoaded) {
             viewModel.loadAllConfiguration(context)
         }
-    }
-    LaunchedEffect(Unit) {
-        delay(150)
-        listRequester.requestFocus()
     }
 
 
@@ -155,7 +148,10 @@ fun GovSettings(
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource().focusRequester(listRequester).focusGroup(),
+            modifier = Modifier
+                .fillMaxSize()
+                .hazePageSource()
+                .gamepadScreenEntry(scopeKey = "subscreen:governors"),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp,

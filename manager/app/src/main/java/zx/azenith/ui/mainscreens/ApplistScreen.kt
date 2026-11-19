@@ -277,55 +277,58 @@ fun ApplistScreen(navController: NavController) {
                 modifier = Modifier.gamepadScreenEntry(page = pageIndex),
                 items = appsToDisplay,
                 key = { it.packageName },
-                contentPadding = listContentPadding
-            ) { app ->
-                ExpressiveListItem(
-                    onClick = { navController.navigate("app_settings/${app.packageName}") },
-                    headlineContent = {
-                        Text(
-                            text = app.label,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    supportingContent = {
-                        Column {
+                contentPadding = listContentPadding,
+                itemContentIndexed = { index, app ->
+                    ExpressiveListItem(
+                        onClick = { navController.navigate("app_settings/${app.packageName}") },
+                        headlineContent = {
                             Text(
-                                text = app.packageName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
+                                text = app.label,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                        },
+                        supportingContent = {
+                            Column {
+                                Text(
+                                    text = app.packageName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
 
-                            Row(modifier = Modifier.padding(top = 4.dp)) {
-                                if (app.isEnabledInConfig) {
-                                    LabelText(
-                                        text = stringResource(R.string.label_enabled),
-                                        color = Color(0xFF4CAF50)
-                                    )
-                                } else {
-                                    LabelText(stringResource(R.string.label_disabled), MaterialTheme.colorScheme.error)
-                                }
-                                if (app.isRecommended) {
-                                    LabelText(stringResource(R.string.label_recommended), MaterialTheme.colorScheme.primary)
-                                }
-                                if (app.isSystem) {
-                                    LabelText(stringResource(R.string.label_system), MaterialTheme.colorScheme.secondary)
+                                Row(modifier = Modifier.padding(top = 4.dp)) {
+                                    if (app.isEnabledInConfig) {
+                                        LabelText(
+                                            text = stringResource(R.string.label_enabled),
+                                            color = Color(0xFF4CAF50)
+                                        )
+                                    } else {
+                                        LabelText(stringResource(R.string.label_disabled), MaterialTheme.colorScheme.error)
+                                    }
+                                    if (app.isRecommended) {
+                                        LabelText(stringResource(R.string.label_recommended), MaterialTheme.colorScheme.primary)
+                                    }
+                                    if (app.isSystem) {
+                                        LabelText(stringResource(R.string.label_system), MaterialTheme.colorScheme.secondary)
+                                    }
                                 }
                             }
-                        }
-                    },
-                    leadingContent = {
-                        AppIconImage(
-                            app = app,
-                            size = 60.dp
-                        )
-                    }
-                )
+                        },
+                        leadingContent = {
+                            AppIconImage(
+                                app = app,
+                                size = 60.dp
+                            )
+                        },
+                        focusKey = app.packageName,
+                        focusIndex = index
+                    )
                 }
+            )
                 }
 
             PullToRefreshDefaults.LoadingIndicator(
