@@ -803,13 +803,23 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
         }
 
         GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT -> {
-            // Focused slider owns horizontal input. Otherwise apply edge-aware
-            // horizontal nav: blocked edges stop pager jumps and focus escapes.
+            // Focused slider owns horizontal input. Otherwise try to move focus to a
+            // horizontal neighbor (generic multi-column support); at an edge consume
+            // the event so the pager does not switch pages. PASS_BOTH keeps the
+            // previous pass-through behavior.
             if (GamepadFocusNav.focusedSlider) {
                 return@onPreviewKeyEvent false
             }
-            val left = action == GamepadAction.DPAD_LEFT
-            return@onPreviewKeyEvent GamepadFocusNav.isHorizontalBlocked(left)
+            if (GamepadFocusNav.horizontalNav == HorizontalNav.PASS_BOTH) {
+                return@onPreviewKeyEvent false
+            }
+            val direction = if (action == GamepadAction.DPAD_LEFT) {
+                FocusDirection.Left
+            } else {
+                FocusDirection.Right
+            }
+            GamepadStickNav.moveFocus(direction)
+            return@onPreviewKeyEvent true
         }
 
         // Vertical focus movement is the focus system's own job.
