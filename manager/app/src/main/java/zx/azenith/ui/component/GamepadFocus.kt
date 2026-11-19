@@ -653,6 +653,8 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
     var entered by remember { mutableStateOf(false) }
     val standaloneScope = remember { "screen:${System.identityHashCode(Any())}" }
     val scope = scopeKey ?: if (page >= 0) "page:$page" else standaloneScope
+    val pagerActive = LocalMainPagerActive.current
+    val isActiveScreen = if (page >= 0) (pagerActive && page == GamepadFocusNav.currentPage) else true
 
     DisposableEffect(page, requester, scope) {
         GamepadFocusNav.publishPageEntry(page, requester)
@@ -660,15 +662,23 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
         onDispose { GamepadFocusNav.clearPageEntry(page, requester) }
     }
 
-    LaunchedEffect(GamepadInput.dpadMode, page) {
+    LaunchedEffect(isActiveScreen) {
+        if (!isActiveScreen) entered = false
+    }
+
+    LaunchedEffect(
+        GamepadInput.dpadMode,
+        GamepadInput.controllerConnected,
+        pagerActive,
+        page,
+        GamepadFocusNav.currentPage
+    ) {
         GamepadFocusNav.publishLastEntry(requester)
         if (page < 0) GamepadFocusNav.lastEntryScope = scope
-        if (!GamepadInput.dpadMode) return@LaunchedEffect
-        // The pager keeps every page composed; only the visible one may take
-        // focus, or the D-pad would seed the wrong page.
-        if (page >= 0 && page != GamepadFocusNav.currentPage) return@LaunchedEffect
+        val canSeed = (GamepadInput.dpadMode || GamepadInput.controllerConnected) && isActiveScreen
+        if (!canSeed) return@LaunchedEffect
         // Try to restore the last focused content row first (important when returning
-        // from subscreens/dialogs).
+        // from subscreens/dialogs). Prefer saved key for this scope.
         delay(120)
         if (entered) return@LaunchedEffect
         if (GamepadFocusNav.restoreFocus()) return@LaunchedEffect
@@ -684,7 +694,9 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
     return this
         .focusRequester(requester)
         .focusable()
-        .onFocusChanged { if (it.hasFocus) entered = true }
+        .onFocusChanged { focusState ->
+            entered = focusState.hasFocus
+        }
         .focusGroup()
 }
 
