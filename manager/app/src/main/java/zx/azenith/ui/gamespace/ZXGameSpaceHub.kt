@@ -255,6 +255,10 @@ fun ZXGameSpaceHub(
     val focusManager = LocalFocusManager.current
     val scaleFactor = appScalePercent.coerceIn(60, 150) / 100f
 
+    // The WrapToFirst stage is the ribbon's end stop: every face button, like
+    // Circle, returns to the first entry instead of running its normal action.
+    val backToStart: () -> Unit = { selectedRibbonIndex = 0 }
+
     val handleBack: () -> Unit = {
         // Circle is a plain BackHandler: dismiss an open dropdown first, then
         // walk the shell's own back stack. This used to live in a manual
@@ -335,6 +339,7 @@ fun ZXGameSpaceHub(
                                             runCatching { libraryFilterFocusRequester.requestFocus() }
                                         }
                                     }
+                                    RibbonEntry.WrapToFirst -> backToStart()
                                     else -> Unit
                                 }
                                 true
@@ -343,6 +348,9 @@ fun ZXGameSpaceHub(
                         KeyEvent.KEYCODE_BUTTON_X -> {
                             if (category != TopCategory.Games) {
                                 false
+                            } else if (activeEntry == RibbonEntry.WrapToFirst) {
+                                backToStart()
+                                true
                             } else {
                                 wallpaperPkg = if (activeEntry is RibbonEntry.Game) {
                                     lastGameApp?.packageName
@@ -350,6 +358,18 @@ fun ZXGameSpaceHub(
                                     "home"
                                 }
                                 true
+                            }
+                        }
+                        KeyEvent.KEYCODE_BUTTON_A -> {
+                            // Cross on the end stop returns to the first entry. Elsewhere
+                            // it stays with the shared activation path (gamepadKeyWatch).
+                            if (category == TopCategory.Games &&
+                                activeEntry == RibbonEntry.WrapToFirst
+                            ) {
+                                backToStart()
+                                true
+                            } else {
+                                false
                             }
                         }
                         KeyEvent.KEYCODE_BUTTON_START -> {
@@ -836,7 +856,7 @@ fun ZXGameSpaceHub(
                                             )
 
                                             RibbonStageType.WrapToFirst -> WrapToFirstStage(
-                                                onReturnToFirst = { selectedRibbonIndex = 0 }
+                                                onReturnToFirst = backToStart
                                             )
                                         }
                                     }
