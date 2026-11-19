@@ -578,6 +578,7 @@ fun InfoTile(
     Surface(
         modifier = modifier
             .clip(cardShape)
+            .gamepadFocusOutline(onActivate = onClick, register = true)
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,
@@ -701,9 +702,11 @@ fun DeviceInfoCard() {
         label = "expandArrowRotation"
     )
 
+    val shape = currentPersonalization().widgetCorner(26.dp)
     Surface(
-        shape = currentPersonalization().widgetCorner(26.dp),
+        shape = shape,
         color = colorScheme.surfaceColorAtElevation(1.dp),
+        modifier = Modifier.gamepadFocusOutline(shape = shape, onActivate = { isExpanded = !isExpanded }, register = true),
         onClick = { isExpanded = !isExpanded }
     ) {
         Column(
@@ -883,6 +886,7 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
+            .gamepadFocusOutline(shape = shape, onActivate = onClick, register = true)
             .clickable { onClick() }
     ) {
         Row(

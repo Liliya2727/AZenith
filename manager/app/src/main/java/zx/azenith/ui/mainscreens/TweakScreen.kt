@@ -865,6 +865,7 @@ fun ExpressiveTile(
     Surface(
         modifier = modifier
             .clip(azShape(26.dp))
+            .gamepadFocusOutline(onActivate = onClick)
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,

@@ -559,6 +559,12 @@ fun MainScreen(fromTileType: String? = null) {
             GamepadShortcuts.pageCount = pagerRoutes.size
             GamepadShortcuts.pageIndex = pagerState.currentPage
             GamepadFocusNav.currentPage = if (isOnMainPager) pagerState.currentPage else -1
+            LaunchedEffect(isOnMainPager) {
+                if (isOnMainPager && GamepadInput.dpadMode) {
+                    delay(150)
+                    GamepadFocusNav.requestPageEntry(pagerState.currentPage)
+                }
+            }
 
             // L1/R1 and the global Circle fallback are published below, once
             // onNavSelected exists (it owns the animated page switch).

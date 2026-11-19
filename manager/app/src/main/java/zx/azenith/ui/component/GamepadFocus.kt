@@ -584,12 +584,15 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
     val shortcuts = GamepadShortcuts.actions
 
     when (action) {
-        // Circle. Priority: dialog/sheet -> open search -> subscreen -> nothing.
+        // Circle. Priority: dialog/sheet (overlay) -> open search -> subscreen -> nothing.
         GamepadAction.BACK -> {
+            // Always try the screen's overlay closer first (sheets, in-composition
+            // dialogs, etc.), then search, then screen/global back.
+            val closedOverlay = shortcuts?.onCloseOverlay?.invoke() == true
+            if (closedOverlay) return@onPreviewKeyEvent true
             if (dialogOpen) {
-                val closed = shortcuts?.onCloseOverlay?.invoke() == true ||
-                    GamepadShortcuts.onGlobalBack?.invoke() == true
-                return@onPreviewKeyEvent closed
+                GamepadShortcuts.onGlobalBack?.invoke()
+                return@onPreviewKeyEvent true
             }
             if (shortcuts?.isSearchOpen == true) {
                 val close = shortcuts.onSearchClose ?: shortcuts.onSearchToggle
@@ -598,7 +601,6 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
             }
             val screenBack = shortcuts?.onBack?.invoke() == true
             if (screenBack) return@onPreviewKeyEvent true
-            // A root page has nothing to close: never let Circle exit the app.
             GamepadShortcuts.onGlobalBack?.invoke()
             return@onPreviewKeyEvent true
         }
