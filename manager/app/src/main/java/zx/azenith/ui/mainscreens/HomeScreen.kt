@@ -234,7 +234,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     value = stringResource(uiState.currentProfileRes), 
                                     highlight = (uiState.currentProfileRes != R.string.status_initializing), 
                                     showArrow = uiState.autoMode == "0",
-                                    isLoading = uiState.isProfileApplying
+                                    isLoading = uiState.isProfileApplying,
+                                    horizontalNav = HorizontalNav.BLOCK_LEFT
                                 ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                                 InfoTile(
@@ -244,7 +245,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     label = stringResource(R.string.root_access),
                                     value = stringResource(rootValueRes(uiState.rootStatusState)),
                                     tone = rootTone(uiState.rootStatusState),
-                                    highlight = false
+                                    highlight = false,
+                                    horizontalNav = HorizontalNav.BLOCK_RIGHT
                                 ) {
                                     viewModel.refreshRootStatus { changed ->
                                         if (changed) {
@@ -321,7 +323,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 value = stringResource(uiState.currentProfileRes), 
                                 highlight = (uiState.currentProfileRes != R.string.status_initializing), 
                                 showArrow = uiState.autoMode == "0",
-                                isLoading = uiState.isProfileApplying
+                                isLoading = uiState.isProfileApplying,
+                                horizontalNav = HorizontalNav.BLOCK_LEFT
                             ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                             InfoTile(
@@ -331,7 +334,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 label = stringResource(R.string.root_access),
                                 value = stringResource(rootValueRes(uiState.rootStatusState)),
                                 tone = rootTone(uiState.rootStatusState),
-                                highlight = false
+                                highlight = false,
+                                horizontalNav = HorizontalNav.BLOCK_RIGHT
                             ) {
                                 viewModel.refreshRootStatus { changed ->
                                     if (changed) {

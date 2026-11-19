@@ -537,6 +537,7 @@ fun InfoTile(
     isLoading: Boolean = false,
     tone: InfoTileTone = InfoTileTone.Neutral,
     iconOverride: ImageVector? = null,
+    horizontalNav: HorizontalNav = HorizontalNav.BLOCK_BOTH,
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -578,7 +579,7 @@ fun InfoTile(
     Surface(
         modifier = modifier
             .clip(cardShape)
-            .gamepadFocusOutline(onActivate = onClick, register = true)
+            .gamepadFocusOutline(onActivate = onClick, register = true, horizontalNav = horizontalNav)
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,

@@ -343,6 +343,20 @@ object GamepadShortcuts {
 }
 
 /**
+ * Edge-aware horizontal D-pad handling for a focused row.
+ *
+ * Directions marked blocked are consumed by [gamepadKeyWatch] so the pager does
+ * not react and focus does not jump past the row; others pass through to the
+ * focus system (or a slider).
+ */
+enum class HorizontalNav {
+    BLOCK_BOTH,
+    BLOCK_LEFT,
+    BLOCK_RIGHT,
+    PASS_BOTH
+}
+
+/**
  * Where the bottom bar and the pages hand focus back to content.
  *
  * Page entries are kept per pager index, because the pager keeps every page
@@ -384,6 +398,30 @@ object GamepadFocusNav {
 
     fun publishFocusedSlider(focused: Boolean) {
         focusedSlider = focused
+    }
+
+    /** Horizontal D-pad policy published by the focused row (edge-aware). */
+    var horizontalNav: HorizontalNav = HorizontalNav.BLOCK_BOTH
+        private set
+    private var horizontalNavOwner: Any? = null
+
+    fun publishHorizontalNav(token: Any, nav: HorizontalNav) {
+        horizontalNavOwner = token
+        horizontalNav = nav
+    }
+
+    fun clearHorizontalNav(token: Any) {
+        if (horizontalNavOwner === token) {
+            horizontalNavOwner = null
+            horizontalNav = HorizontalNav.BLOCK_BOTH
+        }
+    }
+
+    fun isHorizontalBlocked(left: Boolean): Boolean = when (horizontalNav) {
+        HorizontalNav.BLOCK_BOTH -> true
+        HorizontalNav.BLOCK_LEFT -> left
+        HorizontalNav.BLOCK_RIGHT -> !left
+        HorizontalNav.PASS_BOTH -> false
     }
 
     private val focusHistory = ArrayDeque<FocusRequester>()
@@ -466,10 +504,12 @@ fun Modifier.gamepadFocusOutline(
     width: Dp = 2.dp,
     register: Boolean = false,
     slider: Boolean = false,
+    horizontalNav: HorizontalNav = HorizontalNav.BLOCK_BOTH,
     onActivate: (() -> Unit)? = null,
 ): Modifier {
     val requester = remember { FocusRequester() }
     val activationState = rememberUpdatedState(onActivate)
+    val horizontalNavState = rememberUpdatedState(horizontalNav)
     var focused by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(
         targetValue = if (focused && GamepadInput.active) 1f else 0f,
@@ -485,9 +525,11 @@ fun Modifier.gamepadFocusOutline(
             if (focusState.isFocused) {
                 if (register) GamepadFocusNav.publishLastFocused(requester)
                 GamepadShortcuts.publishActivation(requester) { activationState.value?.invoke() }
+                GamepadFocusNav.publishHorizontalNav(requester, horizontalNavState.value)
                 if (slider) GamepadFocusNav.publishFocusedSlider(true)
             } else {
                 if (slider) GamepadFocusNav.publishFocusedSlider(false)
+                GamepadFocusNav.clearHorizontalNav(requester)
                 GamepadShortcuts.clearActivation(requester)
             }
         }
@@ -654,12 +696,13 @@ fun Modifier.gamepadKeyWatch(): Modifier = this.onPreviewKeyEvent { event ->
         }
 
         GamepadAction.DPAD_LEFT, GamepadAction.DPAD_RIGHT -> {
-            // Let horizontal keys reach focused sliders; otherwise consume to block
-            // the pager from handling them (pager switch is L1/R1 only).
+            // Focused slider owns horizontal input. Otherwise apply edge-aware
+            // horizontal nav: blocked edges stop pager jumps and focus escapes.
             if (GamepadFocusNav.focusedSlider) {
                 return@onPreviewKeyEvent false
             }
-            return@onPreviewKeyEvent true
+            val left = action == GamepadAction.DPAD_LEFT
+            return@onPreviewKeyEvent GamepadFocusNav.isHorizontalBlocked(left)
         }
 
         // Vertical focus movement is the focus system's own job.
