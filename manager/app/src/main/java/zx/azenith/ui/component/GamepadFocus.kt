@@ -323,6 +323,18 @@ object GamepadShortcuts {
     private var activationToken: Any? = null
     private var activation: (() -> Unit)? = null
 
+    /**
+     * Last activation callback published by each outlined node.
+     *
+     * A dialog or sheet is its own window, so while it is up the row behind it
+     * keeps Compose focus and gets no focus-loss event. When the sheet's own row
+     * takes focus it overwrites the single [activation] slot, and on dismissal
+     * clearing that slot leaves the (still focused) row behind with nothing for
+     * Cross to invoke. Keeping the callback per requester lets focus restoration
+     * re-publish it when requestFocus() lands on an already-focused node.
+     */
+    private val activationByRequester = HashMap<Any, () -> Unit>()
+
     /** True when focus sits on an outlined content row / switch / slider / button. */
     val hasRowFocus: Boolean get() = activationToken != null
 
@@ -332,6 +344,7 @@ object GamepadShortcuts {
     fun publishActivation(token: Any, callback: (() -> Unit)?) {
         activationToken = token
         activation = callback
+        if (callback != null) activationByRequester[token] = callback
         GamepadFocusNav.publishLastFocusedToken(token)
     }
 
@@ -340,6 +353,21 @@ object GamepadShortcuts {
             activationToken = null
             activation = null
         }
+        // Keep the remembered callback: the node may still be focused in the
+        // main window while a dialog window above it comes and goes.
+    }
+
+    /** Re-publish a remembered activation when focus is restored to [token]. */
+    fun reassertActivation(token: Any): Boolean {
+        val callback = activationByRequester[token] ?: return false
+        activationToken = token
+        activation = callback
+        Log.d("PAD", "activation reassert focusKeyRemembered token=${token.javaClass.simpleName}")
+        return true
+    }
+
+    fun forgetActivation(token: Any) {
+        activationByRequester.remove(token)
     }
 
     /** Invoke the focused row's click, if it has one. */
@@ -495,6 +523,10 @@ object GamepadFocusNav {
             val got = runCatching { requester.requestFocus() }.getOrDefault(false)
             Log.d("PAD", "restoreSavedFocus direct scope=$scope key=$key got=$got")
             if (got) {
+                // requestFocus on an already-focused row fires no focus event,
+                // so re-publish its activation (e.g. after a sheet). Re-publishing
+                // the remembered wrapper is harmless when focus already did it.
+                GamepadShortcuts.reassertActivation(requester)
                 clearRestorePending(scope)
                 return true
             }
@@ -573,7 +605,11 @@ object GamepadFocusNav {
         val currentPageEntry = pageEntries[currentPage]
         val candidates = focusHistory.toList().asReversed() +
             listOfNotNull(currentPageEntry, lastEntry, pageEntry)
-        val restored = candidates.any { runCatching { it.requestFocus() }.getOrDefault(false) }
+        val restored = candidates.any { candidate ->
+            val got = runCatching { candidate.requestFocus() }.getOrDefault(false)
+            if (got) GamepadShortcuts.reassertActivation(candidate)
+            got
+        }
         if (restored) {
             if (scope != null) clearRestorePending(scope)
             // A screen entry is focusable but invisible: stepping into the first
@@ -640,7 +676,10 @@ fun Modifier.gamepadFocusOutline(
         label = "GamepadFocusOutline"
     )
     DisposableEffect(requester) {
-        onDispose { GamepadFocusNav.forget(requester) }
+        onDispose {
+            GamepadFocusNav.forget(requester)
+            GamepadShortcuts.forgetActivation(requester)
+        }
     }
 
     if (scope != null && focusKey != null) {
