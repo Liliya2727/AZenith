@@ -21,6 +21,8 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
+import android.util.Log
 import android.view.KeyEvent
 import android.view.InputDevice
 import android.view.MotionEvent
@@ -53,6 +55,23 @@ import zx.azenith.ui.util.tapHaptic
  */
 class ZXGameSpaceActivity : ComponentActivity() {
 
+    companion object {
+        private const val TRIGGER_THRESHOLD = 0.5f
+    }
+
+    // Logical pressed state shared by the digital key and analog axis paths, so a
+    // controller that reports both can't toggle an overlay twice per press.
+    private var l2Held = false
+    private var r2Held = false
+
+    /** Feed a synthesized L2/R2 key through this window so the hub's key handler sees it. */
+    private fun emitTrigger(down: Boolean, keyCode: Int) {
+        val now = SystemClock.uptimeMillis()
+        val action = if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP
+        super.dispatchKeyEvent(KeyEvent(now, now, action, keyCode, 0))
+        Log.d("PAD", "trigger synth key=$keyCode down=$down")
+    }
+
     /** Synthesized direction keys must dispatch through this window, not the manager's. */
     private fun wireGamepadDirectionRepeat() {
         GamepadDirectionRepeat.sendKey = { code, action, repeat ->
@@ -62,6 +81,29 @@ class ZXGameSpaceActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Real L2/R2 digital keys: keep the shared held state in sync and swallow
+        // a duplicate arrived after we already synthesized the same press from
+        // the analog axis.
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_L2 ||
+            event.keyCode == KeyEvent.KEYCODE_BUTTON_R2
+        ) {
+            val isL2 = event.keyCode == KeyEvent.KEYCODE_BUTTON_L2
+            val held = if (isL2) l2Held else r2Held
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (event.repeatCount == 0) {
+                        if (held) {
+                            Log.d("PAD", "trigger duplicate key ignored key=${event.keyCode}")
+                            return true
+                        }
+                        if (isL2) l2Held = true else r2Held = true
+                    }
+                }
+                KeyEvent.ACTION_UP -> {
+                    if (isL2) l2Held = false else r2Held = false
+                }
+            }
+        }
         if (event.keyCode == KeyEvent.KEYCODE_BUTTON_B || event.keyCode == KeyEvent.KEYCODE_ESCAPE) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 onBackPressedDispatcher.onBackPressed()
@@ -91,6 +133,28 @@ class ZXGameSpaceActivity : ComponentActivity() {
         val isJoystick = source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
         val isGamepad = source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
         if (event.action == MotionEvent.ACTION_MOVE && (isJoystick || isGamepad)) {
+            // Analog triggers usually arrive only as motion axes (many pads never
+            // emit BUTTON_L2/R2 key events). Synthesize the digital keys the hub
+            // listens for. The shared held flag means a pad that sends both paths
+            // won't fire the same press twice.
+            val l2Value = maxOf(
+                event.getAxisValue(MotionEvent.AXIS_LTRIGGER),
+                event.getAxisValue(MotionEvent.AXIS_BRAKE)
+            )
+            val r2Value = maxOf(
+                event.getAxisValue(MotionEvent.AXIS_RTRIGGER),
+                event.getAxisValue(MotionEvent.AXIS_GAS)
+            )
+            val l2Down = l2Value >= TRIGGER_THRESHOLD
+            val r2Down = r2Value >= TRIGGER_THRESHOLD
+            if (l2Down != l2Held) {
+                l2Held = l2Down
+                emitTrigger(l2Down, KeyEvent.KEYCODE_BUTTON_L2)
+            }
+            if (r2Down != r2Held) {
+                r2Held = r2Down
+                emitTrigger(r2Down, KeyEvent.KEYCODE_BUTTON_R2)
+            }
             // Hat takes priority, then the left stick. The dominant axis decides
             // the direction: horizontal walks the game ribbon (and Bento cards),
             // vertical reaches the Bento cards. Holding accelerates repeats.
