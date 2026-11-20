@@ -110,7 +110,6 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.ui.component.GamepadFocusRoot
-import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.LocalGamepadFocusEnabled
 import zx.azenith.ui.component.ZXDropDownNav
 import zx.azenith.ui.util.TapHapticState
@@ -234,11 +233,6 @@ fun ZXGameSpaceHub(
         lastGameApp = activeEntry.app
     }
 
-    // First-launch gate: shown only once, and only when a pad is attached.
-    var pressAnyButton by rememberSaveable {
-        mutableStateOf(GamepadInput.hasDpadDevice())
-    }
-
     LaunchedEffect(activeEntry) {
         if (activeEntry != RibbonEntry.Welcome) {
             homeExpanded = false
@@ -317,12 +311,6 @@ fun ZXGameSpaceHub(
             .background(scheme.surfaceContainerLowest)
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
-                    // Any button dismisses the first-launch gate and is consumed
-                    // so it cannot also trigger navigation underneath.
-                    if (pressAnyButton) {
-                        pressAnyButton = false
-                        return@onPreviewKeyEvent true
-                    }
                     when (event.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_BUTTON_L1 -> {
                             category = TopCategory.Games
@@ -982,13 +970,6 @@ fun ZXGameSpaceHub(
             hazeState = overlayHazeState,
             onLaunch = requestAppLaunch,
             onClose = { wallpaperPkg = null }
-        )
-
-        // First-launch gamepad gate, drawn last so it covers the whole shell.
-        ZXGameSpacePressAnyButtonOverlay(
-            visible = pressAnyButton,
-            hazeState = overlayHazeState,
-            onAnyInput = { pressAnyButton = false }
         )
 
         ZXGameSpaceSidePanelOnboardingOverlay(
