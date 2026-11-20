@@ -42,6 +42,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -305,16 +307,15 @@ internal fun ZXGameSpaceTopBar(
                                         tabBounds = tabBounds + (tab to (parentX to width))
                                     }
                                 }
-                                // GameSpace is opted out of gamepad focus. clickable still
-                                // makes this focusable and M3 paints its own focus ring, so
-                                // keep the tab touch-clickable but never a focus target —
-                                // category switching is handled by L1/R1 on the pad.
-                                // Order matters: focusProperties must come after clickable,
-                                // otherwise clickable's own focusable() re-enables it.
-                                .clickable {
-                                    if (searchOpen) onSearchClose()
-                                    AudioUtil.playOk(context)
-                                    onSelectCategory(tab)
+                                // Top bar is 100% touch-only. Use a raw tap detector instead
+                                // of clickable so Compose never creates a focusable node here
+                                // at all — category switching is L1/R1 on the pad.
+                                .pointerInput(tab) {
+                                    detectTapGestures {
+                                        if (searchOpen) onSearchClose()
+                                        AudioUtil.playOk(context)
+                                        onSelectCategory(tab)
+                                    }
                                 }
                                 .focusProperties { canFocus = false }
                         ) {

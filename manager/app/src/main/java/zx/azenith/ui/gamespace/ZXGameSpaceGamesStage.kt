@@ -18,7 +18,6 @@ package zx.azenith.ui.gamespace
 
 import android.net.Uri
 import android.os.Build
-import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -761,10 +760,6 @@ internal fun WelcomeHubStage(
     val expandedNow = rememberUpdatedState(expanded)
     val notifyExpanded = rememberUpdatedState(onExpandedChange)
     var dragExpandDistance by remember { mutableStateOf(0f) }
-    // Only a genuine touch drag may collapse the wall via fling. Focus-driven
-    // scrolling (moving the outline up to a top-row card) also produces a fling,
-    // and must stop at the edge instead of closing the Bento.
-    var lastUserDragAt by remember { mutableStateOf(0L) }
     val density = LocalDensity.current
     val scaleRatio = (100f / appScalePercent.coerceIn(60, 150))
     val expandThresholdPx = with(density) { (32.dp * scaleRatio).coerceIn(28.dp, 54.dp).toPx() }
@@ -780,7 +775,6 @@ internal fun WelcomeHubStage(
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val fromDrag = source == NestedScrollSource.UserInput
-                if (fromDrag) lastUserDragAt = SystemClock.uptimeMillis()
                 if (!expandedNow.value) {
                     if (fromDrag && available.y < 0f) {
                         dragExpandDistance = (dragExpandDistance - available.y).coerceAtLeast(0f)
@@ -796,49 +790,38 @@ internal fun WelcomeHubStage(
                     }
                     return Offset.Zero
                 }
+                // Collapsing the wall by gesture is optional — Circle always closes it.
+                // Require a deliberate downward drag past the threshold so a focus
+                // scroll to the top row can never accidentally close the Bento.
                 if (expandedNow.value && fromDrag && available.y > 0f && scroll.value <= 0) {
-                    notifyExpanded.value(false)
-                    dragExpandDistance = 0f
+                    dragExpandDistance = (dragExpandDistance + available.y).coerceAtLeast(0f)
+                    if (dragExpandDistance >= expandThresholdPx) {
+                        notifyExpanded.value(false)
+                        dragExpandDistance = 0f
+                    }
                     return Offset(0f, available.y)
                 }
                 return Offset.Zero
             }
 
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                if (expandedNow.value && source == NestedScrollSource.UserInput && available.y > 0f && scroll.value <= 0) {
-                    notifyExpanded.value(false)
-                    dragExpandDistance = 0f
-                    return Offset(0f, available.y)
-                }
+                // No gesture collapse here; onPreScroll's threshold handles drags.
                 return Offset.Zero
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 dragExpandDistance = 0f
-                // A fling that never had a touch drag behind it came from focus
-                // scrolling — don't let it toggle the wall.
-                if (SystemClock.uptimeMillis() - lastUserDragAt > 300L) return Velocity.Zero
-                if (!expandedNow.value) {
-                    if (available.y < -200f) {
-                        notifyExpanded.value(true)
-                        return available
-                    }
-                } else {
-                    if (available.y > 200f && scroll.value <= 0) {
-                        notifyExpanded.value(false)
-                        return available
-                    }
+                // Expanding by an upward fling is fine; collapsing by fling is removed
+                // so a focus-driven scroll can never close the Bento. Use Circle.
+                if (!expandedNow.value && available.y < -200f) {
+                    notifyExpanded.value(true)
+                    return available
                 }
                 return Velocity.Zero
             }
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
                 dragExpandDistance = 0f
-                if (SystemClock.uptimeMillis() - lastUserDragAt > 300L) return Velocity.Zero
-                if (expandedNow.value && available.y > 80f && scroll.value <= 0) {
-                    notifyExpanded.value(false)
-                    return available
-                }
                 return Velocity.Zero
             }
         }
