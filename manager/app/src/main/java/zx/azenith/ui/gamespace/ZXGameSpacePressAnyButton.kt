@@ -27,7 +27,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,11 +36,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import zx.azenith.ui.component.BreathingText
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
@@ -102,16 +98,9 @@ internal fun ZXGameSpacePressAnyButtonOverlay(
             },
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "PRESS ANY BUTTON",
-            style = TextStyle(
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 30.sp,
-                letterSpacing = 6.sp,
-                textAlign = TextAlign.Center
-            ),
-            modifier = Modifier.drawBehind { drawFlowGlow(flow, pulse, scheme.primary) },
-            color = scheme.onSurface
+        BreathingText(
+            text = "Press any button",
+            modifier = Modifier.drawBehind { drawFlowGlow(flow, pulse, scheme.primary) }
         )
     }
 }
