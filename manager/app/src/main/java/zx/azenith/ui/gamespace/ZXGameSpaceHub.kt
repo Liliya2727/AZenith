@@ -409,27 +409,26 @@ fun ZXGameSpaceHub(
                                 }
                                 focusManager.moveFocus(direction)
                                 true
+                            } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
+                                // The library is open: every direction walks focus between
+                                // the filter bar and app tiles. Up that reaches the filter
+                                // simply stops there — the filter row consumes it — instead
+                                // of reopening the ribbon.
+                                val direction = when (keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
+                                    KeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
+                                    else -> FocusDirection.Right
+                                }
+                                focusManager.moveFocus(direction)
+                                true
                             } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
                                 keyCode == KeyEvent.KEYCODE_DPAD_DOWN
                             ) {
                                 // On the collapsed ribbon, vertical keys must do nothing:
                                 // focus search would otherwise land on the top-bar tabs or
                                 // the collapsed Bento tiles and paint their highlight.
-                                // Only an expanded Welcome/Library stage uses vertical.
-                                if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
-                                    // Bento is handled by the first branch above.
-                                    true
-                                } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
-                                    if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                                        libraryExpanded = false
-                                        scope.launch {
-                                            delay(50)
-                                            runCatching { ribbonFocusRequester.requestFocus() }
-                                        }
-                                    }
-                                    true
-                                } else if (category == TopCategory.Games && !searchOpen) {
-                                    // Swallow it: no focus movement on the game ribbon.
+                                if (category == TopCategory.Games && !searchOpen) {
                                     true
                                 } else {
                                     false
@@ -857,7 +856,9 @@ fun ZXGameSpaceHub(
                                                 onOpenSettings = { tuningPkg = it.packageName },
                                                 onExpandedChange = { if (activeEntry == RibbonEntry.Library) libraryExpanded = it },
                                                 onClose = { selectedRibbonIndex = 0 },
-                                                onNavigateUp = { ribbonFocusRequester.requestFocus() },
+                                                // Up at the filter row stops there; it must not
+                                                // reopen the ribbon. Closing the library is Circle.
+                                                onNavigateUp = {},
                                                 loading = loading,
                                                 filterFocusRequester = libraryFilterFocusRequester
                                             )
