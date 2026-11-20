@@ -325,6 +325,34 @@ fun ZXGameSpaceHub(
                             category = TopCategory.Settings
                             true
                         }
+                        // Triggers + Select drive the shell overlays. Consume them
+                        // here so the global watcher can't read Select as Back.
+                        KeyEvent.KEYCODE_BUTTON_SELECT -> {
+                            if (event.nativeKeyEvent.repeatCount == 0) {
+                                quickSettingsOpen = false
+                                nowPlayingOpen = false
+                                category = TopCategory.Games
+                                searchOpen = !searchOpen
+                                if (!searchOpen) searchQuery = ""
+                            }
+                            true
+                        }
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            if (event.nativeKeyEvent.repeatCount == 0) {
+                                searchOpen = false
+                                searchQuery = ""
+                                quickSettingsOpen = !quickSettingsOpen
+                            }
+                            true
+                        }
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            if (event.nativeKeyEvent.repeatCount == 0) {
+                                searchOpen = false
+                                searchQuery = ""
+                                nowPlayingOpen = !nowPlayingOpen
+                            }
+                            true
+                        }
                         // Face buttons: Triangle = the stage's primary action,
                         // Square = wallpaper settings, Start = launch the game.
                         // Only meaningful on the Games category stages.
