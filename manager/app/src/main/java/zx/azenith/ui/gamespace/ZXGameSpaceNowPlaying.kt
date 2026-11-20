@@ -148,6 +148,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import zx.azenith.R
 import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.component.gamepadNotFocusable
 import zx.azenith.ui.util.AudioUtil
 import zx.azenith.ui.util.BgmManager
 import zx.azenith.ui.util.BgmRepeatMode
@@ -176,7 +177,8 @@ internal fun NowPlayingDot(
     onPositioned: (Rect) -> Unit = {},
     onEmergenceImpulse: () -> Unit = {},
     onMergeImpact: () -> Unit = {},
-    onCollapseImpulse: () -> Unit = {}
+    onCollapseImpulse: () -> Unit = {},
+    gamepadFocusable: Boolean = true
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -641,13 +643,22 @@ internal fun NowPlayingDot(
                     transformOrigin = if (isPanelOpen || wasPanelOpen) TransformOrigin(1f, 0.5f) else TransformOrigin(0.5f, 0.5f)
                 }
                 .clip(CircleShape)
-                .gamepadFocusOutline(shape = CircleShape, register = !isPanelOpen)
                 .then(
-                    if (!isPanelOpen) {
-                        Modifier.clickable {
-                            AudioUtil.playOk(context)
-                            onOpenPanel()
-                        }
+                    if (!isPanelOpen && gamepadFocusable) {
+                        Modifier
+                            .gamepadFocusOutline(shape = CircleShape, register = true)
+                            .clickable {
+                                AudioUtil.playOk(context)
+                                onOpenPanel()
+                            }
+                    } else if (!isPanelOpen) {
+                        // Top-bar now-playing chip: touch-only, never a d-pad stop.
+                        Modifier
+                            .clickable {
+                                AudioUtil.playOk(context)
+                                onOpenPanel()
+                            }
+                            .gamepadNotFocusable()
                     } else Modifier
                 )
         ) {

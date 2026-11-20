@@ -708,7 +708,8 @@ object GamepadFocusNav {
 /**
  * Makes a container (the navbar, the landscape dock) and everything inside it
  * unreachable by D-pad. Applied to the bar's root node, which prunes the whole
- * subtree from focus search.
+ * subtree from focus search. Also used after `clickable` on top-bar chips and
+ * icons to keep them touch-tappable but out of d-pad focus search.
  */
 fun Modifier.gamepadNotFocusable(): Modifier = this.focusProperties { canFocus = false }
 

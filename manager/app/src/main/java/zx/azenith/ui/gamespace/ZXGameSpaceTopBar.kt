@@ -134,6 +134,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.Android16BatteryIcon
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.component.gamepadNotFocusable
 import zx.azenith.ui.component.gamepadKeyWatch
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -376,6 +377,8 @@ internal fun ZXGameSpaceTopBar(
                                 Modifier
                             }
                         )
+                        // Top-bar chrome is touch-only; keep it out of d-pad focus.
+                        .gamepadNotFocusable()
                         .padding(horizontal = 4.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -438,11 +441,14 @@ internal fun ZXGameSpaceTopBar(
                     .width(searchWidth)
                     .height(38.dp)
                     .clip(CircleShape)
-                    .gamepadFocusOutline(shape = CircleShape, register = !searchOpen)
                     .then(
                         if (!searchOpen) {
-                            Modifier.clickable(onClick = onSearchClick)
+                            // Collapsed search pill: touch-only, never a d-pad stop.
+                            Modifier
+                                .clickable(onClick = onSearchClick)
+                                .gamepadNotFocusable()
                         } else {
+                            // Open search keeps its TextField focusable for typing.
                             Modifier
                         }
                     )
@@ -553,7 +559,8 @@ internal fun ZXGameSpaceTopBar(
                 onClick = {
                     if (searchOpen) onSearchClose()
                     onExit()
-                }
+                },
+                gamepadFocusable = false
             )
 
             // Material 3 Expressive Unified System Status Capsule (Clock & Battery) and Now Playing
@@ -574,11 +581,12 @@ internal fun ZXGameSpaceTopBar(
                         }
                         .height(38.dp)
                         .clip(CircleShape)
-                        .gamepadFocusOutline(shape = CircleShape, register = true)
+                        // Clock/battery chip is touch-only, never a d-pad stop.
                         .clickable {
                             if (searchOpen) onSearchClose()
                             onStatusClick()
                         }
+                        .gamepadNotFocusable()
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -650,6 +658,7 @@ internal fun ZXGameSpaceTopBar(
                     isPanelOpen = isNowPlayingOpen,
                     canExpand = canExpandNowPlaying,
                     onOpenPanel = onNowPlayingClick,
+                    gamepadFocusable = false,
                     onPositioned = onNowPlayingAnchor,
                     onEmergenceImpulse = {
                         coroutineScope.launch {
@@ -702,7 +711,8 @@ internal fun TopBarIconButton(
     icon: ImageVector,
     contentDescription: String?,
     tint: Color = MaterialTheme.colorScheme.onSurface,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    gamepadFocusable: Boolean = true
 ) {
     val scheme = MaterialTheme.colorScheme
     Surface(
@@ -712,8 +722,18 @@ internal fun TopBarIconButton(
         modifier = Modifier
             .size(38.dp)
             .clip(CircleShape)
-            .gamepadFocusOutline(shape = CircleShape, register = true)
-            .clickable(onClick = onClick)
+            .then(
+                if (gamepadFocusable) {
+                    Modifier
+                        .gamepadFocusOutline(shape = CircleShape, register = true)
+                        .clickable(onClick = onClick)
+                } else {
+                    // Top-bar chrome: touch-only, never a d-pad stop.
+                    Modifier
+                        .clickable(onClick = onClick)
+                        .gamepadNotFocusable()
+                }
+            )
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
