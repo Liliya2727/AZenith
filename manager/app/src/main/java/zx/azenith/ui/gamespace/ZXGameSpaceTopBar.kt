@@ -136,7 +136,6 @@ import zx.azenith.R
 import zx.azenith.ui.component.Android16BatteryIcon
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.gamepadFocusOutline
-import zx.azenith.ui.component.gamepadNotFocusable
 import zx.azenith.ui.component.gamepadKeyWatch
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -373,13 +372,14 @@ internal fun ZXGameSpaceTopBar(
                         .clip(RoundedCornerShape(12.dp))
                         .then(
                             if (onLogoClick != null) {
-                                Modifier.clickable(onClick = onLogoClick)
+                                // Tap via pointerInput so no focusable node is created.
+                                Modifier.pointerInput(onLogoClick) {
+                                    detectTapGestures { onLogoClick() }
+                                }
                             } else {
                                 Modifier
                             }
                         )
-                        // Top-bar chrome is touch-only; keep it out of d-pad focus.
-                        .gamepadNotFocusable()
                         .padding(horizontal = 4.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -444,10 +444,11 @@ internal fun ZXGameSpaceTopBar(
                     .clip(CircleShape)
                     .then(
                         if (!searchOpen) {
-                            // Collapsed search pill: touch-only, never a d-pad stop.
-                            Modifier
-                                .clickable(onClick = onSearchClick)
-                                .gamepadNotFocusable()
+                            // Collapsed search pill: tap via pointerInput so it never
+                            // becomes a focus target at all.
+                            Modifier.pointerInput(onSearchClick) {
+                                detectTapGestures { onSearchClick() }
+                            }
                         } else {
                             // Open search keeps its TextField focusable for typing.
                             Modifier
@@ -505,7 +506,9 @@ internal fun ZXGameSpaceTopBar(
                                 modifier = Modifier
                                     .size(24.dp)
                                     .clip(CircleShape)
-                                    .clickable { onSearchQueryChange("") }
+                                    .pointerInput(Unit) {
+                                        detectTapGestures { onSearchQueryChange("") }
+                                    }
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
@@ -524,10 +527,12 @@ internal fun ZXGameSpaceTopBar(
                             modifier = Modifier
                                 .size(26.dp)
                                 .clip(CircleShape)
-                                .clickable(onClick = {
-                                    AudioUtil.playCancel(context)
-                                    onSearchClose()
-                                })
+                                .pointerInput(Unit) {
+                                    detectTapGestures {
+                                        AudioUtil.playCancel(context)
+                                        onSearchClose()
+                                    }
+                                }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
@@ -582,12 +587,14 @@ internal fun ZXGameSpaceTopBar(
                         }
                         .height(38.dp)
                         .clip(CircleShape)
-                        // Clock/battery chip is touch-only, never a d-pad stop.
-                        .clickable {
-                            if (searchOpen) onSearchClose()
-                            onStatusClick()
+                        // Clock/battery chip: tap via pointerInput so it never
+                        // becomes a focus target at all.
+                        .pointerInput(onStatusClick) {
+                            detectTapGestures {
+                                if (searchOpen) onSearchClose()
+                                onStatusClick()
+                            }
                         }
-                        .gamepadNotFocusable()
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -729,10 +736,11 @@ internal fun TopBarIconButton(
                         .gamepadFocusOutline(shape = CircleShape, register = true)
                         .clickable(onClick = onClick)
                 } else {
-                    // Top-bar chrome: touch-only, never a d-pad stop.
-                    Modifier
-                        .clickable(onClick = onClick)
-                        .gamepadNotFocusable()
+                    // Top-bar chrome: tap via pointerInput so it never becomes
+                    // a focus target at all.
+                    Modifier.pointerInput(onClick) {
+                        detectTapGestures { onClick() }
+                    }
                 }
             )
     ) {

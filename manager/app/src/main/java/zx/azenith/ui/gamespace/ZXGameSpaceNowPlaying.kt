@@ -148,7 +148,6 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import zx.azenith.R
 import zx.azenith.ui.component.gamepadFocusOutline
-import zx.azenith.ui.component.gamepadNotFocusable
 import zx.azenith.ui.util.AudioUtil
 import zx.azenith.ui.util.BgmManager
 import zx.azenith.ui.util.BgmRepeatMode
@@ -652,13 +651,14 @@ internal fun NowPlayingDot(
                                 onOpenPanel()
                             }
                     } else if (!isPanelOpen) {
-                        // Top-bar now-playing chip: touch-only, never a d-pad stop.
-                        Modifier
-                            .clickable {
+                        // Top-bar now-playing chip: tap via pointerInput so it
+                        // never becomes a focus target at all.
+                        Modifier.pointerInput(onOpenPanel) {
+                            detectTapGestures {
                                 AudioUtil.playOk(context)
                                 onOpenPanel()
                             }
-                            .gamepadNotFocusable()
+                        }
                     } else Modifier
                 )
         ) {
