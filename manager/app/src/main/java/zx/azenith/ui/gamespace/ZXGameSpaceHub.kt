@@ -286,6 +286,11 @@ fun ZXGameSpaceHub(
             searchQuery = ""
         } else if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
             homeExpanded = false
+            // Clear the focused tile right now, not when the collapse animation
+            // crosses 0.5. A lower card (library/support/learn more) still holding
+            // focus makes the scroll container keep it in view, which the stage
+            // gate reads as an upward scroll/fling and expands the wall again.
+            focusManager.clearFocus()
         } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
             libraryExpanded = false
         } else if (selectedRibbonIndex != 0) {

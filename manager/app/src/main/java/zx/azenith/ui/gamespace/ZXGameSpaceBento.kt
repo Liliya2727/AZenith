@@ -201,6 +201,10 @@ internal fun BentoTile(
         if (!bentoActive) {
             focused = false
             GamepadShortcuts.clearActivation(requester)
+            // Drop the remembered callback too: restoreFocus() would otherwise
+            // reassert the old activation on a tile that no longer belongs to
+            // the open wall, which can reopen it from a lower card.
+            GamepadShortcuts.forgetActivation(requester)
         }
     }
     val fill = animateColorAsState(container, motion.defaultEffectsSpec(), label = "BentoFill")

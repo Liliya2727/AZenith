@@ -812,10 +812,15 @@ internal fun WelcomeHubStage(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
+                val draggedUp = dragExpandDistance > 0f
                 dragExpandDistance = 0f
-                // Expanding by an upward fling is fine; collapsing by fling is removed
-                // so a focus-driven scroll can never close the Bento. Use Circle.
-                if (!expandedNow.value && available.y < -200f) {
+                // Expanding by an upward fling is fine, but only when the user
+                // actually dragged up. A collapse from Circle runs scrollTo(0),
+                // and the resulting programmatic/focus scroll can surface here as
+                // an upward fling — with focus on a lower tile (library, support,
+                // learn more) that would immediately reopen the wall. Requiring a
+                // real drag keeps those closes closed.
+                if (!expandedNow.value && draggedUp && available.y < -200f) {
                     notifyExpanded.value(true)
                     return available
                 }
