@@ -791,9 +791,18 @@ internal fun WelcomeHubStage(
                     }
                     return Offset.Zero
                 }
-                // The wall is closed only by Circle (handleBack). A downward drag at
-                // the top must not collapse it — focus moving up to the first card
-                // produces exactly such a scroll, so there is no gesture close here.
+                // Touch drag down at the top closes the wall, but a focus-driven
+                // scroll does not: Compose reports focus scrolls as SideEffect, so
+                // the UserInput guard keeps gamepad Up from closing it. A fling is
+                // never allowed to close it (see onPreFling below).
+                if (fromDrag && available.y > 0f && scroll.value <= 0) {
+                    dragExpandDistance = (dragExpandDistance + available.y).coerceAtLeast(0f)
+                    if (dragExpandDistance >= expandThresholdPx) {
+                        notifyExpanded.value(false)
+                        dragExpandDistance = 0f
+                    }
+                    return Offset(0f, available.y)
+                }
                 return Offset.Zero
             }
 
