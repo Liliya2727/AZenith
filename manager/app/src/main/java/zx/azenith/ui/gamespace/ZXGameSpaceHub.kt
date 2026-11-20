@@ -328,7 +328,15 @@ fun ZXGameSpaceHub(
                                 false
                             } else {
                                 when (activeEntry) {
-                                    RibbonEntry.Welcome -> homeExpanded = true
+                                    RibbonEntry.Welcome -> {
+                                        homeExpanded = true
+                                        // Drop focus into the Bento cards instead of letting
+                                        // it land back on the (now non-focusable) top bar.
+                                        scope.launch {
+                                            withFrameNanos { }
+                                            focusManager.moveFocus(FocusDirection.Down)
+                                        }
+                                    }
                                     is RibbonEntry.Game -> tuningPkg = lastGameApp?.packageName
                                     RibbonEntry.Library -> {
                                         // Collapse the ribbon and drop focus straight into the
@@ -401,27 +409,27 @@ fun ZXGameSpaceHub(
                                 }
                                 focusManager.moveFocus(direction)
                                 true
-                            } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                                // Vertical is only for the Bento cards; the game
-                                // ribbon itself is horizontal-only.
-                                false
-                            } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                                // Up collapses an expanded Welcome or Library stage;
-                                // otherwise let the focus system handle it.
+                            } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                                keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                            ) {
+                                // On the collapsed ribbon, vertical keys must do nothing:
+                                // focus search would otherwise land on the top-bar tabs or
+                                // the collapsed Bento tiles and paint their highlight.
+                                // Only an expanded Welcome/Library stage uses vertical.
                                 if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
-                                    homeExpanded = false
-                                    scope.launch {
-                                        welcomeScroll.animateScrollTo(0)
-                                        delay(50)
-                                        runCatching { ribbonFocusRequester.requestFocus() }
-                                    }
+                                    // Bento is handled by the first branch above.
                                     true
                                 } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
-                                    libraryExpanded = false
-                                    scope.launch {
-                                        delay(50)
-                                        runCatching { ribbonFocusRequester.requestFocus() }
+                                    if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                                        libraryExpanded = false
+                                        scope.launch {
+                                            delay(50)
+                                            runCatching { ribbonFocusRequester.requestFocus() }
+                                        }
                                     }
+                                    true
+                                } else if (category == TopCategory.Games && !searchOpen) {
+                                    // Swallow it: no focus movement on the game ribbon.
                                     true
                                 } else {
                                     false

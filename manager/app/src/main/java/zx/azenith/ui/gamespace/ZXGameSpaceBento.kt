@@ -857,7 +857,10 @@ private fun MorphedStatusTile(
         container = container,
         contentColor = onContainer,
         modifier = modifier,
-        onClick = if (p < 0.35f) onExpandClick else null,
+        // Status tiles have no detail action, but when the wall is open they must
+        // still be focus targets so d-pad can traverse the whole set instead of
+        // escaping the group (which read-only, non-focusable tiles used to do).
+        onClick = onExpandClick,
         restCorner = restCorner,
         engagedCorner = engagedCorner
     ) { engaged ->

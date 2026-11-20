@@ -308,12 +308,14 @@ internal fun ZXGameSpaceTopBar(
                                 // makes this focusable and M3 paints its own focus ring, so
                                 // keep the tab touch-clickable but never a focus target —
                                 // category switching is handled by L1/R1 on the pad.
-                                .focusProperties { canFocus = false }
+                                // Order matters: focusProperties must come after clickable,
+                                // otherwise clickable's own focusable() re-enables it.
                                 .clickable {
                                     if (searchOpen) onSearchClose()
                                     AudioUtil.playOk(context)
                                     onSelectCategory(tab)
                                 }
+                                .focusProperties { canFocus = false }
                         ) {
                             Text(
                                 text = stringResource(tab.labelRes),
