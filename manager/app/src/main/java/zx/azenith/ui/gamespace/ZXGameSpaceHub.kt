@@ -447,7 +447,8 @@ fun ZXGameSpaceHub(
                                     if (ribbonEntries.getOrNull(next) != RibbonEntry.Welcome) {
                                         homeExpanded = false
                                     }
-                                    AudioUtil.playScroll(context)
+                                    // Scroll sound/haptic come from the ribbon's own
+                                    // index-crossing effect; playing it here too doubled it.
                                 }
                                 true
                             }
@@ -729,7 +730,6 @@ fun ZXGameSpaceHub(
                                                                     if (TapHapticState.enabled.value) {
                                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                     }
-                                                                    AudioUtil.playScroll(context)
                                                                     if (safeIndex < ribbonEntries.lastIndex) {
                                                                         val next = safeIndex + 1
                                                                         selectedRibbonIndex = next
@@ -743,7 +743,6 @@ fun ZXGameSpaceHub(
                                                                     if (TapHapticState.enabled.value) {
                                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                     }
-                                                                    AudioUtil.playScroll(context)
                                                                     if (safeIndex > 0) {
                                                                         val prev = safeIndex - 1
                                                                         selectedRibbonIndex = prev
