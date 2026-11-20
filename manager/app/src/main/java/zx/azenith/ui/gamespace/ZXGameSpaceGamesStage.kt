@@ -61,6 +61,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -790,17 +791,9 @@ internal fun WelcomeHubStage(
                     }
                     return Offset.Zero
                 }
-                // Collapsing the wall by gesture is optional — Circle always closes it.
-                // Require a deliberate downward drag past the threshold so a focus
-                // scroll to the top row can never accidentally close the Bento.
-                if (expandedNow.value && fromDrag && available.y > 0f && scroll.value <= 0) {
-                    dragExpandDistance = (dragExpandDistance + available.y).coerceAtLeast(0f)
-                    if (dragExpandDistance >= expandThresholdPx) {
-                        notifyExpanded.value(false)
-                        dragExpandDistance = 0f
-                    }
-                    return Offset(0f, available.y)
-                }
+                // The wall is closed only by Circle (handleBack). A downward drag at
+                // the top must not collapse it — focus moving up to the first card
+                // produces exactly such a scroll, so there is no gesture close here.
                 return Offset.Zero
             }
 
@@ -1165,9 +1158,12 @@ internal fun HomeWordmark(
                     transformOrigin = TransformOrigin(1f, 1f)
                 }
                 .size(penSize)
-                .gamepadFocusOutline(shape = penShape, register = true)
                 .clip(penShape)
-                .clickable(onClick = onOpenHomeWallpaper)
+                // The wordmark pen sits above the Bento grid. A focusable node here
+                // is where Up from the top card escapes, so keep it touch-only.
+                .pointerInput(onOpenHomeWallpaper) {
+                    detectTapGestures { onOpenHomeWallpaper() }
+                }
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
