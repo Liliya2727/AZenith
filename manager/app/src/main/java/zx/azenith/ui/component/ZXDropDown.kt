@@ -431,6 +431,9 @@ private fun ZXDropDownItem(
             .heightIn(min = 48.dp)
             .springPressBounce(pressedScale = 0.97f)
             .gamepadFocusOutline(shape = shape, onActivate = onClick)
+            // GameSpace opts out of the outline, so publish activation separately:
+            // without this, Cross on a focused option does nothing.
+            .gamepadActivation(onClick)
             .clip(shape)
             .background(fill, shape)
             .onGloballyPositioned { coordinates ->
