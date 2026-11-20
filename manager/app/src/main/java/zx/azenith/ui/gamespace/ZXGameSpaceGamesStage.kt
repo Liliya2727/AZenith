@@ -18,6 +18,7 @@ package zx.azenith.ui.gamespace
 
 import android.net.Uri
 import android.os.Build
+import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -760,6 +761,10 @@ internal fun WelcomeHubStage(
     val expandedNow = rememberUpdatedState(expanded)
     val notifyExpanded = rememberUpdatedState(onExpandedChange)
     var dragExpandDistance by remember { mutableStateOf(0f) }
+    // Only a genuine touch drag may collapse the wall via fling. Focus-driven
+    // scrolling (moving the outline up to a top-row card) also produces a fling,
+    // and must stop at the edge instead of closing the Bento.
+    var lastUserDragAt by remember { mutableStateOf(0L) }
     val density = LocalDensity.current
     val scaleRatio = (100f / appScalePercent.coerceIn(60, 150))
     val expandThresholdPx = with(density) { (32.dp * scaleRatio).coerceIn(28.dp, 54.dp).toPx() }
@@ -775,6 +780,7 @@ internal fun WelcomeHubStage(
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val fromDrag = source == NestedScrollSource.UserInput
+                if (fromDrag) lastUserDragAt = SystemClock.uptimeMillis()
                 if (!expandedNow.value) {
                     if (fromDrag && available.y < 0f) {
                         dragExpandDistance = (dragExpandDistance - available.y).coerceAtLeast(0f)
@@ -809,6 +815,9 @@ internal fun WelcomeHubStage(
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 dragExpandDistance = 0f
+                // A fling that never had a touch drag behind it came from focus
+                // scrolling — don't let it toggle the wall.
+                if (SystemClock.uptimeMillis() - lastUserDragAt > 300L) return Velocity.Zero
                 if (!expandedNow.value) {
                     if (available.y < -200f) {
                         notifyExpanded.value(true)
@@ -825,6 +834,7 @@ internal fun WelcomeHubStage(
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
                 dragExpandDistance = 0f
+                if (SystemClock.uptimeMillis() - lastUserDragAt > 300L) return Velocity.Zero
                 if (expandedNow.value && available.y > 80f && scroll.value <= 0) {
                     notifyExpanded.value(false)
                     return available

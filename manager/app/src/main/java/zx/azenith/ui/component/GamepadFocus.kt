@@ -241,9 +241,9 @@ object GamepadStickNav {
  * that has no steps.
  */
 object GamepadDirectionRepeat {
-    private const val FIRST_REPEAT_MS = 260L
-    private const val MIN_REPEAT_MS = 45L
-    private const val ACCEL_STEPS = 9
+    private const val FIRST_REPEAT_MS = 180L
+    private const val MIN_REPEAT_MS = 24L
+    private const val ACCEL_STEPS = 6
 
     /** Delivered as (keyCode, KeyEvent.ACTION_*, repeatCount) to the Activity. */
     var sendKey: ((Int, Int, Int) -> Unit)? = null

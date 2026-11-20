@@ -676,7 +676,10 @@ private fun MorphedProfileTile(
     val effectiveClick = if (p < 0.35f) {
         if (isManualMode && onClick != null) onClick else onExpandClick
     } else {
-        onClick
+        // In auto mode there is no profile dropdown, but the tile must stay a
+        // focus target so d-pad can reach it. A no-op click keeps it focusable
+        // without opening anything.
+        onClick ?: {}
     }
 
     BentoTile(
