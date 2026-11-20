@@ -88,10 +88,12 @@ import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -153,6 +155,9 @@ internal object BentoShapes {
     val Circle: RoundedPolygon by lazy { MaterialShapes.Circle.normalized() }
 }
 
+/** True while the Bento wall is open; gates tile hover and Cross activation. */
+private val LocalBentoActive = compositionLocalOf { true }
+
 /**
  * Bento container: staggered spring entrance, squish + corner morph on press, lift on d-pad focus.
  * [content] receives the live engagement fraction as a lambda so children animate in the draw
@@ -175,6 +180,8 @@ internal fun BentoTile(
     var touchPressed by remember { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     val requester = remember { FocusRequester() }
+    val bentoActive = LocalBentoActive.current
+    val onClickState = rememberUpdatedState(onClick)
 
     val press = animateFloatAsState(
         targetValue = if (clickPressed || touchPressed) 1f else 0f,
@@ -182,10 +189,20 @@ internal fun BentoTile(
         label = "BentoPress"
     )
     val lift = animateFloatAsState(
-        targetValue = if (focused && GamepadInput.active) 1f else 0f,
+        targetValue = if (focused && bentoActive && GamepadInput.active) 1f else 0f,
         animationSpec = motion.defaultSpatialSpec(),
         label = "BentoLift"
     )
+
+    // When the wall collapses the tile can stay focused, so drop the hover and
+    // unpublish its Cross activation. Without this the profile tile keeps hovering
+    // and a status/link tile's stale activation can reopen the wall on the next Cross.
+    LaunchedEffect(bentoActive) {
+        if (!bentoActive) {
+            focused = false
+            GamepadShortcuts.clearActivation(requester)
+        }
+    }
     val fill = animateColorAsState(container, motion.defaultEffectsSpec(), label = "BentoFill")
 
     val enter = remember { Animatable(0f) }
@@ -201,11 +218,12 @@ internal fun BentoTile(
         Modifier
             .onFocusChanged {
                 focused = it.isFocused
-                if (it.isFocused) {
+                if (it.isFocused && bentoActive) {
                     GamepadFocusNav.publishLastFocused(requester)
                     // Cross activates the focused card; no outline ring is drawn
-                    // in GameSpace, the slight lift above is the focus cue.
-                    GamepadShortcuts.publishActivation(requester) { onClick() }
+                    // in GameSpace, the slight lift above is the focus cue. Read the
+                    // click through updated state so a recomposition can't leave a stale one.
+                    GamepadShortcuts.publishActivation(requester) { onClickState.value?.invoke() }
                 } else {
                     GamepadShortcuts.clearActivation(requester)
                 }
@@ -534,6 +552,7 @@ internal fun HubBentoGrid(
 ) {
     val scheme = MaterialTheme.colorScheme
 
+    CompositionLocalProvider(LocalBentoActive provides (expandProgress > 0.5f)) {
     BentoMorphLayout(
         progress = expandProgress,
         compactHeight = compactHeight,
@@ -637,6 +656,7 @@ internal fun HubBentoGrid(
             onBadge = scheme.onPrimary,
             onClick = onLearnMore
         )
+    }
     }
 }
 
