@@ -337,7 +337,9 @@ fun ZXGameSpaceHub(
                             }
                             true
                         }
-                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                        // R2 (or R3, for pads whose triggers are analog-only) toggles quick settings.
+                        KeyEvent.KEYCODE_BUTTON_R2,
+                        KeyEvent.KEYCODE_BUTTON_THUMBR -> {
                             if (event.nativeKeyEvent.repeatCount == 0) {
                                 searchOpen = false
                                 searchQuery = ""
@@ -345,7 +347,9 @@ fun ZXGameSpaceHub(
                             }
                             true
                         }
-                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                        // L2 (or L3) toggles now playing.
+                        KeyEvent.KEYCODE_BUTTON_L2,
+                        KeyEvent.KEYCODE_BUTTON_THUMBL -> {
                             if (event.nativeKeyEvent.repeatCount == 0) {
                                 searchOpen = false
                                 searchQuery = ""

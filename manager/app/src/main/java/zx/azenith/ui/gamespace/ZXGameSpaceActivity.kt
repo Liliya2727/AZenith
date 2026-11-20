@@ -104,6 +104,13 @@ class ZXGameSpaceActivity : ComponentActivity() {
                 }
             }
         }
+        // Diagnostic: see the exact keycode a pad sends for controls we don't map yet.
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            val src = event.source
+            if (src and InputDevice.SOURCE_GAMEPAD != 0 || src and InputDevice.SOURCE_DPAD != 0) {
+                Log.d("PAD", "key down code=${event.keyCode} source=$src")
+            }
+        }
         if (event.keyCode == KeyEvent.KEYCODE_BUTTON_B || event.keyCode == KeyEvent.KEYCODE_ESCAPE) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 onBackPressedDispatcher.onBackPressed()
@@ -145,6 +152,12 @@ class ZXGameSpaceActivity : ComponentActivity() {
                 event.getAxisValue(MotionEvent.AXIS_RTRIGGER),
                 event.getAxisValue(MotionEvent.AXIS_GAS)
             )
+            // Diagnostic: some pads expose triggers on Z/RZ instead of LTRIGGER/RTRIGGER.
+            val zAxis = event.getAxisValue(MotionEvent.AXIS_Z)
+            val rzAxis = event.getAxisValue(MotionEvent.AXIS_RZ)
+            if (zAxis > TRIGGER_THRESHOLD || rzAxis > TRIGGER_THRESHOLD) {
+                Log.d("PAD", "trigger axis z=$zAxis rz=$rzAxis")
+            }
             val l2Down = l2Value >= TRIGGER_THRESHOLD
             val r2Down = r2Value >= TRIGGER_THRESHOLD
             if (l2Down != l2Held) {
