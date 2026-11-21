@@ -54,7 +54,7 @@ jobs:
           fi
           if [ "$VAL" = "true" ]; then
             echo "compile_apk=true" >> "$GITHUB_OUTPUT"
-            echo "compile_apk=true -> skipping full build workflow (handled by Test Build APK)"
+            echo "compile_apk=true -> running APK-only build (build-manager)"
           else
             echo "compile_apk=false" >> "$GITHUB_OUTPUT"
             echo "compile_apk=false -> running full build workflow"
@@ -330,7 +330,6 @@ jobs:
   build-manager:
     name: Build Manager APK
     needs: [check-flag]
-    if: needs.check-flag.outputs.compile_apk != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -385,7 +384,11 @@ jobs:
           KS_PWD: ${{ secrets.KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
 
-      - name: Rename Manager APK
+      - name: Cleanup Temporary Keystore
+        if: always()
+        run: rm -f manager/app/azenith.jks
+
+      - name: Rename and Verify Manager APK
         run: |
           APK_PATH=$(find manager/app/build/outputs/apk -name "*.apk" | head -n 1)
           if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
@@ -399,6 +402,9 @@ jobs:
           APK_DIR=$(dirname "$APK_PATH")
           RENAMED_APK="${APK_DIR}/AZenith-${VERSION}-${VERSION_CODE}-${SHORT_SHA}-${VERSION_TYPE}.apk"
           mv "$APK_PATH" "$RENAMED_APK"
+          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$RENAMED_APK"
+          echo "APK_PATH=$RENAMED_APK" >> "$GITHUB_ENV"
           ls -lh "$RENAMED_APK"
 
       - name: Upload APK Artifact
@@ -432,6 +438,24 @@ jobs:
           for i in sorted(z.infolist(), key=lambda x: -x.compress_size)[:30]:
               print(f'APK_REPORT entry packed={i.compress_size} stored={i.file_size} {i.filename}')
           EOF
+
+      - name: Upload APK To Telegram
+        if: needs.check-flag.outputs.compile_apk == 'true'
+        env:
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TITLE: AZenith
+        run: |
+          if [ -n "$CHAT_ID" ] && [ -n "$BOT_TOKEN" ]; then
+            export VERSION=$(git rev-list --count HEAD)
+            bash .github/scripts/telebot.sh "$APK_PATH"
+          else
+            echo "Telegram bot token or chatid is undefined!"
+            exit 1
+          fi
 
   package:
     name: Package Flashable Zip
