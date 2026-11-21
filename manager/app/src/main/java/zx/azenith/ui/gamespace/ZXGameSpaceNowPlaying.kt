@@ -19,6 +19,7 @@
 package zx.azenith.ui.gamespace
 
 import android.graphics.Bitmap
+import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -78,8 +79,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import zx.azenith.ui.component.RegisterGamepadActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -850,10 +859,13 @@ internal fun NowPlayingPanelOverlay(
     val progress = morphProgress.value
     if (!visible && !morphProgress.isRunning && progress <= 0.005f) return
 
+    val playPauseRequester = remember { FocusRequester() }
+
     GameSpacePopupContainer(
         visible = visible,
         name = "NowPlaying",
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        firstFocusRequester = playPauseRequester
     ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidth = maxWidth
@@ -896,6 +908,7 @@ internal fun NowPlayingPanelOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .focusProperties { canFocus = false }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -905,6 +918,7 @@ internal fun NowPlayingPanelOverlay(
             Box(
                 modifier = Modifier
                     .offset(x = dialogLeft, y = dialogTop)
+                    .focusProperties { canFocus = false }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -928,7 +942,8 @@ internal fun NowPlayingPanelOverlay(
                     NowPlayingDialogWindow(
                         layoutMode = layoutMode,
                         dialogWidth = dialogWidth,
-                        availableHeight = availableHeight
+                        availableHeight = availableHeight,
+                        playPauseRequester = playPauseRequester
                     )
                 }
             }
@@ -944,7 +959,8 @@ internal fun NowPlayingPanelOverlay(
 private fun NowPlayingDialogWindow(
     layoutMode: NowPlayingLayoutMode,
     dialogWidth: Dp,
-    availableHeight: Dp
+    availableHeight: Dp,
+    playPauseRequester: FocusRequester
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -1009,7 +1025,8 @@ private fun NowPlayingDialogWindow(
                         positionMs = positionMs,
                         repeatMode = repeatMode,
                         isShuffleEnabled = isShuffleEnabled,
-                        availableHeight = availableHeight
+                        availableHeight = availableHeight,
+                        playPauseRequester = playPauseRequester
                     )
                 }
                 NowPlayingLayoutMode.EXPANDED -> {
@@ -1021,7 +1038,8 @@ private fun NowPlayingDialogWindow(
                         progress = progress,
                         positionMs = positionMs,
                         repeatMode = repeatMode,
-                        isShuffleEnabled = isShuffleEnabled
+                        isShuffleEnabled = isShuffleEnabled,
+                        playPauseRequester = playPauseRequester
                     )
                 }
                 NowPlayingLayoutMode.COMPACT -> {
@@ -1030,13 +1048,15 @@ private fun NowPlayingDialogWindow(
                         isPlaying = isPlaying,
                         durationMs = durationMs,
                         progress = progress,
-                        positionMs = positionMs
+                        positionMs = positionMs,
+                        playPauseRequester = playPauseRequester
                     )
                 }
                 NowPlayingLayoutMode.ULTRA_COMPACT -> {
                     UltraCompactPlayerContent(
                         track = track,
-                        isPlaying = isPlaying
+                        isPlaying = isPlaying,
+                        playPauseRequester = playPauseRequester
                     )
                 }
             }
@@ -1044,6 +1064,24 @@ private fun NowPlayingDialogWindow(
 
         // LAYER 2: Draggable pull-up Playlist Sheet (opens UPWARDS, covering seekbar & controls)
         val currentSheetOffsetY = (totalTravelPx * (1f - playlistProgress.value)).roundToInt()
+        val togglePlaylist: () -> Unit = {
+            coroutineScope.launch {
+                AudioUtil.playOk(context)
+                val target = if (playlistProgress.value > 0.5f) 0f else 1f
+                playlistProgress.animateTo(
+                    targetValue = target,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+        }
+        val playlistListState = rememberLazyListState()
+        RegisterGamepadActions(
+            enabled = playlistProgress.value > 0.5f,
+            scrollState = playlistListState
+        )
 
         Surface(
             shape = RoundedCornerShape(
@@ -1064,7 +1102,13 @@ private fun NowPlayingDialogWindow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(triggerBarHeight)
-                        .padding(horizontal = 14.dp)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .gamepadFocusOutline(
+                            shape = RoundedCornerShape(14.dp),
+                            register = true,
+                            onActivate = togglePlaylist
+                        )
+                        .padding(horizontal = 4.dp)
                         .draggable(
                             orientation = Orientation.Vertical,
                             state = rememberDraggableState { deltaPx ->
@@ -1091,22 +1135,11 @@ private fun NowPlayingDialogWindow(
                                 }
                             }
                         )
+                        .focusProperties { canFocus = false }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = {
-                                coroutineScope.launch {
-                                    AudioUtil.playOk(context)
-                                    val target = if (playlistProgress.value > 0.5f) 0f else 1f
-                                    playlistProgress.animateTo(
-                                        targetValue = target,
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                                            stiffness = Spring.StiffnessMediumLow
-                                        )
-                                    )
-                                }
-                            }
+                            onClick = togglePlaylist
                         ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1176,6 +1209,7 @@ private fun NowPlayingDialogWindow(
                 if (playlistProgress.value > 0.05f) {
                     val listAlpha = ((playlistProgress.value - 0.1f) / 0.9f).coerceIn(0f, 1f)
                     LazyColumn(
+                        state = playlistListState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
@@ -1187,6 +1221,20 @@ private fun NowPlayingDialogWindow(
                             val item = playlist[index]
                             val isCurrent = item.id == track.id
                             val itemBg = if (isCurrent) scheme.secondaryContainer.copy(alpha = 0.55f) else Color.Transparent
+                            val selectTrack: () -> Unit = {
+                                AudioUtil.playOk(context)
+                                BgmManager.selectTrack(context, item)
+                                // Collapse sheet back down to reveal player controls
+                                coroutineScope.launch {
+                                    playlistProgress.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        )
+                                    )
+                                }
+                            }
 
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
@@ -1194,23 +1242,16 @@ private fun NowPlayingDialogWindow(
                                 contentColor = if (isCurrent) scheme.onSecondaryContainer else scheme.onSurface,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .gamepadFocusOutline(
+                                        shape = RoundedCornerShape(12.dp),
+                                        register = true,
+                                        onActivate = selectTrack
+                                    )
+                                    .focusProperties { canFocus = false }
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
-                                        onClick = {
-                                            AudioUtil.playOk(context)
-                                            BgmManager.selectTrack(context, item)
-                                            // Collapse sheet back down to reveal player controls
-                                            coroutineScope.launch {
-                                                playlistProgress.animateTo(
-                                                    targetValue = 0f,
-                                                    animationSpec = spring(
-                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                        stiffness = Spring.StiffnessMediumLow
-                                                    )
-                                                )
-                                            }
-                                        }
+                                        onClick = selectTrack
                                     )
                             ) {
                                 Row(
@@ -1287,7 +1328,8 @@ private fun LargePlayerContent(
     positionMs: Long,
     repeatMode: BgmRepeatMode,
     isShuffleEnabled: Boolean,
-    availableHeight: Dp
+    availableHeight: Dp,
+    playPauseRequester: FocusRequester
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -1449,6 +1491,7 @@ private fun LargePlayerContent(
                 size = if (isPlaying) 68.dp else 56.dp,
                 height = 54.dp,
                 iconSize = 25.dp,
+                modifier = Modifier.focusRequester(playPauseRequester),
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.togglePlayPause(context)
@@ -1499,7 +1542,8 @@ private fun ExpandedPlayerContent(
     progress: Float,
     positionMs: Long,
     repeatMode: BgmRepeatMode,
-    isShuffleEnabled: Boolean
+    isShuffleEnabled: Boolean,
+    playPauseRequester: FocusRequester
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -1658,6 +1702,7 @@ private fun ExpandedPlayerContent(
                 size = if (isPlaying) 68.dp else 56.dp,
                 height = 54.dp,
                 iconSize = 25.dp,
+                modifier = Modifier.focusRequester(playPauseRequester),
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.togglePlayPause(context)
@@ -1705,7 +1750,8 @@ private fun CompactPlayerContent(
     isPlaying: Boolean,
     durationMs: Long,
     progress: Float,
-    positionMs: Long
+    positionMs: Long,
+    playPauseRequester: FocusRequester
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -1762,6 +1808,7 @@ private fun CompactPlayerContent(
                 size = if (isPlaying) 54.dp else 46.dp,
                 height = 42.dp,
                 iconSize = 22.dp,
+                modifier = Modifier.focusRequester(playPauseRequester),
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.togglePlayPause(context)
@@ -1841,7 +1888,8 @@ private fun CompactPlayerContent(
 @Composable
 private fun UltraCompactPlayerContent(
     track: BgmTrack,
-    isPlaying: Boolean
+    isPlaying: Boolean,
+    playPauseRequester: FocusRequester
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -1887,6 +1935,7 @@ private fun UltraCompactPlayerContent(
             size = 44.dp,
             height = 38.dp,
             iconSize = 20.dp,
+            modifier = Modifier.focusRequester(playPauseRequester),
             onClick = {
                 AudioUtil.playOk(context)
                 BgmManager.togglePlayPause(context)
@@ -1951,6 +2000,7 @@ private fun ExpressiveJacket(
         modifier = Modifier
             .size(size)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .focusProperties { canFocus = false }
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -2019,10 +2069,35 @@ private fun ExpressiveSquigglySeekbar(
         label = "PhaseShift"
     )
 
+    val latestFraction by rememberUpdatedState(currentFraction)
+    val latestOnValueChange by rememberUpdatedState(onValueChange)
+    val latestOnValueChangeFinished by rememberUpdatedState(onValueChangeFinished)
+
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .height(28.dp)
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown) {
+                    val delta = when (event.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_LEFT -> -0.05f
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> 0.05f
+                        else -> 0f
+                    }
+                    if (delta != 0f) {
+                        val next = (latestFraction + delta).coerceIn(0f, 1f)
+                        latestOnValueChange(next)
+                        latestOnValueChangeFinished(next)
+                        return@onPreviewKeyEvent true
+                    }
+                }
+                false
+            }
+            .gamepadFocusOutline(
+                shape = RoundedCornerShape(8.dp),
+                register = true,
+                slider = true
+            )
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     val newFraction = (offset.x / size.width).coerceIn(0f, 1f)
@@ -2133,6 +2208,7 @@ private fun Modifier.expressiveBounceClickable(
             scaleX = scale
             scaleY = scale
         }
+        .focusProperties { canFocus = false }
         .clickable(
             interactionSource = interactionSource,
             indication = null,
@@ -2155,6 +2231,7 @@ private fun ExpressiveToggleButton(
     size: Dp,
     iconSize: Dp,
     rotationDegrees: Float,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -2181,8 +2258,13 @@ private fun ExpressiveToggleButton(
         shape = resolvedShape,
         color = if (isActive) activeColor else inactiveColor,
         contentColor = if (isActive) activeContent else inactiveContent,
-        modifier = Modifier
+        modifier = modifier
             .size(size)
+            .gamepadFocusOutline(
+                shape = resolvedShape,
+                register = true,
+                onActivate = onClick
+            )
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -2215,6 +2297,7 @@ private fun ExpressiveNudgeButton(
     iconSize: Dp,
     defaultShape: Shape,
     pressedShape: Shape,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -2231,12 +2314,19 @@ private fun ExpressiveNudgeButton(
         label = "NudgeX"
     )
 
+    val resolvedShape = if (isPressed) pressedShape else defaultShape
+
     Surface(
-        shape = if (isPressed) pressedShape else defaultShape,
+        shape = resolvedShape,
         color = container,
         contentColor = tint,
-        modifier = Modifier
+        modifier = modifier
             .size(size)
+            .gamepadFocusOutline(
+                shape = resolvedShape,
+                register = true,
+                onActivate = onClick
+            )
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -2264,6 +2354,7 @@ private fun ExpressivePlayPauseButton(
     size: Dp,
     height: Dp,
     iconSize: Dp,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -2286,14 +2377,20 @@ private fun ExpressivePlayPauseButton(
     )
 
     val resolvedCorner = if (isPressed) pressedCorner else corner
+    val resolvedShape = RoundedCornerShape(resolvedCorner)
 
     Surface(
-        shape = RoundedCornerShape(resolvedCorner),
+        shape = resolvedShape,
         color = container,
         contentColor = tint,
-        modifier = Modifier
+        modifier = modifier
             .width(size)
             .height(height)
+            .gamepadFocusOutline(
+                shape = resolvedShape,
+                register = true,
+                onActivate = onClick
+            )
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
