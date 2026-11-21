@@ -109,22 +109,7 @@ internal object GameSpaceHintState {
         }
     }
 
-    /**
-     * Screens where a bottom-center overlay would overlap bottom content
-     * (Bento tiles on Welcome, last grid row on Library, last list row on Settings).
-     */
-    fun hasBottomOverlap(screenId: GameSpaceScreenId): Boolean = when (screenId) {
-        GameSpaceScreenId.Game,
-        GameSpaceScreenId.WrapToFirst -> false
-        GameSpaceScreenId.Welcome,
-        GameSpaceScreenId.WelcomeExpanded,
-        GameSpaceScreenId.Library,
-        GameSpaceScreenId.LibraryExpanded,
-        GameSpaceScreenId.Settings -> true
-    }
-
     val isVisible: Boolean
         get() = (GamepadInput.controllerConnected || GamepadInput.dpadMode) &&
-            !overlayOpen &&
-            !hasBottomOverlap(screen)
+            !overlayOpen
 }

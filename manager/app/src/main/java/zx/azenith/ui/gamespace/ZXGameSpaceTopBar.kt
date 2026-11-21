@@ -186,6 +186,7 @@ internal fun ZXGameSpaceTopBar(
 
     var tabsWidthPx by remember { mutableFloatStateOf(0f) }
     var cachedLogoWidthPx by remember { mutableFloatStateOf(0f) }
+    var cachedHintWidthPx by remember { mutableFloatStateOf(0f) }
     var cachedCapsuleWidthPx by remember { mutableFloatStateOf(0f) }
 
     var searchMorphedBack by remember { mutableStateOf(!searchOpen) }
@@ -228,6 +229,7 @@ internal fun ZXGameSpaceTopBar(
         val totalBarWidthDp = maxWidth
         val tabsWidthDp = if (tabsWidthPx > 0f) with(density) { tabsWidthPx.toDp() } else 168.dp
         val logoWidthDp = if (cachedLogoWidthPx > 0f) with(density) { cachedLogoWidthPx.toDp() } else 144.dp
+        val hintWidthDp = if (cachedHintWidthPx > 0f) with(density) { cachedHintWidthPx.toDp() } else 184.dp
         val capsuleWidthDp = if (cachedCapsuleWidthPx > 0f) with(density) { cachedCapsuleWidthPx.toDp() } else 132.dp
 
         val leftSegmentFullWidthDp = tabsWidthDp + 12.dp + logoWidthDp
@@ -235,10 +237,17 @@ internal fun ZXGameSpaceTopBar(
         val totalNeededWidthDp = leftSegmentFullWidthDp + 20.dp + rightSegmentExpandedWidthDp
         val wouldOverlap = totalBarWidthDp < totalNeededWidthDp
 
-        val shouldCollapseForSearch = wouldOverlap && (searchOpen || (!searchMorphedBack && searchWidth > 38.5.dp))
+        val isSearchExpandingOrOpen = searchOpen || (!searchMorphedBack && searchWidth > 38.5.dp)
+        val shouldCollapseForSearch = wouldOverlap && isSearchExpandingOrOpen
         val showLogo = isHomeLogoGone && !shouldCollapseForSearch
 
-        val activeLeftWidthDp = tabsWidthDp + (if (showLogo) 12.dp + logoWidthDp else 0.dp)
+        val baseLeftWidthDp = tabsWidthDp + (if (showLogo) 12.dp + logoWidthDp else 0.dp)
+        val rightSegmentCurrentWidthDp = searchWidth + 8.dp + 38.dp + 8.dp + capsuleWidthDp + (if (hasNowPlaying) 46.dp else 0.dp)
+        val availableForHintDp = totalBarWidthDp - (baseLeftWidthDp + 12.dp + 16.dp + rightSegmentCurrentWidthDp)
+        val canFitHintBar = !isSearchExpandingOrOpen && (availableForHintDp >= hintWidthDp)
+        val isHintShowing = GameSpaceHintState.isVisible && canFitHintBar
+
+        val activeLeftWidthDp = baseLeftWidthDp + (if (isHintShowing) 12.dp + hintWidthDp else 0.dp)
         val availableForNowPlaying = totalBarWidthDp - (activeLeftWidthDp + 24.dp + searchWidth + 8.dp + 38.dp + 8.dp + capsuleWidthDp + 8.dp)
         val canExpandNowPlaying = hasNowPlaying && !searchOpen && (availableForNowPlaying >= 120.dp)
 
@@ -248,9 +257,10 @@ internal fun ZXGameSpaceTopBar(
                 .heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Segment: Category Navigation Tabs & Scrolled Wordmark
+            // Left Segment: Category Navigation Tabs, Scrolled Wordmark & Gamepad Hint Bar
+            // Spacing is owned by each animated child so showing/hiding the wordmark
+            // glides the hint bar continuously without a 12.dp layout-gap snap.
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 var tabBounds by remember { mutableStateOf(mapOf<TopCategory, Pair<Float, Float>>()) }
@@ -386,7 +396,7 @@ internal fun ZXGameSpaceTopBar(
                                 Modifier
                             }
                         )
-                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                        .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -423,6 +433,14 @@ internal fun ZXGameSpaceTopBar(
                     }
                 }
             }
+
+            GameSpaceHintBar(
+                isLogoVisible = showLogo,
+                canFitInTopBar = canFitHintBar,
+                onWidthMeasured = { widthPx ->
+                    cachedHintWidthPx = widthPx.toFloat()
+                }
+            )
         }
 
         Spacer(Modifier.weight(1f))

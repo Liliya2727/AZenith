@@ -986,11 +986,6 @@ fun ZXGameSpaceHub(
             }
         }
 
-        // Compact bottom-center gamepad legend (GameSpace-only, non-interactive).
-        GameSpaceHintBar(
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
-
         // Floating Quick Settings Panel (overlay on right side, does not distort background)
         ZXGameSpaceQuickSettingsOverlay(
             visible = quickSettingsOpen,
