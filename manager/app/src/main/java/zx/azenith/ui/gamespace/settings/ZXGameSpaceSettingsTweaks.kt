@@ -320,6 +320,7 @@ private fun TweaksMainSubPane(
     val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
     val scrollState = rememberScrollState()
+    zx.azenith.ui.component.RegisterGamepadActions(columnScrollState = scrollState)
 
     val refreshRateDropDown = rememberZXDropDownState()
     val rendererDropDown = rememberZXDropDownState()

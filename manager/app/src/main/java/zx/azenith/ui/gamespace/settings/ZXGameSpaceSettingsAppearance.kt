@@ -294,6 +294,7 @@ internal fun SettingsAppearancePane(
     }
 
     val followMonet = keyColorValue == 0
+    zx.azenith.ui.component.RegisterGamepadActions(columnScrollState = scrollState)
 
     Column(
         modifier = modifier

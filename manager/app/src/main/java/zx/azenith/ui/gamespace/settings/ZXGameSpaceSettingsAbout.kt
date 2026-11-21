@@ -111,6 +111,7 @@ internal fun SettingsAboutPane(
     val uriHandler = LocalUriHandler.current
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
+    zx.azenith.ui.component.RegisterGamepadActions(columnScrollState = scrollState)
 
     var showLicensesDialog by remember { mutableStateOf(false) }
     var showLibrariesDialog by remember { mutableStateOf(false) }

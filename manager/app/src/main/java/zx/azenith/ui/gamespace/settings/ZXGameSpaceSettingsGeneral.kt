@@ -87,6 +87,7 @@ internal fun SettingsGeneralPane(
     val coroutineScope = rememberCoroutineScope()
     var statusFeedback by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
+    zx.azenith.ui.component.RegisterGamepadActions(columnScrollState = scrollState)
     var isLauncherVisible by remember { mutableStateOf(isLauncherIconEnabled(context)) }
     val scheme = MaterialTheme.colorScheme
 

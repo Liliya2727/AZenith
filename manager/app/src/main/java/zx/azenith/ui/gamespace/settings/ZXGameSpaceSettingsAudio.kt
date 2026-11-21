@@ -356,6 +356,7 @@ private fun AudioMainSubPane(
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
+    zx.azenith.ui.component.RegisterGamepadActions(columnScrollState = scrollState)
 
     var sfxVolume by remember { mutableIntStateOf(SoundEffectsState.volume.intValue) }
 
@@ -553,6 +554,7 @@ private fun AudioAdvancedSoundEffectsSubPane(
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
+    zx.azenith.ui.component.RegisterGamepadActions(columnScrollState = scrollState)
 
     var sfxVolume by remember { mutableIntStateOf(SoundEffectsState.volume.intValue) }
     var tapSoundEnabled by remember { mutableStateOf(SoundEffectsState.tapEnabled.value) }
@@ -673,6 +675,7 @@ private fun AudioAdvancedBgmSubPane(
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
+    zx.azenith.ui.component.RegisterGamepadActions(columnScrollState = scrollState)
 
     Column(
         modifier = Modifier
