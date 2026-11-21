@@ -354,6 +354,24 @@ internal fun ZXGameSpaceAppSettingsOverlay(
         val topPad = maxOf(18.dp, insets.calculateTopPadding())
         val bottomPad = 14.dp
 
+        val doLaunch = {
+            android.util.Log.d("PAD", "gs appsettings launch pkg=$pkg")
+            if (resolvedApp != null) {
+                onLaunch(resolvedApp)
+            } else {
+                launchGame(context, pkg)
+            }
+        }
+        val openInfo = {
+            android.util.Log.d("PAD", "gs appsettings info pkg=$pkg")
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:$pkg")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            runCatching { context.startActivity(intent) }
+            Unit
+        }
+
         CompositionLocalProvider(
             LocalContentColor provides scheme.onSurface
         ) {
@@ -361,6 +379,26 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(start = startPad, end = endPad, top = topPad, bottom = bottomPad)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown &&
+                            event.nativeKeyEvent.repeatCount == 0 &&
+                            !zx.azenith.ui.component.ZXDropDownNav.isActive
+                        ) {
+                            when (event.nativeKeyEvent.keyCode) {
+                                android.view.KeyEvent.KEYCODE_BUTTON_START -> {
+                                    doLaunch()
+                                    true
+                                }
+                                android.view.KeyEvent.KEYCODE_BUTTON_SELECT -> {
+                                    openInfo()
+                                    true
+                                }
+                                else -> false
+                            }
+                        } else {
+                            false
+                        }
+                    }
             ) {
                 Row(
                     modifier = Modifier.fillMaxSize(),
@@ -592,18 +630,13 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                             }
 
                             // Bottom Quick Actions: Launch & System Info
+                            val showPadGlyphs = zx.azenith.ui.component.GamepadInput.controllerConnected ||
+                                zx.azenith.ui.component.GamepadInput.dpadMode
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 val launchShape = RoundedCornerShape(16.dp)
-                                val doLaunch = {
-                                    if (resolvedApp != null) {
-                                        onLaunch(resolvedApp)
-                                    } else {
-                                        launchGame(context, pkg)
-                                    }
-                                }
                                 Surface(
                                     shape = launchShape,
                                     color = scheme.primary,
@@ -623,7 +656,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                         .clickable(onClick = doLaunch)
                                 ) {
                                     Row(
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.Center
                                     ) {
@@ -637,43 +670,48 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                             text = stringResource(R.string.gamespace_play_game),
                                             style = MaterialTheme.typography.labelLarge.copy(
                                                 fontWeight = FontWeight.Bold
-                                            )
+                                            ),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
+                                        if (showPadGlyphs) {
+                                            Spacer(Modifier.width(6.dp))
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_gp_start),
+                                                contentDescription = null,
+                                                tint = scheme.onPrimary.copy(alpha = 0.90f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
                                     }
                                 }
 
                                 val infoShape = RoundedCornerShape(16.dp)
-                                val openInfo = {
-                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.parse("package:$pkg")
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    runCatching { context.startActivity(intent) }
-                                    Unit
-                                }
-                                Surface(
-                                    shape = infoShape,
-                                    color = scheme.secondaryContainer,
-                                    contentColor = scheme.onSecondaryContainer,
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .focusRequester(infoRequester)
-                                        .onFocusChanged { if (it.isFocused) lastLeftRequester = infoRequester }
-                                        .gamepadFocusOutline(
-                                            shape = infoShape,
-                                            register = true,
-                                            onActivate = openInfo
-                                        )
-                                        .clip(infoShape)
-                                        .focusProperties { canFocus = false }
-                                        .clickable(onClick = openInfo)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Info,
-                                            contentDescription = stringResource(R.string.str_app_info),
-                                            modifier = Modifier.size(20.dp)
-                                        )
+                                zx.azenith.ui.component.GamepadSelectBadge(size = 16.dp) {
+                                    Surface(
+                                        shape = infoShape,
+                                        color = scheme.secondaryContainer,
+                                        contentColor = scheme.onSecondaryContainer,
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .focusRequester(infoRequester)
+                                            .onFocusChanged { if (it.isFocused) lastLeftRequester = infoRequester }
+                                            .gamepadFocusOutline(
+                                                shape = infoShape,
+                                                register = true,
+                                                onActivate = openInfo
+                                            )
+                                            .clip(infoShape)
+                                            .focusProperties { canFocus = false }
+                                            .clickable(onClick = openInfo)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Info,
+                                                contentDescription = stringResource(R.string.str_app_info),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1297,6 +1335,28 @@ internal fun ZXGameSpaceWallpaperOverlay(
             else -> "Default Art"
         }
 
+        val doWpLaunch = {
+            if (!isHome) {
+                android.util.Log.d("PAD", "gs wallpaper launch pkg=$pkg")
+                if (resolvedApp != null) {
+                    onLaunch(resolvedApp)
+                } else {
+                    launchGame(context, pkg)
+                }
+            }
+        }
+        val openWpInfo = {
+            if (!isHome) {
+                android.util.Log.d("PAD", "gs wallpaper info pkg=$pkg")
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$pkg")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                runCatching { context.startActivity(intent) }
+            }
+            Unit
+        }
+
         CompositionLocalProvider(
             LocalContentColor provides scheme.onSurface
         ) {
@@ -1304,6 +1364,26 @@ internal fun ZXGameSpaceWallpaperOverlay(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(start = startPad, end = endPad, top = topPad, bottom = bottomPad)
+                    .onPreviewKeyEvent { event ->
+                        if (!isHome &&
+                            event.type == KeyEventType.KeyDown &&
+                            event.nativeKeyEvent.repeatCount == 0
+                        ) {
+                            when (event.nativeKeyEvent.keyCode) {
+                                android.view.KeyEvent.KEYCODE_BUTTON_START -> {
+                                    doWpLaunch()
+                                    true
+                                }
+                                android.view.KeyEvent.KEYCODE_BUTTON_SELECT -> {
+                                    openWpInfo()
+                                    true
+                                }
+                                else -> false
+                            }
+                        } else {
+                            false
+                        }
+                    }
             ) {
                 Row(
                     modifier = Modifier.fillMaxSize(),
@@ -1708,19 +1788,14 @@ internal fun ZXGameSpaceWallpaperOverlay(
 
                             // Bottom Quick Actions: Launch & System Info (only for apps)
                             if (!isHome) {
+                                val showPadGlyphs = zx.azenith.ui.component.GamepadInput.controllerConnected ||
+                                    zx.azenith.ui.component.GamepadInput.dpadMode
                                 Spacer(Modifier.height(10.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     val launchShape = RoundedCornerShape(14.dp)
-                                    val doWpLaunch = {
-                                        if (resolvedApp != null) {
-                                            onLaunch(resolvedApp)
-                                        } else {
-                                            launchGame(context, pkg)
-                                        }
-                                    }
                                     Surface(
                                         shape = launchShape,
                                         color = scheme.primary,
@@ -1740,7 +1815,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                             .clickable(onClick = doWpLaunch)
                                     ) {
                                         Row(
-                                            modifier = Modifier.fillMaxSize(),
+                                            modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.Center
                                         ) {
@@ -1754,43 +1829,48 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                 text = stringResource(R.string.gamespace_play_game),
                                                 style = MaterialTheme.typography.labelLarge.copy(
                                                     fontWeight = FontWeight.Bold
-                                                )
+                                                ),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
+                                            if (showPadGlyphs) {
+                                                Spacer(Modifier.width(6.dp))
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_gp_start),
+                                                    contentDescription = null,
+                                                    tint = scheme.onPrimary.copy(alpha = 0.90f),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
                                         }
                                     }
 
                                     val infoShape = RoundedCornerShape(14.dp)
-                                    val openWpInfo = {
-                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                            data = Uri.parse("package:$pkg")
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        runCatching { context.startActivity(intent) }
-                                        Unit
-                                    }
-                                    Surface(
-                                        shape = infoShape,
-                                        color = scheme.secondaryContainer,
-                                        contentColor = scheme.onSecondaryContainer,
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .focusRequester(wpInfoRequester)
-                                            .onFocusChanged { if (it.isFocused) lastWpLeftRequester = wpInfoRequester }
-                                            .gamepadFocusOutline(
-                                                shape = infoShape,
-                                                register = true,
-                                                onActivate = openWpInfo
-                                            )
-                                            .clip(infoShape)
-                                            .focusProperties { canFocus = false }
-                                            .clickable(onClick = openWpInfo)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Info,
-                                                contentDescription = stringResource(R.string.str_app_info),
-                                                modifier = Modifier.size(20.dp)
-                                            )
+                                    zx.azenith.ui.component.GamepadSelectBadge(size = 16.dp) {
+                                        Surface(
+                                            shape = infoShape,
+                                            color = scheme.secondaryContainer,
+                                            contentColor = scheme.onSecondaryContainer,
+                                            modifier = Modifier
+                                                .size(42.dp)
+                                                .focusRequester(wpInfoRequester)
+                                                .onFocusChanged { if (it.isFocused) lastWpLeftRequester = wpInfoRequester }
+                                                .gamepadFocusOutline(
+                                                    shape = infoShape,
+                                                    register = true,
+                                                    onActivate = openWpInfo
+                                                )
+                                                .clip(infoShape)
+                                                .focusProperties { canFocus = false }
+                                                .clickable(onClick = openWpInfo)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Info,
+                                                    contentDescription = stringResource(R.string.str_app_info),
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }

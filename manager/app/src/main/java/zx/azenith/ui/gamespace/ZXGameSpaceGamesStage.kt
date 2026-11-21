@@ -129,6 +129,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.focus.focusProperties
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -336,8 +337,7 @@ internal fun ZXGameSpaceTileRibbon(
             modifier = Modifier
                 .fillMaxHeight()
                 .offset { IntOffset(x = totalOffsetPx.roundToInt(), y = 0) }
-                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                .gamepadScreenEntry(),
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top
         ) {
@@ -356,7 +356,7 @@ internal fun ZXGameSpaceTileRibbon(
                             entry = item,
                             selectionFraction = selectionFraction,
                             selected = isSelected,
-                            onFocus = { onSelect(index) },
+                            onFocus = {},
                             onClick = {
                                 if (isSelected) {
                                     onActivate(item)
@@ -371,7 +371,7 @@ internal fun ZXGameSpaceTileRibbon(
                         entry = item,
                         selectionFraction = selectionFraction,
                         selected = isSelected,
-                        onFocus = { onSelect(index) },
+                        onFocus = {},
                         onClick = {
                             if (isSelected) {
                                 onActivate(item)
@@ -467,21 +467,13 @@ internal fun ZXGameSpaceRibbonTile(
     Box(
         modifier = modifier
             .size(tileSize)
-            .onFocusChanged {
-                if (it.isFocused) {
-                    GameSpaceHintState.setFocus(tileHintOwner, GameSpaceFocusKind.RibbonTile)
-                    onFocus()
-                } else {
-                    GameSpaceHintState.clearFocus(tileHintOwner)
-                }
-            }
-            .gamepadFocusOutline(shape = outerShape, width = 2.dp)
             .clip(outerShape)
             .then(
                 if (borderWidth > 0.2.dp) {
                     Modifier.border(width = borderWidth, color = borderColor, shape = outerShape)
                 } else Modifier
             )
+            .focusProperties { canFocus = false }
             .clickable(onClick = onClick)
             .padding(tilePadding)
     ) {

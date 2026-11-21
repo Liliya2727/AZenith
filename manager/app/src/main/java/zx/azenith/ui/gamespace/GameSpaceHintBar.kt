@@ -83,6 +83,7 @@ internal fun resolveGameSpaceHints(
                 add(GameSpaceHintItem(R.drawable.ic_gp_cross, customConfirmLabelRes ?: R.string.gamespace_hint_tuning))
             else -> Unit
         }
+        add(GameSpaceHintItem(R.drawable.ic_gp_start, R.string.gamespace_hint_play))
         add(GameSpaceHintItem(R.drawable.ic_gp_triangle, R.string.gamespace_hint_tuning))
         add(GameSpaceHintItem(R.drawable.ic_gp_square, R.string.gamespace_hint_wallpaper))
         add(GameSpaceHintItem(R.drawable.ic_gp_circle, R.string.gamespace_hint_back))

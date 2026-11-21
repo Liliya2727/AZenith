@@ -225,6 +225,11 @@ fun ZXGameSpaceHub(
     val safeIndex = selectedRibbonIndex.coerceIn(0, ribbonEntries.lastIndex)
     val isNavigatingForward = (safeIndex >= previousRibbonIndex && !(previousRibbonIndex == 0 && safeIndex == ribbonEntries.lastIndex)) ||
         (previousRibbonIndex == ribbonEntries.lastIndex && safeIndex == 0)
+    LaunchedEffect(safeIndex) {
+        if (safeIndex != previousRibbonIndex) {
+            android.util.Log.d("PAD", "gs ribbon index=$previousRibbonIndex -> $safeIndex entry=${ribbonEntries[safeIndex]}")
+        }
+    }
     SideEffect {
         previousRibbonIndex = safeIndex
     }
@@ -388,16 +393,18 @@ fun ZXGameSpaceHub(
                         // Triggers + Select drive the shell overlays. Consume them
                         // here so the global watcher can't read Select as Back.
                         KeyEvent.KEYCODE_BUTTON_SELECT -> {
-                            if (event.nativeKeyEvent.repeatCount == 0) {
-                                if (!isPopupConfinementActive || searchOpen) {
+                            if (isPopupConfinementActive && !searchOpen) {
+                                false
+                            } else {
+                                if (event.nativeKeyEvent.repeatCount == 0) {
                                     quickSettingsOpen = false
                                     nowPlayingOpen = false
                                     category = TopCategory.Games
                                     searchOpen = !searchOpen
                                     if (!searchOpen) searchQuery = ""
                                 }
+                                true
                             }
-                            true
                         }
                         // R2 toggles quick settings, L2 toggles now playing (and also closes
                         // quick settings when quick settings is the active overlay).
@@ -433,6 +440,7 @@ fun ZXGameSpaceHub(
                             } else if (category != TopCategory.Games) {
                                 false
                             } else {
+                                android.util.Log.d("PAD", "gs key Y idx=$safeIndex entry=$activeEntry")
                                 when (activeEntry) {
                                     RibbonEntry.Welcome -> {
                                         homeExpanded = true
@@ -467,6 +475,7 @@ fun ZXGameSpaceHub(
                                 backToStart()
                                 true
                             } else {
+                                android.util.Log.d("PAD", "gs key X idx=$safeIndex entry=$activeEntry")
                                 wallpaperPkg = if (activeEntry is RibbonEntry.Game) {
                                     lastGameApp?.packageName
                                 } else {
@@ -492,9 +501,12 @@ fun ZXGameSpaceHub(
                         }
                         KeyEvent.KEYCODE_BUTTON_START -> {
                             if (isPopupConfinementActive) {
-                                true
+                                false
                             } else if (category == TopCategory.Games && activeEntry is RibbonEntry.Game) {
-                                lastGameApp?.let { requestAppLaunch(it) }
+                                if (event.nativeKeyEvent.repeatCount == 0) {
+                                    android.util.Log.d("PAD", "gs key START idx=$safeIndex pkg=${lastGameApp?.packageName}")
+                                    lastGameApp?.let { requestAppLaunch(it) }
+                                }
                                 true
                             } else {
                                 false
