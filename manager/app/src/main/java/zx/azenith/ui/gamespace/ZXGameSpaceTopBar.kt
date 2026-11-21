@@ -135,6 +135,10 @@ import kotlin.math.roundToInt
 import zx.azenith.R
 import zx.azenith.ui.component.Android16BatteryIcon
 import zx.azenith.ui.component.AppIconImage
+import zx.azenith.ui.component.GamepadL2Badge
+import zx.azenith.ui.component.GamepadR2Badge
+import zx.azenith.ui.component.GamepadSelectBadge
+import zx.azenith.ui.component.GamepadShoulderHint
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadKeyWatch
 import androidx.compose.ui.semantics.contentDescription
@@ -290,6 +294,7 @@ internal fun ZXGameSpaceTopBar(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    GamepadShoulderHint(left = true)
                     TopCategory.entries.forEach { tab ->
                         val selected = tab == selectedCategory
                         val shape = RoundedCornerShape(14.dp)
@@ -328,6 +333,7 @@ internal fun ZXGameSpaceTopBar(
                             )
                         }
                     }
+                    GamepadShoulderHint(left = false)
                 }
             }
 
@@ -434,6 +440,7 @@ internal fun ZXGameSpaceTopBar(
                 }
             }
 
+            GamepadSelectBadge {
             Surface(
                 shape = CircleShape,
                 color = searchBg,
@@ -557,6 +564,7 @@ internal fun ZXGameSpaceTopBar(
                     }
                 }
             }
+            }
 
             TopBarIconButton(
                 icon = Icons.Rounded.PowerSettingsNew,
@@ -575,6 +583,7 @@ internal fun ZXGameSpaceTopBar(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                GamepadR2Badge {
                 Surface(
                     shape = CircleShape,
                     color = scheme.surfaceContainerHigh,
@@ -660,7 +669,9 @@ internal fun ZXGameSpaceTopBar(
                         }
                     }
                 }
+                }
 
+                GamepadL2Badge {
                 NowPlayingDot(
                     visible = hasNowPlaying,
                     isPanelOpen = isNowPlayingOpen,
@@ -708,6 +719,7 @@ internal fun ZXGameSpaceTopBar(
                         }
                     }
                 )
+                }
             }
         }
     }

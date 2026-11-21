@@ -56,14 +56,11 @@ fun GamepadShoulderHint(left: Boolean, modifier: Modifier = Modifier) {
 /**
  * A small controller badge pinned to the lower-left of one action icon, so the
  * glyph reads as belonging to that button instead of floating in the top bar.
- *
- * [topAction] picks the glyph: Triangle/Y for the page's top action (backup,
- * changelog, reboot), Square/X for search. The hint is decorative — it never
- * takes focus or intercepts a click.
+ * The hint is decorative — it never takes focus or intercepts a click.
  */
 @Composable
-fun GamepadActionBadge(
-    topAction: Boolean,
+fun GamepadButtonBadge(
+    glyphRes: Int,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -71,9 +68,7 @@ fun GamepadActionBadge(
         content()
         if (hintsVisible()) {
             Icon(
-                painter = painterResource(
-                    if (topAction) R.drawable.ic_gp_triangle else R.drawable.ic_gp_square
-                ),
+                painter = painterResource(glyphRes),
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -83,4 +78,39 @@ fun GamepadActionBadge(
             )
         }
     }
+}
+
+/**
+ * [topAction] picks the glyph: Triangle/Y for the page's top action (backup,
+ * changelog, reboot), Square/X for search.
+ */
+@Composable
+fun GamepadActionBadge(
+    topAction: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    GamepadButtonBadge(
+        glyphRes = if (topAction) R.drawable.ic_gp_triangle else R.drawable.ic_gp_square,
+        modifier = modifier,
+        content = content,
+    )
+}
+
+/** Select / View — opens search in GameSpace. */
+@Composable
+fun GamepadSelectBadge(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    GamepadButtonBadge(R.drawable.ic_gp_select, modifier, content)
+}
+
+/** R2 — opens quick settings in GameSpace. */
+@Composable
+fun GamepadR2Badge(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    GamepadButtonBadge(R.drawable.ic_gp_r2, modifier, content)
+}
+
+/** L2 — opens now playing in GameSpace. */
+@Composable
+fun GamepadL2Badge(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    GamepadButtonBadge(R.drawable.ic_gp_l2, modifier, content)
 }
