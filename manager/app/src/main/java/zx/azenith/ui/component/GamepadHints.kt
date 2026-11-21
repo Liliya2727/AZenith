@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import zx.azenith.R
 
@@ -43,12 +44,16 @@ private fun hintsVisible(): Boolean =
 
 /** L1 / R1 beside the navigation. [left] picks which shoulder is shown. */
 @Composable
-fun GamepadShoulderHint(left: Boolean, modifier: Modifier = Modifier) {
+fun GamepadShoulderHint(
+    left: Boolean,
+    modifier: Modifier = Modifier,
+    size: Dp = HintSize,
+) {
     if (!hintsVisible()) return
     Icon(
         painter = painterResource(if (left) R.drawable.ic_gp_l1 else R.drawable.ic_gp_r1),
         contentDescription = null,
-        modifier = modifier.size(HintSize),
+        modifier = modifier.size(size),
         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
     )
 }
@@ -62,6 +67,7 @@ fun GamepadShoulderHint(left: Boolean, modifier: Modifier = Modifier) {
 fun GamepadButtonBadge(
     glyphRes: Int,
     modifier: Modifier = Modifier,
+    size: Dp = BadgeSize,
     content: @Composable () -> Unit,
 ) {
     Box(modifier) {
@@ -73,7 +79,7 @@ fun GamepadButtonBadge(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .offset(x = (-1).dp, y = 1.dp)
-                    .size(BadgeSize),
+                    .size(size),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
             )
         }
@@ -99,18 +105,30 @@ fun GamepadActionBadge(
 
 /** Select / View — opens search in GameSpace. */
 @Composable
-fun GamepadSelectBadge(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    GamepadButtonBadge(R.drawable.ic_gp_select, modifier, content)
+fun GamepadSelectBadge(
+    modifier: Modifier = Modifier,
+    size: Dp = BadgeSize,
+    content: @Composable () -> Unit,
+) {
+    GamepadButtonBadge(R.drawable.ic_gp_select, modifier, size, content)
 }
 
 /** R2 — opens quick settings in GameSpace. */
 @Composable
-fun GamepadR2Badge(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    GamepadButtonBadge(R.drawable.ic_gp_r2, modifier, content)
+fun GamepadR2Badge(
+    modifier: Modifier = Modifier,
+    size: Dp = BadgeSize,
+    content: @Composable () -> Unit,
+) {
+    GamepadButtonBadge(R.drawable.ic_gp_r2, modifier, size, content)
 }
 
 /** L2 — opens now playing in GameSpace. */
 @Composable
-fun GamepadL2Badge(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    GamepadButtonBadge(R.drawable.ic_gp_l2, modifier, content)
+fun GamepadL2Badge(
+    modifier: Modifier = Modifier,
+    size: Dp = BadgeSize,
+    content: @Composable () -> Unit,
+) {
+    GamepadButtonBadge(R.drawable.ic_gp_l2, modifier, size, content)
 }
