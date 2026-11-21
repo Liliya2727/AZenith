@@ -18,7 +18,13 @@
 
 package zx.azenith.ui.gamespace
 
+import android.util.Log
 import android.view.KeyEvent
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import zx.azenith.ui.component.RegisterGamepadActions
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -451,10 +457,28 @@ internal fun ZXGameSpaceTopBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val searchRequester = remember { FocusRequester() }
+            val keyboardController = LocalSoftwareKeyboardController.current
+            val isGamepadLast = GameSpaceInputSource.isGamepadLast
 
-            LaunchedEffect(searchOpen) {
+            LaunchedEffect(searchOpen, isGamepadLast) {
                 if (searchOpen) {
-                    runCatching { searchRequester.requestFocus() }
+                    if (!isGamepadLast) {
+                        var focused = false
+                        repeat(10) {
+                            withFrameNanos { }
+                            if (runCatching { searchRequester.requestFocus() }.getOrDefault(false)) {
+                                focused = true
+                                return@repeat
+                            }
+                        }
+                        keyboardController?.show()
+                        Log.d("PAD", "gs search ime=show source=${GameSpaceInputSource.lastSource} focused=$focused")
+                    } else {
+                        keyboardController?.hide()
+                        Log.d("PAD", "gs search ime=hide source=${GameSpaceInputSource.lastSource}")
+                    }
+                } else {
+                    keyboardController?.hide()
                 }
             }
 
@@ -505,7 +529,18 @@ internal fun ZXGameSpaceTopBar(
                             cursorBrush = SolidColor(scheme.primary),
                             modifier = Modifier
                                 .weight(1f)
-                                .focusRequester(searchRequester),
+                                .focusProperties {
+                                    // Keep the text field out of gamepad D-pad focus search while
+                                    // the gamepad is active so D-pad stays on the result cards,
+                                    // but allow focus whenever touch/keyboard is the active source.
+                                    canFocus = !isGamepadLast
+                                }
+                                .focusRequester(searchRequester)
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused && !GameSpaceInputSource.isGamepadLast) {
+                                        keyboardController?.show()
+                                    }
+                                },
                             decorationBox = { innerTextField ->
                                 Box(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1039,7 +1074,8 @@ internal fun ZXGameSpaceSearchOverlay(
     GameSpacePopupContainer(
         visible = visible,
         name = "Search",
-        modifier = modifier
+        modifier = modifier,
+        seedFocusOnOpen = GameSpaceInputSource.isGamepadLast
     ) {
         AnimatedVisibility(
             visible = visible,
@@ -1062,14 +1098,7 @@ internal fun ZXGameSpaceSearchOverlay(
             ) + fadeOut(animationSpec = motion.fastEffectsSpec())
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .focusProperties { canFocus = false }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onClose
-                    )
+                modifier = Modifier.fillMaxSize()
             ) {
                 content()
             }
@@ -1165,6 +1194,12 @@ internal fun ZXGameSpaceSearchPane(
         }
     }
 
+    val searchListState = rememberLazyListState()
+    RegisterGamepadActions(
+        enabled = true,
+        scrollState = searchListState
+    )
+
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = scheme.surfaceContainer,
@@ -1173,11 +1208,6 @@ internal fun ZXGameSpaceSearchPane(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 4.dp, bottom = 14.dp)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {}
-            )
     ) {
         Column(
             modifier = Modifier
@@ -1197,9 +1227,14 @@ internal fun ZXGameSpaceSearchPane(
                 ) {
                     items(SearchScopeFilter.entries) { filter ->
                         val selected = scopeFilter == filter
+                        val selectFilter = {
+                            Log.d("PAD", "gs search scopeFilter=$filter")
+                            AudioUtil.playOk(context)
+                            scopeFilter = filter
+                        }
                         FilterChip(
                             selected = selected,
-                            onClick = { scopeFilter = filter },
+                            onClick = selectFilter,
                             label = {
                                 Text(
                                     text = filter.label,
@@ -1215,7 +1250,12 @@ internal fun ZXGameSpaceSearchPane(
                                 labelColor = scheme.onSurfaceVariant,
                                 selectedLabelColor = scheme.onSecondaryContainer
                             ),
-                            border = null
+                            border = null,
+                            modifier = Modifier.gamepadFocusOutline(
+                                shape = CircleShape,
+                                register = true,
+                                onActivate = selectFilter
+                            )
                         )
                     }
                 }
@@ -1226,6 +1266,7 @@ internal fun ZXGameSpaceSearchPane(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
+                        .focusProperties { canFocus = false }
                         .clickable(onClick = {
                             AudioUtil.playCancel(context)
                             onClose()
@@ -1244,6 +1285,7 @@ internal fun ZXGameSpaceSearchPane(
 
             // Results Container
             LazyColumn(
+                state = searchListState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
@@ -1337,6 +1379,18 @@ internal fun ZXGameSpaceSearchPane(
                         ) {
                             rowApps.forEach { app ->
                                 val shape = RoundedCornerShape(18.dp)
+                                val activateApp = {
+                                    Log.d("PAD", "gs search launchApp=${app.packageName}")
+                                    AudioUtil.playOk(context)
+                                    onClose()
+                                    onLaunch(app)
+                                }
+                                val tuneApp = {
+                                    Log.d("PAD", "gs search tuneApp=${app.packageName}")
+                                    AudioUtil.playOk(context)
+                                    onClose()
+                                    onOpenSettings(app)
+                                }
                                 Surface(
                                     shape = shape,
                                     color = scheme.surfaceContainerHigh,
@@ -1346,10 +1400,11 @@ internal fun ZXGameSpaceSearchPane(
                                         .gamepadFocusOutline(
                                             shape = shape,
                                             register = true,
-                                            onActivate = { onLaunch(app) }
+                                            onActivate = activateApp
                                         )
                                         .clip(shape)
-                                        .clickable { onLaunch(app) }
+                                        .focusProperties { canFocus = false }
+                                        .clickable(onClick = activateApp)
                                 ) {
                                     Row(
                                         modifier = Modifier
@@ -1385,8 +1440,14 @@ internal fun ZXGameSpaceSearchPane(
                                             color = scheme.surfaceContainerHighest,
                                             modifier = Modifier
                                                 .size(34.dp)
+                                                .gamepadFocusOutline(
+                                                    shape = CircleShape,
+                                                    register = true,
+                                                    onActivate = tuneApp
+                                                )
                                                 .clip(CircleShape)
-                                                .clickable { onOpenSettings(app) }
+                                                .focusProperties { canFocus = false }
+                                                .clickable(onClick = tuneApp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
@@ -1409,19 +1470,32 @@ internal fun ZXGameSpaceSearchPane(
                     // Show all / Show less toggle button for Apps when query is blank
                     if (query.isBlank() && matchedApps.size > initialAppLimit) {
                         item(key = "toggle_show_all_apps") {
+                            val toggleAppsShape = RoundedCornerShape(16.dp)
+                            val toggleApps = {
+                                val next = !showAllApps
+                                Log.d("PAD", "gs search showAllApps=$next")
+                                AudioUtil.playOk(context)
+                                showAllApps = next
+                            }
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
+                                shape = toggleAppsShape,
                                 color = scheme.surfaceContainerHigh,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(42.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable { showAllApps = !showAllApps }
                                     .animateItem(
                                         fadeInSpec = motion.defaultEffectsSpec(),
                                         fadeOutSpec = motion.fastEffectsSpec(),
                                         placementSpec = motion.defaultSpatialSpec()
                                     )
+                                    .gamepadFocusOutline(
+                                        shape = toggleAppsShape,
+                                        register = true,
+                                        onActivate = toggleApps
+                                    )
+                                    .clip(toggleAppsShape)
+                                    .focusProperties { canFocus = false }
+                                    .clickable(onClick = toggleApps)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxSize(),
@@ -1491,15 +1565,25 @@ internal fun ZXGameSpaceSearchPane(
                         ) {
                             rowSettings.forEach { setting ->
                                 val shape = RoundedCornerShape(18.dp)
+                                val activateSetting = {
+                                    Log.d("PAD", "gs search openSetting=${setting.title} tab=${setting.tab}")
+                                    AudioUtil.playOk(context)
+                                    onNavigateToSettingsTab(setting.tab)
+                                }
                                 Surface(
                                     shape = shape,
                                     color = scheme.surfaceContainerHigh,
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(68.dp)
-                                        .gamepadFocusOutline(shape = shape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = shape,
+                                            register = true,
+                                            onActivate = activateSetting
+                                        )
                                         .clip(shape)
-                                        .clickable { onNavigateToSettingsTab(setting.tab) }
+                                        .focusProperties { canFocus = false }
+                                        .clickable(onClick = activateSetting)
                                 ) {
                                     Row(
                                         modifier = Modifier
@@ -1565,19 +1649,32 @@ internal fun ZXGameSpaceSearchPane(
                     // Show all / Show less toggle button for Settings when query is blank
                     if (query.isBlank() && matchedSettings.size > initialSettingLimit) {
                         item(key = "toggle_show_all_settings") {
+                            val toggleSettingsShape = RoundedCornerShape(16.dp)
+                            val toggleSettings = {
+                                val next = !showAllSettings
+                                Log.d("PAD", "gs search showAllSettings=$next")
+                                AudioUtil.playOk(context)
+                                showAllSettings = next
+                            }
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
+                                shape = toggleSettingsShape,
                                 color = scheme.surfaceContainerHigh,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(42.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable { showAllSettings = !showAllSettings }
                                     .animateItem(
                                         fadeInSpec = motion.defaultEffectsSpec(),
                                         fadeOutSpec = motion.fastEffectsSpec(),
                                         placementSpec = motion.defaultSpatialSpec()
                                     )
+                                    .gamepadFocusOutline(
+                                        shape = toggleSettingsShape,
+                                        register = true,
+                                        onActivate = toggleSettings
+                                    )
+                                    .clip(toggleSettingsShape)
+                                    .focusProperties { canFocus = false }
+                                    .clickable(onClick = toggleSettings)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxSize(),

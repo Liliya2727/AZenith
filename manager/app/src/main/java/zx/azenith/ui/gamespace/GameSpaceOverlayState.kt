@@ -18,6 +18,9 @@ package zx.azenith.ui.gamespace
 
 import android.os.SystemClock
 import android.util.Log
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -44,6 +47,69 @@ import zx.azenith.ui.component.GamepadFocusNav
 import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.GamepadShortcuts
 import zx.azenith.ui.component.LocalGamepadFocusEnabled
+
+/**
+ * Tracks the last input source in GameSpace (Gamepad vs Touch/Keyboard) from
+ * real [KeyEvent] / [MotionEvent] source flags so the Search IME opens on touch
+ * or physical keyboard input and stays hidden when Search is opened by gamepad.
+ */
+internal object GameSpaceInputSource {
+    enum class Source {
+        TouchOrKeyboard,
+        Gamepad,
+    }
+
+    var lastSource by mutableStateOf(Source.TouchOrKeyboard)
+        private set
+
+    val isGamepadLast: Boolean
+        get() = lastSource == Source.Gamepad
+
+    private fun update(next: Source, reason: String) {
+        if (lastSource != next) {
+            lastSource = next
+            Log.d("PAD", "gs inputSource=$next reason=$reason")
+        }
+    }
+
+    fun onTouchEvent(event: MotionEvent) {
+        val action = event.actionMasked
+        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
+            update(Source.TouchOrKeyboard, "touch")
+        }
+    }
+
+    fun onMotionEvent(event: MotionEvent) {
+        val source = event.source
+        val isJoystick = (source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
+        val isGamepad = (source and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+        if (isJoystick || isGamepad) {
+            update(Source.Gamepad, "motion")
+        }
+    }
+
+    fun onKeyEvent(event: KeyEvent) {
+        if (event.action != KeyEvent.ACTION_DOWN) return
+        val source = event.source
+        val isGamepadSource = (source and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
+            (source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK ||
+            (source and InputDevice.SOURCE_DPAD) == InputDevice.SOURCE_DPAD
+        val isGamepadKey = KeyEvent.isGamepadButton(event.keyCode) ||
+            event.keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+            event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+            event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+            event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+            event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER
+        if (isGamepadSource || isGamepadKey) {
+            update(Source.Gamepad, "key:${event.keyCode}")
+        } else if ((source and InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD &&
+            event.keyCode != KeyEvent.KEYCODE_BACK &&
+            event.keyCode != KeyEvent.KEYCODE_ESCAPE
+        ) {
+            update(Source.TouchOrKeyboard, "keyboard:${event.keyCode}")
+        }
+    }
+}
 
 /**
  * Shared observable overlay registry and focus confinement for all GameSpace popups.
@@ -128,6 +194,7 @@ internal fun GameSpacePopupContainer(
     name: String,
     modifier: Modifier = Modifier,
     firstFocusRequester: FocusRequester? = null,
+    seedFocusOnOpen: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val token = remember { Any() }
@@ -145,9 +212,13 @@ internal fun GameSpacePopupContainer(
         }
     }
 
-    LaunchedEffect(visible) {
+    LaunchedEffect(visible, seedFocusOnOpen) {
         if (visible) {
             wasVisible = true
+            if (!seedFocusOnOpen) {
+                Log.d("PAD", "gs popup seed skipped name=$name inputSource=${GameSpaceInputSource.lastSource}")
+                return@LaunchedEffect
+            }
             val startMs = SystemClock.uptimeMillis()
             withFrameNanos { }
             var seeded = false
@@ -180,10 +251,11 @@ internal fun GameSpacePopupContainer(
         } else if (wasVisible) {
             wasVisible = false
             if (!GameSpaceOverlayState.isAnyOpen &&
+                GameSpaceInputSource.isGamepadLast &&
                 (GamepadInput.dpadMode || GamepadInput.controllerConnected)
             ) {
                 delay(120L)
-                if (!GameSpaceOverlayState.isAnyOpen) {
+                if (!GameSpaceOverlayState.isAnyOpen && GameSpaceInputSource.isGamepadLast) {
                     GameSpaceOverlayState.restoreBaseFocus()
                 }
             }

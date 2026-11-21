@@ -81,7 +81,13 @@ class ZXGameSpaceActivity : ComponentActivity() {
         }
     }
 
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        GameSpaceInputSource.onTouchEvent(event)
+        return super.dispatchTouchEvent(event)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        GameSpaceInputSource.onKeyEvent(event)
         // Real L2/R2 digital keys: keep the shared held state in sync and swallow
         // a duplicate arrived after we already synthesized the same press from
         // the analog axis.
@@ -92,6 +98,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
             val held = if (isL2) l2Held else r2Held
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
+                    GamepadInput.onDpadKey()
                     if (event.repeatCount == 0) {
                         if (held) {
                             Log.d("PAD", "trigger duplicate key ignored key=${event.keyCode}")
@@ -150,10 +157,12 @@ class ZXGameSpaceActivity : ComponentActivity() {
             val r2Down = r2Value >= TRIGGER_THRESHOLD
             if (l2Down != l2Held) {
                 l2Held = l2Down
+                if (l2Down) GameSpaceInputSource.onMotionEvent(event)
                 emitTrigger(l2Down, KeyEvent.KEYCODE_BUTTON_L2)
             }
             if (r2Down != r2Held) {
                 r2Held = r2Down
+                if (r2Down) GameSpaceInputSource.onMotionEvent(event)
                 emitTrigger(r2Down, KeyEvent.KEYCODE_BUTTON_R2)
             }
             // Right stick vertical scroll (drives registered scroll state in Settings / overlays).
@@ -162,6 +171,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
             val vertical = if (kotlin.math.abs(rz) >= kotlin.math.abs(ry)) rz else ry
             GamepadStickScroll.onAxisY(vertical)
             if (kotlin.math.abs(vertical) > GamepadStickScroll.DEADZONE) {
+                GameSpaceInputSource.onMotionEvent(event)
                 GamepadInput.onDpadKey()
             }
 
@@ -182,6 +192,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
                 else -> null
             }
             if (keyCode != null) {
+                GameSpaceInputSource.onMotionEvent(event)
                 GamepadInput.onDpadKey()
                 GamepadDirectionRepeat.onDirectionDown(keyCode)
             } else {

@@ -1032,8 +1032,16 @@ fun ZXGameSpaceHub(
                     ZXGameSpaceSearchPane(
                         query = searchQuery,
                         apps = allApps,
-                        onLaunch = requestAppLaunch,
-                        onOpenSettings = { tuningPkg = it.packageName },
+                        onLaunch = { app ->
+                            searchOpen = false
+                            searchQuery = ""
+                            requestAppLaunch(app)
+                        },
+                        onOpenSettings = { app ->
+                            searchOpen = false
+                            searchQuery = ""
+                            tuningPkg = app.packageName
+                        },
                         onNavigateToSettingsTab = { tab ->
                             selectedSettingsTab = tab
                             category = TopCategory.Settings
