@@ -861,7 +861,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                             viewModel.updateSetting(pkg, "perf_lite_mode", value)
                                                         },
                                                         modifier = Modifier.zxDropDownAnchor(liteModeMenu),
-                                                        externalMenuState = liteModeMenu
+                                                        externalMenuState = liteModeMenu,
+                                                        focusKey = "appsettings:perf_lite_mode"
                                                     )
                                                 }
                                             )
@@ -894,7 +895,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                                     viewModel.updateSetting(pkg, "bypass_charging", value)
                                                                 },
                                                                 modifier = Modifier.zxDropDownAnchor(bypassMenu),
-                                                                externalMenuState = bypassMenu
+                                                                externalMenuState = bypassMenu,
+                                                                focusKey = "appsettings:bypass_charging"
                                                             )
                                                         }
                                                     }
@@ -910,7 +912,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                                 viewModel.updateSetting(pkg, "game_preload", value)
                                                             },
                                                             modifier = Modifier.zxDropDownAnchor(preloadMenu),
-                                                            externalMenuState = preloadMenu
+                                                            externalMenuState = preloadMenu,
+                                                            focusKey = "appsettings:game_preload"
                                                         )
                                                     }
                                                     if (isFullModeEnabled) {
@@ -926,7 +929,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                                     viewModel.updateSetting(pkg, "app_priority", value)
                                                                 },
                                                                 modifier = Modifier.zxDropDownAnchor(priorityMenu),
-                                                                externalMenuState = priorityMenu
+                                                                externalMenuState = priorityMenu,
+                                                                focusKey = "appsettings:app_priority"
                                                             )
                                                         }
                                                     }
@@ -942,7 +946,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                                 viewModel.updateSetting(pkg, "dnd_on_gaming", value)
                                                             },
                                                             modifier = Modifier.zxDropDownAnchor(dndMenu),
-                                                            externalMenuState = dndMenu
+                                                            externalMenuState = dndMenu,
+                                                            focusKey = "appsettings:dnd_on_gaming"
                                                         )
                                                     }
                                                 }
@@ -978,7 +983,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                                     viewModel.updateSetting(pkg, "refresh_rate", value)
                                                                 },
                                                                 modifier = Modifier.zxDropDownAnchor(refreshMenu),
-                                                                externalMenuState = refreshMenu
+                                                                externalMenuState = refreshMenu,
+                                                                focusKey = "appsettings:refresh_rate"
                                                             )
                                                         }
                                                     }
@@ -996,7 +1002,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                                 viewModel.updateSetting(pkg, "renderer", value)
                                                             },
                                                             modifier = Modifier.zxDropDownAnchor(rendererMenu),
-                                                            externalMenuState = rendererMenu
+                                                            externalMenuState = rendererMenu,
+                                                            focusKey = "appsettings:renderer"
                                                         )
                                                     }
                                                 }
