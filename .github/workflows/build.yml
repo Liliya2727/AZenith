@@ -385,6 +385,22 @@ jobs:
           KS_PWD: ${{ secrets.KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
 
+      - name: Rename Manager APK
+        run: |
+          APK_PATH=$(find manager/app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "Error: Manager APK not found!" >&2
+            exit 1
+          fi
+          VERSION=$(tr -d '\n\r ' < version)
+          VERSION_TYPE=$(tr -d '\n\r ' < version_type)
+          VERSION_CODE=$(git rev-list HEAD --count)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          APK_DIR=$(dirname "$APK_PATH")
+          RENAMED_APK="${APK_DIR}/AZenith-${VERSION}-${VERSION_CODE}-${SHORT_SHA}-${VERSION_TYPE}.apk"
+          mv "$APK_PATH" "$RENAMED_APK"
+          ls -lh "$RENAMED_APK"
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v7.0.1
         with:

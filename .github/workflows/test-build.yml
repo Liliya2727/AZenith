@@ -102,17 +102,24 @@ jobs:
         if: always()
         run: rm -f manager/app/azenith.jks
 
-      - name: Locate and Verify Signed APK
+      - name: Locate, Rename, and Verify Signed APK
         run: |
           APK_PATH=$(find manager/app/build/outputs/apk/release -name "*.apk" | head -n 1)
           if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
             echo "Error: Release APK not found!" >&2
             exit 1
           fi
+          VERSION=$(tr -d '\n\r ' < version)
+          VERSION_TYPE=$(tr -d '\n\r ' < version_type)
+          VERSION_CODE=$(git rev-list HEAD --count)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          APK_DIR=$(dirname "$APK_PATH")
+          RENAMED_APK="${APK_DIR}/AZenith-${VERSION}-${VERSION_CODE}-${SHORT_SHA}-${VERSION_TYPE}.apk"
+          mv "$APK_PATH" "$RENAMED_APK"
           BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
-          "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$APK_PATH"
-          echo "APK_PATH=$APK_PATH" >> "$GITHUB_ENV"
-          ls -lh "$APK_PATH"
+          "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$RENAMED_APK"
+          echo "APK_PATH=$RENAMED_APK" >> "$GITHUB_ENV"
+          ls -lh "$RENAMED_APK"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v7.0.1
