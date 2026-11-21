@@ -763,7 +763,11 @@ internal fun TopBarIconButton(
             .then(
                 if (gamepadFocusable) {
                     Modifier
-                        .gamepadFocusOutline(shape = CircleShape, register = true)
+                        .gamepadFocusOutline(
+                            shape = CircleShape,
+                            register = true,
+                            onActivate = onClick
+                        )
                         .clickable(onClick = onClick)
                 } else {
                     // Top-bar chrome: tap via pointerInput so it never becomes
@@ -800,6 +804,14 @@ internal fun ZXGameSpaceExitDialog(
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val defaultRequester = remember { FocusRequester() }
+    val overlayToken = remember { Any() }
+
+    androidx.compose.runtime.DisposableEffect(overlayToken) {
+        GameSpaceOverlayState.acquire(overlayToken, "ExitDialog")
+        onDispose {
+            GameSpaceOverlayState.release(overlayToken)
+        }
+    }
 
     LaunchedEffect(Unit) {
         delay(100)
@@ -810,6 +822,7 @@ internal fun ZXGameSpaceExitDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        androidx.compose.runtime.CompositionLocalProvider(zx.azenith.ui.component.LocalGamepadFocusEnabled provides true) {
         Surface(
             shape = RoundedCornerShape(28.dp),
             color = scheme.surfaceContainerHigh,
@@ -879,7 +892,14 @@ internal fun ZXGameSpaceExitDialog(
                             .height(130.dp)
                             .clip(RoundedCornerShape(20.dp))
                             .focusRequester(defaultRequester)
-                            .gamepadFocusOutline(shape = RoundedCornerShape(20.dp), register = true)
+                            .gamepadFocusOutline(
+                                shape = RoundedCornerShape(20.dp),
+                                register = true,
+                                onActivate = {
+                                    AudioUtil.playOk(context)
+                                    onExitShell()
+                                }
+                            )
                             .clickable(onClick = {
                                 AudioUtil.playOk(context)
                                 onExitShell()
@@ -930,7 +950,14 @@ internal fun ZXGameSpaceExitDialog(
                             .weight(1f)
                             .height(130.dp)
                             .clip(RoundedCornerShape(20.dp))
-                            .gamepadFocusOutline(shape = RoundedCornerShape(20.dp), register = true)
+                            .gamepadFocusOutline(
+                                shape = RoundedCornerShape(20.dp),
+                                register = true,
+                                onActivate = {
+                                    AudioUtil.playOk(context)
+                                    onExitApp()
+                                }
+                            )
                             .clickable(onClick = {
                                 AudioUtil.playOk(context)
                                 onExitApp()
@@ -981,7 +1008,11 @@ internal fun ZXGameSpaceExitDialog(
                     onClick = onDismiss,
                     shape = RoundedCornerShape(percent = 50),
                     modifier = Modifier
-                        .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true)
+                        .gamepadFocusOutline(
+                            shape = RoundedCornerShape(percent = 50),
+                            register = true,
+                            onActivate = onDismiss
+                        )
                         .padding(horizontal = 16.dp)
                 ) {
                     Text(
@@ -991,6 +1022,7 @@ internal fun ZXGameSpaceExitDialog(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -1004,36 +1036,43 @@ internal fun ZXGameSpaceSearchOverlay(
 ) {
     val motion = MaterialTheme.motionScheme
 
-    AnimatedVisibility(
+    GameSpacePopupContainer(
         visible = visible,
-        modifier = modifier,
-        enter = expandVertically(
-            expandFrom = Alignment.Top,
-            animationSpec = motion.defaultSpatialSpec()
-        ) + scaleIn(
-            initialScale = 0.90f,
-            transformOrigin = TransformOrigin(0.85f, 0f),
-            animationSpec = motion.defaultSpatialSpec()
-        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = shrinkVertically(
-            shrinkTowards = Alignment.Top,
-            animationSpec = motion.fastSpatialSpec()
-        ) + scaleOut(
-            targetScale = 0.92f,
-            transformOrigin = TransformOrigin(0.85f, 0f),
-            animationSpec = motion.fastSpatialSpec()
-        ) + fadeOut(animationSpec = motion.fastEffectsSpec())
+        name = "Search",
+        modifier = modifier
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClose
-                )
+        AnimatedVisibility(
+            visible = visible,
+            modifier = Modifier.fillMaxSize(),
+            enter = expandVertically(
+                expandFrom = Alignment.Top,
+                animationSpec = motion.defaultSpatialSpec()
+            ) + scaleIn(
+                initialScale = 0.90f,
+                transformOrigin = TransformOrigin(0.85f, 0f),
+                animationSpec = motion.defaultSpatialSpec()
+            ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+            exit = shrinkVertically(
+                shrinkTowards = Alignment.Top,
+                animationSpec = motion.fastSpatialSpec()
+            ) + scaleOut(
+                targetScale = 0.92f,
+                transformOrigin = TransformOrigin(0.85f, 0f),
+                animationSpec = motion.fastSpatialSpec()
+            ) + fadeOut(animationSpec = motion.fastEffectsSpec())
         ) {
-            content()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .focusProperties { canFocus = false }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClose
+                    )
+            ) {
+                content()
+            }
         }
     }
 }
@@ -1304,7 +1343,11 @@ internal fun ZXGameSpaceSearchPane(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(72.dp)
-                                        .gamepadFocusOutline(shape = shape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = shape,
+                                            register = true,
+                                            onActivate = { onLaunch(app) }
+                                        )
                                         .clip(shape)
                                         .clickable { onLaunch(app) }
                                 ) {

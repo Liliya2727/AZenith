@@ -221,13 +221,17 @@ internal fun BentoTile(
 
     val interactive = if (onClick != null) {
         DisposableEffect(requester) {
-            onDispose { GameSpaceHintState.clearFocus(requester) }
+            onDispose {
+                GameSpaceHintState.clearFocus(requester)
+                GameSpaceOverlayState.clearBaseFocus(requester)
+            }
         }
         Modifier
             .onFocusChanged {
                 focused = it.isFocused
                 if (it.isFocused && bentoActive) {
                     GamepadFocusNav.publishLastFocused(requester)
+                    GameSpaceOverlayState.recordBaseFocus(requester)
                     // Cross activates the focused card; no outline ring is drawn
                     // in GameSpace, the slight lift above is the focus cue. Read the
                     // click through updated state so a recomposition can't leave a stale one.

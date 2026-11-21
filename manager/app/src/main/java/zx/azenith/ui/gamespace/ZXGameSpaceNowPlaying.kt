@@ -850,6 +850,11 @@ internal fun NowPlayingPanelOverlay(
     val progress = morphProgress.value
     if (!visible && !morphProgress.isRunning && progress <= 0.005f) return
 
+    GameSpacePopupContainer(
+        visible = visible,
+        name = "NowPlaying",
+        modifier = Modifier.fillMaxSize()
+    ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidth = maxWidth
         val screenHeight = maxHeight
@@ -928,6 +933,7 @@ internal fun NowPlayingPanelOverlay(
                 }
             }
         }
+    }
     }
 }
 

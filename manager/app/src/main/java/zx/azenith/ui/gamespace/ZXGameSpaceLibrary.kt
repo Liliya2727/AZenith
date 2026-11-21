@@ -472,7 +472,10 @@ private fun LibraryAppTile(
     val corner = { lerp(LIBRARY_REST_CORNER, LIBRARY_ENGAGED_CORNER, engaged().coerceIn(0f, 1f)) }
 
     DisposableEffect(requester) {
-        onDispose { GameSpaceHintState.clearFocus(requester) }
+        onDispose {
+            GameSpaceHintState.clearFocus(requester)
+            GameSpaceOverlayState.clearBaseFocus(requester)
+        }
     }
 
     Box(
@@ -495,6 +498,7 @@ private fun LibraryAppTile(
                 focused = it.isFocused
                 if (it.isFocused) {
                     GamepadFocusNav.publishLastFocused(requester)
+                    GameSpaceOverlayState.recordBaseFocus(requester)
                     GameSpaceHintState.setFocus(requester, GameSpaceFocusKind.LibraryTile)
                 } else {
                     GameSpaceHintState.clearFocus(requester)

@@ -147,6 +147,7 @@ import zx.azenith.ui.component.MediaBannerRenderer
 import zx.azenith.ui.component.ZXDropDownMenu
 import zx.azenith.ui.component.ZXDropDownState
 import zx.azenith.ui.component.ZenithSlider
+import androidx.compose.ui.focus.focusProperties
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.rememberZXDropDownState
 import zx.azenith.ui.component.zxDropDownAnchor
@@ -208,6 +209,11 @@ internal fun ZXGameSpaceAppSettingsOverlay(
         }
     }
 
+    GameSpacePopupContainer(
+        visible = visible,
+        name = "AppSettings",
+        modifier = Modifier.fillMaxSize()
+    ) {
     // Edge-to-edge stationary scrim: smoothly dims and blurs underlying UI and prevents tap-through
     AnimatedVisibility(
         visible = visible,
@@ -227,6 +233,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                     }
                 )
                 .background(scheme.scrim.copy(alpha = 0.40f))
+                .focusProperties { canFocus = false }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -470,22 +477,27 @@ internal fun ZXGameSpaceAppSettingsOverlay(
 
                                 // Master Switch Card
                                 val masterShape = RoundedCornerShape(18.dp)
+                                val toggleMaster = {
+                                    val next = !localMasterOn
+                                    localMasterOn = next
+                                    viewModel.toggleMasterSwitch(pkg, next)
+                                    ApplistViewmodel.apps = ApplistViewmodel.apps.map {
+                                        if (it.packageName == pkg) it.copy(isEnabledInConfig = next) else it
+                                    }
+                                }
                                 Surface(
                                     shape = masterShape,
                                     color = if (localMasterOn) scheme.primaryContainer else scheme.surfaceContainerHigh,
                                     contentColor = if (localMasterOn) scheme.onPrimaryContainer else scheme.onSurface,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .gamepadFocusOutline(shape = masterShape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = masterShape,
+                                            register = true,
+                                            onActivate = toggleMaster
+                                        )
                                         .clip(masterShape)
-                                        .clickable {
-                                            val next = !localMasterOn
-                                            localMasterOn = next
-                                            viewModel.toggleMasterSwitch(pkg, next)
-                                            ApplistViewmodel.apps = ApplistViewmodel.apps.map {
-                                                if (it.packageName == pkg) it.copy(isEnabledInConfig = next) else it
-                                            }
-                                        }
+                                        .clickable(onClick = toggleMaster)
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -536,6 +548,13 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 val launchShape = RoundedCornerShape(16.dp)
+                                val doLaunch = {
+                                    if (resolvedApp != null) {
+                                        onLaunch(resolvedApp)
+                                    } else {
+                                        launchGame(context, pkg)
+                                    }
+                                }
                                 Surface(
                                     shape = launchShape,
                                     color = scheme.primary,
@@ -543,15 +562,13 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(44.dp)
-                                        .gamepadFocusOutline(shape = launchShape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = launchShape,
+                                            register = true,
+                                            onActivate = doLaunch
+                                        )
                                         .clip(launchShape)
-                                        .clickable {
-                                            if (resolvedApp != null) {
-                                                onLaunch(resolvedApp)
-                                            } else {
-                                                launchGame(context, pkg)
-                                            }
-                                        }
+                                        .clickable(onClick = doLaunch)
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxSize(),
@@ -574,21 +591,27 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                 }
 
                                 val infoShape = RoundedCornerShape(16.dp)
+                                val openInfo = {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.parse("package:$pkg")
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    runCatching { context.startActivity(intent) }
+                                    Unit
+                                }
                                 Surface(
                                     shape = infoShape,
                                     color = scheme.secondaryContainer,
                                     contentColor = scheme.onSecondaryContainer,
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .gamepadFocusOutline(shape = infoShape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = infoShape,
+                                            register = true,
+                                            onActivate = openInfo
+                                        )
                                         .clip(infoShape)
-                                        .clickable {
-                                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                                data = Uri.parse("package:$pkg")
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            }
-                                            runCatching { context.startActivity(intent) }
-                                        }
+                                        .clickable(onClick = openInfo)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
@@ -1027,6 +1050,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
             }
         }
     }
+    }
 }
 
 /**
@@ -1053,6 +1077,11 @@ internal fun ZXGameSpaceWallpaperOverlay(
         activePkg = packageName
     }
 
+    GameSpacePopupContainer(
+        visible = visible,
+        name = "WallpaperSettings",
+        modifier = Modifier.fillMaxSize()
+    ) {
     // Edge-to-edge stationary scrim: smoothly dims and blurs underlying UI and prevents tap-through
     AnimatedVisibility(
         visible = visible,
@@ -1072,6 +1101,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                     }
                 )
                 .background(scheme.scrim.copy(alpha = 0.40f))
+                .focusProperties { canFocus = false }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -1347,29 +1377,34 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                 if (!isHome) {
                                     // Custom Stage Switch Card
                                     val masterShape = RoundedCornerShape(18.dp)
+                                    val toggleCustomStage = {
+                                        val nextMode = if (isOverrideActive) {
+                                            "default"
+                                        } else if (customUri != null) {
+                                            "custom"
+                                        } else {
+                                            "follow_home"
+                                        }
+                                        selectedMode = nextMode
+                                        context.setGameWallpaperMode(pkg, nextMode)
+                                        if (nextMode != "default" && !isWallpaperEnabled) {
+                                            isWallpaperEnabled = true
+                                            context.setGameWallpaperEnabled(pkg, true)
+                                        }
+                                    }
                                     Surface(
                                         shape = masterShape,
                                         color = if (isOverrideActive) scheme.primaryContainer else scheme.surfaceContainerHigh,
                                         contentColor = if (isOverrideActive) scheme.onPrimaryContainer else scheme.onSurface,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .gamepadFocusOutline(shape = masterShape, register = true)
+                                            .gamepadFocusOutline(
+                                                shape = masterShape,
+                                                register = true,
+                                                onActivate = toggleCustomStage
+                                            )
                                             .clip(masterShape)
-                                            .clickable {
-                                                val nextMode = if (isOverrideActive) {
-                                                    "default"
-                                                } else if (customUri != null) {
-                                                    "custom"
-                                                } else {
-                                                    "follow_home"
-                                                }
-                                                selectedMode = nextMode
-                                                context.setGameWallpaperMode(pkg, nextMode)
-                                                if (nextMode != "default" && !isWallpaperEnabled) {
-                                                    isWallpaperEnabled = true
-                                                    context.setGameWallpaperEnabled(pkg, true)
-                                                }
-                                            }
+                                            .clickable(onClick = toggleCustomStage)
                                     ) {
                                         Row(
                                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -1426,27 +1461,32 @@ internal fun ZXGameSpaceWallpaperOverlay(
 
                                 // Show Wallpaper Switch Card (Supports pure pitch black / Monet surface when disabled)
                                 val wallpaperToggleShape = RoundedCornerShape(18.dp)
+                                val toggleShowWallpaper = {
+                                    val next = !isWallpaperEnabled
+                                    isWallpaperEnabled = next
+                                    if (isHome) {
+                                        context.setHomeWallpaperEnabled(next)
+                                    } else {
+                                        context.setGameWallpaperEnabled(pkg, next)
+                                        if (!next && isOverrideActive) {
+                                            selectedMode = "default"
+                                            context.setGameWallpaperMode(pkg, "default")
+                                        }
+                                    }
+                                }
                                 Surface(
                                     shape = wallpaperToggleShape,
                                     color = if (isWallpaperEnabled) scheme.surfaceContainerHigh else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
                                     contentColor = scheme.onSurface,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .gamepadFocusOutline(shape = wallpaperToggleShape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = wallpaperToggleShape,
+                                            register = true,
+                                            onActivate = toggleShowWallpaper
+                                        )
                                         .clip(wallpaperToggleShape)
-                                        .clickable {
-                                            val next = !isWallpaperEnabled
-                                            isWallpaperEnabled = next
-                                            if (isHome) {
-                                                context.setHomeWallpaperEnabled(next)
-                                            } else {
-                                                context.setGameWallpaperEnabled(pkg, next)
-                                                if (!next && isOverrideActive) {
-                                                    selectedMode = "default"
-                                                    context.setGameWallpaperMode(pkg, "default")
-                                                }
-                                            }
-                                        }
+                                        .clickable(onClick = toggleShowWallpaper)
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -1491,19 +1531,24 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                     var floatingShapesEnabled by remember {
                                         mutableStateOf(prefs.getBoolean("gamespace_floating_shapes_enabled", true))
                                     }
+                                    val toggleFloatingShapes = {
+                                        val next = !floatingShapesEnabled
+                                        floatingShapesEnabled = next
+                                        prefs.edit().putBoolean("gamespace_floating_shapes_enabled", next).apply()
+                                    }
                                     Surface(
                                         shape = shapesToggleShape,
                                         color = if (floatingShapesEnabled) scheme.surfaceContainerHigh else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
                                         contentColor = scheme.onSurface,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .gamepadFocusOutline(shape = shapesToggleShape, register = true)
+                                            .gamepadFocusOutline(
+                                                shape = shapesToggleShape,
+                                                register = true,
+                                                onActivate = toggleFloatingShapes
+                                            )
                                             .clip(shapesToggleShape)
-                                            .clickable {
-                                                val next = !floatingShapesEnabled
-                                                floatingShapesEnabled = next
-                                                prefs.edit().putBoolean("gamespace_floating_shapes_enabled", next).apply()
-                                            }
+                                            .clickable(onClick = toggleFloatingShapes)
                                     ) {
                                         Row(
                                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -1551,6 +1596,13 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     val launchShape = RoundedCornerShape(14.dp)
+                                    val doWpLaunch = {
+                                        if (resolvedApp != null) {
+                                            onLaunch(resolvedApp)
+                                        } else {
+                                            launchGame(context, pkg)
+                                        }
+                                    }
                                     Surface(
                                         shape = launchShape,
                                         color = scheme.primary,
@@ -1558,15 +1610,13 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(42.dp)
-                                            .gamepadFocusOutline(shape = launchShape, register = true)
+                                            .gamepadFocusOutline(
+                                                shape = launchShape,
+                                                register = true,
+                                                onActivate = doWpLaunch
+                                            )
                                             .clip(launchShape)
-                                            .clickable {
-                                                if (resolvedApp != null) {
-                                                    onLaunch(resolvedApp)
-                                                } else {
-                                                    launchGame(context, pkg)
-                                                }
-                                            }
+                                            .clickable(onClick = doWpLaunch)
                                     ) {
                                         Row(
                                             modifier = Modifier.fillMaxSize(),
@@ -1589,21 +1639,27 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                     }
 
                                     val infoShape = RoundedCornerShape(14.dp)
+                                    val openWpInfo = {
+                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.parse("package:$pkg")
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        runCatching { context.startActivity(intent) }
+                                        Unit
+                                    }
                                     Surface(
                                         shape = infoShape,
                                         color = scheme.secondaryContainer,
                                         contentColor = scheme.onSecondaryContainer,
                                         modifier = Modifier
                                             .size(42.dp)
-                                            .gamepadFocusOutline(shape = infoShape, register = true)
+                                            .gamepadFocusOutline(
+                                                shape = infoShape,
+                                                register = true,
+                                                onActivate = openWpInfo
+                                            )
                                             .clip(infoShape)
-                                            .clickable {
-                                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                                    data = Uri.parse("package:$pkg")
-                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                }
-                                                runCatching { context.startActivity(intent) }
-                                            }
+                                            .clickable(onClick = openWpInfo)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(
@@ -1794,6 +1850,11 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
                                                     val chooseShape = RoundedCornerShape(16.dp)
+                                                    val pickWallpaper = {
+                                                        imagePicker.launch(
+                                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                                                        )
+                                                    }
                                                     Surface(
                                                         shape = chooseShape,
                                                         color = scheme.primary,
@@ -1801,13 +1862,13 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
                                                             .weight(1f)
-                                                            .gamepadFocusOutline(shape = chooseShape, register = true)
+                                                            .gamepadFocusOutline(
+                                                                shape = chooseShape,
+                                                                register = true,
+                                                                onActivate = pickWallpaper
+                                                            )
                                                             .clip(chooseShape)
-                                                            .clickable {
-                                                                imagePicker.launch(
-                                                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                                                                )
-                                                            }
+                                                            .clickable(onClick = pickWallpaper)
                                                     ) {
                                                         Row(
                                                             modifier = Modifier
@@ -1838,6 +1899,17 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                         exit = fadeOut(motion.defaultEffectsSpec()) + shrinkVertically(motion.defaultSpatialSpec())
                                                     ) {
                                                         val resetShape = RoundedCornerShape(16.dp)
+                                                        val resetWallpaper = {
+                                                            if (isHome) {
+                                                                context.clearHeaderImage()
+                                                                customUri = null
+                                                            } else {
+                                                                context.setGameWallpaperUri(pkg, null)
+                                                                customUri = null
+                                                                selectedMode = "default"
+                                                                context.setGameWallpaperMode(pkg, "default")
+                                                            }
+                                                        }
                                                         Surface(
                                                             shape = resetShape,
                                                             color = scheme.surfaceContainerHighest,
@@ -1845,19 +1917,13 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                             modifier = Modifier
                                                                 .fillMaxWidth()
                                                                 .height(48.dp)
-                                                                .gamepadFocusOutline(shape = resetShape, register = true)
+                                                                .gamepadFocusOutline(
+                                                                    shape = resetShape,
+                                                                    register = true,
+                                                                    onActivate = resetWallpaper
+                                                                )
                                                                 .clip(resetShape)
-                                                                .clickable {
-                                                                    if (isHome) {
-                                                                        context.clearHeaderImage()
-                                                                        customUri = null
-                                                                    } else {
-                                                                        context.setGameWallpaperUri(pkg, null)
-                                                                        customUri = null
-                                                                        selectedMode = "default"
-                                                                        context.setGameWallpaperMode(pkg, "default")
-                                                                    }
-                                                                }
+                                                                .clickable(onClick = resetWallpaper)
                                                         ) {
                                                             Row(
                                                                 modifier = Modifier
@@ -2030,6 +2096,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                 }
             }
         }
+    }
     }
 }
 

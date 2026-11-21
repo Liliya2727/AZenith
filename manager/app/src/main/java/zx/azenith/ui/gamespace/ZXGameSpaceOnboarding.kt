@@ -88,6 +88,7 @@ import dev.chrisbanes.haze.blur.material3.Material3
 import kotlin.math.roundToInt
 import zx.azenith.R
 import zx.azenith.ui.component.AppIconImage
+import androidx.compose.ui.focus.focusProperties
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -121,6 +122,11 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
     }
     var isConfirmed by remember(visible) { mutableStateOf(false) }
 
+    GameSpacePopupContainer(
+        visible = visible,
+        name = "SidePanelOnboarding",
+        modifier = Modifier.fillMaxSize()
+    ) {
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically(
@@ -182,6 +188,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                             blurRadius(28.dp)
                         }
                     )
+                    .focusProperties { canFocus = false }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -196,6 +203,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                     modifier = Modifier
                         .widthIn(max = 640.dp)
                         .fillMaxWidth()
+                        .focusProperties { canFocus = false }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -292,7 +300,11 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                     contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .gamepadFocusOutline(shape = cardShape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = cardShape,
+                                            register = true,
+                                            onActivate = { selectedSide = key }
+                                        )
                                         .clip(cardShape)
                                         .clickable { selectedSide = key }
                                 ) {
@@ -480,7 +492,14 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                             contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
                                             modifier = Modifier
                                                 .weight(1f)
-                                                .gamepadFocusOutline(shape = pillShape, register = true)
+                                                .gamepadFocusOutline(
+                                                    shape = pillShape,
+                                                    register = true,
+                                                    onActivate = {
+                                                        sliderSensitivity = targetVal
+                                                        committedSensitivity = targetVal
+                                                    }
+                                                )
                                                 .clip(pillShape)
                                                 .clickable {
                                                     sliderSensitivity = targetVal
@@ -536,7 +555,11 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                 contentColor = scheme.onSurface,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .gamepadFocusOutline(shape = cancelShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = cancelShape,
+                                        register = true,
+                                        onActivate = onDismiss
+                                    )
                                     .clip(cancelShape)
                                     .clickable(onClick = onDismiss)
                             ) {
@@ -552,23 +575,28 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                             }
 
                             val confirmShape = CircleShape
+                            val runConfirm = {
+                                isConfirmed = true
+                                prefs.edit()
+                                    .putString("gamespace_sidepanel_side", selectedSide)
+                                    .putInt("gamespace_sidepanel_sensitivity", sliderSensitivity)
+                                    .putBoolean("gamespace_sidepanel_setup_done", true)
+                                    .apply()
+                                onConfirm()
+                            }
                             Surface(
                                 shape = confirmShape,
                                 color = scheme.primary,
                                 contentColor = scheme.onPrimary,
                                 modifier = Modifier
                                     .weight(1.6f)
-                                    .gamepadFocusOutline(shape = confirmShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = confirmShape,
+                                        register = true,
+                                        onActivate = runConfirm
+                                    )
                                     .clip(confirmShape)
-                                    .clickable {
-                                        isConfirmed = true
-                                        prefs.edit()
-                                            .putString("gamespace_sidepanel_side", selectedSide)
-                                            .putInt("gamespace_sidepanel_sensitivity", sliderSensitivity)
-                                            .putBoolean("gamespace_sidepanel_setup_done", true)
-                                            .apply()
-                                        onConfirm()
-                                    }
+                                    .clickable(onClick = runConfirm)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(vertical = 10.dp, horizontal = 16.dp),
@@ -602,5 +630,6 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                 }
             }
         }
+    }
     }
 }

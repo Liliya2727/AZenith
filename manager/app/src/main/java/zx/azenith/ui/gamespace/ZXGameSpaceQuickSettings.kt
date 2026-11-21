@@ -97,12 +97,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import zx.azenith.R
 import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.RegisterGamepadActions
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 
@@ -158,122 +160,141 @@ internal fun ZXGameSpaceQuickSettingsOverlay(
     val layoutDirection = LocalLayoutDirection.current
     val endSafePad = maxOf(24.dp, cutoutInsets.calculateEndPadding(layoutDirection))
 
-    // Scrim overlay - dismiss on tap outside
-    AnimatedVisibility(
+    GameSpacePopupContainer(
         visible = visible,
-        enter = fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = fadeOut(animationSpec = motion.defaultEffectsSpec())
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(scheme.scrim.copy(alpha = 0.35f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClose
-                )
-        )
-    }
-
-    // Floating panel sliding in from right side with spring bouncy animation
-    AnimatedVisibility(
-        visible = visible,
-        enter = slideInHorizontally(
-            initialOffsetX = { fullWidth -> fullWidth },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = slideOutHorizontally(
-            targetOffsetX = { fullWidth -> fullWidth },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        name = "QuickSettings",
         modifier = Modifier.fillMaxSize()
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(end = endSafePad, top = 16.dp, bottom = 16.dp),
-            contentAlignment = Alignment.CenterEnd
+        // Scrim overlay - dismiss on tap outside
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(animationSpec = motion.defaultEffectsSpec()),
+            exit = fadeOut(animationSpec = motion.defaultEffectsSpec())
         ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = scheme.surfaceContainerLow,
+            Box(
                 modifier = Modifier
-                    .width(360.dp)
-                    .fillMaxHeight()
+                    .fillMaxSize()
+                    .background(scheme.scrim.copy(alpha = 0.35f))
+                    .focusProperties { canFocus = false }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {} // Prevent click-through from dismissing panel
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 16.dp)
-                ) {
-                    // Header
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = scheme.primaryContainer,
-                                modifier = Modifier.size(38.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Tune,
-                                        contentDescription = null,
-                                        tint = scheme.onPrimaryContainer,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                            Text(
-                                text = stringResource(R.string.quick_settings_title),
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.onSurface
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                AudioUtil.playCancel(context)
-                                onClose()
-                            },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .gamepadFocusOutline(shape = CircleShape, register = true)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.dialog_cancel),
-                                tint = scheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
+                        indication = null,
+                        onClick = onClose
+                    )
+            )
+        }
 
-                    // Bento Widgets Scrollable Container
+        // Floating panel sliding in from right side with spring bouncy animation
+        AnimatedVisibility(
+            visible = visible,
+            enter = slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+            exit = slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val scrollState = rememberScrollState()
+            RegisterGamepadActions(
+                enabled = visible,
+                columnScrollState = scrollState
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(end = endSafePad, top = 16.dp, bottom = 16.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = scheme.surfaceContainerLow,
+                    modifier = Modifier
+                        .width(360.dp)
+                        .fillMaxHeight()
+                        .focusProperties { canFocus = false }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {} // Prevent click-through from dismissing panel
+                ) {
                     Column(
                         modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
                     ) {
+                        // Header
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = scheme.primaryContainer,
+                                    modifier = Modifier.size(38.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Tune,
+                                            contentDescription = null,
+                                            tint = scheme.onPrimaryContainer,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = stringResource(R.string.quick_settings_title),
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    AudioUtil.playCancel(context)
+                                    onClose()
+                                },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .gamepadFocusOutline(
+                                        shape = CircleShape,
+                                        register = true,
+                                        onActivate = {
+                                            AudioUtil.playCancel(context)
+                                            onClose()
+                                        }
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.dialog_cancel),
+                                    tint = scheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        // Bento Widgets Scrollable Container
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(scrollState),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
                         // Bento Row 1: Network & Bluetooth
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -383,6 +404,7 @@ internal fun ZXGameSpaceQuickSettingsOverlay(
                 }
             }
         }
+    }
     }
 }
 
