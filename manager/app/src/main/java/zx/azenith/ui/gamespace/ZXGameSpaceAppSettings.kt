@@ -147,7 +147,17 @@ import zx.azenith.ui.component.MediaBannerRenderer
 import zx.azenith.ui.component.ZXDropDownMenu
 import zx.azenith.ui.component.ZXDropDownState
 import zx.azenith.ui.component.ZenithSlider
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import zx.azenith.ui.component.GamepadFocusNav
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.rememberZXDropDownState
 import zx.azenith.ui.component.zxDropDownAnchor
@@ -197,6 +207,15 @@ internal fun ZXGameSpaceAppSettingsOverlay(
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
+    val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+
+    val masterRequester = remember { FocusRequester() }
+    val launchRequester = remember { FocusRequester() }
+    val infoRequester = remember { FocusRequester() }
+    val rightPaneRequester = remember { FocusRequester() }
+    var lastLeftRequester by remember { mutableStateOf<FocusRequester?>(null) }
+    var rightPaneHasFocus by remember { mutableStateOf(false) }
 
     var activePkg by remember { mutableStateOf(packageName) }
     if (packageName != null) {
@@ -212,7 +231,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
     GameSpacePopupContainer(
         visible = visible,
         name = "AppSettings",
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        firstFocusRequester = masterRequester
     ) {
     // Edge-to-edge stationary scrim: smoothly dims and blurs underlying UI and prevents tap-through
     AnimatedVisibility(
@@ -354,6 +374,31 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                         modifier = Modifier
                             .width(264.dp)
                             .fillMaxHeight()
+                            .focusGroup()
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown &&
+                                    event.nativeKeyEvent.repeatCount == 0 &&
+                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT &&
+                                    localMasterOn
+                                ) {
+                                    scope.launch {
+                                        val moved = runCatching {
+                                            focusManager.moveFocus(FocusDirection.Right)
+                                        }.getOrDefault(false)
+                                        if (!moved || !rightPaneHasFocus) {
+                                            val gotPane = runCatching { rightPaneRequester.requestFocus() }.getOrDefault(false)
+                                            if (gotPane) {
+                                                runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
+                                                    runCatching { focusManager.moveFocus(FocusDirection.Down) }.getOrDefault(false) ||
+                                                    runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
+                                            }
+                                        }
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
                     ) {
                         Column(
                             modifier = Modifier
@@ -374,7 +419,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                         TopBarIconButton(
                                             icon = Icons.Rounded.KeyboardArrowDown,
                                             contentDescription = stringResource(R.string.cd_back),
-                                            onClick = onClose
+                                            onClick = onClose,
+                                            gamepadFocusable = false
                                         )
                                         Text(
                                             text = stringResource(R.string.app_settings_title),
@@ -491,12 +537,15 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                     contentColor = if (localMasterOn) scheme.onPrimaryContainer else scheme.onSurface,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .focusRequester(masterRequester)
+                                        .onFocusChanged { if (it.isFocused) lastLeftRequester = masterRequester }
                                         .gamepadFocusOutline(
                                             shape = masterShape,
                                             register = true,
                                             onActivate = toggleMaster
                                         )
                                         .clip(masterShape)
+                                        .focusProperties { canFocus = false }
                                         .clickable(onClick = toggleMaster)
                                 ) {
                                     Row(
@@ -562,12 +611,15 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(44.dp)
+                                        .focusRequester(launchRequester)
+                                        .onFocusChanged { if (it.isFocused) lastLeftRequester = launchRequester }
                                         .gamepadFocusOutline(
                                             shape = launchShape,
                                             register = true,
                                             onActivate = doLaunch
                                         )
                                         .clip(launchShape)
+                                        .focusProperties { canFocus = false }
                                         .clickable(onClick = doLaunch)
                                 ) {
                                     Row(
@@ -605,12 +657,15 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                     contentColor = scheme.onSecondaryContainer,
                                     modifier = Modifier
                                         .size(44.dp)
+                                        .focusRequester(infoRequester)
+                                        .onFocusChanged { if (it.isFocused) lastLeftRequester = infoRequester }
                                         .gamepadFocusOutline(
                                             shape = infoShape,
                                             register = true,
                                             onActivate = openInfo
                                         )
                                         .clip(infoShape)
+                                        .focusProperties { canFocus = false }
                                         .clickable(onClick = openInfo)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
@@ -633,6 +688,23 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
+                            .focusRequester(rightPaneRequester)
+                            .onFocusChanged { rightPaneHasFocus = it.hasFocus }
+                            .focusGroup()
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown &&
+                                    event.nativeKeyEvent.repeatCount == 0 &&
+                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT &&
+                                    !GamepadFocusNav.focusedSlider &&
+                                    !zx.azenith.ui.component.ZXDropDownNav.isActive
+                                ) {
+                                    val target = lastLeftRequester ?: masterRequester
+                                    runCatching { target.requestFocus() }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
                     ) {
                         AnimatedContent(
                             targetState = localMasterOn,
@@ -1071,6 +1143,16 @@ internal fun ZXGameSpaceWallpaperOverlay(
     val scope = rememberCoroutineScope()
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
+    val focusManager = LocalFocusManager.current
+
+    val wpFirstRequester = remember { FocusRequester() }
+    val wpSecondRequester = remember { FocusRequester() }
+    val wpThirdRequester = remember { FocusRequester() }
+    val wpLaunchRequester = remember { FocusRequester() }
+    val wpInfoRequester = remember { FocusRequester() }
+    val wpRightPaneRequester = remember { FocusRequester() }
+    var lastWpLeftRequester by remember { mutableStateOf<FocusRequester?>(null) }
+    var wpRightPaneHasFocus by remember { mutableStateOf(false) }
 
     var activePkg by remember { mutableStateOf(packageName) }
     if (packageName != null) {
@@ -1080,7 +1162,8 @@ internal fun ZXGameSpaceWallpaperOverlay(
     GameSpacePopupContainer(
         visible = visible,
         name = "WallpaperSettings",
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        firstFocusRequester = wpFirstRequester
     ) {
     // Edge-to-edge stationary scrim: smoothly dims and blurs underlying UI and prevents tap-through
     AnimatedVisibility(
@@ -1234,6 +1317,30 @@ internal fun ZXGameSpaceWallpaperOverlay(
                         modifier = Modifier
                             .width(272.dp)
                             .fillMaxHeight()
+                            .focusGroup()
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown &&
+                                    event.nativeKeyEvent.repeatCount == 0 &&
+                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+                                ) {
+                                    scope.launch {
+                                        val moved = runCatching {
+                                            focusManager.moveFocus(FocusDirection.Right)
+                                        }.getOrDefault(false)
+                                        if (!moved || !wpRightPaneHasFocus) {
+                                            val gotPane = runCatching { wpRightPaneRequester.requestFocus() }.getOrDefault(false)
+                                            if (gotPane) {
+                                                runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
+                                                    runCatching { focusManager.moveFocus(FocusDirection.Down) }.getOrDefault(false) ||
+                                                    runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
+                                            }
+                                        }
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
                     ) {
                         Column(
                             modifier = Modifier
@@ -1260,7 +1367,8 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         TopBarIconButton(
                                             icon = Icons.Rounded.KeyboardArrowDown,
                                             contentDescription = stringResource(R.string.cd_back),
-                                            onClick = onClose
+                                            onClick = onClose,
+                                            gamepadFocusable = false
                                         )
                                         Text(
                                             text = if (isHome) "Home Wallpaper" else "Game Wallpaper",
@@ -1398,12 +1506,15 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         contentColor = if (isOverrideActive) scheme.onPrimaryContainer else scheme.onSurface,
                                         modifier = Modifier
                                             .fillMaxWidth()
+                                            .focusRequester(wpFirstRequester)
+                                            .onFocusChanged { if (it.isFocused) lastWpLeftRequester = wpFirstRequester }
                                             .gamepadFocusOutline(
                                                 shape = masterShape,
                                                 register = true,
                                                 onActivate = toggleCustomStage
                                             )
                                             .clip(masterShape)
+                                            .focusProperties { canFocus = false }
                                             .clickable(onClick = toggleCustomStage)
                                     ) {
                                         Row(
@@ -1474,18 +1585,22 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         }
                                     }
                                 }
+                                val showWpRequester = if (isHome) wpFirstRequester else wpSecondRequester
                                 Surface(
                                     shape = wallpaperToggleShape,
                                     color = if (isWallpaperEnabled) scheme.surfaceContainerHigh else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
                                     contentColor = scheme.onSurface,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .focusRequester(showWpRequester)
+                                        .onFocusChanged { if (it.isFocused) lastWpLeftRequester = showWpRequester }
                                         .gamepadFocusOutline(
                                             shape = wallpaperToggleShape,
                                             register = true,
                                             onActivate = toggleShowWallpaper
                                         )
                                         .clip(wallpaperToggleShape)
+                                        .focusProperties { canFocus = false }
                                         .clickable(onClick = toggleShowWallpaper)
                                 ) {
                                     Row(
@@ -1542,12 +1657,15 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         contentColor = scheme.onSurface,
                                         modifier = Modifier
                                             .fillMaxWidth()
+                                            .focusRequester(wpThirdRequester)
+                                            .onFocusChanged { if (it.isFocused) lastWpLeftRequester = wpThirdRequester }
                                             .gamepadFocusOutline(
                                                 shape = shapesToggleShape,
                                                 register = true,
                                                 onActivate = toggleFloatingShapes
                                             )
                                             .clip(shapesToggleShape)
+                                            .focusProperties { canFocus = false }
                                             .clickable(onClick = toggleFloatingShapes)
                                     ) {
                                         Row(
@@ -1610,12 +1728,15 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(42.dp)
+                                            .focusRequester(wpLaunchRequester)
+                                            .onFocusChanged { if (it.isFocused) lastWpLeftRequester = wpLaunchRequester }
                                             .gamepadFocusOutline(
                                                 shape = launchShape,
                                                 register = true,
                                                 onActivate = doWpLaunch
                                             )
                                             .clip(launchShape)
+                                            .focusProperties { canFocus = false }
                                             .clickable(onClick = doWpLaunch)
                                     ) {
                                         Row(
@@ -1653,12 +1774,15 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         contentColor = scheme.onSecondaryContainer,
                                         modifier = Modifier
                                             .size(42.dp)
+                                            .focusRequester(wpInfoRequester)
+                                            .onFocusChanged { if (it.isFocused) lastWpLeftRequester = wpInfoRequester }
                                             .gamepadFocusOutline(
                                                 shape = infoShape,
                                                 register = true,
                                                 onActivate = openWpInfo
                                             )
                                             .clip(infoShape)
+                                            .focusProperties { canFocus = false }
                                             .clickable(onClick = openWpInfo)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
@@ -1682,6 +1806,22 @@ internal fun ZXGameSpaceWallpaperOverlay(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
+                            .focusRequester(wpRightPaneRequester)
+                            .onFocusChanged { wpRightPaneHasFocus = it.hasFocus }
+                            .focusGroup()
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown &&
+                                    event.nativeKeyEvent.repeatCount == 0 &&
+                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT &&
+                                    !GamepadFocusNav.focusedSlider
+                                ) {
+                                    val target = lastWpLeftRequester ?: wpFirstRequester
+                                    runCatching { target.requestFocus() }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
                     ) {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),

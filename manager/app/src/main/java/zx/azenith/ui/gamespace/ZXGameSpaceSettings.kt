@@ -18,6 +18,7 @@ package zx.azenith.ui.gamespace
 
 import android.util.Log
 import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -31,6 +32,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -113,6 +115,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.GamepadFocusNav
 import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.LocalGamepadFocusEnabled
+import zx.azenith.ui.component.gamepadActivation
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.gamespace.settings.SettingsAboutPane
 import zx.azenith.ui.gamespace.settings.SettingsAppearancePane
@@ -271,6 +274,37 @@ internal fun ZXGameSpaceSettingsStage(
         }
     }
 
+    val enterRightPane: (SettingsSidebarTab?) -> Unit = { explicitTab ->
+        val pending = explicitTab ?: pendingFocusTab
+        if (pending != null && pending != selectedTab) {
+            Log.d("PAD", "gs settings category=$pending from=$selectedTab source=focusCommit")
+            onSelectTab(pending)
+        }
+        scope.launch {
+            withFrameNanos { }
+            val movedDirect = runCatching {
+                focusManager.moveFocus(FocusDirection.Right)
+            }.getOrDefault(false)
+            if (!movedDirect || !rightPaneHasFocus) {
+                val gotPane = runCatching { rightPaneRequester.requestFocus() }.getOrDefault(false)
+                if (gotPane) {
+                    runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
+                        runCatching { focusManager.moveFocus(FocusDirection.Down) }.getOrDefault(false) ||
+                        runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
+                }
+            }
+        }
+    }
+
+    // Circle / B while focus is inside the right pane returns focus to the
+    // currently selected sidebar item instead of exiting Settings.
+    BackHandler(enabled = rightPaneHasFocus) {
+        AudioUtil.playCancel(context)
+        val requester = sidebarTabRequesters[selectedTab]
+        val restored = requester != null && runCatching { requester.requestFocus() }.getOrDefault(false)
+        Log.d("PAD", "gs settings backToSidebar tab=$selectedTab restored=$restored")
+    }
+
     CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
     BoxWithConstraints(modifier = modifier) {
         val isCompactLandscape = maxWidth < 920.dp
@@ -294,25 +328,7 @@ internal fun ZXGameSpaceSettingsStage(
                             event.nativeKeyEvent.repeatCount == 0 &&
                             event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
                         ) {
-                            val pending = pendingFocusTab
-                            if (pending != null && pending != selectedTab) {
-                                Log.d("PAD", "gs settings category=$pending from=$selectedTab source=focusCommit")
-                                onSelectTab(pending)
-                            }
-                            scope.launch {
-                                withFrameNanos { }
-                                val movedDirect = runCatching {
-                                    focusManager.moveFocus(FocusDirection.Right)
-                                }.getOrDefault(false)
-                                if (!movedDirect || !rightPaneHasFocus) {
-                                    val gotPane = runCatching { rightPaneRequester.requestFocus() }.getOrDefault(false)
-                                    if (gotPane) {
-                                        runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
-                                            runCatching { focusManager.moveFocus(FocusDirection.Down) }.getOrDefault(false) ||
-                                            runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
-                                    }
-                                }
-                            }
+                            enterRightPane(null)
                             true
                         } else {
                             false
@@ -452,13 +468,17 @@ internal fun ZXGameSpaceSettingsStage(
                                                 GameSpaceHintState.clearFocus(tabHintOwner)
                                             }
                                         }
-                                        .gamepadFocusOutline(
-                                            shape = itemShape,
-                                            register = true,
-                                            onActivate = selectTabNow
-                                        )
+                                        // No focus outline ring on sidebar tabs: the animated
+                                        // selected-tab pill fill is the visual indicator, and
+                                        // Cross/A moves focus into the right pane's first control.
+                                        .gamepadActivation {
+                                            AudioUtil.playOk(context)
+                                            enterRightPane(tab)
+                                        }
+                                        .focusable()
                                         .clip(itemShape)
                                         .springPressBounce(pressedScale = 0.94f)
+                                        .focusProperties { canFocus = false }
                                         .clickable(onClick = selectTabNow)
                                 ) {
                                     if (isCompactLandscape) {
