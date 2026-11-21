@@ -24,14 +24,46 @@ on:
       - "azenithApplist.json"
       - "version"
       - "version_type"
+      - "compile_apk"
 
 concurrency:
   group: build
   cancel-in-progress: true
 
 jobs:
+  check-flag:
+    name: Check compile_apk Flag
+    runs-on: ubuntu-latest
+    outputs:
+      compile_apk: ${{ steps.flag.outputs.compile_apk }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          sparse-checkout: |
+            compile_apk
+          sparse-checkout-cone-mode: false
+
+      - name: Read compile_apk Flag
+        id: flag
+        run: |
+          if [ -f compile_apk ]; then
+            VAL=$(tr -d '\n\r ' < compile_apk | tr '[:upper:]' '[:lower:]')
+          else
+            VAL="false"
+          fi
+          if [ "$VAL" = "true" ]; then
+            echo "compile_apk=true" >> "$GITHUB_OUTPUT"
+            echo "compile_apk=true -> skipping full build workflow (handled by Test Build APK)"
+          else
+            echo "compile_apk=false" >> "$GITHUB_OUTPUT"
+            echo "compile_apk=false -> running full build workflow"
+          fi
+
   build-binder-resolver:
     name: Build Binder Resolver APK
+    needs: [check-flag]
+    if: needs.check-flag.outputs.compile_apk != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,6 +113,8 @@ jobs:
 
   build-preloadbin:
     name: Build Preload Binary
+    needs: [check-flag]
+    if: needs.check-flag.outputs.compile_apk != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -119,6 +153,8 @@ jobs:
 
   build-rust:
     name: Build ${{ matrix.name }}
+    needs: [check-flag]
+    if: needs.check-flag.outputs.compile_apk != 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -210,7 +246,8 @@ jobs:
 
   build-sysdaemon:
     name: Build AZenith Binder Monitor
-    needs: [build-binder-resolver]
+    needs: [check-flag, build-binder-resolver]
+    if: needs.check-flag.outputs.compile_apk != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -292,6 +329,8 @@ jobs:
 
   build-manager:
     name: Build Manager APK
+    needs: [check-flag]
+    if: needs.check-flag.outputs.compile_apk != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -380,7 +419,8 @@ jobs:
 
   package:
     name: Package Flashable Zip
-    needs: [build-preloadbin, build-rust, build-sysdaemon, build-manager]
+    needs: [check-flag, build-preloadbin, build-rust, build-sysdaemon, build-manager]
+    if: needs.check-flag.outputs.compile_apk != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
