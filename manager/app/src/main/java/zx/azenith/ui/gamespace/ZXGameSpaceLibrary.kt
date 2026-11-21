@@ -65,6 +65,7 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -305,6 +306,10 @@ private fun LibraryScopeButton(
     focusRequester: FocusRequester? = null
 ) {
     val scheme = MaterialTheme.colorScheme
+    val filterHintOwner = remember { Any() }
+    DisposableEffect(filterHintOwner) {
+        onDispose { GameSpaceHintState.clearFocus(filterHintOwner) }
+    }
     ToggleButton(
         checked = checked,
         onCheckedChange = { if (it) onClick() },
@@ -319,6 +324,10 @@ private fun LibraryScopeButton(
         modifier = Modifier
             .semantics { role = Role.RadioButton }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .onFocusChanged {
+                if (it.isFocused) GameSpaceHintState.setFocus(filterHintOwner, GameSpaceFocusKind.LibraryFilter)
+                else GameSpaceHintState.clearFocus(filterHintOwner)
+            }
             .gamepadFocusOutline(shape = CircleShape)
             .gamepadActivation(onClick)
     ) {
@@ -462,6 +471,10 @@ private fun LibraryAppTile(
     val engaged = { maxOf(press.value, lift.value) }
     val corner = { lerp(LIBRARY_REST_CORNER, LIBRARY_ENGAGED_CORNER, engaged().coerceIn(0f, 1f)) }
 
+    DisposableEffect(requester) {
+        onDispose { GameSpaceHintState.clearFocus(requester) }
+    }
+
     Box(
         modifier = modifier
             .graphicsLayer {
@@ -480,7 +493,12 @@ private fun LibraryAppTile(
             }
             .onFocusChanged {
                 focused = it.isFocused
-                if (it.isFocused) GamepadFocusNav.publishLastFocused(requester)
+                if (it.isFocused) {
+                    GamepadFocusNav.publishLastFocused(requester)
+                    GameSpaceHintState.setFocus(requester, GameSpaceFocusKind.LibraryTile)
+                } else {
+                    GameSpaceHintState.clearFocus(requester)
+                }
             }
             .focusRequester(requester)
             .gamepadActivation(onClick)

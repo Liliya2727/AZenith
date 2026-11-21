@@ -64,6 +64,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -74,6 +75,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -323,6 +325,10 @@ internal fun ZXGameSpaceSettingsStage(
                                 val itemShape = RoundedCornerShape(16.dp)
                                 val contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurfaceVariant
 
+                                val tabHintOwner = remember(tab) { Any() }
+                                DisposableEffect(tabHintOwner) {
+                                    onDispose { GameSpaceHintState.clearFocus(tabHintOwner) }
+                                }
                                 Surface(
                                     shape = itemShape,
                                     color = Color.Transparent,
@@ -335,6 +341,10 @@ internal fun ZXGameSpaceSettingsStage(
                                             if (tabPositions[tab]?.first != parentY || tabPositions[tab]?.second != height) {
                                                 tabPositions = tabPositions + (tab to (parentY to height))
                                             }
+                                        }
+                                        .onFocusChanged {
+                                            if (it.isFocused) GameSpaceHintState.setFocus(tabHintOwner, GameSpaceFocusKind.SettingsTab)
+                                            else GameSpaceHintState.clearFocus(tabHintOwner)
                                         }
                                         .gamepadFocusOutline(shape = itemShape, register = true)
                                         .clip(itemShape)

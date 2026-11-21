@@ -45,8 +45,8 @@ import zx.azenith.R
 import zx.azenith.ui.component.gamepadNotFocusable
 
 internal data class GameSpaceHintItem(
-    @DrawableRes val glyphRes: Int,
-    @StringRes val labelRes: Int,
+    @param:DrawableRes val glyphRes: Int,
+    @param:StringRes val labelRes: Int,
 )
 
 /**

@@ -241,6 +241,38 @@ fun ZXGameSpaceHub(
         if (activeEntry != RibbonEntry.Library) libraryExpanded = false
     }
 
+    val hintOwner = remember { Any() }
+    val hintScreen = when {
+        category == TopCategory.Settings -> GameSpaceScreenId.Settings
+        activeEntry == RibbonEntry.Welcome && homeExpanded -> GameSpaceScreenId.WelcomeExpanded
+        activeEntry == RibbonEntry.Welcome -> GameSpaceScreenId.Welcome
+        activeEntry is RibbonEntry.Game -> GameSpaceScreenId.Game
+        activeEntry == RibbonEntry.Library && libraryExpanded -> GameSpaceScreenId.LibraryExpanded
+        activeEntry == RibbonEntry.Library -> GameSpaceScreenId.Library
+        else -> GameSpaceScreenId.WrapToFirst
+    }
+    val hintOverlayOpen = introActive ||
+        exitPrompt ||
+        sidePanelPromptOpen ||
+        tuningPkg != null ||
+        wallpaperPkg != null ||
+        nowPlayingOpen ||
+        quickSettingsOpen ||
+        searchOpen
+
+    LaunchedEffect(hintScreen) {
+        GameSpaceHintState.setScreen(hintOwner, hintScreen)
+    }
+    LaunchedEffect(hintOverlayOpen) {
+        GameSpaceHintState.setOverlayOpen(hintOwner, hintOverlayOpen)
+    }
+    DisposableEffect(hintOwner) {
+        onDispose {
+            GameSpaceHintState.clearScreen(hintOwner)
+            GameSpaceHintState.clearOverlay(hintOwner)
+        }
+    }
+
     val clock = rememberClock()
     val battery = rememberBatteryState()
     val ramState = rememberRamState()

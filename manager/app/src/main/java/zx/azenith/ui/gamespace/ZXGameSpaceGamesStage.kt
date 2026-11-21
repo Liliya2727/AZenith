@@ -140,6 +140,7 @@ import zx.azenith.ui.util.saveMediaDirectly
 import zx.azenith.ui.util.TapHapticState
 import zx.azenith.ui.util.AudioUtil
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -458,10 +459,22 @@ internal fun ZXGameSpaceRibbonTile(
     val borderWidth = lerp(0.dp, 1.5.dp, selectionFraction)
     val tilePadding = lerp(0.dp, 3.dp, selectionFraction)
 
+    val tileHintOwner = remember { Any() }
+    DisposableEffect(tileHintOwner) {
+        onDispose { GameSpaceHintState.clearFocus(tileHintOwner) }
+    }
+
     Box(
         modifier = modifier
             .size(tileSize)
-            .onFocusChanged { if (it.isFocused) onFocus() }
+            .onFocusChanged {
+                if (it.isFocused) {
+                    GameSpaceHintState.setFocus(tileHintOwner, GameSpaceFocusKind.RibbonTile)
+                    onFocus()
+                } else {
+                    GameSpaceHintState.clearFocus(tileHintOwner)
+                }
+            }
             .gamepadFocusOutline(shape = outerShape, width = 2.dp)
             .clip(outerShape)
             .then(
@@ -2067,6 +2080,17 @@ internal fun GameHeroStage(
                 label = "PlayBtnTonal"
             )
 
+            val penHintOwner = remember { Any() }
+            val gearHintOwner = remember { Any() }
+            val playHintOwner = remember { Any() }
+            DisposableEffect(penHintOwner, gearHintOwner, playHintOwner) {
+                onDispose {
+                    GameSpaceHintState.clearFocus(penHintOwner)
+                    GameSpaceHintState.clearFocus(gearHintOwner)
+                    GameSpaceHintState.clearFocus(playHintOwner)
+                }
+            }
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -2087,7 +2111,11 @@ internal fun GameHeroStage(
                                 scaleX = penPageBounce.value
                                 scaleY = penPageBounce.value
                             }
-                            .onFocusChanged { penFocused = it.isFocused }
+                            .onFocusChanged {
+                                penFocused = it.isFocused
+                                if (it.isFocused) GameSpaceHintState.setFocus(penHintOwner, GameSpaceFocusKind.WallpaperButton)
+                                else GameSpaceHintState.clearFocus(penHintOwner)
+                            }
                             .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
                             .clip(CircleShape)
                             .clickable(onClick = onOpenWallpaperSettings)
@@ -2113,7 +2141,11 @@ internal fun GameHeroStage(
                                 scaleY = gearPageBounce.value
                                 rotationZ = gearRotation.value
                             }
-                            .onFocusChanged { gearFocused = it.isFocused }
+                            .onFocusChanged {
+                                gearFocused = it.isFocused
+                                if (it.isFocused) GameSpaceHintState.setFocus(gearHintOwner, GameSpaceFocusKind.AppSettingsButton)
+                                else GameSpaceHintState.clearFocus(gearHintOwner)
+                            }
                             .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
                             .clip(CircleShape)
                             .clickable(onClick = onOpenAppSettings)
@@ -2145,7 +2177,11 @@ internal fun GameHeroStage(
                             scaleY = combinedScale
                             transformOrigin = TransformOrigin.Center
                         }
-                        .onFocusChanged { playFocused = it.isFocused }
+                        .onFocusChanged {
+                            playFocused = it.isFocused
+                            if (it.isFocused) GameSpaceHintState.setFocus(playHintOwner, GameSpaceFocusKind.PlayButton)
+                            else GameSpaceHintState.clearFocus(playHintOwner)
+                        }
                         .gamepadFocusOutline(shape = playButtonShape, width = 3.dp)
                         .clip(playButtonShape)
                         .clickable(

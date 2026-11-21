@@ -87,6 +87,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -219,6 +220,9 @@ internal fun BentoTile(
     val engaged = { maxOf(press.value, lift.value) }
 
     val interactive = if (onClick != null) {
+        DisposableEffect(requester) {
+            onDispose { GameSpaceHintState.clearFocus(requester) }
+        }
         Modifier
             .onFocusChanged {
                 focused = it.isFocused
@@ -228,8 +232,10 @@ internal fun BentoTile(
                     // in GameSpace, the slight lift above is the focus cue. Read the
                     // click through updated state so a recomposition can't leave a stale one.
                     GamepadShortcuts.publishActivation(requester) { onClickState.value?.invoke() }
+                    GameSpaceHintState.setFocus(requester, GameSpaceFocusKind.BentoTile)
                 } else {
                     GamepadShortcuts.clearActivation(requester)
+                    GameSpaceHintState.clearFocus(requester)
                 }
             }
             .focusRequester(requester)
