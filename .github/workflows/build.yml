@@ -30,46 +30,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build AZenith
+  build-binder-resolver:
+    name: Build Binder Resolver APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
-      
-      - name: Verify Module
-        run: bash .github/scripts/verify.sh
-        
-      - name: Copy changelog file
-        run: bash .github/scripts/changelog.sh
 
-      - name: Determine Build Type
-        id: build_type
-        run: |
-          # Membaca isi file dan menghapus spasi/newline tersembunyi
-          V_TYPE=$(cat version_type | tr -d '\n\r ')
-          echo "V_TYPE=$V_TYPE" >> $GITHUB_ENV
-          echo "Build mode set to: $V_TYPE"
-  
-      - name: NDK Setup
-        uses: nttld/setup-ndk@v1.6.0
-        with:
-          ndk-version: r30
-         
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           java-version: "21"
           distribution: temurin
-          
+
+      - name: Cache Gradle (binder_resolver)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-binder-resolver-${{ hashFiles('binder_resolver/**/*.gradle*', 'binder_resolver/gradle/libs.versions.toml', 'binder_resolver/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-binder-resolver-
+
       - name: Build Binder Resolver APK
         working-directory: ./binder_resolver
         run: |
           chmod +x ./gradlew
           ./gradlew --no-daemon clean assembleRelease
-          
+
       - name: Stage Binder Resolver APK
         run: |
           APK=$(find binder_resolver/app/build/outputs/apk/release -name "*.apk" | head -n 1)
@@ -80,22 +71,34 @@ jobs:
           cp "$APK" sysdaemon/binder_resolver.apk
           ls -l sysdaemon/binder_resolver.apk
 
-      - name: Setup Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Upload Binder Resolver APK
+        uses: actions/upload-artifact@v7.0.1
         with:
-          targets: aarch64-linux-android, armv7-linux-androideabi
+          name: binder-resolver-apk
+          path: sysdaemon/binder_resolver.apk
+          retention-days: 1
+          if-no-files-found: error
 
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+  build-preloadbin:
+    name: Build Preload Binary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
 
-      - name: Compile Daemon
-        working-directory: ./archdaemon
+      - name: Determine Build Type
+        id: build_type
         run: |
-          if [ "$V_TYPE" == "experimental" ]; then
-            cargo ndk -t arm64-v8a -t armeabi-v7a build
-          else
-            cargo ndk -t arm64-v8a -t armeabi-v7a build --release
-          fi
+          V_TYPE=$(cat version_type | tr -d '\n\r ')
+          echo "V_TYPE=$V_TYPE" >> $GITHUB_ENV
+          echo "Build mode set to: $V_TYPE"
+
+      - name: NDK Setup
+        uses: nttld/setup-ndk@v1.6.0
+        with:
+          ndk-version: r30
 
       - name: Compile Preload Binary
         working-directory: ./preloadbin
@@ -106,8 +109,88 @@ jobs:
             ndk-build
           fi
 
-      - name: Build AZenith Thermalcore
-        working-directory: ./thermalcore
+      - name: Upload Preload Binary
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: preloadbin-libs
+          path: preloadbin/libs
+          retention-days: 1
+          if-no-files-found: error
+
+  build-rust:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Daemon
+            dir: archdaemon
+            bin: azenith-service
+          - name: AZenith Thermalcore
+            dir: thermalcore
+            bin: rianixia-thermalcore
+          - name: AZenith Profilesettings
+            dir: binprofiles
+            bin: azenith-profilesettings
+          - name: AZenith Utility
+            dir: binutils
+            bin: azenith-utilityconf
+          - name: AZenith Preferenced
+            dir: binpreferenced
+            bin: azenith-preferencedtweaks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Verify Module
+        run: bash .github/scripts/verify.sh
+
+      - name: Determine Build Type
+        id: build_type
+        run: |
+          V_TYPE=$(cat version_type | tr -d '\n\r ')
+          echo "V_TYPE=$V_TYPE" >> $GITHUB_ENV
+          if [ "$V_TYPE" == "experimental" ]; then
+            echo "RUST_PROFILE=debug" >> $GITHUB_ENV
+          else
+            echo "RUST_PROFILE=release" >> $GITHUB_ENV
+          fi
+          echo "Build mode set to: $V_TYPE"
+
+      - name: NDK Setup
+        uses: nttld/setup-ndk@v1.6.0
+        with:
+          ndk-version: r30
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi
+
+      - name: Cache Cargo (${{ matrix.dir }})
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cargo/bin/cargo-ndk
+            ${{ matrix.dir }}/target
+          key: ${{ runner.os }}-cargo-${{ matrix.dir }}-${{ hashFiles(format('{0}/Cargo.lock', matrix.dir), format('{0}/Cargo.toml', matrix.dir)) }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.dir }}-
+
+      - name: Install cargo-ndk
+        run: |
+          if ! command -v cargo-ndk >/dev/null 2>&1; then
+            cargo install cargo-ndk
+          fi
+
+      - name: Compile ${{ matrix.name }}
+        working-directory: ./${{ matrix.dir }}
         run: |
           if [ "$V_TYPE" == "experimental" ]; then
             cargo ndk -t arm64-v8a -t armeabi-v7a build
@@ -115,33 +198,79 @@ jobs:
             cargo ndk -t arm64-v8a -t armeabi-v7a build --release
           fi
 
-      - name: Compile AZenith Profilesettings
-        working-directory: ./binprofiles
+      - name: Upload ${{ matrix.name }} Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: rust-${{ matrix.dir }}
+          path: |
+            ${{ matrix.dir }}/target/aarch64-linux-android/${{ env.RUST_PROFILE }}/${{ matrix.bin }}
+            ${{ matrix.dir }}/target/armv7-linux-androideabi/${{ env.RUST_PROFILE }}/${{ matrix.bin }}
+          retention-days: 1
+          if-no-files-found: error
+
+  build-sysdaemon:
+    name: Build AZenith Binder Monitor
+    needs: [build-binder-resolver]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Verify Module
+        run: bash .github/scripts/verify.sh
+
+      - name: Determine Build Type
+        id: build_type
         run: |
+          V_TYPE=$(cat version_type | tr -d '\n\r ')
+          echo "V_TYPE=$V_TYPE" >> $GITHUB_ENV
           if [ "$V_TYPE" == "experimental" ]; then
-            cargo ndk -t arm64-v8a -t armeabi-v7a build
+            echo "RUST_PROFILE=debug" >> $GITHUB_ENV
           else
-            cargo ndk -t arm64-v8a -t armeabi-v7a build --release
+            echo "RUST_PROFILE=release" >> $GITHUB_ENV
+          fi
+          echo "Build mode set to: $V_TYPE"
+
+      - name: Download Binder Resolver APK
+        uses: actions/download-artifact@v4
+        with:
+          name: binder-resolver-apk
+          path: sysdaemon
+
+      - name: Verify Staged Binder Resolver APK
+        run: ls -l sysdaemon/binder_resolver.apk
+
+      - name: NDK Setup
+        uses: nttld/setup-ndk@v1.6.0
+        with:
+          ndk-version: r30
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi
+
+      - name: Cache Cargo (sysdaemon)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cargo/bin/cargo-ndk
+            sysdaemon/target
+          key: ${{ runner.os }}-cargo-sysdaemon-${{ hashFiles('sysdaemon/Cargo.lock', 'sysdaemon/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-sysdaemon-
+
+      - name: Install cargo-ndk
+        run: |
+          if ! command -v cargo-ndk >/dev/null 2>&1; then
+            cargo install cargo-ndk
           fi
 
-      - name: Compile AZenith Utility
-        working-directory: ./binutils
-        run: |
-          if [ "$V_TYPE" == "experimental" ]; then
-            cargo ndk -t arm64-v8a -t armeabi-v7a build
-          else
-            cargo ndk -t arm64-v8a -t armeabi-v7a build --release
-          fi
-          
-      - name: Compile AZenith Preferenced
-        working-directory: ./binpreferenced
-        run: |
-          if [ "$V_TYPE" == "experimental" ]; then
-            cargo ndk -t arm64-v8a -t armeabi-v7a build
-          else
-            cargo ndk -t arm64-v8a -t armeabi-v7a build --release
-          fi
-          
       - name: Compile AZenith Binder Monitor
         working-directory: ./sysdaemon
         run: |
@@ -150,7 +279,55 @@ jobs:
           else
             cargo ndk -t arm64-v8a -t armeabi-v7a build --release
           fi
-          
+
+      - name: Upload AZenith Binder Monitor Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: rust-sysdaemon
+          path: |
+            sysdaemon/target/aarch64-linux-android/${{ env.RUST_PROFILE }}/azenith-appmonitoring
+            sysdaemon/target/armv7-linux-androideabi/${{ env.RUST_PROFILE }}/azenith-appmonitoring
+          retention-days: 1
+          if-no-files-found: error
+
+  build-manager:
+    name: Build Manager APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Verify Module
+        run: bash .github/scripts/verify.sh
+
+      - name: Copy changelog file
+        run: bash .github/scripts/changelog.sh
+
+      - name: Determine Build Type
+        id: build_type
+        run: |
+          V_TYPE=$(cat version_type | tr -d '\n\r ')
+          echo "V_TYPE=$V_TYPE" >> $GITHUB_ENV
+          echo "Build mode set to: $V_TYPE"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: temurin
+
+      - name: Cache Gradle (manager)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-manager-${{ hashFiles('manager/**/*.gradle*', 'manager/gradle/libs.versions.toml', 'manager/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-manager-
+
       - name: Decode keystore
         env:
           KEYSTORE: ${{ secrets.KEYSTORE }}
@@ -200,6 +377,81 @@ jobs:
           for i in sorted(z.infolist(), key=lambda x: -x.compress_size)[:30]:
               print(f'APK_REPORT entry packed={i.compress_size} stored={i.file_size} {i.filename}')
           EOF
+
+  package:
+    name: Package Flashable Zip
+    needs: [build-preloadbin, build-rust, build-sysdaemon, build-manager]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Determine Build Type
+        id: build_type
+        run: |
+          V_TYPE=$(cat version_type | tr -d '\n\r ')
+          echo "V_TYPE=$V_TYPE" >> $GITHUB_ENV
+          if [ "$V_TYPE" == "experimental" ]; then
+            echo "APK_SUBDIR=debug" >> $GITHUB_ENV
+          else
+            echo "APK_SUBDIR=release" >> $GITHUB_ENV
+          fi
+          echo "Build mode set to: $V_TYPE"
+
+      - name: Download Preload Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: preloadbin-libs
+          path: preloadbin/libs
+
+      - name: Download Daemon
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-archdaemon
+          path: archdaemon/target
+
+      - name: Download Thermalcore
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-thermalcore
+          path: thermalcore/target
+
+      - name: Download Profilesettings
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binprofiles
+          path: binprofiles/target
+
+      - name: Download Utility
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binutils
+          path: binutils/target
+
+      - name: Download Preferenced
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binpreferenced
+          path: binpreferenced/target
+
+      - name: Download Binder Monitor
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-sysdaemon
+          path: sysdaemon/target
+
+      - name: Download Manager APK
+        uses: actions/download-artifact@v4
+        with:
+          name: azenith-apk
+          path: manager/app/build/outputs/apk/${{ env.APK_SUBDIR }}
+
+      - name: Restore Executable Permissions
+        run: |
+          find preloadbin/libs -type f -exec chmod +x {} +
+          find archdaemon/target thermalcore/target binprofiles/target binutils/target binpreferenced/target sysdaemon/target -type f -exec chmod +x {} +
 
       - name: Compile Flashable Zip
         id: compileZip
