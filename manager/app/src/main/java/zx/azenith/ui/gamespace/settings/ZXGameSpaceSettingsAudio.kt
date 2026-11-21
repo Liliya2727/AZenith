@@ -18,6 +18,7 @@ package zx.azenith.ui.gamespace.settings
 
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -43,6 +44,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -93,6 +95,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -101,6 +104,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -131,6 +135,8 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.gamespace.GameSpaceInputSource
+import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.gamespace.SettingsActionCard
 import zx.azenith.ui.gamespace.SettingsSwitchCard
 import zx.azenith.ui.util.AudioUtil
@@ -190,6 +196,52 @@ internal fun SettingsAudioPane(
     val scheme = MaterialTheme.colorScheme
 
     var currentSubTab by remember { mutableStateOf(AudioSubTab.Main) }
+    var previousSubTab by remember { mutableStateOf(AudioSubTab.Main) }
+    val sfxCardRequester = remember { FocusRequester() }
+    val bgmCardRequester = remember { FocusRequester() }
+    val subTabPaneRequesters = remember { AudioSubTab.entries.associateWith { FocusRequester() } }
+    val subTabOverlayToken = remember { Any() }
+
+    DisposableEffect(currentSubTab) {
+        if (currentSubTab != AudioSubTab.Main) {
+            GameSpaceOverlayState.acquire(subTabOverlayToken, "Audio:$currentSubTab")
+        }
+        onDispose {
+            GameSpaceOverlayState.release(subTabOverlayToken)
+        }
+    }
+
+    LaunchedEffect(currentSubTab) {
+        if (currentSubTab != AudioSubTab.Main) {
+            if (GameSpaceInputSource.isGamepadLast) {
+                val targetRequester = subTabPaneRequesters.getValue(currentSubTab)
+                var seeded = false
+                for (attempt in 1..12) {
+                    withFrameNanos { }
+                    seeded = runCatching { targetRequester.requestFocus() }.getOrDefault(false)
+                    if (seeded) break
+                }
+                Log.d("PAD", "gs audio subTab=$currentSubTab seeded=$seeded")
+            }
+        } else if (previousSubTab != AudioSubTab.Main) {
+            if (GameSpaceInputSource.isGamepadLast) {
+                val originRequester = if (previousSubTab == AudioSubTab.AdvancedSoundEffects) {
+                    sfxCardRequester
+                } else {
+                    bgmCardRequester
+                }
+                var restored = false
+                for (attempt in 1..12) {
+                    withFrameNanos { }
+                    restored = runCatching { originRequester.requestFocus() }.getOrDefault(false)
+                    if (restored) break
+                }
+                Log.d("PAD", "gs audio restoreOrigin from=$previousSubTab restored=$restored")
+            }
+        }
+        previousSubTab = currentSubTab
+    }
+
     BackHandler(enabled = currentSubTab != AudioSubTab.Main) {
         AudioUtil.playCancel(context)
         currentSubTab = AudioSubTab.Main
@@ -240,55 +292,70 @@ internal fun SettingsAudioPane(
         modifier = modifier.fillMaxSize(),
         label = "AudioSubTabTransition"
     ) { subTab ->
-        when (subTab) {
-            AudioSubTab.Main -> {
-                AudioMainSubPane(
-                    soundEffectsEnabled = uiState.soundEffects,
-                    onSoundEffectsToggle = { settingsViewModel.setSoundEffects(it) },
-                    bgmEnabled = bgmEnabled,
-                    onBgmToggle = { BgmManager.setEnabled(context, it) },
-                    bgmVolume = bgmVolume,
-                    currentTrack = currentTrack,
-                    currentAlbumArt = currentAlbumArt,
-                    playbackPositionMs = playbackPositionMs,
-                    isPlaying = isPlaying,
-                    playlistSize = playlist.size,
-                    onOpenAdvancedSfx = {
-                        AudioUtil.playOk(context)
-                        currentSubTab = AudioSubTab.AdvancedSoundEffects
-                    },
-                    onOpenAdvancedBgm = {
-                        AudioUtil.playOk(context)
-                        currentSubTab = AudioSubTab.AdvancedBgm
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRequester(subTabPaneRequesters.getValue(subTab))
+                .focusGroup()
+                .focusProperties {
+                    canFocus = (subTab == currentSubTab)
+                    if (subTab != AudioSubTab.Main) {
+                        onExit = { cancelFocusChange() }
                     }
-                )
-            }
-            AudioSubTab.AdvancedSoundEffects -> {
-                AudioAdvancedSoundEffectsSubPane(
-                    onBackClick = {
-                        AudioUtil.playCancel(context)
-                        currentSubTab = AudioSubTab.Main
-                    }
-                )
-            }
-            AudioSubTab.AdvancedBgm -> {
-                AudioAdvancedBgmSubPane(
-                    nowPlayingEnabled = nowPlayingEnabled,
-                    onNowPlayingToggle = { BgmManager.setNowPlayingEnabled(context, it) },
-                    bgmVolume = bgmVolume,
-                    stagedTracks = stagedTracks,
-                    playlist = playlist,
-                    currentTrack = currentTrack,
-                    isPlaying = isPlaying,
-                    isShuffleEnabled = isShuffleEnabled,
-                    onAddMusicClick = {
-                        audioPickerLauncher.launch(arrayOf("audio/*", "application/ogg"))
-                    },
-                    onBackClick = {
-                        AudioUtil.playCancel(context)
-                        currentSubTab = AudioSubTab.Main
-                    }
-                )
+                }
+        ) {
+            when (subTab) {
+                AudioSubTab.Main -> {
+                    AudioMainSubPane(
+                        soundEffectsEnabled = uiState.soundEffects,
+                        onSoundEffectsToggle = { settingsViewModel.setSoundEffects(it) },
+                        bgmEnabled = bgmEnabled,
+                        onBgmToggle = { BgmManager.setEnabled(context, it) },
+                        bgmVolume = bgmVolume,
+                        currentTrack = currentTrack,
+                        currentAlbumArt = currentAlbumArt,
+                        playbackPositionMs = playbackPositionMs,
+                        isPlaying = isPlaying,
+                        playlistSize = playlist.size,
+                        sfxCardRequester = sfxCardRequester,
+                        bgmCardRequester = bgmCardRequester,
+                        onOpenAdvancedSfx = {
+                            AudioUtil.playOk(context)
+                            currentSubTab = AudioSubTab.AdvancedSoundEffects
+                        },
+                        onOpenAdvancedBgm = {
+                            AudioUtil.playOk(context)
+                            currentSubTab = AudioSubTab.AdvancedBgm
+                        }
+                    )
+                }
+                AudioSubTab.AdvancedSoundEffects -> {
+                    AudioAdvancedSoundEffectsSubPane(
+                        onBackClick = {
+                            AudioUtil.playCancel(context)
+                            currentSubTab = AudioSubTab.Main
+                        }
+                    )
+                }
+                AudioSubTab.AdvancedBgm -> {
+                    AudioAdvancedBgmSubPane(
+                        nowPlayingEnabled = nowPlayingEnabled,
+                        onNowPlayingToggle = { BgmManager.setNowPlayingEnabled(context, it) },
+                        bgmVolume = bgmVolume,
+                        stagedTracks = stagedTracks,
+                        playlist = playlist,
+                        currentTrack = currentTrack,
+                        isPlaying = isPlaying,
+                        isShuffleEnabled = isShuffleEnabled,
+                        onAddMusicClick = {
+                            audioPickerLauncher.launch(arrayOf("audio/*", "application/ogg"))
+                        },
+                        onBackClick = {
+                            AudioUtil.playCancel(context)
+                            currentSubTab = AudioSubTab.Main
+                        }
+                    )
+                }
             }
         }
     }
@@ -353,6 +420,8 @@ private fun AudioMainSubPane(
     playbackPositionMs: Long,
     isPlaying: Boolean,
     playlistSize: Int,
+    sfxCardRequester: FocusRequester,
+    bgmCardRequester: FocusRequester,
     onOpenAdvancedSfx: () -> Unit,
     onOpenAdvancedBgm: () -> Unit
 ) {
@@ -460,6 +529,7 @@ private fun AudioMainSubPane(
                         title = stringResource(R.string.sound_effects_advanced),
                         summary = stringResource(R.string.sound_effects_advanced_desc),
                         onClick = onOpenAdvancedSfx,
+                        focusRequester = sfxCardRequester,
                         shape = blockBottomShape
                     )
                 }
@@ -542,6 +612,7 @@ private fun AudioMainSubPane(
                         title = stringResource(R.string.bgm_advanced),
                         summary = stringResource(R.string.bgm_advanced_desc),
                         onClick = onOpenAdvancedBgm,
+                        focusRequester = bgmCardRequester,
                         shape = blockBottomShape
                     )
                 }
@@ -726,18 +797,24 @@ private fun AudioAdvancedBgmSubPane(
 
         if (playlist.size > 1 || playlist.any { !it.isDefault } || stagedTracks.isNotEmpty()) {
             val resetBtnShape = RoundedCornerShape(14.dp)
+            val resetPlaylistAction = {
+                AudioUtil.playOk(context)
+                BgmManager.resetPlaylistToDefault(context)
+            }
             Surface(
                 shape = resetBtnShape,
                 color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                 contentColor = scheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .gamepadFocusOutline(shape = resetBtnShape, register = true)
+                    .gamepadFocusOutline(
+                        shape = resetBtnShape,
+                        register = true,
+                        onActivate = resetPlaylistAction
+                    )
                     .clip(resetBtnShape)
-                    .clickable {
-                        AudioUtil.playOk(context)
-                        BgmManager.resetPlaylistToDefault(context)
-                    }
+                    .focusProperties { canFocus = false }
+                    .clickable(onClick = resetPlaylistAction)
             ) {
                 Row(
                     modifier = Modifier
@@ -835,7 +912,6 @@ private fun VolumeSliderCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .gamepadFocusOutline(shape = shape, register = true)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -929,7 +1005,6 @@ private fun AudioMiniPlayerBar(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .gamepadFocusOutline(shape = shape, register = true)
     ) {
         Row(
             modifier = Modifier
@@ -1031,8 +1106,13 @@ private fun AudioMiniPlayerBar(
                         contentColor = scheme.onSurfaceVariant,
                         modifier = Modifier
                             .size(32.dp)
+                            .gamepadFocusOutline(
+                                shape = prevShape,
+                                register = true,
+                                onActivate = onPrevClick
+                            )
                             .clip(prevShape)
-                            .gamepadFocusOutline(shape = prevShape, register = true)
+                            .focusProperties { canFocus = false }
                             .clickable(onClick = onPrevClick)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -1052,8 +1132,13 @@ private fun AudioMiniPlayerBar(
                     contentColor = scheme.onPrimary,
                     modifier = Modifier
                         .size(34.dp)
+                        .gamepadFocusOutline(
+                            shape = playShape,
+                            register = true,
+                            onActivate = onTogglePlayClick
+                        )
                         .clip(playShape)
-                        .gamepadFocusOutline(shape = playShape, register = true)
+                        .focusProperties { canFocus = false }
                         .clickable(onClick = onTogglePlayClick)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -1073,8 +1158,13 @@ private fun AudioMiniPlayerBar(
                         contentColor = scheme.onSurfaceVariant,
                         modifier = Modifier
                             .size(32.dp)
+                            .gamepadFocusOutline(
+                                shape = nextShape,
+                                register = true,
+                                onActivate = onNextClick
+                            )
                             .clip(nextShape)
-                            .gamepadFocusOutline(shape = nextShape, register = true)
+                            .focusProperties { canFocus = false }
                             .clickable(onClick = onNextClick)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -1161,7 +1251,6 @@ private fun BgmPlaylistStagingSection(
                         color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                         contentColor = scheme.onSurface,
                         modifier = cardModifier
-                            .gamepadFocusOutline(shape = stagingCardShape, register = true)
                     ) {
                         Column(
                             modifier = Modifier
@@ -1229,24 +1318,30 @@ private fun BgmPlaylistStagingSection(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     val restoreAllShape = RoundedCornerShape(12.dp)
+                                    val restoreAllAction = {
+                                        AudioUtil.playOk(context)
+                                        val allStaged = stagedTracks.toList()
+                                        allStaged.forEach { track ->
+                                            BgmManager.restoreFromStaging(context, track.id)
+                                        }
+                                        if (playlist.size + allStaged.size >= 3) {
+                                            playlistExpanded = true
+                                        }
+                                    }
                                     Surface(
                                         shape = restoreAllShape,
                                         color = scheme.tertiaryContainer,
                                         contentColor = scheme.onTertiaryContainer,
                                         modifier = Modifier
                                             .weight(1f)
-                                            .gamepadFocusOutline(shape = restoreAllShape, register = true)
+                                            .gamepadFocusOutline(
+                                                shape = restoreAllShape,
+                                                register = true,
+                                                onActivate = restoreAllAction
+                                            )
                                             .clip(restoreAllShape)
-                                            .clickable {
-                                                AudioUtil.playOk(context)
-                                                val allStaged = stagedTracks.toList()
-                                                allStaged.forEach { track ->
-                                                    BgmManager.restoreFromStaging(context, track.id)
-                                                }
-                                                if (playlist.size + allStaged.size >= 3) {
-                                                    playlistExpanded = true
-                                                }
-                                            }
+                                            .focusProperties { canFocus = false }
+                                            .clickable(onClick = restoreAllAction)
                                     ) {
                                         Row(
                                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -1268,20 +1363,26 @@ private fun BgmPlaylistStagingSection(
                                     }
 
                                     val clearAllShape = RoundedCornerShape(12.dp)
+                                    val clearAllAction = {
+                                        val toDelete = stagedTracks.toList()
+                                        toDelete.forEach { track ->
+                                            BgmManager.deletePermanently(context, track.id)
+                                        }
+                                    }
                                     Surface(
                                         shape = clearAllShape,
                                         color = scheme.surfaceContainerHighest,
                                         contentColor = scheme.error.copy(alpha = 0.85f),
                                         modifier = Modifier
                                             .weight(1f)
-                                            .gamepadFocusOutline(shape = clearAllShape, register = true)
+                                            .gamepadFocusOutline(
+                                                shape = clearAllShape,
+                                                register = true,
+                                                onActivate = clearAllAction
+                                            )
                                             .clip(clearAllShape)
-                                            .clickable {
-                                                val toDelete = stagedTracks.toList()
-                                                toDelete.forEach { track ->
-                                                    BgmManager.deletePermanently(context, track.id)
-                                                }
-                                            }
+                                            .focusProperties { canFocus = false }
+                                            .clickable(onClick = clearAllAction)
                                     ) {
                                         Row(
                                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -1365,7 +1466,6 @@ private fun BgmPlaylistStagingSection(
                                                 contentColor = trackContentColor,
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .gamepadFocusOutline(shape = trackItemShape, register = true)
                                                     .clip(trackItemShape)
                                             ) {
                                                 Row(
@@ -1438,26 +1538,34 @@ private fun BgmPlaylistStagingSection(
                                                     }
 
                                                     val restoreShape = CircleShape
+                                                    val restoreTrackAction: () -> Unit = {
+                                                        if (!isExiting) {
+                                                            scope.launch {
+                                                                AudioUtil.playOk(context)
+                                                                exitingStagedTrackIds = exitingStagedTrackIds + track.id
+                                                                delay(320)
+                                                                BgmManager.restoreFromStaging(context, track.id)
+                                                                exitingStagedTrackIds = exitingStagedTrackIds - track.id
+                                                                if (playlist.size >= 3) {
+                                                                    playlistExpanded = true
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                     Surface(
                                                         shape = restoreShape,
                                                         color = scheme.primaryContainer,
                                                         contentColor = scheme.onPrimaryContainer,
                                                         modifier = Modifier
                                                             .size(32.dp)
-                                                            .gamepadFocusOutline(shape = restoreShape, register = true)
+                                                            .gamepadFocusOutline(
+                                                                shape = restoreShape,
+                                                                register = true,
+                                                                onActivate = restoreTrackAction
+                                                            )
                                                             .clip(restoreShape)
-                                                            .clickable(enabled = !isExiting) {
-                                                                scope.launch {
-                                                                    AudioUtil.playOk(context)
-                                                                    exitingStagedTrackIds = exitingStagedTrackIds + track.id
-                                                                    delay(320)
-                                                                    BgmManager.restoreFromStaging(context, track.id)
-                                                                    exitingStagedTrackIds = exitingStagedTrackIds - track.id
-                                                                    if (playlist.size >= 3) {
-                                                                        playlistExpanded = true
-                                                                    }
-                                                                }
-                                                            }
+                                                            .focusProperties { canFocus = false }
+                                                            .clickable(enabled = !isExiting, onClick = restoreTrackAction)
                                                     ) {
                                                         Box(contentAlignment = Alignment.Center) {
                                                             Icon(
@@ -1470,15 +1578,8 @@ private fun BgmPlaylistStagingSection(
 
                                                     if (!track.isDefault) {
                                                         val deleteShape = CircleShape
-                                                        Surface(
-                                                            shape = deleteShape,
-                                                            color = Color.Transparent,
-                                                            contentColor = scheme.error.copy(alpha = 0.8f),
-                                                            modifier = Modifier
-                                                                .size(32.dp)
-                                                                .gamepadFocusOutline(shape = deleteShape, register = true)
-                                                                .clip(deleteShape)
-                                                            .clickable(enabled = !isExiting) {
+                                                        val deleteTrackAction: () -> Unit = {
+                                                            if (!isExiting) {
                                                                 scope.launch {
                                                                     exitingStagedTrackIds = exitingStagedTrackIds + track.id
                                                                     delay(320)
@@ -1486,6 +1587,21 @@ private fun BgmPlaylistStagingSection(
                                                                     exitingStagedTrackIds = exitingStagedTrackIds - track.id
                                                                 }
                                                             }
+                                                        }
+                                                        Surface(
+                                                            shape = deleteShape,
+                                                            color = Color.Transparent,
+                                                            contentColor = scheme.error.copy(alpha = 0.8f),
+                                                            modifier = Modifier
+                                                                .size(32.dp)
+                                                                .gamepadFocusOutline(
+                                                                    shape = deleteShape,
+                                                                    register = true,
+                                                                    onActivate = deleteTrackAction
+                                                                )
+                                                                .clip(deleteShape)
+                                                                .focusProperties { canFocus = false }
+                                                                .clickable(enabled = !isExiting, onClick = deleteTrackAction)
                                                         ) {
                                                             Box(contentAlignment = Alignment.Center) {
                                                                 Icon(
@@ -1511,8 +1627,13 @@ private fun BgmPlaylistStagingSection(
                                     contentColor = scheme.primary,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .gamepadFocusOutline(shape = showMoreShape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = showMoreShape,
+                                            register = true,
+                                            onActivate = { stagingExpanded = !stagingExpanded }
+                                        )
                                         .clip(showMoreShape)
+                                        .focusProperties { canFocus = false }
                                         .clickable {
                                             stagingExpanded = !stagingExpanded
                                         }
@@ -1550,7 +1671,6 @@ private fun BgmPlaylistStagingSection(
                 color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                 contentColor = scheme.onSurface,
                 modifier = cardModifier
-                    .gamepadFocusOutline(shape = playlistCardShape, register = true)
             ) {
                 Column(
                     modifier = Modifier
@@ -1629,8 +1749,13 @@ private fun BgmPlaylistStagingSection(
                                 contentColor = if (isShuffleEnabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .gamepadFocusOutline(shape = shuffleBtnShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = shuffleBtnShape,
+                                        register = true,
+                                        onActivate = { BgmManager.toggleShuffle(context) }
+                                    )
                                     .clip(shuffleBtnShape)
+                                    .focusProperties { canFocus = false }
                                     .clickable {
                                         BgmManager.toggleShuffle(context)
                                     }
@@ -1661,8 +1786,13 @@ private fun BgmPlaylistStagingSection(
                                 contentColor = scheme.onPrimary,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .gamepadFocusOutline(shape = addBtnShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = addBtnShape,
+                                        register = true,
+                                        onActivate = onAddMusicClick
+                                    )
                                     .clip(addBtnShape)
+                                    .focusProperties { canFocus = false }
                                     .clickable(onClick = onAddMusicClick)
                             ) {
                                 Row(
@@ -1784,8 +1914,17 @@ private fun BgmPlaylistStagingSection(
                                             contentColor = trackContentColor,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .gamepadFocusOutline(shape = trackItemShape, register = true)
+                                                .gamepadFocusOutline(
+                                                    shape = trackItemShape,
+                                                    register = true,
+                                                    onActivate = {
+                                                        if (!isExiting) {
+                                                            BgmManager.selectTrack(context, track)
+                                                        }
+                                                    }
+                                                )
                                                 .clip(trackItemShape)
+                                                .focusProperties { canFocus = false }
                                                 .clickable(enabled = !isExiting) {
                                                     BgmManager.selectTrack(context, track)
                                                 }
@@ -1884,15 +2023,22 @@ private fun BgmPlaylistStagingSection(
 
                                                 if (playlist.size > 1 && realIndex in playlist.indices && !isExiting) {
                                                     if (realIndex > 0) {
+                                                        val moveUpAction = {
+                                                            BgmManager.moveTrack(context, realIndex, realIndex - 1)
+                                                        }
                                                         Surface(
                                                             shape = CircleShape,
                                                             color = Color.Transparent,
                                                             modifier = Modifier
                                                                 .size(28.dp)
+                                                                .gamepadFocusOutline(
+                                                                    shape = CircleShape,
+                                                                    register = true,
+                                                                    onActivate = moveUpAction
+                                                                )
                                                                 .clip(CircleShape)
-                                                                .clickable {
-                                                                    BgmManager.moveTrack(context, realIndex, realIndex - 1)
-                                                                }
+                                                                .focusProperties { canFocus = false }
+                                                                .clickable(onClick = moveUpAction)
                                                         ) {
                                                             Box(contentAlignment = Alignment.Center) {
                                                                 Icon(
@@ -1905,15 +2051,22 @@ private fun BgmPlaylistStagingSection(
                                                         }
                                                     }
                                                     if (realIndex < playlist.lastIndex) {
+                                                        val moveDownAction = {
+                                                            BgmManager.moveTrack(context, realIndex, realIndex + 1)
+                                                        }
                                                         Surface(
                                                             shape = CircleShape,
                                                             color = Color.Transparent,
                                                             modifier = Modifier
                                                                 .size(28.dp)
+                                                                .gamepadFocusOutline(
+                                                                    shape = CircleShape,
+                                                                    register = true,
+                                                                    onActivate = moveDownAction
+                                                                )
                                                                 .clip(CircleShape)
-                                                                .clickable {
-                                                                    BgmManager.moveTrack(context, realIndex, realIndex + 1)
-                                                                }
+                                                                .focusProperties { canFocus = false }
+                                                                .clickable(onClick = moveDownAction)
                                                         ) {
                                                             Box(contentAlignment = Alignment.Center) {
                                                                 Icon(
@@ -1928,22 +2081,30 @@ private fun BgmPlaylistStagingSection(
                                                 }
 
                                                 val deleteShape = CircleShape
+                                                val removeTrackAction: () -> Unit = {
+                                                    if (!isExiting) {
+                                                        scope.launch {
+                                                            exitingPlaylistTrackIds = exitingPlaylistTrackIds + track.id
+                                                            delay(320)
+                                                            BgmManager.removeTrack(context, track.id)
+                                                            exitingPlaylistTrackIds = exitingPlaylistTrackIds - track.id
+                                                        }
+                                                    }
+                                                }
                                                 Surface(
                                                     shape = deleteShape,
                                                     color = Color.Transparent,
                                                     contentColor = trackControlTint.copy(alpha = 0.9f),
                                                     modifier = Modifier
                                                         .size(32.dp)
-                                                        .gamepadFocusOutline(shape = deleteShape, register = true)
+                                                        .gamepadFocusOutline(
+                                                            shape = deleteShape,
+                                                            register = true,
+                                                            onActivate = removeTrackAction
+                                                        )
                                                         .clip(deleteShape)
-                                                        .clickable(enabled = !isExiting) {
-                                                            scope.launch {
-                                                                exitingPlaylistTrackIds = exitingPlaylistTrackIds + track.id
-                                                                delay(320)
-                                                                BgmManager.removeTrack(context, track.id)
-                                                                exitingPlaylistTrackIds = exitingPlaylistTrackIds - track.id
-                                                            }
-                                                        }
+                                                        .focusProperties { canFocus = false }
+                                                        .clickable(enabled = !isExiting, onClick = removeTrackAction)
                                                 ) {
                                                     Box(contentAlignment = Alignment.Center) {
                                                         Icon(
@@ -1968,8 +2129,13 @@ private fun BgmPlaylistStagingSection(
                                 contentColor = scheme.primary,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .gamepadFocusOutline(shape = showMoreShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = showMoreShape,
+                                        register = true,
+                                        onActivate = { playlistExpanded = !playlistExpanded }
+                                    )
                                     .clip(showMoreShape)
+                                    .focusProperties { canFocus = false }
                                     .clickable {
                                         playlistExpanded = !playlistExpanded
                                     }

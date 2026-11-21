@@ -23,6 +23,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -38,6 +40,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -101,6 +104,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -112,6 +116,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -121,6 +126,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
@@ -145,9 +153,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
 import androidx.compose.material3.HorizontalDivider
+import zx.azenith.ui.component.LocalGamepadFocusEnabled
+import zx.azenith.ui.component.RegisterGamepadActions
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.component.gamepadKeyWatch
 import zx.azenith.ui.gamespace.AdaptiveSettingsGrid
+import zx.azenith.ui.gamespace.GameSpaceInputSource
+import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.gamespace.SettingsActionCard
 import zx.azenith.ui.gamespace.SettingsSwitchCard
 import zx.azenith.ui.component.ZXDropDownMenu
@@ -225,6 +238,48 @@ internal fun SettingsTweaksPane(
 ) {
     val context = LocalContext.current
     var currentSubTab by remember { mutableStateOf(TweaksSubTab.Main) }
+    var previousSubTab by remember { mutableStateOf(TweaksSubTab.Main) }
+    val subTabCardRequesters = remember { TweaksSubTab.entries.associateWith { FocusRequester() } }
+    val subTabPaneRequesters = remember { TweaksSubTab.entries.associateWith { FocusRequester() } }
+    val subTabOverlayToken = remember { Any() }
+
+    DisposableEffect(currentSubTab) {
+        if (currentSubTab != TweaksSubTab.Main) {
+            GameSpaceOverlayState.acquire(subTabOverlayToken, "Tweaks:$currentSubTab")
+        }
+        onDispose {
+            GameSpaceOverlayState.release(subTabOverlayToken)
+        }
+    }
+
+    LaunchedEffect(currentSubTab) {
+        if (currentSubTab != TweaksSubTab.Main) {
+            if (GameSpaceInputSource.isGamepadLast) {
+                val targetRequester = subTabPaneRequesters.getValue(currentSubTab)
+                var seeded = false
+                for (attempt in 1..12) {
+                    withFrameNanos { }
+                    seeded = runCatching { targetRequester.requestFocus() }.getOrDefault(false)
+                    if (seeded) break
+                }
+                Log.d("PAD", "gs tweaks subTab=$currentSubTab seeded=$seeded")
+            }
+        } else if (previousSubTab != TweaksSubTab.Main) {
+            if (GameSpaceInputSource.isGamepadLast) {
+                val originRequester = subTabCardRequesters[previousSubTab]
+                var restored = false
+                if (originRequester != null) {
+                    for (attempt in 1..12) {
+                        withFrameNanos { }
+                        restored = runCatching { originRequester.requestFocus() }.getOrDefault(false)
+                        if (restored) break
+                    }
+                }
+                Log.d("PAD", "gs tweaks restoreOrigin from=$previousSubTab restored=$restored")
+            }
+        }
+        previousSubTab = currentSubTab
+    }
 
     LaunchedEffect(Unit) {
         if (!tweakViewModel.isUiLoaded) {
@@ -251,60 +306,74 @@ internal fun SettingsTweaksPane(
         modifier = modifier.fillMaxSize(),
         label = "TweaksSubTabTransition"
     ) { subTab ->
-        when (subTab) {
-            TweaksSubTab.Main -> {
-                TweaksMainSubPane(
-                    profile = profile,
-                    profileValue = profileValue,
-                    refreshHz = refreshHz,
-                    onApplyProfile = onApplyProfile,
-                    tweakViewModel = tweakViewModel,
-                    onNavigateToSubTab = { target ->
-                        AudioUtil.playOk(context)
-                        currentSubTab = target
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRequester(subTabPaneRequesters.getValue(subTab))
+                .focusGroup()
+                .focusProperties {
+                    canFocus = (subTab == currentSubTab)
+                    if (subTab != TweaksSubTab.Main) {
+                        onExit = { cancelFocusChange() }
                     }
-                )
-            }
-            TweaksSubTab.BypassCharging -> {
-                BypassChargingSubPane(
-                    onBackClick = {
-                        AudioUtil.playCancel(context)
-                        currentSubTab = TweaksSubTab.Main
-                    }
-                )
-            }
-            TweaksSubTab.Governors -> {
-                GovernorsSubPane(
-                    tweakViewModel = tweakViewModel,
-                    onBackClick = {
-                        AudioUtil.playCancel(context)
-                        currentSubTab = TweaksSubTab.Main
-                    }
-                )
-            }
-            TweaksSubTab.Preferenced -> {
-                PreferencedTweaksSubPane(
-                    onBackClick = {
-                        AudioUtil.playCancel(context)
-                        currentSubTab = TweaksSubTab.Main
-                    }
-                )
-            }
-            TweaksSubTab.FpsGo -> {
-                FpsGoSubPane(
-                    onBackClick = {
-                        AudioUtil.playCancel(context)
-                        currentSubTab = TweaksSubTab.Main
-                    }
-                )
-            }
-            TweaksSubTab.DisplayColor -> {
-                DisplayColorSubPane(
-                    onBackClick = {
-                        AudioUtil.playCancel(context)
-                        currentSubTab = TweaksSubTab.Main
-                    }
-                )
+                }
+        ) {
+            when (subTab) {
+                TweaksSubTab.Main -> {
+                    TweaksMainSubPane(
+                        profile = profile,
+                        profileValue = profileValue,
+                        refreshHz = refreshHz,
+                        onApplyProfile = onApplyProfile,
+                        tweakViewModel = tweakViewModel,
+                        subTabCardRequesters = subTabCardRequesters,
+                        onNavigateToSubTab = { target ->
+                            AudioUtil.playOk(context)
+                            currentSubTab = target
+                        }
+                    )
+                }
+                TweaksSubTab.BypassCharging -> {
+                    BypassChargingSubPane(
+                        onBackClick = {
+                            AudioUtil.playCancel(context)
+                            currentSubTab = TweaksSubTab.Main
+                        }
+                    )
+                }
+                TweaksSubTab.Governors -> {
+                    GovernorsSubPane(
+                        tweakViewModel = tweakViewModel,
+                        onBackClick = {
+                            AudioUtil.playCancel(context)
+                            currentSubTab = TweaksSubTab.Main
+                        }
+                    )
+                }
+                TweaksSubTab.Preferenced -> {
+                    PreferencedTweaksSubPane(
+                        onBackClick = {
+                            AudioUtil.playCancel(context)
+                            currentSubTab = TweaksSubTab.Main
+                        }
+                    )
+                }
+                TweaksSubTab.FpsGo -> {
+                    FpsGoSubPane(
+                        onBackClick = {
+                            AudioUtil.playCancel(context)
+                            currentSubTab = TweaksSubTab.Main
+                        }
+                    )
+                }
+                TweaksSubTab.DisplayColor -> {
+                    DisplayColorSubPane(
+                        onBackClick = {
+                            AudioUtil.playCancel(context)
+                            currentSubTab = TweaksSubTab.Main
+                        }
+                    )
+                }
             }
         }
     }
@@ -317,6 +386,7 @@ private fun TweaksMainSubPane(
     refreshHz: Int,
     onApplyProfile: (String) -> Unit,
     tweakViewModel: TweakViewModel,
+    subTabCardRequesters: Map<TweaksSubTab, FocusRequester>,
     onNavigateToSubTab: (TweaksSubTab) -> Unit
 ) {
     val context = LocalContext.current
@@ -542,6 +612,15 @@ private fun TweaksMainSubPane(
                                         label = "ProfileIconScale"
                                     )
 
+                                    val selectProfile = {
+                                        if (!isProfileApplying && currentTarget != value) {
+                                            AudioUtil.playOk(context)
+                                            pendingProfileValue = value
+                                            isProfileApplying = true
+                                            onApplyProfile(value)
+                                        }
+                                    }
+
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
@@ -553,17 +632,15 @@ private fun TweaksMainSubPane(
                                                     positions = positions + (value to (parentX to width))
                                                 }
                                             }
+                                            .gamepadFocusOutline(
+                                                shape = pillItemShape,
+                                                register = true,
+                                                onActivate = selectProfile
+                                            )
                                             .clip(pillItemShape)
                                             .springPressBounce(pressedScale = 0.95f)
-                                            .clickable {
-                                                if (!isProfileApplying && currentTarget != value) {
-                                                    AudioUtil.playOk(context)
-                                                    pendingProfileValue = value
-                                                    isProfileApplying = true
-                                                    onApplyProfile(value)
-                                                }
-                                            }
-                                            .gamepadFocusOutline(shape = pillItemShape, register = true),
+                                            .focusProperties { canFocus = false }
+                                            .clickable(onClick = selectProfile),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Row(
@@ -746,6 +823,7 @@ private fun TweaksMainSubPane(
                     summary = "Display surface color calibration and hardware saturation",
                     trailingBadge = "KCAL",
                     onClick = { onNavigateToSubTab(TweaksSubTab.DisplayColor) },
+                    focusRequester = subTabCardRequesters[TweaksSubTab.DisplayColor],
                     shape = blockBottomShape
                 )
             }
@@ -765,6 +843,7 @@ private fun TweaksMainSubPane(
                     summary = stringResource(R.string.bcharging_desc),
                     trailingBadge = if (bypassEnabled) "Active" else null,
                     onClick = { onNavigateToSubTab(TweaksSubTab.BypassCharging) },
+                    focusRequester = subTabCardRequesters[TweaksSubTab.BypassCharging],
                     shape = blockTopShape
                 )
 
@@ -773,6 +852,7 @@ private fun TweaksMainSubPane(
                     title = stringResource(R.string.gov_settings),
                     summary = stringResource(R.string.gov_settingsdesc),
                     onClick = { onNavigateToSubTab(TweaksSubTab.Governors) },
+                    focusRequester = subTabCardRequesters[TweaksSubTab.Governors],
                     shape = blockMiddleShape
                 )
 
@@ -781,6 +861,7 @@ private fun TweaksMainSubPane(
                     title = stringResource(R.string.prefs),
                     summary = stringResource(R.string.prefsdesc),
                     onClick = { onNavigateToSubTab(TweaksSubTab.Preferenced) },
+                    focusRequester = subTabCardRequesters[TweaksSubTab.Preferenced],
                     shape = if (isMediaTek) blockMiddleShape else blockBottomShape
                 )
 
@@ -791,6 +872,7 @@ private fun TweaksMainSubPane(
                         summary = stringResource(R.string.str_fpsgo_desc),
                         trailingBadge = "MediaTek",
                         onClick = { onNavigateToSubTab(TweaksSubTab.FpsGo) },
+                        focusRequester = subTabCardRequesters[TweaksSubTab.FpsGo],
                         shape = blockBottomShape
                     )
                 }
@@ -842,6 +924,7 @@ private fun BypassChargingSubPane(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val logScrollState = rememberScrollState()
+    RegisterGamepadActions(columnScrollState = scrollState)
 
     var bypassPath by remember { mutableStateOf("") }
     var bypassState by remember { mutableStateOf(false) }
@@ -1323,63 +1406,104 @@ private fun BypassChargingSubPane(
     // Found Working Node Confirmation Dialog
     foundWorkingNode?.let { node ->
         Dialog(onDismissRequest = { foundWorkingNode = null }) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = scheme.surfaceContainerHigh,
-                contentColor = scheme.onSurface,
-                tonalElevation = 6.dp,
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .clip(RoundedCornerShape(24.dp))
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.CheckCircle,
-                            contentDescription = null,
-                            tint = scheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Text(
-                            text = "Working Node Found",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onSurface
-                        )
+            val dialogToken = remember { Any() }
+            val applyRequester = remember { FocusRequester() }
+            DisposableEffect(Unit) {
+                GameSpaceOverlayState.acquire(dialogToken, "FoundWorkingNodeDialog")
+                onDispose {
+                    GameSpaceOverlayState.release(dialogToken)
+                }
+            }
+            LaunchedEffect(Unit) {
+                if (GameSpaceInputSource.isGamepadLast) {
+                    for (attempt in 1..12) {
+                        withFrameNanos { }
+                        if (runCatching { applyRequester.requestFocus() }.getOrDefault(false)) break
                     }
-                    Text(
-                        text = "Automated diagnostics confirmed cutoff control using node [$node]. Apply this node as the active hardware bypass target?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = scheme.onSurfaceVariant
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = { foundWorkingNode = null },
-                            colors = ButtonDefaults.textButtonColors()
-                        ) {
-                            Text("Dismiss", color = scheme.outline)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                bypassPath = node
-                                PropertyUtils.set("persist.sys.azenithconf.bypasspath", node)
-                                scope.launch(Dispatchers.IO) {
-                                    RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$node\n")
-                                }
+                }
+            }
+            val applyNodeAction = {
+                bypassPath = node
+                PropertyUtils.set("persist.sys.azenithconf.bypasspath", node)
+                scope.launch(Dispatchers.IO) {
+                    RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$node\n")
+                }
+                foundWorkingNode = null
+            }
+            CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = scheme.surfaceContainerHigh,
+                    contentColor = scheme.onSurface,
+                    tonalElevation = 6.dp,
+                    modifier = Modifier
+                        .fillMaxWidth(0.92f)
+                        .clip(RoundedCornerShape(24.dp))
+                        .gamepadKeyWatch()
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown &&
+                                (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                                 event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
+                            ) {
                                 foundWorkingNode = null
+                                true
+                            } else {
+                                false
                             }
+                        }
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Text("Apply Node")
+                            Icon(
+                                imageVector = Icons.Rounded.CheckCircle,
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = "Working Node Found",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
+                        }
+                        Text(
+                            text = "Automated diagnostics confirmed cutoff control using node [$node]. Apply this node as the active hardware bypass target?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = { foundWorkingNode = null },
+                                colors = ButtonDefaults.textButtonColors(),
+                                modifier = Modifier.gamepadFocusOutline(
+                                    shape = CircleShape,
+                                    onActivate = { foundWorkingNode = null }
+                                )
+                            ) {
+                                Text("Dismiss", color = scheme.outline)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = applyNodeAction,
+                                modifier = Modifier
+                                    .focusRequester(applyRequester)
+                                    .gamepadFocusOutline(
+                                        shape = CircleShape,
+                                        onActivate = applyNodeAction
+                                    )
+                            ) {
+                                Text("Apply Node")
+                            }
                         }
                     }
                 }
@@ -1399,6 +1523,7 @@ private fun GovernorsSubPane(
 ) {
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
+    RegisterGamepadActions(columnScrollState = scrollState)
 
     val defaultGovDropDown = rememberZXDropDownState()
     val performanceGovDropDown = rememberZXDropDownState()
@@ -1626,6 +1751,7 @@ private fun PreferencedTweaksSubPane(
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    RegisterGamepadActions(columnScrollState = scrollState)
 
     val socVendor = remember { getChipsetVendor(context) }
     val isMediaTek = socVendor == "mediatek"
@@ -1845,6 +1971,7 @@ private fun FpsGoSubPane(
     onBackClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    RegisterGamepadActions(columnScrollState = scrollState)
 
     var fpsgoState by remember { mutableStateOf(false) }
     var fpsgedState by remember { mutableStateOf(false) }
@@ -1928,6 +2055,7 @@ private fun DisplayColorSubPane(
 ) {
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
+    RegisterGamepadActions(columnScrollState = scrollState)
 
     var redVal by remember { mutableFloatStateOf(1000f) }
     var greenVal by remember { mutableFloatStateOf(1000f) }
@@ -2019,15 +2147,21 @@ private fun DisplayColorSubPane(
             ) {
                 ColorPreset.entries.forEach { preset ->
                     val isSelected = (selectedPreset ?: matchingPreset) == preset
+                    val presetShape = RoundedCornerShape(14.dp)
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = presetShape,
                         color = if (isSelected) scheme.primaryContainer else Color.Transparent,
                         contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
+                            .gamepadFocusOutline(
+                                shape = presetShape,
+                                register = true,
+                                onActivate = { onPresetSelected(preset) }
+                            )
+                            .clip(presetShape)
+                            .focusProperties { canFocus = false }
                             .clickable { onPresetSelected(preset) }
-                            .gamepadFocusOutline(shape = RoundedCornerShape(14.dp), register = true)
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
@@ -2215,7 +2349,6 @@ private fun FreqOffsetSliderCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .gamepadFocusOutline(shape = shape, register = true)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -2301,7 +2434,6 @@ private fun BypassThresholdSliderCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .gamepadFocusOutline(shape = shape, register = true)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

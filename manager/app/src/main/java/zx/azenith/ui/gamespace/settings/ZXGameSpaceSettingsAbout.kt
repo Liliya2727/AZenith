@@ -16,9 +16,12 @@
 
 package zx.azenith.ui.gamespace.settings
 
+import android.util.Log
+import android.view.KeyEvent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -54,17 +57,23 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -85,7 +94,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import zx.azenith.BuildConfig
 import zx.azenith.R
+import zx.azenith.ui.component.LocalGamepadFocusEnabled
+import zx.azenith.ui.component.RegisterGamepadActions
 import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.component.gamepadKeyWatch
+import zx.azenith.ui.gamespace.GameSpaceInputSource
+import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.gamespace.SettingsActionCard
 import zx.azenith.ui.gamespace.springPressBounce
 import zx.azenith.ui.util.AudioUtil
@@ -120,6 +134,31 @@ internal fun SettingsAboutPane(
     var showLibrariesDialog by remember { mutableStateOf(false) }
     var showChangelogDialog by remember { mutableStateOf(false) }
     var changelogText by remember { mutableStateOf("") }
+
+    val changelogRequester = remember { FocusRequester() }
+    val licensesRequester = remember { FocusRequester() }
+    val librariesRequester = remember { FocusRequester() }
+    var lastDialogOriginRequester by remember { mutableStateOf<FocusRequester?>(null) }
+    var wasAnyDialogOpen by remember { mutableStateOf(false) }
+    val anyDialogOpen = showLicensesDialog || showLibrariesDialog || showChangelogDialog
+
+    LaunchedEffect(anyDialogOpen) {
+        if (anyDialogOpen) {
+            wasAnyDialogOpen = true
+        } else if (wasAnyDialogOpen) {
+            wasAnyDialogOpen = false
+            val target = lastDialogOriginRequester
+            if (target != null && GameSpaceInputSource.isGamepadLast) {
+                for (attempt in 1..10) {
+                    withFrameNanos { }
+                    if (runCatching { target.requestFocus() }.getOrDefault(false)) {
+                        Log.d("PAD", "gs about restoreDialogOrigin attempt=$attempt")
+                        break
+                    }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(showChangelogDialog) {
         if (showChangelogDialog && changelogText.isEmpty()) {
@@ -213,6 +252,19 @@ internal fun SettingsAboutPane(
 
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val btnShape = RoundedCornerShape(16.dp)
+                    val openChangelog = {
+                        AudioUtil.playOk(context)
+                        lastDialogOriginRequester = changelogRequester
+                        showChangelogDialog = true
+                    }
+                    val openSupportGroup = {
+                        AudioUtil.playOk(context)
+                        uriHandler.openUri("https://t.me/ArchHavenDisc")
+                    }
+                    val openUpdateChannel = {
+                        AudioUtil.playOk(context)
+                        uriHandler.openUri("https://t.me/ZeshArch")
+                    }
                     if (maxWidth >= 600.dp) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -226,13 +278,16 @@ internal fun SettingsAboutPane(
                                 modifier = Modifier
                                     .weight(1f)
                                     .defaultMinSize(minHeight = 44.dp)
+                                    .focusRequester(changelogRequester)
                                     .springPressBounce()
-                                    .gamepadFocusOutline(shape = btnShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = btnShape,
+                                        register = true,
+                                        onActivate = openChangelog
+                                    )
                                     .clip(btnShape)
-                                    .clickable {
-                                        AudioUtil.playOk(context)
-                                        showChangelogDialog = true
-                                    }
+                                    .focusProperties { canFocus = false }
+                                    .clickable(onClick = openChangelog)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
@@ -262,12 +317,14 @@ internal fun SettingsAboutPane(
                                     .weight(1f)
                                     .defaultMinSize(minHeight = 44.dp)
                                     .springPressBounce()
-                                    .gamepadFocusOutline(shape = btnShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = btnShape,
+                                        register = true,
+                                        onActivate = openSupportGroup
+                                    )
                                     .clip(btnShape)
-                                    .clickable {
-                                        AudioUtil.playOk(context)
-                                        uriHandler.openUri("https://t.me/ArchHavenDisc")
-                                    }
+                                    .focusProperties { canFocus = false }
+                                    .clickable(onClick = openSupportGroup)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
@@ -298,12 +355,14 @@ internal fun SettingsAboutPane(
                                     .weight(1f)
                                     .defaultMinSize(minHeight = 44.dp)
                                     .springPressBounce()
-                                    .gamepadFocusOutline(shape = btnShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = btnShape,
+                                        register = true,
+                                        onActivate = openUpdateChannel
+                                    )
                                     .clip(btnShape)
-                                    .clickable {
-                                        AudioUtil.playOk(context)
-                                        uriHandler.openUri("https://t.me/ZeshArch")
-                                    }
+                                    .focusProperties { canFocus = false }
+                                    .clickable(onClick = openUpdateChannel)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
@@ -338,13 +397,16 @@ internal fun SettingsAboutPane(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .defaultMinSize(minHeight = 44.dp)
+                                    .focusRequester(changelogRequester)
                                     .springPressBounce()
-                                    .gamepadFocusOutline(shape = btnShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = btnShape,
+                                        register = true,
+                                        onActivate = openChangelog
+                                    )
                                     .clip(btnShape)
-                                    .clickable {
-                                        AudioUtil.playOk(context)
-                                        showChangelogDialog = true
-                                    }
+                                    .focusProperties { canFocus = false }
+                                    .clickable(onClick = openChangelog)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
@@ -379,12 +441,14 @@ internal fun SettingsAboutPane(
                                         .weight(1f)
                                         .defaultMinSize(minHeight = 42.dp)
                                         .springPressBounce()
-                                        .gamepadFocusOutline(shape = btnShape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = btnShape,
+                                            register = true,
+                                            onActivate = openSupportGroup
+                                        )
                                         .clip(btnShape)
-                                        .clickable {
-                                            AudioUtil.playOk(context)
-                                            uriHandler.openUri("https://t.me/ArchHavenDisc")
-                                        }
+                                        .focusProperties { canFocus = false }
+                                        .clickable(onClick = openSupportGroup)
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -415,12 +479,14 @@ internal fun SettingsAboutPane(
                                         .weight(1f)
                                         .defaultMinSize(minHeight = 42.dp)
                                         .springPressBounce()
-                                        .gamepadFocusOutline(shape = btnShape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = btnShape,
+                                            register = true,
+                                            onActivate = openUpdateChannel
+                                        )
                                         .clip(btnShape)
-                                        .clickable {
-                                            AudioUtil.playOk(context)
-                                            uriHandler.openUri("https://t.me/ZeshArch")
-                                        }
+                                        .focusProperties { canFocus = false }
+                                        .clickable(onClick = openUpdateChannel)
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -477,14 +543,22 @@ internal fun SettingsAboutPane(
                             title = stringResource(R.string.str_licenses),
                             summary = stringResource(R.string.str_apache_license_2),
                             trailingBadge = "Apache 2.0",
-                            onClick = { showLicensesDialog = true }
+                            focusRequester = licensesRequester,
+                            onClick = {
+                                lastDialogOriginRequester = licensesRequester
+                                showLicensesDialog = true
+                            }
                         )
 
                         SettingsActionCard(
                             icon = Icons.AutoMirrored.Rounded.LibraryBooks,
                             title = stringResource(R.string.str_libraries_used),
                             summary = stringResource(R.string.str_libraries_hint),
-                            onClick = { showLibrariesDialog = true }
+                            focusRequester = librariesRequester,
+                            onClick = {
+                                lastDialogOriginRequester = librariesRequester
+                                showLibrariesDialog = true
+                            }
                         )
 
                         SettingsActionCard(
@@ -560,14 +634,22 @@ internal fun SettingsAboutPane(
                             title = stringResource(R.string.str_licenses),
                             summary = stringResource(R.string.str_apache_license_2),
                             trailingBadge = "Apache 2.0",
-                            onClick = { showLicensesDialog = true }
+                            focusRequester = licensesRequester,
+                            onClick = {
+                                lastDialogOriginRequester = licensesRequester
+                                showLicensesDialog = true
+                            }
                         )
 
                         SettingsActionCard(
                             icon = Icons.AutoMirrored.Rounded.LibraryBooks,
                             title = stringResource(R.string.str_libraries_used),
                             summary = stringResource(R.string.str_libraries_hint),
-                            onClick = { showLibrariesDialog = true }
+                            focusRequester = librariesRequester,
+                            onClick = {
+                                lastDialogOriginRequester = librariesRequester
+                                showLibrariesDialog = true
+                            }
                         )
 
                         SettingsActionCard(
@@ -626,129 +708,186 @@ internal fun SettingsAboutPane(
     val isWideScreen = configuration.screenWidthDp >= 720
 
     if (showLicensesDialog) {
+        val licensesToken = remember { Any() }
+        val licensesFirstRequester = remember { FocusRequester() }
+        val licensesScrollState = rememberScrollState()
+        DisposableEffect(licensesToken) {
+            GameSpaceOverlayState.acquire(licensesToken, "AboutLicensesDialog")
+            onDispose {
+                GameSpaceOverlayState.release(licensesToken)
+            }
+        }
+        LaunchedEffect(Unit) {
+            repeat(10) {
+                withFrameNanos { }
+                if (runCatching { licensesFirstRequester.requestFocus() }.getOrDefault(false)) {
+                    return@repeat
+                }
+            }
+        }
         Dialog(
             onDismissRequest = { showLicensesDialog = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = scheme.surfaceContainerHigh,
-                contentColor = scheme.onSurface,
-                modifier = Modifier
-                    .fillMaxWidth(if (isWideScreen) 0.72f else 0.92f)
-                    .padding(16.dp)
-                    .tapHaptic()
-            ) {
-                Column(
+            CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
+                RegisterGamepadActions(
+                    enabled = true,
+                    columnScrollState = licensesScrollState
+                )
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = scheme.surfaceContainerHigh,
+                    contentColor = scheme.onSurface,
                     modifier = Modifier
-                        .padding(22.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .fillMaxWidth(if (isWideScreen) 0.72f else 0.92f)
+                        .padding(16.dp)
+                        .tapHaptic()
+                        .gamepadKeyWatch()
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown &&
+                                (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                                    event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
+                            ) {
+                                AudioUtil.playCancel(context)
+                                showLicensesDialog = false
+                                true
+                            } else {
+                                false
+                            }
+                        }
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    Column(
+                        modifier = Modifier
+                            .padding(22.dp)
+                            .verticalScroll(licensesScrollState),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Row(
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier.weight(1f)
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = scheme.primaryContainer,
-                                contentColor = scheme.onPrimaryContainer,
-                                modifier = Modifier.size(46.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Gavel,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(22.dp)
+                                Surface(
+                                    shape = CircleShape,
+                                    color = scheme.primaryContainer,
+                                    contentColor = scheme.onPrimaryContainer,
+                                    modifier = Modifier.size(46.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Gavel,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.str_apache_license_2),
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.onSurface
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.str_license_copyright),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = scheme.onSurfaceVariant
                                     )
                                 }
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = stringResource(R.string.str_apache_license_2),
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = scheme.onSurface
-                                )
-                                Text(
-                                    text = stringResource(R.string.str_license_copyright),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = scheme.onSurfaceVariant
+
+                            IconButton(
+                                onClick = { showLicensesDialog = false },
+                                modifier = Modifier.focusProperties { canFocus = false }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    tint = scheme.onSurfaceVariant
                                 )
                             }
                         }
 
-                        IconButton(
-                            onClick = { showLicensesDialog = false },
-                            modifier = Modifier.focusProperties { canFocus = false }
+                        Text(
+                            text = stringResource(R.string.str_project_license_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurfaceVariant
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = null,
-                                tint = scheme.onSurfaceVariant
-                            )
+                            val openFullLicense = {
+                                AudioUtil.playOk(context)
+                                uriHandler.openUri("https://www.apache.org/licenses/LICENSE-2.0")
+                            }
+                            val openGithubLicense = {
+                                AudioUtil.playOk(context)
+                                uriHandler.openUri("https://github.com/Liliya2727/AZenith/blob/main/LICENSE")
+                            }
+                            FilledTonalButton(
+                                onClick = openFullLicense,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .focusRequester(licensesFirstRequester)
+                                    .gamepadFocusOutline(
+                                        shape = CircleShape,
+                                        register = true,
+                                        onActivate = openFullLicense
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.str_view_full_license),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = openGithubLicense,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .gamepadFocusOutline(
+                                        shape = CircleShape,
+                                        register = true,
+                                        onActivate = openGithubLicense
+                                    )
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_github),
+                                    contentDescription = stringResource(R.string.cd_github),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = scheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.str_view_on_github),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
+
+                        SettingsActionCard(
+                            icon = Icons.AutoMirrored.Rounded.LibraryBooks,
+                            title = stringResource(R.string.str_libraries_used),
+                            summary = stringResource(R.string.str_libraries_hint),
+                            onClick = {
+                                showLicensesDialog = false
+                                showLibrariesDialog = true
+                            }
+                        )
                     }
-
-                    Text(
-                        text = stringResource(R.string.str_project_license_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = scheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        FilledTonalButton(
-                            onClick = { uriHandler.openUri("https://www.apache.org/licenses/LICENSE-2.0") },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.str_view_full_license),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith/blob/main/LICENSE") },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_github),
-                                contentDescription = stringResource(R.string.cd_github),
-                                modifier = Modifier.size(18.dp),
-                                tint = scheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.str_view_on_github),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    SettingsActionCard(
-                        icon = Icons.AutoMirrored.Rounded.LibraryBooks,
-                        title = stringResource(R.string.str_libraries_used),
-                        summary = stringResource(R.string.str_libraries_hint),
-                        onClick = {
-                            showLicensesDialog = false
-                            showLibrariesDialog = true
-                        }
-                    )
                 }
             }
         }
@@ -756,81 +895,117 @@ internal fun SettingsAboutPane(
 
     if (showLibrariesDialog) {
         val libraries by produceLibraries(R.raw.aboutlibraries)
+        val librariesToken = remember { Any() }
+        val librariesBoxRequester = remember { FocusRequester() }
+        DisposableEffect(librariesToken) {
+            GameSpaceOverlayState.acquire(librariesToken, "AboutLibrariesDialog")
+            onDispose {
+                GameSpaceOverlayState.release(librariesToken)
+            }
+        }
+        LaunchedEffect(libraries) {
+            repeat(10) {
+                withFrameNanos { }
+                if (runCatching { librariesBoxRequester.requestFocus() }.getOrDefault(false)) {
+                    return@repeat
+                }
+            }
+        }
         Dialog(
             onDismissRequest = { showLibrariesDialog = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = scheme.surfaceContainerHigh,
-                contentColor = scheme.onSurface,
-                modifier = Modifier
-                    .fillMaxWidth(if (isWideScreen) 0.84f else 0.94f)
-                    .fillMaxHeight(0.86f)
-                    .tapHaptic()
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = scheme.primaryContainer,
-                                modifier = Modifier.size(38.dp)
+            CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = scheme.surfaceContainerHigh,
+                    contentColor = scheme.onSurface,
+                    modifier = Modifier
+                        .fillMaxWidth(if (isWideScreen) 0.84f else 0.94f)
+                        .fillMaxHeight(0.86f)
+                        .tapHaptic()
+                        .gamepadKeyWatch()
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown &&
+                                (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                                    event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Rounded.LibraryBooks,
-                                        contentDescription = null,
-                                        tint = scheme.onPrimaryContainer,
-                                        modifier = Modifier.size(20.dp)
+                                AudioUtil.playCancel(context)
+                                showLibrariesDialog = false
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = scheme.primaryContainer,
+                                    modifier = Modifier.size(38.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Rounded.LibraryBooks,
+                                            contentDescription = null,
+                                            tint = scheme.onPrimaryContainer,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.str_libraries_used),
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.onSurface
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.str_libraries_hint),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = scheme.onSurfaceVariant
                                     )
                                 }
                             }
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.str_libraries_used),
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = scheme.onSurface
-                                )
-                                Text(
-                                    text = stringResource(R.string.str_libraries_hint),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = scheme.onSurfaceVariant
+
+                            IconButton(
+                                onClick = { showLibrariesDialog = false },
+                                modifier = Modifier.focusProperties { canFocus = false }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    tint = scheme.onSurfaceVariant
                                 )
                             }
                         }
 
-                        IconButton(
-                            onClick = { showLibrariesDialog = false },
-                            modifier = Modifier.focusProperties { canFocus = false }
+                        HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .focusRequester(librariesBoxRequester)
+                                .focusable()
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = null,
-                                tint = scheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
-
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        if (libraries == null) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                        } else {
-                            LibrariesContainer(
-                                libraries = libraries,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            if (libraries == null) {
+                                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                            } else {
+                                LibrariesContainer(
+                                    libraries = libraries,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
                 }
@@ -839,100 +1014,138 @@ internal fun SettingsAboutPane(
     }
 
     if (showChangelogDialog) {
+        val changelogToken = remember { Any() }
+        val changelogScrollState = rememberScrollState()
+        val changelogBoxRequester = remember { FocusRequester() }
+        DisposableEffect(changelogToken) {
+            GameSpaceOverlayState.acquire(changelogToken, "AboutChangelogDialog")
+            onDispose {
+                GameSpaceOverlayState.release(changelogToken)
+            }
+        }
+        LaunchedEffect(Unit) {
+            repeat(10) {
+                withFrameNanos { }
+                if (runCatching { changelogBoxRequester.requestFocus() }.getOrDefault(false)) {
+                    return@repeat
+                }
+            }
+        }
         Dialog(
             onDismissRequest = { showChangelogDialog = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = scheme.surfaceContainerHigh,
-                contentColor = scheme.onSurface,
-                modifier = Modifier
-                    .fillMaxWidth(if (isWideScreen) 0.72f else 0.94f)
-                    .fillMaxHeight(0.86f)
-                    .tapHaptic()
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = scheme.primaryContainer,
-                                modifier = Modifier.size(38.dp)
+            CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
+                RegisterGamepadActions(
+                    enabled = true,
+                    columnScrollState = changelogScrollState
+                )
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = scheme.surfaceContainerHigh,
+                    contentColor = scheme.onSurface,
+                    modifier = Modifier
+                        .fillMaxWidth(if (isWideScreen) 0.72f else 0.94f)
+                        .fillMaxHeight(0.86f)
+                        .tapHaptic()
+                        .gamepadKeyWatch()
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown &&
+                                (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                                    event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Rounded.Notes,
-                                        contentDescription = null,
-                                        tint = scheme.onPrimaryContainer,
-                                        modifier = Modifier.size(20.dp)
+                                AudioUtil.playCancel(context)
+                                showChangelogDialog = false
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = scheme.primaryContainer,
+                                    modifier = Modifier.size(38.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Rounded.Notes,
+                                            contentDescription = null,
+                                            tint = scheme.onPrimaryContainer,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.str_changelog),
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.str_version_buildconfig_version_na, BuildConfig.VERSION_NAME),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = scheme.primary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.str_changelog),
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = scheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = stringResource(R.string.str_version_buildconfig_version_na, BuildConfig.VERSION_NAME),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = scheme.primary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+
+                            IconButton(
+                                onClick = { showChangelogDialog = false },
+                                modifier = Modifier.focusProperties { canFocus = false }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    tint = scheme.onSurfaceVariant
                                 )
                             }
                         }
 
-                        IconButton(
-                            onClick = { showChangelogDialog = false },
-                            modifier = Modifier.focusProperties { canFocus = false }
+                        HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .focusRequester(changelogBoxRequester)
+                                .focusable()
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = null,
-                                tint = scheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
-                        if (changelogText.isBlank()) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                        } else {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 22.dp, vertical = 16.dp)
-                            ) {
-                                MarkdownText(
-                                    markdown = changelogText,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = scheme.onSurfaceVariant
-                                    ),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Spacer(modifier = Modifier.height(24.dp))
+                            if (changelogText.isBlank()) {
+                                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                            } else {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .verticalScroll(changelogScrollState)
+                                        .padding(horizontal = 22.dp, vertical = 16.dp)
+                                ) {
+                                    MarkdownText(
+                                        markdown = changelogText,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            color = scheme.onSurfaceVariant
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                }
                             }
                         }
                     }
@@ -1007,18 +1220,28 @@ private fun DeveloperCreditCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val iconBtnShape = RoundedCornerShape(10.dp)
+                val openGithub = {
+                    AudioUtil.playOk(context)
+                    onOpenUrl(githubUrl)
+                }
+                val openTelegram = {
+                    AudioUtil.playOk(context)
+                    onOpenUrl(telegramUrl)
+                }
                 Surface(
                     shape = iconBtnShape,
                     color = scheme.surfaceContainerHighest,
                     modifier = Modifier
                         .size(36.dp)
                         .springPressBounce()
-                        .gamepadFocusOutline(shape = iconBtnShape, register = true)
+                        .gamepadFocusOutline(
+                            shape = iconBtnShape,
+                            register = true,
+                            onActivate = openGithub
+                        )
                         .clip(iconBtnShape)
-                        .clickable {
-                            AudioUtil.playOk(context)
-                            onOpenUrl(githubUrl)
-                        }
+                        .focusProperties { canFocus = false }
+                        .clickable(onClick = openGithub)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -1036,12 +1259,14 @@ private fun DeveloperCreditCard(
                     modifier = Modifier
                         .size(36.dp)
                         .springPressBounce()
-                        .gamepadFocusOutline(shape = iconBtnShape, register = true)
+                        .gamepadFocusOutline(
+                            shape = iconBtnShape,
+                            register = true,
+                            onActivate = openTelegram
+                        )
                         .clip(iconBtnShape)
-                        .clickable {
-                            AudioUtil.playOk(context)
-                            onOpenUrl(telegramUrl)
-                        }
+                        .focusProperties { canFocus = false }
+                        .clickable(onClick = openTelegram)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(

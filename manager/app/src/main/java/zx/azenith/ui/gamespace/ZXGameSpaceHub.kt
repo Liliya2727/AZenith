@@ -269,15 +269,17 @@ fun ZXGameSpaceHub(
         quickSettingsOpen ||
         searchOpen
 
-    val isPopupConfinementActive = GameSpaceOverlayState.isAnyOpen ||
-        ZXDropDownNav.isActive ||
-        exitPrompt ||
+    val isTopLevelPopupOpen = exitPrompt ||
         sidePanelPromptOpen ||
         tuningPkg != null ||
         wallpaperPkg != null ||
         nowPlayingOpen ||
         quickSettingsOpen ||
         searchOpen
+
+    val isPopupConfinementActive = GameSpaceOverlayState.isAnyOpen ||
+        ZXDropDownNav.isActive ||
+        isTopLevelPopupOpen
 
     // Clear stale Manager main-pager flag while GameSpace owns the foreground so
     // GamepadFocusRoot's gamepadKeyWatch never blocks horizontal D-pad in popups/settings.
@@ -775,7 +777,7 @@ fun ZXGameSpaceHub(
                     },
                     modifier = Modifier
                         .fillMaxSize()
-                        .focusProperties { canFocus = !isPopupConfinementActive },
+                        .focusProperties { canFocus = !isTopLevelPopupOpen },
                     label = "CategoryStageTransition"
                 ) { currentCategory ->
                     when (currentCategory) {

@@ -48,11 +48,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +73,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import zx.azenith.R
+import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.util.tapHaptic
 
 private const val CONFIRM_TIMEOUT_SECONDS = 10
@@ -103,10 +106,22 @@ fun ScaleConfirmationDialog(
     val progress = remember { Animatable(1f) }
     val scheme = MaterialTheme.colorScheme
     val confirmRequester = remember { FocusRequester() }
+    val overlayToken = remember { Any() }
+
+    DisposableEffect(overlayToken) {
+        GameSpaceOverlayState.acquire(overlayToken, "ScaleConfirmationDialog")
+        onDispose {
+            GameSpaceOverlayState.release(overlayToken)
+        }
+    }
 
     LaunchedEffect(Unit) {
-        delay(100)
-        runCatching { confirmRequester.requestFocus() }
+        repeat(10) {
+            withFrameNanos { }
+            if (runCatching { confirmRequester.requestFocus() }.getOrDefault(false)) {
+                return@repeat
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -136,7 +151,8 @@ fun ScaleConfirmationDialog(
         )
     ) {
         CompositionLocalProvider(
-            LocalDensity provides fixedDensity
+            LocalDensity provides fixedDensity,
+            LocalGamepadFocusEnabled provides true
         ) {
             Box(
                 modifier = Modifier
