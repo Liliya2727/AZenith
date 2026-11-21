@@ -270,14 +270,7 @@ internal fun ZXGameSpaceQuickSettingsOverlay(
                                 },
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .gamepadFocusOutline(
-                                        shape = CircleShape,
-                                        register = true,
-                                        onActivate = {
-                                            AudioUtil.playCancel(context)
-                                            onClose()
-                                        }
-                                    )
+                                    .focusProperties { canFocus = false }
                             ) {
                                 Icon(
                                     imageVector = Icons.Rounded.Close,

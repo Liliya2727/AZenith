@@ -36,7 +36,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,6 +93,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
@@ -144,7 +144,7 @@ internal fun Modifier.springPressBounce(
         }
         .pointerInput(enabled) {
             awaitEachGesture {
-                awaitFirstDown(requireUnconsumed = false)
+                awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 scope.launch {
                     scaleAnim.animateTo(
                         targetValue = pressedScale,
@@ -154,7 +154,9 @@ internal fun Modifier.springPressBounce(
                         )
                     )
                 }
-                val upOrCancel = waitForUpOrCancellation()
+                do {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                } while (event.changes.any { it.pressed })
                 scope.launch {
                     scaleAnim.animateTo(
                         targetValue = 1f,
@@ -248,13 +250,17 @@ internal fun ZXGameSpaceSettingsStage(
     val sidebarTabRequesters = remember {
         SettingsSidebarTab.entries.associateWith { FocusRequester() }
     }
-    val rightPaneRequester = remember { FocusRequester() }
+    val paneRequesters = remember {
+        SettingsSidebarTab.entries.associateWith { FocusRequester() }
+    }
     var rightPaneHasFocus by remember { mutableStateOf(false) }
     var pendingFocusTab by remember { mutableStateOf<SettingsSidebarTab?>(null) }
 
     // Initial focus when entering the Settings tab lands on the currently selected sidebar item.
     LaunchedEffect(Unit) {
-        if (GamepadInput.dpadMode || GamepadInput.controllerConnected) {
+        if (GameSpaceInputSource.isGamepadLast &&
+            (GamepadInput.dpadMode || GamepadInput.controllerConnected)
+        ) {
             withFrameNanos { }
             val requester = sidebarTabRequesters[selectedTab]
             val focused = requester != null && runCatching { requester.requestFocus() }.getOrDefault(false)
@@ -275,30 +281,33 @@ internal fun ZXGameSpaceSettingsStage(
     }
 
     val enterRightPane: (SettingsSidebarTab?) -> Unit = { explicitTab ->
-        val pending = explicitTab ?: pendingFocusTab
-        if (pending != null && pending != selectedTab) {
-            Log.d("PAD", "gs settings category=$pending from=$selectedTab source=focusCommit")
-            onSelectTab(pending)
+        val targetTab = explicitTab ?: pendingFocusTab ?: selectedTab
+        if (targetTab != selectedTab) {
+            Log.d("PAD", "gs settings category=$targetTab from=$selectedTab source=focusCommit")
+            onSelectTab(targetTab)
         }
         scope.launch {
-            withFrameNanos { }
-            val movedDirect = runCatching {
-                focusManager.moveFocus(FocusDirection.Right)
-            }.getOrDefault(false)
-            if (!movedDirect || !rightPaneHasFocus) {
-                val gotPane = runCatching { rightPaneRequester.requestFocus() }.getOrDefault(false)
-                if (gotPane) {
-                    runCatching { focusManager.moveFocus(FocusDirection.Next) }.getOrDefault(false) ||
-                        runCatching { focusManager.moveFocus(FocusDirection.Down) }.getOrDefault(false) ||
-                        runCatching { focusManager.moveFocus(FocusDirection.Enter) }.getOrDefault(false)
+            val targetRequester = paneRequesters.getValue(targetTab)
+            var focusedAttempt = -1
+            for (attempt in 1..12) {
+                withFrameNanos { }
+                val focused = runCatching { targetRequester.requestFocus() }.getOrDefault(false)
+                if (focused && rightPaneHasFocus) {
+                    focusedAttempt = attempt
+                    break
                 }
             }
+            Log.d("PAD", "gs settings enterRightPane tab=$targetTab attempt=$focusedAttempt hasFocus=$rightPaneHasFocus")
         }
     }
 
-    // Circle / B while focus is inside the right pane returns focus to the
-    // currently selected sidebar item instead of exiting Settings.
-    BackHandler(enabled = rightPaneHasFocus) {
+    // Circle / B while focus is inside the right pane (and no sub-screen / dropdown
+    // overlay is open) returns focus to the currently selected sidebar item instead of exiting Settings.
+    BackHandler(
+        enabled = rightPaneHasFocus &&
+            !GameSpaceOverlayState.isAnyOpen &&
+            !zx.azenith.ui.component.ZXDropDownNav.isActive
+    ) {
         AudioUtil.playCancel(context)
         val requester = sidebarTabRequesters[selectedTab]
         val restored = requester != null && runCatching { requester.requestFocus() }.getOrDefault(false)
@@ -323,17 +332,6 @@ internal fun ZXGameSpaceSettingsStage(
                     .width(sidebarWidth)
                     .fillMaxHeight()
                     .focusGroup()
-                    .onPreviewKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown &&
-                            event.nativeKeyEvent.repeatCount == 0 &&
-                            event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
-                        ) {
-                            enterRightPane(null)
-                            true
-                        } else {
-                            false
-                        }
-                    }
             ) {
                 Column(
                     modifier = Modifier
@@ -452,16 +450,22 @@ internal fun ZXGameSpaceSettingsStage(
                                         }
                                         .focusRequester(tabRequester)
                                         .focusProperties {
-                                            // While focus is inside the right pane, only the
-                                            // active sidebar item may receive a LEFT exit so
-                                            // focus always returns to the selected category.
-                                            canFocus = !rightPaneHasFocus || isSelected
+                                            // Sidebar navigation is strictly vertical: DPAD_LEFT/RIGHT
+                                            // never jumps into the right pane, and while focus is in
+                                            // the right pane, DPAD_LEFT cannot escape back to the sidebar.
+                                            canFocus = !rightPaneHasFocus &&
+                                                !GameSpaceOverlayState.isAnyOpen &&
+                                                !zx.azenith.ui.component.ZXDropDownNav.isActive
+                                            left = FocusRequester.Cancel
+                                            right = FocusRequester.Cancel
                                         }
                                         .onFocusChanged {
                                             if (it.isFocused) {
                                                 GameSpaceOverlayState.recordBaseFocus(tabRequester)
                                                 GameSpaceHintState.setFocus(tabHintOwner, GameSpaceFocusKind.SettingsTab)
-                                                if (GamepadInput.dpadMode || GamepadInput.controllerConnected) {
+                                                if (GameSpaceInputSource.isGamepadLast &&
+                                                    (GamepadInput.dpadMode || GamepadInput.controllerConnected)
+                                                ) {
                                                     pendingFocusTab = tab
                                                 }
                                             } else {
@@ -532,28 +536,8 @@ internal fun ZXGameSpaceSettingsStage(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .focusRequester(rightPaneRequester)
                     .onFocusChanged { rightPaneHasFocus = it.hasFocus }
                     .focusGroup()
-                    .onPreviewKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown &&
-                            event.nativeKeyEvent.repeatCount == 0 &&
-                            event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT &&
-                            !GamepadFocusNav.focusedSlider
-                        ) {
-                            val moved = runCatching {
-                                focusManager.moveFocus(FocusDirection.Left)
-                            }.getOrDefault(false)
-                            if (!moved) {
-                                sidebarTabRequesters[selectedTab]?.let {
-                                    runCatching { it.requestFocus() }
-                                }
-                            }
-                            true
-                        } else {
-                            false
-                        }
-                    }
             ) {
                 AnimatedContent(
                     targetState = selectedTab,
@@ -564,20 +548,30 @@ internal fun ZXGameSpaceSettingsStage(
                     modifier = Modifier.fillMaxSize(),
                     label = "SettingsPaneTransition"
                 ) { tab ->
-                    when (tab) {
-                        SettingsSidebarTab.General -> SettingsGeneralPane()
-                        SettingsSidebarTab.Tweaks -> SettingsTweaksPane(
-                            profile = profile,
-                            profileValue = profileValue,
-                            refreshHz = refreshHz,
-                            onApplyProfile = onApplyProfile
-                        )
-                        SettingsSidebarTab.Appearance -> SettingsAppearancePane()
-                        SettingsSidebarTab.Audio -> SettingsAudioPane()
-                        SettingsSidebarTab.About -> SettingsAboutPane(
-                            deviceName = deviceName,
-                            chipsetName = chipsetName
-                        )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .focusRequester(paneRequesters.getValue(tab))
+                            .focusGroup()
+                            .focusProperties {
+                                canFocus = (tab == selectedTab)
+                            }
+                    ) {
+                        when (tab) {
+                            SettingsSidebarTab.General -> SettingsGeneralPane()
+                            SettingsSidebarTab.Tweaks -> SettingsTweaksPane(
+                                profile = profile,
+                                profileValue = profileValue,
+                                refreshHz = refreshHz,
+                                onApplyProfile = onApplyProfile
+                            )
+                            SettingsSidebarTab.Appearance -> SettingsAppearancePane()
+                            SettingsSidebarTab.Audio -> SettingsAudioPane()
+                            SettingsSidebarTab.About -> SettingsAboutPane(
+                                deviceName = deviceName,
+                                chipsetName = chipsetName
+                            )
+                        }
                     }
                 }
             }
@@ -595,7 +589,8 @@ internal fun SettingsSwitchCard(
     modifier: Modifier = Modifier,
     summary: String? = null,
     shape: Shape = RoundedCornerShape(20.dp),
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    focusRequester: FocusRequester? = null
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -634,13 +629,19 @@ internal fun SettingsSwitchCard(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 72.dp)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .then(if (enabled) Modifier.springPressBounce(pressedScale = 0.97f) else Modifier)
-            .gamepadFocusOutline(
-                shape = shape,
-                register = enabled,
-                onActivate = if (enabled) toggleCard else null
+            .then(
+                if (enabled) {
+                    Modifier.gamepadFocusOutline(
+                        shape = shape,
+                        register = true,
+                        onActivate = toggleCard
+                    )
+                } else Modifier
             )
             .clip(shape)
+            .focusProperties { canFocus = false }
             .then(
                 if (enabled) {
                     Modifier.clickable(onClick = toggleCard)
@@ -769,7 +770,8 @@ internal fun SettingsActionCard(
     summary: String? = null,
     trailingBadge: String? = null,
     shape: Shape = RoundedCornerShape(20.dp),
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    focusRequester: FocusRequester? = null
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -787,6 +789,7 @@ internal fun SettingsActionCard(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 72.dp)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .then(if (enabled) Modifier.springPressBounce(pressedScale = 0.97f) else Modifier)
             .then(
                 if (enabled) {
@@ -798,6 +801,7 @@ internal fun SettingsActionCard(
                 } else Modifier
             )
             .clip(shape)
+            .focusProperties { canFocus = false }
             .clickable(enabled = enabled, onClick = triggerAction)
     ) {
         Row(

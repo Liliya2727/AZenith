@@ -62,6 +62,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -680,7 +683,10 @@ internal fun SettingsAboutPane(
                             }
                         }
 
-                        IconButton(onClick = { showLicensesDialog = false }) {
+                        IconButton(
+                            onClick = { showLicensesDialog = false },
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 contentDescription = null,
@@ -803,7 +809,10 @@ internal fun SettingsAboutPane(
                             }
                         }
 
-                        IconButton(onClick = { showLibrariesDialog = false }) {
+                        IconButton(
+                            onClick = { showLibrariesDialog = false },
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 contentDescription = null,
@@ -888,7 +897,10 @@ internal fun SettingsAboutPane(
                             }
                         }
 
-                        IconButton(onClick = { showChangelogDialog = false }) {
+                        IconButton(
+                            onClick = { showChangelogDialog = false },
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 contentDescription = null,

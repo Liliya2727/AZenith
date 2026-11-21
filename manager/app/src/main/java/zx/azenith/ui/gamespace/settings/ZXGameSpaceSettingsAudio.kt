@@ -104,6 +104,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
@@ -780,7 +783,7 @@ private fun AudioSubTabHeader(
             modifier = Modifier
                 .size(42.dp)
                 .clip(backShape)
-                .gamepadFocusOutline(shape = backShape, register = true)
+                .focusProperties { canFocus = false }
                 .clickable(onClick = onBackClick)
         ) {
             Box(contentAlignment = Alignment.Center) {

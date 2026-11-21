@@ -270,7 +270,8 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                             TopBarIconButton(
                                 icon = Icons.Rounded.Close,
                                 contentDescription = stringResource(R.string.cd_back),
-                                onClick = onDismiss
+                                onClick = onDismiss,
+                                gamepadFocusable = false
                             )
                         }
 
