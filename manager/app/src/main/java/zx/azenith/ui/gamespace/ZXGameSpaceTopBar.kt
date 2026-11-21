@@ -294,7 +294,7 @@ internal fun ZXGameSpaceTopBar(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GamepadShoulderHint(left = true, size = 20.dp)
+                    GamepadShoulderHint(left = true, size = 24.dp)
                     TopCategory.entries.forEach { tab ->
                         val selected = tab == selectedCategory
                         val shape = RoundedCornerShape(14.dp)
@@ -333,7 +333,7 @@ internal fun ZXGameSpaceTopBar(
                             )
                         }
                     }
-                    GamepadShoulderHint(left = false, size = 20.dp)
+                    GamepadShoulderHint(left = false, size = 24.dp)
                 }
             }
 
@@ -440,7 +440,7 @@ internal fun ZXGameSpaceTopBar(
                 }
             }
 
-            GamepadSelectBadge(size = 18.dp) {
+            GamepadSelectBadge(size = 22.dp) {
             Surface(
                 shape = CircleShape,
                 color = searchBg,
@@ -583,7 +583,7 @@ internal fun ZXGameSpaceTopBar(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                GamepadR2Badge(size = 18.dp) {
+                GamepadR2Badge(size = 22.dp) {
                 Surface(
                     shape = CircleShape,
                     color = scheme.surfaceContainerHigh,
@@ -671,7 +671,7 @@ internal fun ZXGameSpaceTopBar(
                 }
                 }
 
-                GamepadL2Badge(size = 18.dp) {
+                GamepadL2Badge(size = 22.dp) {
                 NowPlayingDot(
                     visible = hasNowPlaying,
                     isPanelOpen = isNowPlayingOpen,
