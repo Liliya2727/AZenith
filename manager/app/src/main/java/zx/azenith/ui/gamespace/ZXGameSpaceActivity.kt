@@ -42,6 +42,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import zx.azenith.ui.component.GamepadDirectionRepeat
 import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.GamepadStickScroll
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
@@ -155,6 +156,15 @@ class ZXGameSpaceActivity : ComponentActivity() {
                 r2Held = r2Down
                 emitTrigger(r2Down, KeyEvent.KEYCODE_BUTTON_R2)
             }
+            // Right stick vertical scroll (drives registered scroll state in Settings / overlays).
+            val rz = event.getAxisValue(MotionEvent.AXIS_RZ)
+            val ry = event.getAxisValue(MotionEvent.AXIS_RY)
+            val vertical = if (kotlin.math.abs(rz) >= kotlin.math.abs(ry)) rz else ry
+            GamepadStickScroll.onAxisY(vertical)
+            if (kotlin.math.abs(vertical) > GamepadStickScroll.DEADZONE) {
+                GamepadInput.onDpadKey()
+            }
+
             // Hat takes priority, then the left stick. The dominant axis decides
             // the direction: horizontal walks the game ribbon (and Bento cards),
             // vertical reaches the Bento cards. Holding accelerates repeats.
@@ -254,6 +264,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         GamepadDirectionRepeat.release()
+        GamepadStickScroll.reset()
         BgmManager.onActivityPause()
     }
 
