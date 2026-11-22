@@ -723,8 +723,12 @@ fun isGameCategory(context: android.content.Context, packageName: String?): Bool
     return try {
         val pm = context.packageManager
         val appInfo = pm.getApplicationInfo(packageName, 0)
-        appInfo.category == ApplicationInfo.CATEGORY_GAME ||
-            (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            appInfo.category == ApplicationInfo.CATEGORY_GAME
+        } else {
+            appInfo.category == ApplicationInfo.CATEGORY_GAME ||
+                (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+        }
     } catch (e: Exception) {
         false
     }
