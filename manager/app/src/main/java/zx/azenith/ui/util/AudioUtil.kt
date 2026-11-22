@@ -112,6 +112,7 @@ object AudioUtil {
     private var cancelSoundId = 0
     private var noticeSoundId = 0
     private var noticeBackSoundId = 0
+    private var gameLaunchSoundId = 0
 
     private val loadedSoundIds = ConcurrentHashMap.newKeySet<Int>()
     private val pendingPlays = ConcurrentHashMap.newKeySet<Int>()
@@ -155,9 +156,25 @@ object AudioUtil {
         cancelSoundId = pool.load(appContext, R.raw.cancel, 1)
         noticeSoundId = pool.load(appContext, R.raw.notice, 1)
         noticeBackSoundId = pool.load(appContext, R.raw.notice_back, 1)
+        gameLaunchSoundId = pool.load(appContext, R.raw.gamelaunch, 1)
 
         soundPool = pool
         isInitialized = true
+    }
+
+    @Synchronized
+    fun release() {
+        runCatching { soundPool?.release() }
+        soundPool = null
+        scrollSoundId = 0
+        okSoundId = 0
+        cancelSoundId = 0
+        noticeSoundId = 0
+        noticeBackSoundId = 0
+        gameLaunchSoundId = 0
+        loadedSoundIds.clear()
+        pendingPlays.clear()
+        isInitialized = false
     }
 
     private fun play(context: Context, soundId: Int) {
@@ -202,5 +219,20 @@ object AudioUtil {
         TapHapticState.suppressSound = true
         if (!SoundEffectsState.noticeEnabled.value) return
         play(context, noticeBackSoundId)
+    }
+
+    /**
+     * Plays the preloaded game-launch sound once if SFX are enabled and the sample is already loaded.
+     * Never queues a delayed play or blocks launch if the sample has not finished loading.
+     */
+    fun playGameLaunch() {
+        if (!isGameHubActive) return
+        if (!SoundEffectsState.enabled.value) return
+        val pool = soundPool ?: return
+        val id = gameLaunchSoundId
+        if (id == 0 || !loadedSoundIds.contains(id)) return
+        val vol = (SoundEffectsState.volume.intValue / 100f).coerceIn(0f, 1f)
+        if (vol <= 0f) return
+        pool.play(id, vol, vol, 1, 0, 1f)
     }
 }

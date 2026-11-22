@@ -274,6 +274,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
         super.onDestroy()
         GameLaunchInputLock.isLocked = false
         zx.azenith.ui.util.AudioUtil.isGameHubActive = false
+        zx.azenith.ui.util.AudioUtil.release()
         BgmManager.onDestroy()
     }
 }

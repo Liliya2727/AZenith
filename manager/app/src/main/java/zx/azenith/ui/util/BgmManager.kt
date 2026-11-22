@@ -168,6 +168,68 @@ object BgmManager {
     private var flacPlayer: FlacAudioTrackPlayer? = null
     private var currentFis: FileInputStream? = null
     private var isInitialized = false
+    @Volatile
+    private var duckMultiplier: Float = 1f
+    private var duckJob: Job? = null
+
+    private fun applyEffectiveVolume() {
+        val volFactor = ((_volume.value / 100f) * duckMultiplier).coerceIn(0f, 1f)
+        flacPlayer?.setVolume(volFactor)
+        mediaPlayer?.let { player ->
+            try {
+                player.setVolume(volFactor, volFactor)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to apply volume", e)
+            }
+        }
+    }
+
+    fun duckForLaunch(targetMultiplier: Float, fadeDurationMs: Long) {
+        if (!_isEnabled.value || !_isPlaying.value) return
+        duckJob?.cancel()
+        val start = duckMultiplier
+        val target = targetMultiplier.coerceIn(0f, 1f)
+        if (fadeDurationMs <= 0L) {
+            duckMultiplier = target
+            applyEffectiveVolume()
+            return
+        }
+        duckJob = scope.launch {
+            val steps = (fadeDurationMs / 16L).coerceAtLeast(1L).toInt()
+            val stepMs = fadeDurationMs / steps
+            for (i in 1..steps) {
+                val t = i.toFloat() / steps.toFloat()
+                duckMultiplier = start + (target - start) * t
+                applyEffectiveVolume()
+                delay(stepMs)
+            }
+            duckMultiplier = target
+            applyEffectiveVolume()
+        }
+    }
+
+    fun restoreFromLaunch(fadeDurationMs: Long = 0L) {
+        duckJob?.cancel()
+        duckJob = null
+        val start = duckMultiplier
+        if (fadeDurationMs <= 0L || kotlin.math.abs(1f - start) < 0.001f) {
+            duckMultiplier = 1f
+            applyEffectiveVolume()
+            return
+        }
+        duckJob = scope.launch {
+            val steps = (fadeDurationMs / 16L).coerceAtLeast(1L).toInt()
+            val stepMs = fadeDurationMs / steps
+            for (i in 1..steps) {
+                val t = i.toFloat() / steps.toFloat()
+                duckMultiplier = start + (1f - start) * t
+                applyEffectiveVolume()
+                delay(stepMs)
+            }
+            duckMultiplier = 1f
+            applyEffectiveVolume()
+        }
+    }
 
     fun formatTimeMs(timeMs: Long): String {
         val totalSeconds = (timeMs / 1000).coerceAtLeast(0L)
@@ -593,15 +655,7 @@ object BgmManager {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putInt(PREF_BGM_VOLUME, clamped).apply()
 
-        val volFactor = clamped / 100f
-        flacPlayer?.setVolume(volFactor)
-        mediaPlayer?.let { player ->
-            try {
-                player.setVolume(volFactor, volFactor)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set volume", e)
-            }
-        }
+        applyEffectiveVolume()
     }
 
     fun selectTrack(context: Context, track: BgmTrack) {
@@ -846,6 +900,7 @@ object BgmManager {
 
     fun onActivityResume(context: Context) {
         isGameHubActive = true
+        restoreFromLaunch(fadeDurationMs = 0L)
         if (_isEnabled.value) {
             val flac = flacPlayer
             val player = mediaPlayer
@@ -877,6 +932,10 @@ object BgmManager {
     }
 
     fun onActivityPause() {
+        duckJob?.cancel()
+        duckJob = null
+        duckMultiplier = 1f
+        applyEffectiveVolume()
         stopPositionTracker()
         try {
             flacPlayer?.pause()

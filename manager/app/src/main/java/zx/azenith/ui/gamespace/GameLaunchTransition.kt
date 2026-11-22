@@ -61,8 +61,17 @@ import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.GamepadDirectionRepeat
 import zx.azenith.ui.component.GamepadStickScroll
+import zx.azenith.ui.util.AudioUtil
+import zx.azenith.ui.util.BgmManager
 
 private const val TAG = "GameLaunch"
+
+const val PREF_GAME_LAUNCH_TRANSITION_ENABLED = "gamespace_launch_transition_enabled"
+private const val SETTINGS_PREFS = "settings"
+
+fun isGameLaunchTransitionEnabled(context: Context): Boolean =
+    context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+        .getBoolean(PREF_GAME_LAUNCH_TRANSITION_ENABLED, true)
 
 // ============================================================================
 // Game-launch transition tuning constants (timings in ms, magnitudes as floats)
@@ -85,6 +94,9 @@ internal const val WORDMARK_START_MS = 380
 internal const val WORDMARK_DURATION_MS = 420 // 380..800 ms
 internal const val WORDMARK_START_SCALE = 0.90f
 internal const val WORDMARK_END_SCALE = 1.00f
+
+internal const val BGM_DUCK_TARGET = 0.12f
+internal const val BGM_DUCK_FADE_MS = 220L
 
 internal const val LAUNCH_AT_MS = 700L
 internal const val WATCHDOG_TIMEOUT_MS = 4000L
@@ -351,8 +363,9 @@ class GameLaunchController {
         if (isRunning) return
 
         val durationScale = animatorDurationScale(context)
-        if (durationScale <= 0f) {
-            // System animations disabled: skip transition and fire launch immediately.
+        val transitionEnabled = isGameLaunchTransitionEnabled(context)
+        if (!transitionEnabled || durationScale <= 0f) {
+            // Transition disabled or system animations off: skip transition and fire launch immediately.
             state = GameLaunchState.Running(packageName = packageName, progress = 1f)
             lockInput(true)
             activeJob?.cancel()
@@ -382,6 +395,10 @@ class GameLaunchController {
         isActivityPaused = false
         activeJob?.cancel()
         watchdogJob?.cancel()
+
+        // t = 0 ms: duck BGM and play preloaded gamelaunch sound once.
+        BgmManager.duckForLaunch(BGM_DUCK_TARGET, BGM_DUCK_FADE_MS)
+        AudioUtil.playGameLaunch()
 
         activeJob = scope.launch {
             try {
@@ -495,6 +512,7 @@ class GameLaunchController {
         watchdogJob = null
         lockInput(false)
         state = GameLaunchState.Idle
+        BgmManager.restoreFromLaunch(RECOVERY_FADE_MS.toLong())
 
         scope.launch {
             launch {
@@ -556,6 +574,7 @@ class GameLaunchController {
         activeJob?.cancel()
         watchdogJob?.cancel()
         lockInput(false)
+        BgmManager.restoreFromLaunch(0L)
     }
 }
 
