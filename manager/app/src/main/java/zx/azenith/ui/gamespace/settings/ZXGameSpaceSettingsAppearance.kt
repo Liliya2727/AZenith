@@ -143,6 +143,7 @@ import zx.azenith.ui.component.ScaleConfirmationDialog
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadKeyWatch
+import zx.azenith.ui.gamespace.BindGameSpaceDialogGamepad
 import zx.azenith.ui.gamespace.GAMESPACE_PRESET_KEY_COLORS
 import zx.azenith.ui.gamespace.GameSpaceInputSource
 import zx.azenith.ui.gamespace.GameSpaceOverlayState
@@ -1689,6 +1690,7 @@ private fun ApplyGameWallpaperDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        BindGameSpaceDialogGamepad()
         val dialogToken = remember { Any() }
         val allGamesRequester = remember { FocusRequester() }
         val gameListState = rememberLazyListState()

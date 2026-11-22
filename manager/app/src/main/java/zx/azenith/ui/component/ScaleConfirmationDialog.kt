@@ -73,6 +73,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import zx.azenith.R
+import zx.azenith.ui.gamespace.BindGameSpaceDialogGamepad
 import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.util.tapHaptic
 
@@ -116,15 +117,6 @@ fun ScaleConfirmationDialog(
     }
 
     LaunchedEffect(Unit) {
-        repeat(10) {
-            withFrameNanos { }
-            if (runCatching { confirmRequester.requestFocus() }.getOrDefault(false)) {
-                return@repeat
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
         progress.animateTo(
             targetValue = 0f,
             animationSpec = tween(
@@ -150,6 +142,15 @@ fun ScaleConfirmationDialog(
             usePlatformDefaultWidth = false
         )
     ) {
+        BindGameSpaceDialogGamepad()
+        LaunchedEffect(Unit) {
+            for (attempt in 1..10) {
+                withFrameNanos { }
+                if (runCatching { confirmRequester.requestFocus() }.getOrDefault(false)) {
+                    break
+                }
+            }
+        }
         CompositionLocalProvider(
             LocalDensity provides fixedDensity,
             LocalGamepadFocusEnabled provides true

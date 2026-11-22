@@ -18,10 +18,13 @@ package zx.azenith.ui.gamespace.settings
 
 import android.util.Log
 import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,6 +39,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,11 +67,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -75,8 +82,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -91,13 +101,18 @@ import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import zx.azenith.BuildConfig
 import zx.azenith.R
+import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.LocalGamepadFocusEnabled
 import zx.azenith.ui.component.RegisterGamepadActions
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadKeyWatch
+import zx.azenith.ui.gamespace.BindGameSpaceDialogGamepad
 import zx.azenith.ui.gamespace.GameSpaceInputSource
 import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.gamespace.SettingsActionCard
@@ -148,8 +163,12 @@ internal fun SettingsAboutPane(
         } else if (wasAnyDialogOpen) {
             wasAnyDialogOpen = false
             val target = lastDialogOriginRequester
-            if (target != null && GameSpaceInputSource.isGamepadLast) {
-                for (attempt in 1..10) {
+            val useGamepad = GameSpaceInputSource.isGamepadLast ||
+                GamepadInput.dpadMode ||
+                GamepadInput.controllerConnected
+            if (target != null && useGamepad) {
+                GamepadInput.onDpadKey()
+                for (attempt in 1..12) {
                     withFrameNanos { }
                     if (runCatching { target.requestFocus() }.getOrDefault(false)) {
                         Log.d("PAD", "gs about restoreDialogOrigin attempt=$attempt")
@@ -717,22 +736,48 @@ internal fun SettingsAboutPane(
                 GameSpaceOverlayState.release(licensesToken)
             }
         }
-        LaunchedEffect(Unit) {
-            repeat(10) {
-                withFrameNanos { }
-                if (runCatching { licensesFirstRequester.requestFocus() }.getOrDefault(false)) {
-                    return@repeat
-                }
-            }
+        val dismissLicenses = {
+            Log.d("PAD", "gs about dismiss LicensesDialog")
+            AudioUtil.playCancel(context)
+            showLicensesDialog = false
         }
         Dialog(
-            onDismissRequest = { showLicensesDialog = false },
+            onDismissRequest = dismissLicenses,
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
+            BindGameSpaceDialogGamepad()
+            val dialogScope = rememberCoroutineScope()
+            val dialogFocusManager = LocalFocusManager.current
+            val dialogDensity = LocalDensity.current
+            val stepPx = with(dialogDensity) { 120.dp.toPx() }
+            var firstAttached by remember { mutableStateOf(false) }
+
+            BackHandler(enabled = true, onBack = dismissLicenses)
+
+            LaunchedEffect(Unit) {
+                if (GameSpaceInputSource.isGamepadLast || GamepadInput.dpadMode || GamepadInput.controllerConnected) {
+                    GamepadInput.onDpadKey()
+                }
+                withTimeoutOrNull(600L) {
+                    snapshotFlow { firstAttached }.first { it }
+                }
+                var seeded = false
+                for (attempt in 1..12) {
+                    withFrameNanos { }
+                    seeded = runCatching { licensesFirstRequester.requestFocus() }.getOrDefault(false)
+                    if (seeded) break
+                }
+                Log.d("PAD", "gs about seed LicensesDialog attached=$firstAttached seeded=$seeded")
+            }
+
             CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
                 RegisterGamepadActions(
                     enabled = true,
-                    columnScrollState = licensesScrollState
+                    columnScrollState = licensesScrollState,
+                    onCloseOverlay = {
+                        dismissLicenses()
+                        true
+                    }
                 )
                 Surface(
                     shape = RoundedCornerShape(28.dp),
@@ -744,17 +789,35 @@ internal fun SettingsAboutPane(
                         .tapHaptic()
                         .gamepadKeyWatch()
                         .onPreviewKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown &&
-                                (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                                    event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
-                            ) {
-                                AudioUtil.playCancel(context)
-                                showLicensesDialog = false
-                                true
-                            } else {
-                                false
+                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            when (event.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_BUTTON_B,
+                                KeyEvent.KEYCODE_ESCAPE -> {
+                                    dismissLicenses()
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    val moved = dialogFocusManager.moveFocus(FocusDirection.Down)
+                                    if (!moved && licensesScrollState.value < licensesScrollState.maxValue) {
+                                        dialogScope.launch { licensesScrollState.animateScrollBy(stepPx) }
+                                    }
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    val moved = dialogFocusManager.moveFocus(FocusDirection.Up)
+                                    if (!moved && licensesScrollState.value > 0) {
+                                        dialogScope.launch { licensesScrollState.animateScrollBy(-stepPx) }
+                                    }
+                                    true
+                                }
+                                else -> false
                             }
                         }
+                        .focusProperties {
+                            canFocus = false
+                            onExit = { cancelFocusChange() }
+                        }
+                        .focusGroup()
                 ) {
                     Column(
                         modifier = Modifier
@@ -801,7 +864,7 @@ internal fun SettingsAboutPane(
                             }
 
                             IconButton(
-                                onClick = { showLicensesDialog = false },
+                                onClick = dismissLicenses,
                                 modifier = Modifier.focusProperties { canFocus = false }
                             ) {
                                 Icon(
@@ -834,12 +897,14 @@ internal fun SettingsAboutPane(
                                 onClick = openFullLicense,
                                 modifier = Modifier
                                     .weight(1f)
+                                    .onGloballyPositioned { firstAttached = true }
                                     .focusRequester(licensesFirstRequester)
                                     .gamepadFocusOutline(
                                         shape = CircleShape,
                                         register = true,
                                         onActivate = openFullLicense
                                     )
+                                    .focusProperties { canFocus = false }
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
@@ -862,6 +927,7 @@ internal fun SettingsAboutPane(
                                         register = true,
                                         onActivate = openGithubLicense
                                     )
+                                    .focusProperties { canFocus = false }
                             ) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_github),
@@ -897,25 +963,55 @@ internal fun SettingsAboutPane(
         val libraries by produceLibraries(R.raw.aboutlibraries)
         val librariesToken = remember { Any() }
         val librariesBoxRequester = remember { FocusRequester() }
+        val librariesLazyListState = rememberLazyListState()
         DisposableEffect(librariesToken) {
             GameSpaceOverlayState.acquire(librariesToken, "AboutLibrariesDialog")
             onDispose {
                 GameSpaceOverlayState.release(librariesToken)
             }
         }
-        LaunchedEffect(libraries) {
-            repeat(10) {
-                withFrameNanos { }
-                if (runCatching { librariesBoxRequester.requestFocus() }.getOrDefault(false)) {
-                    return@repeat
-                }
-            }
+        val dismissLibraries = {
+            Log.d("PAD", "gs about dismiss LibrariesDialog")
+            AudioUtil.playCancel(context)
+            showLibrariesDialog = false
         }
         Dialog(
-            onDismissRequest = { showLibrariesDialog = false },
+            onDismissRequest = dismissLibraries,
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
+            BindGameSpaceDialogGamepad()
+            val dialogScope = rememberCoroutineScope()
+            val dialogDensity = LocalDensity.current
+            val stepPx = with(dialogDensity) { 180.dp.toPx() }
+            var boxAttached by remember { mutableStateOf(false) }
+
+            BackHandler(enabled = true, onBack = dismissLibraries)
+
+            LaunchedEffect(libraries) {
+                if (GameSpaceInputSource.isGamepadLast || GamepadInput.dpadMode || GamepadInput.controllerConnected) {
+                    GamepadInput.onDpadKey()
+                }
+                withTimeoutOrNull(600L) {
+                    snapshotFlow { boxAttached }.first { it }
+                }
+                var seeded = false
+                for (attempt in 1..12) {
+                    withFrameNanos { }
+                    seeded = runCatching { librariesBoxRequester.requestFocus() }.getOrDefault(false)
+                    if (seeded) break
+                }
+                Log.d("PAD", "gs about seed LibrariesDialog attached=$boxAttached seeded=$seeded")
+            }
+
             CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
+                RegisterGamepadActions(
+                    enabled = true,
+                    scrollState = librariesLazyListState,
+                    onCloseOverlay = {
+                        dismissLibraries()
+                        true
+                    }
+                )
                 Surface(
                     shape = RoundedCornerShape(28.dp),
                     color = scheme.surfaceContainerHigh,
@@ -926,17 +1022,33 @@ internal fun SettingsAboutPane(
                         .tapHaptic()
                         .gamepadKeyWatch()
                         .onPreviewKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown &&
-                                (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                                    event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
-                            ) {
-                                AudioUtil.playCancel(context)
-                                showLibrariesDialog = false
-                                true
-                            } else {
-                                false
+                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            when (event.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_BUTTON_B,
+                                KeyEvent.KEYCODE_ESCAPE -> {
+                                    dismissLibraries()
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    dialogScope.launch {
+                                        runCatching { librariesLazyListState.animateScrollBy(stepPx) }
+                                    }
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    dialogScope.launch {
+                                        runCatching { librariesLazyListState.animateScrollBy(-stepPx) }
+                                    }
+                                    true
+                                }
+                                else -> false
                             }
                         }
+                        .focusProperties {
+                            canFocus = false
+                            onExit = { cancelFocusChange() }
+                        }
+                        .focusGroup()
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Row(
@@ -979,7 +1091,7 @@ internal fun SettingsAboutPane(
                             }
 
                             IconButton(
-                                onClick = { showLibrariesDialog = false },
+                                onClick = dismissLibraries,
                                 modifier = Modifier.focusProperties { canFocus = false }
                             ) {
                                 Icon(
@@ -992,17 +1104,26 @@ internal fun SettingsAboutPane(
 
                         HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
 
+                        val contentShape = RoundedCornerShape(20.dp)
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .padding(10.dp)
+                                .onGloballyPositioned { boxAttached = true }
                                 .focusRequester(librariesBoxRequester)
-                                .focusable()
+                                .gamepadFocusOutline(
+                                    shape = contentShape,
+                                    register = true
+                                )
+                                .clip(contentShape)
+                                .focusProperties { canFocus = false }
                         ) {
                             if (libraries == null) {
                                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                             } else {
                                 LibrariesContainer(
                                     libraries = libraries,
+                                    lazyListState = librariesLazyListState,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -1023,22 +1144,47 @@ internal fun SettingsAboutPane(
                 GameSpaceOverlayState.release(changelogToken)
             }
         }
-        LaunchedEffect(Unit) {
-            repeat(10) {
-                withFrameNanos { }
-                if (runCatching { changelogBoxRequester.requestFocus() }.getOrDefault(false)) {
-                    return@repeat
-                }
-            }
+        val dismissChangelog = {
+            Log.d("PAD", "gs about dismiss ChangelogDialog")
+            AudioUtil.playCancel(context)
+            showChangelogDialog = false
         }
         Dialog(
-            onDismissRequest = { showChangelogDialog = false },
+            onDismissRequest = dismissChangelog,
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
+            BindGameSpaceDialogGamepad()
+            val dialogScope = rememberCoroutineScope()
+            val dialogDensity = LocalDensity.current
+            val stepPx = with(dialogDensity) { 180.dp.toPx() }
+            var boxAttached by remember { mutableStateOf(false) }
+
+            BackHandler(enabled = true, onBack = dismissChangelog)
+
+            LaunchedEffect(Unit) {
+                if (GameSpaceInputSource.isGamepadLast || GamepadInput.dpadMode || GamepadInput.controllerConnected) {
+                    GamepadInput.onDpadKey()
+                }
+                withTimeoutOrNull(600L) {
+                    snapshotFlow { boxAttached }.first { it }
+                }
+                var seeded = false
+                for (attempt in 1..12) {
+                    withFrameNanos { }
+                    seeded = runCatching { changelogBoxRequester.requestFocus() }.getOrDefault(false)
+                    if (seeded) break
+                }
+                Log.d("PAD", "gs about seed ChangelogDialog attached=$boxAttached seeded=$seeded")
+            }
+
             CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
                 RegisterGamepadActions(
                     enabled = true,
-                    columnScrollState = changelogScrollState
+                    columnScrollState = changelogScrollState,
+                    onCloseOverlay = {
+                        dismissChangelog()
+                        true
+                    }
                 )
                 Surface(
                     shape = RoundedCornerShape(28.dp),
@@ -1050,17 +1196,33 @@ internal fun SettingsAboutPane(
                         .tapHaptic()
                         .gamepadKeyWatch()
                         .onPreviewKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown &&
-                                (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                                    event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
-                            ) {
-                                AudioUtil.playCancel(context)
-                                showChangelogDialog = false
-                                true
-                            } else {
-                                false
+                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            when (event.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_BUTTON_B,
+                                KeyEvent.KEYCODE_ESCAPE -> {
+                                    dismissChangelog()
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    dialogScope.launch {
+                                        runCatching { changelogScrollState.animateScrollBy(stepPx) }
+                                    }
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    dialogScope.launch {
+                                        runCatching { changelogScrollState.animateScrollBy(-stepPx) }
+                                    }
+                                    true
+                                }
+                                else -> false
                             }
                         }
+                        .focusProperties {
+                            canFocus = false
+                            onExit = { cancelFocusChange() }
+                        }
+                        .focusGroup()
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Row(
@@ -1108,7 +1270,7 @@ internal fun SettingsAboutPane(
                             }
 
                             IconButton(
-                                onClick = { showChangelogDialog = false },
+                                onClick = dismissChangelog,
                                 modifier = Modifier.focusProperties { canFocus = false }
                             ) {
                                 Icon(
@@ -1121,12 +1283,20 @@ internal fun SettingsAboutPane(
 
                         HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
 
+                        val contentShape = RoundedCornerShape(20.dp)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
+                                .padding(10.dp)
+                                .onGloballyPositioned { boxAttached = true }
                                 .focusRequester(changelogBoxRequester)
-                                .focusable()
+                                .gamepadFocusOutline(
+                                    shape = contentShape,
+                                    register = true
+                                )
+                                .clip(contentShape)
+                                .focusProperties { canFocus = false }
                         ) {
                             if (changelogText.isBlank()) {
                                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -1135,7 +1305,7 @@ internal fun SettingsAboutPane(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .verticalScroll(changelogScrollState)
-                                        .padding(horizontal = 22.dp, vertical = 16.dp)
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
                                 ) {
                                     MarkdownText(
                                         markdown = changelogText,

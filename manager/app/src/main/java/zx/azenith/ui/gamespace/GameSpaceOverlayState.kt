@@ -42,10 +42,13 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.delay
+import zx.azenith.ui.component.GamepadDirectionRepeat
 import zx.azenith.ui.component.GamepadFocusNav
 import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.GamepadShortcuts
+import zx.azenith.ui.component.GamepadStickScroll
 import zx.azenith.ui.component.LocalGamepadFocusEnabled
 
 /**
@@ -278,5 +281,87 @@ internal fun GameSpacePopupContainer(
                 .focusGroup(),
             content = content,
         )
+    }
+}
+
+/**
+ * Shared gamepad generic motion handler for GameSpace windows (Activity and Dialog windows).
+ *
+ * Translates right-stick vertical movement ([MotionEvent.AXIS_RZ] / [MotionEvent.AXIS_RY]) into
+ * [GamepadStickScroll.onAxisY] and hat/left-stick axes into [GamepadDirectionRepeat] D-pad events.
+ */
+internal object GameSpaceGamepadMotion {
+    const val TRIGGER_THRESHOLD = 0.5f
+
+    fun handleStickAndHatMotion(event: MotionEvent): Boolean {
+        val source = event.source
+        val isJoystick = (source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
+        val isGamepad = (source and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+        if (event.action != MotionEvent.ACTION_MOVE || (!isJoystick && !isGamepad)) {
+            return false
+        }
+
+        // Right stick vertical scroll (drives registered scroll state in Settings / overlays / dialogs).
+        val rz = event.getAxisValue(MotionEvent.AXIS_RZ)
+        val ry = event.getAxisValue(MotionEvent.AXIS_RY)
+        val vertical = if (kotlin.math.abs(rz) >= kotlin.math.abs(ry)) rz else ry
+        GamepadStickScroll.onAxisY(vertical)
+        if (kotlin.math.abs(vertical) > GamepadStickScroll.DEADZONE) {
+            GameSpaceInputSource.onMotionEvent(event)
+            GamepadInput.onDpadKey()
+        }
+
+        // Hat takes priority, then the left stick.
+        val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+        val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+        val stickX = event.getAxisValue(MotionEvent.AXIS_X)
+        val stickY = event.getAxisValue(MotionEvent.AXIS_Y)
+        val x = if (kotlin.math.abs(hatX) >= kotlin.math.abs(stickX)) hatX else stickX
+        val y = if (kotlin.math.abs(hatY) >= kotlin.math.abs(stickY)) hatY else stickY
+        val keyCode = when {
+            kotlin.math.abs(x) >= kotlin.math.abs(y) && kotlin.math.abs(x) > 0.5f ->
+                if (x < 0f) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+            kotlin.math.abs(y) > 0.5f ->
+                if (y < 0f) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
+            else -> null
+        }
+        if (keyCode != null) {
+            GameSpaceInputSource.onMotionEvent(event)
+            GamepadInput.onDpadKey()
+            GamepadDirectionRepeat.onDirectionDown(keyCode)
+        } else {
+            GamepadDirectionRepeat.release()
+        }
+        return true
+    }
+}
+
+/**
+ * Attaches [GameSpaceGamepadMotion.handleStickAndHatMotion] and redirects
+ * [GamepadDirectionRepeat.sendKey] to the current [Dialog] window's root view while composed.
+ *
+ * Separate [Dialog] windows have their own `Window`/`DecorView`, so generic motion events
+ * (left stick, hat switch, right stick) and synthesized D-pad key events never reach
+ * [ZXGameSpaceActivity.dispatchGenericMotionEvent] unless bound to the dialog's view.
+ */
+@Composable
+internal fun BindGameSpaceDialogGamepad() {
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val rootView = view.rootView
+        val prevSendKey = GamepadDirectionRepeat.sendKey
+        GamepadDirectionRepeat.sendKey = { code, action, repeat ->
+            val now = SystemClock.uptimeMillis()
+            rootView.dispatchKeyEvent(KeyEvent(now, now, action, code, repeat))
+        }
+        rootView.setOnGenericMotionListener { _, event ->
+            GameSpaceGamepadMotion.handleStickAndHatMotion(event)
+        }
+        onDispose {
+            GamepadDirectionRepeat.release()
+            GamepadStickScroll.reset()
+            rootView.setOnGenericMotionListener(null)
+            GamepadDirectionRepeat.sendKey = prevSendKey
+        }
     }
 }

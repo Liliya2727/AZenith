@@ -164,6 +164,7 @@ import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadKeyWatch
 import zx.azenith.ui.gamespace.AdaptiveSettingsGrid
+import zx.azenith.ui.gamespace.BindGameSpaceDialogGamepad
 import zx.azenith.ui.gamespace.GameSpaceInputSource
 import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.gamespace.SettingsActionCard
@@ -1478,6 +1479,7 @@ private fun BypassChargingSubPane(
     // Found Working Node Confirmation Dialog
     foundWorkingNode?.let { node ->
         Dialog(onDismissRequest = { foundWorkingNode = null }) {
+            BindGameSpaceDialogGamepad()
             val dialogToken = remember { Any() }
             val applyRequester = remember { FocusRequester() }
             DisposableEffect(Unit) {

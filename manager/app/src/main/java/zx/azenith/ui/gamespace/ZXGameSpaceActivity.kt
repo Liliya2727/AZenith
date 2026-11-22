@@ -165,39 +165,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
                 if (r2Down) GameSpaceInputSource.onMotionEvent(event)
                 emitTrigger(r2Down, KeyEvent.KEYCODE_BUTTON_R2)
             }
-            // Right stick vertical scroll (drives registered scroll state in Settings / overlays).
-            val rz = event.getAxisValue(MotionEvent.AXIS_RZ)
-            val ry = event.getAxisValue(MotionEvent.AXIS_RY)
-            val vertical = if (kotlin.math.abs(rz) >= kotlin.math.abs(ry)) rz else ry
-            GamepadStickScroll.onAxisY(vertical)
-            if (kotlin.math.abs(vertical) > GamepadStickScroll.DEADZONE) {
-                GameSpaceInputSource.onMotionEvent(event)
-                GamepadInput.onDpadKey()
-            }
-
-            // Hat takes priority, then the left stick. The dominant axis decides
-            // the direction: horizontal walks the game ribbon (and Bento cards),
-            // vertical reaches the Bento cards. Holding accelerates repeats.
-            val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
-            val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-            val stickX = event.getAxisValue(MotionEvent.AXIS_X)
-            val stickY = event.getAxisValue(MotionEvent.AXIS_Y)
-            val x = if (kotlin.math.abs(hatX) >= kotlin.math.abs(stickX)) hatX else stickX
-            val y = if (kotlin.math.abs(hatY) >= kotlin.math.abs(stickY)) hatY else stickY
-            val keyCode = when {
-                kotlin.math.abs(x) >= kotlin.math.abs(y) && kotlin.math.abs(x) > 0.5f ->
-                    if (x < 0f) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
-                kotlin.math.abs(y) > 0.5f ->
-                    if (y < 0f) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
-                else -> null
-            }
-            if (keyCode != null) {
-                GameSpaceInputSource.onMotionEvent(event)
-                GamepadInput.onDpadKey()
-                GamepadDirectionRepeat.onDirectionDown(keyCode)
-            } else {
-                GamepadDirectionRepeat.release()
-            }
+            GameSpaceGamepadMotion.handleStickAndHatMotion(event)
             return true
         }
         return super.dispatchGenericMotionEvent(event)

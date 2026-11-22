@@ -848,15 +848,17 @@ internal fun ZXGameSpaceExitDialog(
         }
     }
 
-    LaunchedEffect(Unit) {
-        delay(100)
-        runCatching { defaultRequester.requestFocus() }
-    }
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        BindGameSpaceDialogGamepad()
+        LaunchedEffect(Unit) {
+            for (attempt in 1..10) {
+                withFrameNanos { }
+                if (runCatching { defaultRequester.requestFocus() }.getOrDefault(false)) break
+            }
+        }
         androidx.compose.runtime.CompositionLocalProvider(zx.azenith.ui.component.LocalGamepadFocusEnabled provides true) {
         Surface(
             shape = RoundedCornerShape(28.dp),
