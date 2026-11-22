@@ -94,33 +94,34 @@ fun isGameLaunchHideStatusBarEnabled(context: Context): Boolean =
 // Tuning constants (timings in ms, magnitudes as floats). Everything lives here.
 //
 // Timeline (defaults):
-//   0    UI out (220), shapes fly out (350 + 0..100 stagger), wallpaper blur (0..300)
-//   160  scrim darkens (260)
-//   320  wordmark in (220) + SOUND
-//   540  hold (600), wordmark scale 1.00 -> 1.04 linear
-//   1140 wordmark out (220)
-//   1360 empty dark screen for PRE_LAUNCH_DELAY_MS (1000)
-//   2360 status bar hidden + game launched; restore POST_LAUNCH_RESTORE_DELAY_MS later
+//   0    UI out (300, scale 1.00 -> 1.04 + fade) & shapes fly out (300 + 0..80 stagger)
+//   300  wallpaper blur (400, 0 -> 24 dp) after UI elements are gone
+//   700  scrim darkens (260) + wordmark in (220, 70% size) + SOUND
+//   920  hold (600), wordmark scale 1.00 -> 1.04 linear
+//   1520 wordmark out (220)
+//   1740 empty dark screen for PRE_LAUNCH_DELAY_MS (1000)
+//   2740 status bar hidden + game launched; restore POST_LAUNCH_RESTORE_DELAY_MS later
 // ============================================================================
-internal const val UI_OUT_MS = 220
+internal const val UI_OUT_MS = 300
 internal const val UI_OUT_END_SCALE = 1.04f
 
-internal const val SHAPES_FLYOUT_DURATION_MS = 350
-internal const val SHAPES_MAX_STAGGER_MS = 100
+internal const val SHAPES_FLYOUT_DURATION_MS = 300
+internal const val SHAPES_MAX_STAGGER_MS = 80
 internal const val SHAPES_END_SCALE = 1.22f
 internal val SHAPES_FLYOUT_DISTANCE_DP = 420.dp
 
-internal const val BLUR_START_MS = 0
-internal const val BLUR_MS = 300
+internal const val BLUR_START_MS = UI_OUT_MS
+internal const val BLUR_MS = 400
 internal const val LAUNCH_BLUR_DP = 24f
 
-internal const val SCRIM_START_MS = 160
+internal const val SCRIM_START_MS = BLUR_START_MS + BLUR_MS
 internal const val SCRIM_MS = 260
 internal const val SCRIM_MAX_ALPHA = 0.95f
 
-internal const val WORDMARK_START_MS = 320
+internal const val WORDMARK_START_MS = SCRIM_START_MS
 internal const val WORDMARK_IN_MS = 220
 internal const val WORDMARK_IN_START_SCALE = 0.92f
+internal const val WORDMARK_FONT_SCALE = 0.70f
 internal const val WORDMARK_LETTER_SPACING_EM = 0.4f
 internal const val HOLD_MS = 600
 internal const val HOLD_END_SCALE = 1.04f
@@ -656,10 +657,13 @@ internal fun GameLaunchTransitionOverlay(
                 .background(scheme.scrim)
         )
 
+        val wordmarkStyle = MaterialTheme.typography.displayLarge
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = appName.uppercase(),
-                style = MaterialTheme.typography.displayLarge.copy(
+                style = wordmarkStyle.copy(
+                    fontSize = wordmarkStyle.fontSize * WORDMARK_FONT_SCALE,
+                    lineHeight = wordmarkStyle.lineHeight * WORDMARK_FONT_SCALE,
                     fontWeight = FontWeight.Black,
                     letterSpacing = WORDMARK_LETTER_SPACING_EM.em
                 ),
