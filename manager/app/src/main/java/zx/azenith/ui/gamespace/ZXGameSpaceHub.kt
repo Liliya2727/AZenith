@@ -193,6 +193,21 @@ fun ZXGameSpaceHub(
     var pendingLaunchPkg by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var sidePanelPromptOpen by remember { mutableStateOf(false) }
     val launchController = remember { GameLaunchController() }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, launchController) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> launchController.onActivityPaused()
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> launchController.onActivityResumed(scope)
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            launchController.onDispose()
+        }
+    }
     val requestPackageLaunch: (String, String?) -> Unit = { pkg, label ->
         if (!launchController.isRunning) {
             val setupDone = prefs.getBoolean("gamespace_sidepanel_setup_done", false)
@@ -652,9 +667,24 @@ fun ZXGameSpaceHub(
                 .hazeSource(overlayHazeState, zIndex = 0f)
         ) {
             ZXGameSpaceStageBackdrop(
-                entry = activeEntry
+                entry = activeEntry,
+                launchShapesElapsedMs = { launchController.shapesElapsedMsAnim.value }
             )
         }
+
+        // Hub UI + popups layer: fades and scales down as one layer during game launch
+        // while leaving the wallpaper backdrop underneath untouched (darkened by the scrim).
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val p = launchController.contentFadeAnim.value
+                    alpha = (1f - p).coerceIn(0f, 1f)
+                    val s = 1f - (1f - CONTENT_END_SCALE) * p
+                    scaleX = s
+                    scaleY = s
+                }
+        ) {
 
         val isAmoled = remember { prefs.getInt("color_mode", ColorMode.SYSTEM.value) == ColorMode.DARKAMOLED.value }
         val isHomescreenScrolled = category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 10)
@@ -1198,6 +1228,12 @@ fun ZXGameSpaceHub(
                 }
             }
         )
+        } // end Hub UI + popups layer
+
+        // Scrim, centered AZenith wordmark, and pointer lock overlay during game launch.
+        GameLaunchTransitionOverlay(controller = launchController)
+
+        BackHandler(enabled = launchController.isRunning) { }
     }
     }
 }

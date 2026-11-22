@@ -23,21 +23,82 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Build
 import android.os.Process
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
+import zx.azenith.ui.component.GamepadDirectionRepeat
+import zx.azenith.ui.component.GamepadStickScroll
 
 private const val TAG = "GameLaunch"
+
+// ============================================================================
+// Game-launch transition tuning constants (timings in ms, magnitudes as floats)
+// ============================================================================
+internal const val CONTENT_FADE_START_MS = 0
+internal const val CONTENT_FADE_DURATION_MS = 280
+internal const val CONTENT_END_SCALE = 0.97f
+
+internal const val SHAPES_FLYOUT_START_MS = 0
+internal const val SHAPES_FLYOUT_DURATION_MS = 450
+internal const val SHAPES_MAX_STAGGER_MS = 120
+internal const val SHAPES_END_SCALE = 1.22f
+internal val SHAPES_FLYOUT_DISTANCE_DP = 420.dp
+
+internal const val SCRIM_START_MS = 120
+internal const val SCRIM_DURATION_MS = 400 // 120..520 ms
+internal const val SCRIM_MAX_ALPHA = 0.94f
+
+internal const val WORDMARK_START_MS = 380
+internal const val WORDMARK_DURATION_MS = 420 // 380..800 ms
+internal const val WORDMARK_START_SCALE = 0.90f
+internal const val WORDMARK_END_SCALE = 1.00f
+
+internal const val LAUNCH_AT_MS = 700L
+internal const val WATCHDOG_TIMEOUT_MS = 4000L
+internal const val RECOVERY_FADE_MS = 200
+internal const val IMMEDIATE_GUARD_MS = 500L
+
+/**
+ * Shared lock flag read by [ZXGameSpaceActivity] to swallow non-system key and
+ * motion events while a game-launch transition is running.
+ */
+object GameLaunchInputLock {
+    @Volatile
+    var isLocked: Boolean = false
+}
 
 /**
  * State of the GameSpace game-launch transition, hosted at the Hub level.
@@ -186,8 +247,6 @@ object GameLauncher {
                                 TAG,
                                 "am start failed pkg=$packageName component=$component rc=${execResult.code} out=$combined"
                             )
-                            // If am start failed due to a missing/disabled activity, do not mask it;
-                            // otherwise attempt the in-app fallback once.
                             if (hasLaunchErrorText(combined)) {
                                 GameLaunchResult.Failure("am start error (rc=${execResult.code}): $combined")
                             } else {
@@ -242,7 +301,9 @@ object GameLauncher {
 }
 
 /**
- * Coordinates the launchInProgress guard and transition state at the Hub level.
+ * Coordinates the launchInProgress guard, transition animations, input lock, and watchdog
+ * at the Hub level. All animated values are [Animatable] instances read inside
+ * `graphicsLayer` lambdas so there is zero per-frame recomposition.
  */
 @Stable
 class GameLaunchController {
@@ -252,6 +313,35 @@ class GameLaunchController {
     val isRunning: Boolean
         get() = state is GameLaunchState.Running
 
+    // Driven by Animatables and read strictly inside graphicsLayer / draw lambdas.
+    val contentFadeAnim = Animatable(0f) // 0 = normal, 1 = faded out
+    val shapesElapsedMsAnim = Animatable(0f) // 0..(SHAPES_FLYOUT_DURATION_MS + SHAPES_MAX_STAGGER_MS)
+    val scrimAlphaAnim = Animatable(0f) // 0..SCRIM_MAX_ALPHA
+    val wordmarkAlphaAnim = Animatable(0f) // 0..1
+    val wordmarkScaleAnim = Animatable(WORDMARK_START_SCALE) // WORDMARK_START_SCALE..WORDMARK_END_SCALE
+
+    private var activeJob: Job? = null
+    private var watchdogJob: Job? = null
+
+    @Volatile
+    var isActivityPaused: Boolean = false
+
+    private fun animatorDurationScale(context: Context): Float = runCatching {
+        Settings.Global.getFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f
+        )
+    }.getOrDefault(1f)
+
+    private fun lockInput(locked: Boolean) {
+        GameLaunchInputLock.isLocked = locked
+        if (locked) {
+            GamepadDirectionRepeat.release()
+            GamepadStickScroll.reset()
+        }
+    }
+
     fun requestLaunch(
         scope: CoroutineScope,
         context: Context,
@@ -259,22 +349,280 @@ class GameLaunchController {
         label: String? = null
     ) {
         if (isRunning) return
+
+        val durationScale = animatorDurationScale(context)
+        if (durationScale <= 0f) {
+            // System animations disabled: skip transition and fire launch immediately.
+            state = GameLaunchState.Running(packageName = packageName, progress = 1f)
+            lockInput(true)
+            activeJob?.cancel()
+            watchdogJob?.cancel()
+            activeJob = scope.launch {
+                try {
+                    val res = GameLauncher.launch(context, packageName, label)
+                    if (res is GameLaunchResult.Failure) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.toast_app_launch_fail),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        delay(IMMEDIATE_GUARD_MS)
+                    }
+                } finally {
+                    lockInput(false)
+                    state = GameLaunchState.Idle
+                }
+            }
+            return
+        }
+
         state = GameLaunchState.Running(packageName = packageName, progress = 0f)
-        scope.launch {
+        lockInput(true)
+        isActivityPaused = false
+        activeJob?.cancel()
+        watchdogJob?.cancel()
+
+        activeJob = scope.launch {
             try {
+                // Reset channels cleanly before starting.
+                contentFadeAnim.snapTo(0f)
+                shapesElapsedMsAnim.snapTo(0f)
+                scrimAlphaAnim.snapTo(0f)
+                wordmarkAlphaAnim.snapTo(0f)
+                wordmarkScaleAnim.snapTo(WORDMARK_START_SCALE)
+
+                // 0..280 ms: UI content fades 1 -> 0 with accelerating easing & slight scale-down.
+                val contentJob = launch {
+                    if (CONTENT_FADE_START_MS > 0) delay(CONTENT_FADE_START_MS.toLong())
+                    contentFadeAnim.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(
+                            durationMillis = CONTENT_FADE_DURATION_MS,
+                            easing = FastOutLinearInEasing
+                        )
+                    )
+                }
+
+                // 0..450 ms (+ up to 120 ms stagger): floating shapes fly out radially.
+                val shapesTotalMs = SHAPES_FLYOUT_DURATION_MS + SHAPES_MAX_STAGGER_MS
+                val shapesJob = launch {
+                    if (SHAPES_FLYOUT_START_MS > 0) delay(SHAPES_FLYOUT_START_MS.toLong())
+                    shapesElapsedMsAnim.animateTo(
+                        targetValue = shapesTotalMs.toFloat(),
+                        animationSpec = tween(
+                            durationMillis = shapesTotalMs,
+                            easing = LinearEasing
+                        )
+                    )
+                }
+
+                // 120..520 ms: scrim darkens to near-opaque.
+                val scrimJob = launch {
+                    delay(SCRIM_START_MS.toLong())
+                    scrimAlphaAnim.animateTo(
+                        targetValue = SCRIM_MAX_ALPHA,
+                        animationSpec = tween(
+                            durationMillis = SCRIM_DURATION_MS,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
+                }
+
+                // 380..800 ms: centered "AZenith" wordmark fades in with slight scale-up and stays.
+                val wordmarkJob = launch {
+                    delay(WORDMARK_START_MS.toLong())
+                    launch {
+                        wordmarkAlphaAnim.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = WORDMARK_DURATION_MS,
+                                easing = FastOutSlowInEasing
+                            )
+                        )
+                    }
+                    launch {
+                        wordmarkScaleAnim.animateTo(
+                            targetValue = WORDMARK_END_SCALE,
+                            animationSpec = tween(
+                                durationMillis = WORDMARK_DURATION_MS,
+                                easing = FastOutSlowInEasing
+                            )
+                        )
+                    }
+                }
+
+                // Wait until LAUNCH_AT_MS, then fire the launch off the main thread.
+                delay(LAUNCH_AT_MS)
                 val res = GameLauncher.launch(context, packageName, label)
                 if (res is GameLaunchResult.Failure) {
+                    contentJob.cancel()
+                    shapesJob.cancel()
+                    scrimJob.cancel()
+                    wordmarkJob.cancel()
                     Toast.makeText(
                         context,
                         context.getString(R.string.toast_app_launch_fail),
                         Toast.LENGTH_SHORT
                     ).show()
+                    reverseToIdle(scope)
+                } else {
+                    // Start watchdog in case the game crashes on start or never takes focus.
+                    watchdogJob = scope.launch {
+                        delay(WATCHDOG_TIMEOUT_MS)
+                        if (isRunning && !isActivityPaused) {
+                            Log.w(
+                                TAG,
+                                "Launch transition watchdog triggered for $packageName after ${LAUNCH_AT_MS + WATCHDOG_TIMEOUT_MS}ms"
+                            )
+                            reverseToIdle(scope)
+                        }
+                    }
                 }
-                // Brief guard window against rapid double presses (A / START).
-                delay(500L)
-            } finally {
-                state = GameLaunchState.Idle
+            } catch (_: CancellationException) {
+                // Lifecycle pause/reset cancelled the transition.
             }
+        }
+    }
+
+    /**
+     * Smoothly fades the Hub UI and floating shapes back in and unlocks input.
+     */
+    fun reverseToIdle(scope: CoroutineScope) {
+        activeJob?.cancel()
+        activeJob = null
+        watchdogJob?.cancel()
+        watchdogJob = null
+        lockInput(false)
+        state = GameLaunchState.Idle
+
+        scope.launch {
+            launch {
+                contentFadeAnim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
+                )
+            }
+            launch {
+                shapesElapsedMsAnim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
+                )
+            }
+            launch {
+                scrimAlphaAnim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
+                )
+            }
+            launch {
+                wordmarkAlphaAnim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
+                )
+            }
+            launch {
+                wordmarkScaleAnim.animateTo(
+                    targetValue = WORDMARK_START_SCALE,
+                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
+                )
+            }
+        }
+    }
+
+    fun onActivityPaused() {
+        isActivityPaused = true
+        activeJob?.cancel()
+        activeJob = null
+        watchdogJob?.cancel()
+        watchdogJob = null
+    }
+
+    fun onActivityResumed(scope: CoroutineScope) {
+        isActivityPaused = false
+        val needsReset = isRunning ||
+            contentFadeAnim.value > 0.001f ||
+            scrimAlphaAnim.value > 0.001f ||
+            wordmarkAlphaAnim.value > 0.001f ||
+            shapesElapsedMsAnim.value > 0.001f
+        if (needsReset) {
+            reverseToIdle(scope)
+        } else {
+            lockInput(false)
+        }
+    }
+
+    fun onDispose() {
+        activeJob?.cancel()
+        watchdogJob?.cancel()
+        lockInput(false)
+    }
+}
+
+/**
+ * Full-screen overlay rendering the darkening theme scrim, centered AZenith wordmark,
+ * and pointer-event blocker during a game-launch transition.
+ * Reads [Animatable] values strictly inside `graphicsLayer` lambdas (zero per-frame recomposition).
+ */
+@Composable
+internal fun GameLaunchTransitionOverlay(
+    controller: GameLaunchController,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    // Theme-only color with guaranteed contrast over MaterialTheme.colorScheme.scrim
+    // in both Light and Dark/AMOLED schemes.
+    val wordmarkColor = if (scheme.surface.luminance() > 0.5f) {
+        scheme.surface
+    } else {
+        scheme.onSurface
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        // Darkening scrim over the wallpaper layer.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = controller.scrimAlphaAnim.value }
+                .background(scheme.scrim)
+        )
+
+        // Centered AZenith wordmark matching HomeWordmark / TopBar typography.
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.displayLarge.copy(
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-1.0).sp
+                ),
+                color = wordmarkColor,
+                maxLines = 1,
+                modifier = Modifier.graphicsLayer {
+                    val s = controller.wordmarkScaleAnim.value
+                    alpha = controller.wordmarkAlphaAnim.value
+                    scaleX = s
+                    scaleY = s
+                }
+            )
+        }
+
+        // Swallow all pointer/touch events while the transition is active.
+        if (controller.isRunning) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
+                    }
+            )
         }
     }
 }

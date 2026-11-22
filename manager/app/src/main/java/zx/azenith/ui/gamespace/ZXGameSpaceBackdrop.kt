@@ -88,7 +88,10 @@ import zx.azenith.ui.util.getHeaderImage
  * and a rich game artwork stage with Material 3 tonal scrims.
  */
 @Composable
-internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
+internal fun ZXGameSpaceStageBackdrop(
+    entry: RibbonEntry,
+    launchShapesElapsedMs: () -> Float = { 0f }
+) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
@@ -261,7 +264,10 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                 }
 
                 if (isHomescreen && floatingShapesEnabled) {
-                    ZXGameSpaceFloatingShapes(modifier = Modifier.fillMaxSize())
+                    ZXGameSpaceFloatingShapes(
+                        modifier = Modifier.fillMaxSize(),
+                        launchShapesElapsedMs = launchShapesElapsedMs
+                    )
                 }
 
                 val baseDimColor = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
@@ -307,7 +313,10 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                 )
             } else {
                 if (isHomescreen && floatingShapesEnabled) {
-                    ZXGameSpaceFloatingShapes(modifier = Modifier.fillMaxSize())
+                    ZXGameSpaceFloatingShapes(
+                        modifier = Modifier.fillMaxSize(),
+                        launchShapesElapsedMs = launchShapesElapsedMs
+                    )
                 }
             }
         }
@@ -459,19 +468,30 @@ private val FLOATING_MORPH_SHAPES: List<RoundedPolygon> by lazy {
  * The drift is ~5 dp/s, so 80 ms steps are invisible.
  */
 @Composable
-internal fun ZXGameSpaceFloatingShapes(modifier: Modifier = Modifier) {
+internal fun ZXGameSpaceFloatingShapes(
+    modifier: Modifier = Modifier,
+    launchShapesElapsedMs: () -> Float = { 0f }
+) {
     val scheme = MaterialTheme.colorScheme
     val clock = rememberGameSpaceClock()
     BoxWithConstraints(modifier = modifier) {
         val w = maxWidth
         val h = maxHeight
-        FLOATING_SHAPE_CONFIGS.forEach { config ->
+        val shapeCount = FLOATING_SHAPE_CONFIGS.size
+        FLOATING_SHAPE_CONFIGS.forEachIndexed { index, config ->
             val posX = w * config.relX
             val posY = h * config.relY
+            val staggerMs = if (shapeCount > 1) {
+                (SHAPES_MAX_STAGGER_MS * index) / (shapeCount - 1)
+            } else {
+                0
+            }
             FloatingShapeItem(
                 config = config,
                 color = config.colorProvider(scheme),
                 clock = clock,
+                launchStaggerMs = staggerMs.toFloat(),
+                launchShapesElapsedMs = launchShapesElapsedMs,
                 modifier = Modifier.offset(x = posX, y = posY)
             )
         }
@@ -505,10 +525,19 @@ private fun FloatingShapeItem(
     config: FloatingShapeConfig,
     color: Color,
     clock: FloatState,
+    launchStaggerMs: Float = 0f,
+    launchShapesElapsedMs: () -> Float = { 0f },
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
     val floatDistPx = with(density) { config.floatDistDp.toPx() }
+    val flyDistPx = with(density) { SHAPES_FLYOUT_DISTANCE_DP.toPx() }
+    // Radial outward direction from screen center (0.5, 0.5).
+    val dx = config.relX - 0.5f
+    val dy = config.relY - 0.5f
+    val dist = kotlin.math.hypot(dx.toDouble(), dy.toDouble()).toFloat().coerceAtLeast(0.001f)
+    val dirX = dx / dist
+    val dirY = dy / dist
     val path = remember { Path() }
     val matrix = remember { Matrix() }
     val morphs = remember { HashMap<Int, Morph>() }
@@ -517,10 +546,27 @@ private fun FloatingShapeItem(
         modifier = modifier
             .graphicsLayer {
                 val t = clock.floatValue
-                translationX =
+                val idleTx =
                     (reverseRamp(t, (config.floatDurationMs * 1.35f).roundToInt()) * 2f - 1f) * floatDistPx * 0.65f
-                translationY =
+                val idleTy =
                     (FastOutSlowInEasing.transform(reverseRamp(t, config.floatDurationMs)) * 2f - 1f) * floatDistPx
+                val elapsed = launchShapesElapsedMs()
+                if (elapsed > 0f) {
+                    val localT = ((elapsed - launchStaggerMs) / SHAPES_FLYOUT_DURATION_MS).coerceIn(0f, 1f)
+                    val eased = androidx.compose.animation.core.FastOutLinearInEasing.transform(localT)
+                    translationX = idleTx + dirX * flyDistPx * eased
+                    translationY = idleTy + dirY * flyDistPx * eased
+                    val s = 1f + (SHAPES_END_SCALE - 1f) * eased
+                    scaleX = s
+                    scaleY = s
+                    alpha = (1f - eased).coerceIn(0f, 1f)
+                } else {
+                    translationX = idleTx
+                    translationY = idleTy
+                    scaleX = 1f
+                    scaleY = 1f
+                    alpha = 1f
+                }
                 rotationZ = -14f + 38f * reverseRamp(t, config.rotDurationMs)
             }
             .size(config.size)
