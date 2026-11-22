@@ -134,7 +134,7 @@ fun ZXGameSpaceShell(
                         "/data/adb/modules/AZenith/system/bin/sys.azenith-service -p $id"
                     ).submit()
                 },
-                onLaunch = { app -> launchGame(context, app.packageName) },
+                onLaunch = { app -> GameLauncher.launch(context, app.packageName, app.label) },
                 onExit = { leaving = true },
                 onExitApp = onExitApp,
                 loading = applist.isRefreshing
@@ -182,13 +182,8 @@ fun ZXGameSpaceShell(
 }
 
 /**
- * Hands the game to the launcher and lets it take the foreground: the shell is a front end, so it
- * stays where it is rather than tearing itself down behind the game.
+ * Hands the game to the launcher through the single [GameLauncher] entry point.
  */
-internal fun launchGame(context: android.content.Context, packageName: String) {
-    zx.azenith.ui.gamespace.ZXSidePanelService.registerAppOpenedFromAzenith(packageName)
-    zx.azenith.ui.gamespace.ZXSidePanelService.show(context, packageName)
-    val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return
-    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-    runCatching { context.startActivity(intent) }
+internal fun launchGame(context: android.content.Context, packageName: String, label: String? = null) {
+    GameLauncher.launch(context, packageName, label)
 }

@@ -203,6 +203,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
     allApps: List<ApplistViewmodel.AppInfo>,
     hazeState: HazeState,
     onLaunch: (ApplistViewmodel.AppInfo) -> Unit,
+    onLaunchPackage: ((String) -> Unit)? = null,
     onClose: () -> Unit,
     viewModel: AppSettingsViewModel = viewModel()
 ) {
@@ -366,6 +367,8 @@ internal fun ZXGameSpaceAppSettingsOverlay(
             android.util.Log.d("PAD", "gs appsettings launch pkg=$pkg")
             if (resolvedApp != null) {
                 onLaunch(resolvedApp)
+            } else if (onLaunchPackage != null) {
+                onLaunchPackage(pkg)
             } else {
                 launchGame(context, pkg)
             }
@@ -1226,6 +1229,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
     allApps: List<ApplistViewmodel.AppInfo>,
     hazeState: HazeState,
     onLaunch: (ApplistViewmodel.AppInfo) -> Unit,
+    onLaunchPackage: ((String) -> Unit)? = null,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1397,6 +1401,8 @@ internal fun ZXGameSpaceWallpaperOverlay(
                 android.util.Log.d("PAD", "gs wallpaper launch pkg=$pkg")
                 if (resolvedApp != null) {
                     onLaunch(resolvedApp)
+                } else if (onLaunchPackage != null) {
+                    onLaunchPackage(pkg)
                 } else {
                     launchGame(context, pkg)
                 }

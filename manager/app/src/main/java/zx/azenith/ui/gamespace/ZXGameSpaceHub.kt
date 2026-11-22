@@ -190,16 +190,24 @@ fun ZXGameSpaceHub(
     var nowPlayingOpen by remember { mutableStateOf(false) }
     var nowPlayingAnchor by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     var pendingLaunchApp by remember { mutableStateOf<ApplistViewmodel.AppInfo?>(null) }
+    var pendingLaunchPkg by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var sidePanelPromptOpen by remember { mutableStateOf(false) }
-    val requestAppLaunch: (ApplistViewmodel.AppInfo) -> Unit = { app ->
-        val setupDone = prefs.getBoolean("gamespace_sidepanel_setup_done", false)
-        if (!setupDone) {
-            pendingLaunchApp = app
-            sidePanelPromptOpen = true
-        } else {
-            ZXSidePanelService.show(context, app.packageName, app.label)
-            onLaunch(app)
+    val launchController = remember { GameLaunchController() }
+    val requestPackageLaunch: (String, String?) -> Unit = { pkg, label ->
+        if (!launchController.isRunning) {
+            val setupDone = prefs.getBoolean("gamespace_sidepanel_setup_done", false)
+            if (!setupDone) {
+                pendingLaunchApp = allApps.firstOrNull { it.packageName == pkg }
+                    ?: games.firstOrNull { it.packageName == pkg }
+                pendingLaunchPkg = pkg to label
+                sidePanelPromptOpen = true
+            } else {
+                launchController.requestLaunch(scope, context, pkg, label)
+            }
         }
+    }
+    val requestAppLaunch: (ApplistViewmodel.AppInfo) -> Unit = { app ->
+        requestPackageLaunch(app.packageName, app.label)
     }
     val welcomeScroll = rememberScrollState()
     var homeExpanded by remember { mutableStateOf(false) }
@@ -1151,6 +1159,7 @@ fun ZXGameSpaceHub(
             allApps = allApps,
             hazeState = overlayHazeState,
             onLaunch = requestAppLaunch,
+            onLaunchPackage = { pkg -> requestPackageLaunch(pkg, null) },
             onClose = { tuningPkg = null }
         )
 
@@ -1160,6 +1169,7 @@ fun ZXGameSpaceHub(
             allApps = allApps,
             hazeState = overlayHazeState,
             onLaunch = requestAppLaunch,
+            onLaunchPackage = { pkg -> requestPackageLaunch(pkg, null) },
             onClose = { wallpaperPkg = null }
         )
 
@@ -1170,16 +1180,20 @@ fun ZXGameSpaceHub(
             onDismiss = {
                 sidePanelPromptOpen = false
                 pendingLaunchApp = null
+                pendingLaunchPkg = null
             },
             onConfirm = {
                 val appToLaunch = pendingLaunchApp
+                val pkgFallback = pendingLaunchPkg
                 sidePanelPromptOpen = false
                 pendingLaunchApp = null
-                if (appToLaunch != null) {
+                pendingLaunchPkg = null
+                val targetPkg = appToLaunch?.packageName ?: pkgFallback?.first
+                val targetLabel = appToLaunch?.label ?: pkgFallback?.second
+                if (targetPkg != null) {
                     scope.launch {
                         delay(240)
-                        ZXSidePanelService.show(context, appToLaunch.packageName, appToLaunch.label)
-                        onLaunch(appToLaunch)
+                        launchController.requestLaunch(scope, context, targetPkg, targetLabel)
                     }
                 }
             }
