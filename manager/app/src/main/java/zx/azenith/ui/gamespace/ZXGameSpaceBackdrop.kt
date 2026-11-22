@@ -263,7 +263,8 @@ internal fun ZXGameSpaceStageBackdrop(
                     }
                 }
 
-                if (isHomescreen && floatingShapesEnabled) {
+                val showFloatingShapes = (isHomescreen || current is RibbonEntry.Game) && floatingShapesEnabled
+                if (showFloatingShapes) {
                     ZXGameSpaceFloatingShapes(
                         modifier = Modifier.fillMaxSize(),
                         launchShapesElapsedMs = launchShapesElapsedMs
@@ -312,7 +313,8 @@ internal fun ZXGameSpaceStageBackdrop(
                         )
                 )
             } else {
-                if (isHomescreen && floatingShapesEnabled) {
+                val showFloatingShapes = (isHomescreen || current is RibbonEntry.Game) && floatingShapesEnabled
+                if (showFloatingShapes) {
                     ZXGameSpaceFloatingShapes(
                         modifier = Modifier.fillMaxSize(),
                         launchShapesElapsedMs = launchShapesElapsedMs
