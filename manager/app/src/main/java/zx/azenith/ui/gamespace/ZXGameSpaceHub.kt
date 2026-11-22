@@ -221,6 +221,24 @@ fun ZXGameSpaceHub(
         }
     }
 
+    // Keep selectedRibbonIndex anchored to the same logical entry (especially Library
+    // and the current Game) when enabling/disabling a game shifts ribbonEntries indices.
+    var trackedEntryKey by remember { mutableStateOf<Any>(RibbonEntry.Welcome) }
+    var lastRibbonEntries by remember { mutableStateOf(ribbonEntries) }
+    if (lastRibbonEntries !== ribbonEntries) {
+        val remapped = when (val key = trackedEntryKey) {
+            RibbonEntry.Welcome -> 0
+            RibbonEntry.Library -> ribbonEntries.indexOf(RibbonEntry.Library)
+            RibbonEntry.WrapToFirst -> ribbonEntries.indexOf(RibbonEntry.WrapToFirst)
+            is String -> ribbonEntries.indexOfFirst { it is RibbonEntry.Game && it.app.packageName == key }
+            else -> -1
+        }
+        if (remapped >= 0) {
+            selectedRibbonIndex = remapped
+        }
+        lastRibbonEntries = ribbonEntries
+    }
+
     var previousRibbonIndex by remember { mutableIntStateOf(0) }
     val safeIndex = selectedRibbonIndex.coerceIn(0, ribbonEntries.lastIndex)
     val isNavigatingForward = (safeIndex >= previousRibbonIndex && !(previousRibbonIndex == 0 && safeIndex == ribbonEntries.lastIndex)) ||
@@ -234,6 +252,10 @@ fun ZXGameSpaceHub(
         previousRibbonIndex = safeIndex
     }
     val activeEntry = ribbonEntries[safeIndex]
+    trackedEntryKey = when (activeEntry) {
+        is RibbonEntry.Game -> activeEntry.app.packageName
+        else -> activeEntry
+    }
     val activeStageType = activeEntry.stageType
     var lastGameApp by remember { mutableStateOf(enabledApps.firstOrNull()) }
     if (activeEntry is RibbonEntry.Game) {
