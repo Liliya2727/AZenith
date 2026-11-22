@@ -315,6 +315,20 @@ pub struct PowerState {
     pub fg_away_timer: i64,
 }
 
+/// Snapshot of a package's pre-existing GameManager state before AZenith modifies it.
+#[derive(Debug, Clone, Default)]
+pub struct GameSnapshot {
+    pub parsed_ok: bool,
+    pub current_mode: Option<String>,
+    pub had_mode2_config: bool,
+    pub mode2_scaling: Option<String>,
+    pub mode2_fps: Option<String>,
+    pub had_mode4_config: bool,
+    pub mode4_scaling: Option<String>,
+    pub mode4_fps: Option<String>,
+    pub prev_device_config: Option<String>,
+}
+
 /// Renderer/resolution state
 #[derive(Debug, Clone, Default)]
 pub struct RenderState {
@@ -327,6 +341,8 @@ pub struct RenderState {
     pub manual_sidepanel_shown: bool,
     /// Tracks the last package for which initial resolution SDK info was logged.
     pub last_resolution_log_pkg: Option<String>,
+    /// Pre-apply game mode/config snapshot for safe restoration.
+    pub resolution_snapshot: Option<GameSnapshot>,
 }
 
 // ---------------------------------------------------------------------------

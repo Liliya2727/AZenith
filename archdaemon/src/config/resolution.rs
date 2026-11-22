@@ -1,6 +1,6 @@
 //! Resolution / game-mode.
 
-use crate::core::DaemonContext;
+use crate::core::{DaemonContext, GameSnapshot};
 use crate::IS_DEFAULT;
 use crate::sysprop::get_or_default;
 use crate::{log_debug, log_error, log_info, log_warn};
@@ -236,6 +236,168 @@ fn normalize_fps(raw: &str, sdk: i32) -> Option<String> {
 }
 
 // ---------------------------------------------------------------------------
+// Snapshot & Restore helpers (Stage 4)
+// ---------------------------------------------------------------------------
+fn parse_mode_block(configs_out: &str, mode_num: u8) -> (bool, Option<String>, Option<String>) {
+    let needle = format!("Game Mode:{mode_num},");
+    let Some(start) = configs_out.find(&needle) else {
+        return (false, None, None);
+    };
+    let rest = &configs_out[start + needle.len()..];
+    let block = match rest.find(']') {
+        Some(end) => &rest[..end],
+        None => rest,
+    };
+
+    let mut scaling = None;
+    let mut fps = None;
+    for part in block.split(',') {
+        let part = part.trim();
+        if let Some(val) = part.strip_prefix("Scaling:") {
+            let v = val.trim();
+            if !v.is_empty() {
+                scaling = Some(v.to_string());
+            }
+        } else if let Some(val) = part.strip_prefix("Fps:") {
+            let v = val.trim();
+            if !v.is_empty() {
+                fps = Some(v.to_string());
+            }
+        }
+    }
+    (true, scaling, fps)
+}
+
+fn parse_current_mode(modes_out: &str) -> Option<String> {
+    let needle = "current mode:";
+    let idx = modes_out.find(needle)?;
+    let rest = modes_out[idx + needle.len()..].trim_start();
+    let mode: String = rest
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+        .collect();
+    if mode.is_empty() { None } else { Some(mode) }
+}
+
+fn capture_game_snapshot(pkg: &str, cap: GameCapability) -> GameSnapshot {
+    let mut snap = GameSnapshot::default();
+
+    // Capture any pre-existing device_config game_overlay entry so we never
+    // wipe a value AZenith did not create.
+    let dc_res = systemv_capture_both(&format!("cmd device_config get game_overlay {pkg}"));
+    if dc_res.exit_code == 0 {
+        let v = dc_res.output.trim();
+        if !v.is_empty() && v != "null" && !output_has_error(v) {
+            snap.prev_device_config = Some(v.to_string());
+        }
+    }
+
+    if cap != GameCapability::SetCustom {
+        return snap;
+    }
+
+    let modes_res = systemv_capture_both(&format!("cmd game list-modes {pkg}"));
+    let configs_res = systemv_capture_both(&format!("cmd game list-configs {pkg}"));
+
+    if modes_res.exit_code != 0 || configs_res.exit_code != 0 {
+        log_warn!(
+            "resolution",
+            "snapshot capture failed pkg={pkg} modes_rc={} configs_rc={}",
+            modes_res.exit_code,
+            configs_res.exit_code
+        );
+        return snap;
+    }
+
+    let current_mode = parse_current_mode(&modes_res.output);
+    let no_interventions = configs_res.output.contains("No interventions found");
+    let has_interventions = configs_res.output.contains("interventions:");
+
+    if current_mode.is_none() || (!no_interventions && !has_interventions) {
+        log_warn!(
+            "resolution",
+            "snapshot parse failed pkg={pkg} modes_out={:?} configs_out={:?}",
+            modes_res.output,
+            configs_res.output
+        );
+        return snap;
+    }
+
+    snap.current_mode = current_mode;
+    if !no_interventions {
+        let (h2, s2, f2) = parse_mode_block(&configs_res.output, 2);
+        snap.had_mode2_config = h2;
+        snap.mode2_scaling = s2;
+        snap.mode2_fps = f2;
+
+        let (h4, s4, f4) = parse_mode_block(&configs_res.output, 4);
+        snap.had_mode4_config = h4;
+        snap.mode4_scaling = s4;
+        snap.mode4_fps = f4;
+    }
+    snap.parsed_ok = true;
+    log_debug!(
+        "resolution",
+        "snapshot captured pkg={pkg} mode={:?} had_m2={} m2_scale={:?} m2_fps={:?}",
+        snap.current_mode,
+        snap.had_mode2_config,
+        snap.mode2_scaling,
+        snap.mode2_fps
+    );
+    snap
+}
+
+fn restore_device_config(pkg: &str, prev: Option<&str>) {
+    match prev {
+        Some(val) if !val.is_empty() => {
+            let _ = run_res_cmd(&format!("cmd device_config put game_overlay {pkg} {val}"));
+        }
+        _ => {
+            let _ = run_res_cmd(&format!("cmd device_config delete game_overlay {pkg}"));
+        }
+    }
+}
+
+fn restore_from_snapshot(pkg: &str, snap: Option<&GameSnapshot>) {
+    let Some(snap) = snap else {
+        log_warn!("resolution", "no snapshot for pkg={pkg}, falling back to reset --mode 2");
+        let _ = run_res_cmd(&format!("cmd game reset --mode 2 {pkg}"));
+        return;
+    };
+
+    if !snap.parsed_ok {
+        log_warn!("resolution", "unparsed snapshot for pkg={pkg}, falling back to reset --mode 2");
+        let _ = run_res_cmd(&format!("cmd game reset --mode 2 {pkg}"));
+        return;
+    }
+
+    if snap.had_mode2_config {
+        let mut cmd = String::from("cmd game set --mode 2");
+        if let Some(ref s) = snap.mode2_scaling {
+            if s.starts_with('-') {
+                cmd.push_str(" --downscale disable");
+            } else {
+                cmd.push_str(&format!(" --downscale {s}"));
+            }
+        }
+        if let Some(ref f) = snap.mode2_fps {
+            cmd.push_str(&format!(" --fps {f}"));
+        }
+        cmd.push_str(&format!(" {pkg}"));
+        let _ = run_res_cmd(&cmd);
+    } else {
+        // AZenith created the mode-2 override where none existed previously.
+        let _ = run_res_cmd(&format!("cmd game reset --mode 2 {pkg}"));
+    }
+
+    if let Some(ref mode) = snap.current_mode {
+        if mode != "unsupported" {
+            let _ = run_res_cmd(&format!("cmd game mode {mode} {pkg}"));
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // apply_game_set (Android 13+)
 // ---------------------------------------------------------------------------
 fn apply_game_set(pkg: &str, downscale: &str, fps: &str) -> bool {
@@ -256,7 +418,7 @@ fn apply_game_set(pkg: &str, downscale: &str, fps: &str) -> bool {
 // ---------------------------------------------------------------------------
 // apply_legacy (Android 12 fallback)
 // ---------------------------------------------------------------------------
-fn apply_legacy(pkg: &str, downscale: &str, fps: &str) -> bool {
+fn apply_legacy(pkg: &str, downscale: &str, fps: &str, prev_dc: Option<&str>) -> bool {
     let mut config = String::from("mode=2");
 
     if !IS_DEFAULT!(downscale) {
@@ -272,7 +434,16 @@ fn apply_legacy(pkg: &str, downscale: &str, fps: &str) -> bool {
     }
 
     let (_, ok_mode) = run_res_cmd(&format!("cmd game mode 2 {pkg}"));
-    ok_mode
+    if !ok_mode {
+        // Clean up orphan device_config entry on partial failure.
+        log_warn!(
+            "resolution",
+            "apply_legacy partial failure pkg={pkg}, reverting device_config"
+        );
+        restore_device_config(pkg, prev_dc);
+        return false;
+    }
+    true
 }
 
 // ---------------------------------------------------------------------------
@@ -331,10 +502,13 @@ pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &s
         return false;
     }
 
+    let snapshot = capture_game_snapshot(pkg, cap);
+
     if matches!(cap, GameCapability::SetCustom | GameCapability::SetMode) {
         if apply_game_set(pkg, &norm_downscale, &norm_fps) {
             ctx.render.resolution_applied = true;
             ctx.render.used_legacy_fallback = false;
+            ctx.render.resolution_snapshot = Some(snapshot);
             log_info!("resolution", "applied pkg={pkg} sdk={sdk} cap={:?} downscale={} fps={}",
                 cap,
                 if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
@@ -344,13 +518,17 @@ pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &s
         log_warn!("resolution", "cmd game set failed pkg={pkg}, falling back to device_config");
     }
 
-    if !apply_legacy(pkg, &norm_downscale, &norm_fps) {
+    if !apply_legacy(pkg, &norm_downscale, &norm_fps, snapshot.prev_device_config.as_deref()) {
         log_warn!("resolution", "legacy apply failed pkg={pkg} sdk={sdk}");
+        if snapshot.parsed_ok {
+            restore_from_snapshot(pkg, Some(&snapshot));
+        }
         return false;
     }
 
     ctx.render.resolution_applied = true;
     ctx.render.used_legacy_fallback = true;
+    ctx.render.resolution_snapshot = Some(snapshot);
     log_info!("resolution", "applied pkg={pkg} sdk={sdk} mode=legacy downscale={} fps={}",
         if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
         if IS_DEFAULT!(norm_fps) { "-" } else { &norm_fps });
@@ -365,14 +543,21 @@ pub fn restore_resolution_target(ctx: &mut DaemonContext, pkg: &str) {
         return;
     }
 
+    let snap = ctx.render.resolution_snapshot.take();
+
     if ctx.render.used_legacy_fallback {
-        let _ = run_res_cmd(&format!("cmd device_config delete game_overlay {pkg}"));
-        let (_, ok_reset) = run_res_cmd(&format!("cmd game reset {pkg}"));
-        if !ok_reset {
-            let _ = run_res_cmd(&format!("cmd game mode 1 {pkg}"));
+        let prev_dc = snap.as_ref().and_then(|s| s.prev_device_config.as_deref());
+        restore_device_config(pkg, prev_dc);
+        if snap.as_ref().is_some_and(|s| s.parsed_ok) {
+            restore_from_snapshot(pkg, snap.as_ref());
+        } else {
+            let (_, ok_reset) = run_res_cmd(&format!("cmd game reset {pkg}"));
+            if !ok_reset {
+                let _ = run_res_cmd(&format!("cmd game mode 1 {pkg}"));
+            }
         }
     } else {
-        let _ = run_res_cmd(&format!("cmd game reset --mode 2 {pkg}"));
+        restore_from_snapshot(pkg, snap.as_ref());
     }
 
     log_info!("resolution", "reset pkg={pkg} legacy={}", if ctx.render.used_legacy_fallback { 1 } else { 0 });
