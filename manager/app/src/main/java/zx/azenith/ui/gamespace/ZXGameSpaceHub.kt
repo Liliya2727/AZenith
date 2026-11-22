@@ -777,7 +777,11 @@ fun ZXGameSpaceHub(
                     },
                     modifier = Modifier
                         .fillMaxSize()
-                        .focusProperties { canFocus = !isTopLevelPopupOpen },
+                        .focusProperties {
+                            if (isTopLevelPopupOpen) {
+                                canFocus = false
+                            }
+                        },
                     label = "CategoryStageTransition"
                 ) { currentCategory ->
                     when (currentCategory) {
