@@ -370,7 +370,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
             } else if (onLaunchPackage != null) {
                 onLaunchPackage(pkg)
             } else {
-                launchGame(context, pkg)
+                launchGame(scope, context, pkg)
             }
         }
         val openInfo = {
@@ -1404,7 +1404,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                 } else if (onLaunchPackage != null) {
                     onLaunchPackage(pkg)
                 } else {
-                    launchGame(context, pkg)
+                    launchGame(scope, context, pkg)
                 }
             }
         }

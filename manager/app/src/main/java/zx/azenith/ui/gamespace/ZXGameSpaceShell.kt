@@ -134,7 +134,7 @@ fun ZXGameSpaceShell(
                         "/data/adb/modules/AZenith/system/bin/sys.azenith-service -p $id"
                     ).submit()
                 },
-                onLaunch = { app -> GameLauncher.launch(context, app.packageName, app.label) },
+                onLaunch = { app -> GameLauncher.launchAsync(scope, context, app.packageName, app.label) },
                 onExit = { leaving = true },
                 onExitApp = onExitApp,
                 loading = applist.isRefreshing
@@ -184,6 +184,11 @@ fun ZXGameSpaceShell(
 /**
  * Hands the game to the launcher through the single [GameLauncher] entry point.
  */
-internal fun launchGame(context: android.content.Context, packageName: String, label: String? = null) {
-    GameLauncher.launch(context, packageName, label)
+internal fun launchGame(
+    scope: kotlinx.coroutines.CoroutineScope,
+    context: android.content.Context,
+    packageName: String,
+    label: String? = null
+) {
+    GameLauncher.launchAsync(scope, context, packageName, label)
 }
