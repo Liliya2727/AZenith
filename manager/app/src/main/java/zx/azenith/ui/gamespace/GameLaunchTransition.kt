@@ -44,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
@@ -116,7 +117,7 @@ internal const val LAUNCH_BLUR_DP = 24f
 
 internal const val SCRIM_START_MS = BLUR_START_MS + BLUR_MS + BLUR_HOLD_MS
 internal const val SCRIM_MS = 260
-internal const val SCRIM_MAX_ALPHA = 0.95f
+internal const val SCRIM_MAX_ALPHA = 1.0f
 
 internal const val WORDMARK_START_MS = SCRIM_START_MS
 internal const val WORDMARK_IN_MS = 220
@@ -654,7 +655,7 @@ internal fun GameLaunchTransitionOverlay(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = controller.scrimAlphaAnim.value }
-                .background(scheme.scrim)
+                .background(Color.Black)
         )
 
         val wordmarkStyle = MaterialTheme.typography.displayLarge
