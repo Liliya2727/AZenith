@@ -347,9 +347,25 @@ internal fun ZXGameSpaceSettingsStage(
             !zx.azenith.ui.component.ZXDropDownNav.isActive
     ) {
         AudioUtil.playCancel(context)
+        GamepadInput.onDpadKey()
+        // Unlock sidebar focusability before requesting focus on the selected tab:
+        // while rightPaneHasFocus is true, the sidebar Surface cancels onEnter and
+        // each sidebar tab has canFocus = false to prevent geometric D-pad jumps.
+        rightPaneHasFocus = false
         val requester = sidebarTabRequesters[selectedTab]
-        val restored = requester != null && runCatching { requester.requestFocus() }.getOrDefault(false)
-        Log.d("PAD", "gs settings backToSidebar tab=$selectedTab restored=$restored")
+        var restored = requester != null && runCatching { requester.requestFocus() }.getOrDefault(false)
+        if (!restored && requester != null) {
+            scope.launch {
+                for (attempt in 1..6) {
+                    withFrameNanos { }
+                    restored = runCatching { requester.requestFocus() }.getOrDefault(false)
+                    if (restored) break
+                }
+                Log.d("PAD", "gs settings backToSidebar retry tab=$selectedTab restored=$restored")
+            }
+        } else {
+            Log.d("PAD", "gs settings backToSidebar tab=$selectedTab restored=$restored")
+        }
     }
 
     CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
