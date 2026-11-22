@@ -5,6 +5,87 @@ use crate::IS_DEFAULT;
 use crate::sysprop::get_or_default;
 use crate::{log_debug, log_error, log_info, log_warn};
 use crate::shell::{CmdResult, systemv_capture_both};
+use std::sync::OnceLock;
+
+// ---------------------------------------------------------------------------
+// Capability probe (Stage 3)
+// ---------------------------------------------------------------------------
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GameCapability {
+    /// Android 14+: `cmd game set` with custom mode + `list-configs`.
+    SetCustom,
+    /// Android 13: `cmd game set --mode [2|3|...]`.
+    SetMode,
+    /// Android 12 / 12L: `cmd game downscale [ratio|disable] <pkg>`.
+    Downscale,
+    /// Service missing or unrecognized.
+    None,
+}
+
+static GAME_CAPABILITY: OnceLock<GameCapability> = OnceLock::new();
+
+fn parse_help_capability(help_out: &str) -> GameCapability {
+    if help_out.is_empty()
+        || help_out.contains("Can't find service")
+        || help_out.contains("Unknown command")
+    {
+        return GameCapability::None;
+    }
+    if help_out.contains("list-configs") || help_out.contains("set [intervention configs]") {
+        return GameCapability::SetCustom;
+    }
+    if help_out.contains("set --mode") {
+        return GameCapability::SetMode;
+    }
+    if help_out.contains("downscale [") {
+        return GameCapability::Downscale;
+    }
+    GameCapability::None
+}
+
+fn fallback_capability_from_sdk(sdk: i32) -> GameCapability {
+    if sdk >= 34 {
+        GameCapability::SetCustom
+    } else if sdk == 33 {
+        GameCapability::SetMode
+    } else if sdk >= 31 {
+        GameCapability::Downscale
+    } else {
+        GameCapability::None
+    }
+}
+
+/// Probes `cmd game help` once at startup (cached). Never uses `--help`,
+/// and ignores rc=255 because AOSP's `ShellCommand.handleDefaultCommands("help")`
+/// returns `-1`.
+pub fn probe_game_capability() -> GameCapability {
+    *GAME_CAPABILITY.get_or_init(|| {
+        // Never use `--help`; `cmd game help` returns rc=255 (-1) even on success.
+        let res = systemv_capture_both("cmd game help");
+        let parsed = parse_help_capability(&res.output);
+        if parsed != GameCapability::None {
+            log_info!(
+                "resolution",
+                "capability probe ok cap={:?} rc={}",
+                parsed,
+                res.exit_code
+            );
+            return parsed;
+        }
+
+        let sdk = get_prop_int("ro.build.version.sdk");
+        let fb = fallback_capability_from_sdk(sdk);
+        log_warn!(
+            "resolution",
+            "capability probe failed rc={} out={:?}, falling back to sdk={} cap={:?}",
+            res.exit_code,
+            res.output,
+            sdk,
+            fb
+        );
+        fb
+    })
+}
 
 const ERROR_PATTERNS: &[&str] = &[
     "Invalid",
@@ -225,8 +306,22 @@ pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &s
         return false;
     }
 
+    let cap = probe_game_capability();
+    if cap == GameCapability::None {
+        if first_for_pkg {
+            log_info!("resolution", "skip pkg={pkg} sdk={sdk} cap=None reason=unsupported");
+        } else {
+            log_debug!("resolution", "game mode API unsupported sdk={sdk} cap=None");
+        }
+        return false;
+    }
+
     if first_for_pkg {
-        log_info!("resolution", "init pkg={pkg} sdk={sdk} downscale={downscale} fps={fps}");
+        log_info!(
+            "resolution",
+            "init pkg={pkg} sdk={sdk} cap={:?} downscale={downscale} fps={fps}",
+            cap
+        );
     }
 
     let norm_downscale = normalize_ratio(downscale, sdk).unwrap_or_else(|| "default".to_string());
@@ -236,11 +331,12 @@ pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &s
         return false;
     }
 
-    if sdk >= 33 {
+    if matches!(cap, GameCapability::SetCustom | GameCapability::SetMode) {
         if apply_game_set(pkg, &norm_downscale, &norm_fps) {
             ctx.render.resolution_applied = true;
             ctx.render.used_legacy_fallback = false;
-            log_info!("resolution", "applied pkg={pkg} sdk={sdk} downscale={} fps={}",
+            log_info!("resolution", "applied pkg={pkg} sdk={sdk} cap={:?} downscale={} fps={}",
+                cap,
                 if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
                 if IS_DEFAULT!(norm_fps) { "-" } else { &norm_fps });
             return true;

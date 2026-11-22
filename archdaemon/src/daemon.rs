@@ -2,7 +2,9 @@
 
 use crate::sysprop::{get_into, set};
 use crate::fileops;use crate::bypass::handle_dynamic_bypass;
-use crate::config::resolution::{apply_resolution_target, restore_resolution_target};
+use crate::config::resolution::{
+    apply_resolution_target, probe_game_capability, restore_resolution_target,
+};
 use crate::config::rendering::apply_smart_renderer;
 use crate::core::{
     DaemonContext, ProfileMode,
@@ -56,6 +58,7 @@ pub fn main_daemon() -> c_int {
     let mut ctx = DaemonContext::new();
     init_daemon_context(&mut ctx);
     restore_daemon_state(&mut ctx);
+    probe_game_capability();
 
     // A previous run may have been killed between switching a charge node ON
     // and restoring it. Clear that before anything else touches bypass state.
