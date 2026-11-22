@@ -29,6 +29,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,12 +58,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -89,7 +93,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import zx.azenith.ui.gamespace.GameSpaceInputSource
 import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.gamespace.springPressBounce
 import zx.azenith.ui.util.AudioUtil
@@ -168,6 +175,7 @@ fun Modifier.zxDropDownAnchor(state: ZXDropDownState): Modifier =
  * Place it inside a [Box] that fills the area the menu may cover, as a sibling after the
  * content it overlays.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun <T> ZXDropDownMenu(
     state: ZXDropDownState,
@@ -189,6 +197,7 @@ fun <T> ZXDropDownMenu(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val requesters = remember(options) { List(options.size) { FocusRequester() } }
+    val attachedItems = remember(options) { mutableStateMapOf<Int, Boolean>() }
 
     var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
     var overlayWidth by remember { mutableFloatStateOf(0f) }
@@ -319,21 +328,50 @@ fun <T> ZXDropDownMenu(
                 openedBefore = true
                 val initial = options.indexOf(selectedOption).let { if (it >= 0) it else 0 }
                 Log.d("PAD", "gs dropdown open initial=$initial size=${options.size}")
-                // The enter transition has to start before focus moves, or the first item is
-                // still at its pre-scale size and the outline lands off the row.
-                delay(70)
-                val seeded = runCatching { requesters[initial].requestFocus() }.getOrDefault(false)
-                Log.d("PAD", "gs dropdown seed initial=$initial seeded=$seeded")
+                val useGamepad = GameSpaceInputSource.isGamepadLast ||
+                    GamepadInput.dpadMode ||
+                    GamepadInput.controllerConnected
+                if (useGamepad) {
+                    GamepadInput.onDpadKey()
+                }
+                val attached = withTimeoutOrNull(500L) {
+                    snapshotFlow { attachedItems[initial] == true }.first { it }
+                } == true
+                var seeded = false
+                if (attached) {
+                    withFrameNanos { }
+                    seeded = runCatching { requesters[initial].requestFocus() }.getOrDefault(false)
+                    if (!seeded) {
+                        for (attempt in 1..8) {
+                            withFrameNanos { }
+                            seeded = runCatching { requesters[initial].requestFocus() }.getOrDefault(false)
+                            if (seeded) break
+                        }
+                    }
+                }
+                Log.d("PAD", "gs dropdown seed initial=$initial attached=$attached seeded=$seeded")
             } else {
+                if (openedBefore) {
+                    val useGamepad = GameSpaceInputSource.isGamepadLast ||
+                        GamepadInput.dpadMode ||
+                        GamepadInput.controllerConnected
+                    if (useGamepad) {
+                        GamepadInput.onDpadKey()
+                        withFrameNanos { }
+                        val restored = GamepadFocusNav.restoreFocus()
+                        Log.d("PAD", "gs dropdown closed restoreImmediate=$restored")
+                    }
+                }
                 delay(160)
                 render = false
                 if (openedBefore) {
-                    // Wait one frame after render=false so every ZXDropDownItem has run its
-                    // onDispose and removed its FocusRequester from GamepadFocusNav.focusHistory,
-                    // leaving the anchor row that opened the menu at the top of the stack.
                     withFrameNanos { }
-                    val restored = GamepadFocusNav.restoreFocus()
-                    Log.d("PAD", "gs dropdown closed restore=$restored")
+                    if (!GamepadShortcuts.hasRowFocus &&
+                        (GameSpaceInputSource.isGamepadLast || GamepadInput.dpadMode)
+                    ) {
+                        val restored = GamepadFocusNav.restoreFocus()
+                        Log.d("PAD", "gs dropdown closed restoreAfterDispose=$restored")
+                    }
                 }
             }
         }
@@ -371,6 +409,18 @@ fun <T> ZXDropDownMenu(
                             transformOrigin = TransformOrigin(1f, originY)
                         }
                         .onGloballyPositioned { menuViewport = it.size.height.toFloat() }
+                        .focusProperties {
+                            canFocus = false
+                            if (state.expanded) {
+                                onExit = {
+                                    if (state.expanded) {
+                                        cancelFocusChange()
+                                        Log.d("PAD", "gs dropdown cancelExit")
+                                    }
+                                }
+                            }
+                        }
+                        .focusGroup()
                         .onPreviewKeyEvent { event ->
                             when (event.nativeKeyEvent.keyCode) {
                                 KeyEvent.KEYCODE_DPAD_LEFT,
@@ -387,16 +437,21 @@ fun <T> ZXDropDownMenu(
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         options.forEachIndexed { index, option ->
+                            DisposableEffect(index) {
+                                onDispose { attachedItems.remove(index) }
+                            }
                             ZXDropDownItem(
                                 label = optionLabel(option),
                                 supporting = optionSupporting(option),
                                 icon = optionIcon?.invoke(option),
                                 selected = option == selectedOption,
+                                menuExpanded = state.expanded,
                                 requester = requesters[index],
                                 upTarget = requesters.getOrNull(index - 1),
                                 downTarget = requesters.getOrNull(index + 1),
                                 scrollState = scrollState,
                                 viewport = { menuViewport },
+                                onAttached = { attachedItems[index] = true },
                                 onClick = {
                                     onOptionSelected(option)
                                     state.dismiss()
@@ -416,11 +471,13 @@ private fun ZXDropDownItem(
     supporting: String?,
     icon: ImageVector?,
     selected: Boolean,
+    menuExpanded: Boolean,
     requester: FocusRequester,
     upTarget: FocusRequester?,
     downTarget: FocusRequester?,
     scrollState: ScrollState,
     viewport: () -> Float,
+    onAttached: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -466,9 +523,11 @@ private fun ZXDropDownItem(
             .onGloballyPositioned { coordinates ->
                 itemTop.floatValue = coordinates.positionInParent().y
                 itemHeight.floatValue = coordinates.size.height.toFloat()
+                onAttached()
             }
             .onFocusChanged { focus ->
                 if (!focus.isFocused) return@onFocusChanged
+                Log.d("PAD", "gs dropdown focus label=$label")
                 val visible = viewport()
                 if (visible <= 0f) return@onFocusChanged
                 val top = itemTop.floatValue
@@ -484,13 +543,16 @@ private fun ZXDropDownItem(
                 // The menu is the only thing that may hold focus while it is open, so the
                 // horizontal search is cancelled outright and the vertical one stops at
                 // the ends instead of walking out into the list behind the scrim.
+                if (!menuExpanded) {
+                    canFocus = false
+                }
                 left = FocusRequester.Cancel
                 right = FocusRequester.Cancel
                 up = upTarget ?: FocusRequester.Cancel
                 down = downTarget ?: FocusRequester.Cancel
             }
             .focusRequester(requester)
-            .gamepadFocusOutline(shape = shape, onActivate = activateItem)
+            .gamepadFocusOutline(shape = shape, register = false, onActivate = activateItem)
             .clip(shape)
             .background(fill, shape)
             .focusProperties { canFocus = false }
