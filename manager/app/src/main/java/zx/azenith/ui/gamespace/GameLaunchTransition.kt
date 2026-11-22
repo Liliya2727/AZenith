@@ -95,24 +95,24 @@ fun isGameLaunchHideStatusBarEnabled(context: Context): Boolean =
 // Tuning constants (timings in ms, magnitudes as floats). Everything lives here.
 //
 // Timeline (3-part sequence, defaults):
-//   Part 1 (0..300 ms):     UI out (300, scale 1.00 -> 1.04 + fade) & floating shapes scatter fast (420 + 0..80 stagger)
+//   Part 1 (0..300 ms):     UI out (300, scale 1.00 -> 1.06 + fade) & floating shapes scatter fast (420 + 0..80 stagger)
 //   Pause  (300..800 ms):   POST_UI_OUT_DELAY_MS (500)
 //   Part 2 (800..1750 ms):  wallpaper blur in (250, 0 -> 24 dp), then hold blur (700)
 //   Part 3 (1750 ms+):      pure black scrim (260) + wordmark in (220, 70% size) + SOUND,
 //                           hold (600), wordmark out (220), pre-launch dark screen (1000), launch
 // ============================================================================
 internal const val UI_OUT_MS = 300
-internal const val UI_OUT_END_SCALE = 1.04f
+internal const val UI_OUT_END_SCALE = 1.06f
 
-internal const val SHAPES_FLYOUT_DURATION_MS = 420
+internal const val SHAPES_FLYOUT_DURATION_MS = 400
 internal const val SHAPES_MAX_STAGGER_MS = 80
 internal const val SHAPES_END_SCALE = 1.25f
 internal val SHAPES_FLYOUT_DISTANCE_DP = 760.dp
 
-internal const val POST_UI_OUT_DELAY_MS = 500
+internal const val POST_UI_OUT_DELAY_MS = 400
 internal const val BLUR_START_MS = UI_OUT_MS + POST_UI_OUT_DELAY_MS
 internal const val BLUR_MS = 250
-internal const val BLUR_HOLD_MS = 700
+internal const val BLUR_HOLD_MS = 400
 internal const val LAUNCH_BLUR_DP = 24f
 
 internal const val SCRIM_START_MS = BLUR_START_MS + BLUR_MS + BLUR_HOLD_MS
@@ -135,7 +135,7 @@ internal const val POST_LAUNCH_RESTORE_DELAY_MS = 1000L
 internal const val BGM_DUCK_TARGET = 0.12f
 internal const val BGM_DUCK_FADE_MS = 220L
 
-internal const val WATCHDOG_AFTER_LAUNCH_MS = 4000L
+internal const val WATCHDOG_AFTER_LAUNCH_MS = 5000L
 internal const val RECOVERY_FADE_MS = 200
 internal const val IMMEDIATE_GUARD_MS = 500L
 
