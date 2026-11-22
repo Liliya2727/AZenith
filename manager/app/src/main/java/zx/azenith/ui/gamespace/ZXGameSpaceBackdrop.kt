@@ -263,14 +263,6 @@ internal fun ZXGameSpaceStageBackdrop(
                     }
                 }
 
-                val showFloatingShapes = (isHomescreen || current is RibbonEntry.Game) && floatingShapesEnabled
-                if (showFloatingShapes) {
-                    ZXGameSpaceFloatingShapes(
-                        modifier = Modifier.fillMaxSize(),
-                        launchShapesElapsedMs = launchShapesElapsedMs
-                    )
-                }
-
                 val baseDimColor = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
                 val dimScale = (effectiveDim / 75f).coerceIn(0.15f, 1.45f)
 
@@ -312,14 +304,13 @@ internal fun ZXGameSpaceStageBackdrop(
                             )
                         )
                 )
-            } else {
-                val showFloatingShapes = (isHomescreen || current is RibbonEntry.Game) && floatingShapesEnabled
-                if (showFloatingShapes) {
-                    ZXGameSpaceFloatingShapes(
-                        modifier = Modifier.fillMaxSize(),
-                        launchShapesElapsedMs = launchShapesElapsedMs
-                    )
-                }
+            }
+
+            if ((isHomescreen || current is RibbonEntry.Game) && floatingShapesEnabled) {
+                ZXGameSpaceFloatingShapes(
+                    modifier = Modifier.fillMaxSize(),
+                    launchShapesElapsedMs = launchShapesElapsedMs
+                )
             }
         }
     }
@@ -370,7 +361,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Circle,
         relX = 0.70f,
         relY = 0.22f,
-        size = 36.dp,
+        size = 56.dp,
         colorProvider = { it.primary },
         floatDurationMs = 5200,
         floatDistDp = 14.dp,
@@ -381,7 +372,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Cookie4,
         relX = 0.85f,
         relY = 0.36f,
-        size = 28.dp,
+        size = 30.dp,
         colorProvider = { it.tertiary },
         floatDurationMs = 6100,
         floatDistDp = 12.dp,
@@ -392,7 +383,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Clover4,
         relX = 0.56f,
         relY = 0.26f,
-        size = 32.dp,
+        size = 44.dp,
         colorProvider = { it.secondary },
         floatDurationMs = 4800,
         floatDistDp = 16.dp,
@@ -403,7 +394,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Sunny,
         relX = 0.75f,
         relY = 0.65f,
-        size = 40.dp,
+        size = 76.dp,
         colorProvider = { it.primary },
         floatDurationMs = 6800,
         floatDistDp = 18.dp,
@@ -414,7 +405,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.SoftBurst,
         relX = 0.90f,
         relY = 0.18f,
-        size = 24.dp,
+        size = 22.dp,
         colorProvider = { it.outlineVariant },
         floatDurationMs = 4300,
         floatDistDp = 10.dp,
@@ -425,7 +416,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Puffy,
         relX = 0.44f,
         relY = 0.16f,
-        size = 30.dp,
+        size = 64.dp,
         colorProvider = { it.tertiary },
         floatDurationMs = 5600,
         floatDistDp = 13.dp,
@@ -436,7 +427,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Gem,
         relX = 0.62f,
         relY = 0.78f,
-        size = 28.dp,
+        size = 36.dp,
         colorProvider = { it.secondary },
         floatDurationMs = 6400,
         floatDistDp = 15.dp,
@@ -596,11 +587,11 @@ private fun FloatingShapeItem(
                 matrix.reset()
                 matrix.scale(this.size.width, this.size.height)
                 outline.transform(matrix)
-                drawPath(outline, color = color.copy(alpha = 0.12f))
+                drawPath(outline, color = color.copy(alpha = 0.22f))
                 drawPath(
                     outline,
-                    color = color.copy(alpha = 0.28f),
-                    style = Stroke(width = 2.4f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    color = color.copy(alpha = 0.50f),
+                    style = Stroke(width = 3.0f, cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
             }
     )
