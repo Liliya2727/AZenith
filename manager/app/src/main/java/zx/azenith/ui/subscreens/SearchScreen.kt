@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -72,6 +73,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -92,6 +94,8 @@ import zx.azenith.ui.component.LeadingIcon
 import zx.azenith.ui.component.SearchJump
 import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
+import zx.azenith.ui.component.GamepadShortcuts
+import zx.azenith.ui.component.RegisterGamepadActions
 import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.component.hazePageSource
 import zx.azenith.ui.navigation.safePopBackStack
@@ -124,6 +128,7 @@ fun SearchScreen(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+    val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme
     val motionScheme = MaterialTheme.motionScheme
     var query by rememberSaveable { mutableStateOf("") }
@@ -177,6 +182,19 @@ fun SearchScreen(
 
     BackHandler { dismissEditor(); navController.safePopBackStack() }
 
+    RegisterGamepadActions(
+        enabled = true,
+        hasSearch = false,
+        hasTopAction = false,
+        onCloseOverlay = { false },
+        onBack = {
+            dismissEditor()
+            navController.safePopBackStack()
+            true
+        },
+        scrollState = listState,
+    )
+
     LaunchedEffect(Unit) {
         // Requesting focus before the field is attached throws, and on the first
         // frame of a nav transition it is not attached yet.
@@ -228,7 +246,10 @@ fun SearchScreen(
                             },
                             trailingIcon = {
                                 if (query.isNotEmpty()) {
-                                    IconButton(onClick = { query = "" }) {
+                                    IconButton(
+                                        onClick = { query = "" },
+                                        modifier = Modifier.focusProperties { canFocus = false }
+                                    ) {
                                         Icon(
                                             Icons.Default.Clear,
                                             contentDescription = stringResource(R.string.cd_clear)
@@ -253,10 +274,13 @@ fun SearchScreen(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            dismissEditor()
-                            navController.safePopBackStack()
-                        }) {
+                        IconButton(
+                            onClick = {
+                                dismissEditor()
+                                navController.safePopBackStack()
+                            },
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.cd_back)
@@ -318,7 +342,11 @@ fun SearchScreen(
                 )
 
                 SearchPhase.Results -> LazyColumn(
-                    modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazePageSource()
+                        .gamepadScreenEntry(scopeKey = "subscreen:search"),
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding(),
                         start = 16.dp,

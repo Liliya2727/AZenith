@@ -59,6 +59,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -197,6 +198,18 @@ fun AppSettingsScreen(
     val isLandscape = LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     // Landscape supplies the side padding itself, so the lists inside stop carrying theirs.
     val panePadding = if (isLandscape) 0.dp else 16.dp
+    val portraitListState = rememberLazyListState()
+    val landscapeRightListState = rememberLazyListState()
+
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            appListViewModel.loadApps(context, forceRefresh = true)
+            navController.safePopBackStack()
+            true
+        },
+        scrollState = if (isLandscape) landscapeRightListState else portraitListState,
+    )
 
     // Each region is built once and the layouts only decide where it goes: portrait stacks them
     // in one column, landscape keeps identity and its switch on the left and the tweaks they
@@ -543,9 +556,11 @@ fun AppSettingsScreen(
                     // Right pane: the switch that gates the app, and everything AZenith does to it
                     // once that switch is on.
                     LazyColumn(
+                        state = landscapeRightListState,
                         modifier = Modifier
                             .weight(0.64f)
-                            .fillMaxHeight(),
+                            .fillMaxHeight()
+                            .gamepadScreenEntry(scopeKey = "subscreen:app_settings"),
                         contentPadding = PaddingValues(
                             top = innerPadding.calculateTopPadding() + 8.dp,
                             bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -559,7 +574,11 @@ fun AppSettingsScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+                    state = portraitListState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazePageSource()
+                        .gamepadScreenEntry(scopeKey = "subscreen:app_settings"),
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding(),
                         bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -739,6 +758,7 @@ fun AppSettingsTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadNotFocusable()
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
@@ -750,20 +770,29 @@ fun AppSettingsTopAppBar(
                 ) 
             },
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },
             actions = {
 
-                IconButton(onClick = onLaunchApp) {
+                IconButton(
+                    onClick = onLaunchApp,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.Launch, 
                         contentDescription = stringResource(R.string.str_launch_app)
                     )
                 }
 
-                IconButton(onClick = onOpenAppInfo) {
+                IconButton(
+                    onClick = onOpenAppInfo,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(
                         imageVector = Icons.Rounded.Info, 
                         contentDescription = stringResource(R.string.str_app_info)

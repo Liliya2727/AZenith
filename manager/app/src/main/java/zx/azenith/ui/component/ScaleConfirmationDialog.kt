@@ -48,11 +48,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +73,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import zx.azenith.R
+import zx.azenith.ui.gamespace.BindGameSpaceDialogGamepad
+import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.util.tapHaptic
 
 private const val CONFIRM_TIMEOUT_SECONDS = 10
@@ -103,10 +107,13 @@ fun ScaleConfirmationDialog(
     val progress = remember { Animatable(1f) }
     val scheme = MaterialTheme.colorScheme
     val confirmRequester = remember { FocusRequester() }
+    val overlayToken = remember { Any() }
 
-    LaunchedEffect(Unit) {
-        delay(100)
-        runCatching { confirmRequester.requestFocus() }
+    DisposableEffect(overlayToken) {
+        GameSpaceOverlayState.acquire(overlayToken, "ScaleConfirmationDialog")
+        onDispose {
+            GameSpaceOverlayState.release(overlayToken)
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -135,8 +142,18 @@ fun ScaleConfirmationDialog(
             usePlatformDefaultWidth = false
         )
     ) {
+        BindGameSpaceDialogGamepad()
+        LaunchedEffect(Unit) {
+            for (attempt in 1..10) {
+                withFrameNanos { }
+                if (runCatching { confirmRequester.requestFocus() }.getOrDefault(false)) {
+                    break
+                }
+            }
+        }
         CompositionLocalProvider(
-            LocalDensity provides fixedDensity
+            LocalDensity provides fixedDensity,
+            LocalGamepadFocusEnabled provides true
         ) {
             Box(
                 modifier = Modifier
@@ -235,7 +252,7 @@ fun ScaleConfirmationDialog(
                         ) {
                             TextButton(
                                 onClick = onRevert,
-                                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true)
+                                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true, onActivate = onRevert)
                             ) {
                                 Text(
                                     text = stringResource(R.string.scale_confirm_revert),
@@ -247,7 +264,7 @@ fun ScaleConfirmationDialog(
                                 onClick = onConfirm,
                                 modifier = Modifier
                                     .focusRequester(confirmRequester)
-                                    .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true)
+                                    .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true, onActivate = onConfirm)
                             ) {
                                 Text(
                                     text = stringResource(R.string.scale_confirm_keep),

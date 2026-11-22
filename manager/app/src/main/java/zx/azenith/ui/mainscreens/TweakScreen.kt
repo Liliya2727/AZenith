@@ -56,6 +56,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
 
@@ -147,6 +148,7 @@ fun TweakScreen(
         indexOf = { id -> TWEAK_ROW_ITEMS[id] }
     )
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
+    var requestHideBackupRestoreSheet by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
     val rendererOrigin = rememberDialogOrigin()
     var showRefreshRateDialog by remember { mutableStateOf(false) }
@@ -169,6 +171,36 @@ fun TweakScreen(
     
     LoadingDialogHost(handle = loadingDialog)
     ConfirmDialogHost(handle = confirmDialog)
+
+    // Gamepad shortcuts: Square opens Tweaks search, Triangle toggles the cloud
+    // (backup/restore) sheet beside it.
+    val isCurrentPage = LocalIsCurrentPagerPage.current
+    val isPagerActive = LocalMainPagerActive.current
+    val pageIndex = LocalPagerPageIndex.current
+    RegisterGamepadActions(
+        enabled = isCurrentPage && isPagerActive,
+        hasSearch = true,
+        isSearchOpen = false,
+        onSearchToggle = { navController.navigate(SearchTab.Tweaks.searchRoute) },
+        hasTopAction = true,
+        isTopActionOpen = showBackupRestoreSheet,
+        onTopAction = { showBackupRestoreSheet = !showBackupRestoreSheet },
+        onCloseOverlay = {
+            var closed = false
+            if (showBackupRestoreSheet && !requestHideBackupRestoreSheet) { requestHideBackupRestoreSheet = true; closed = true }
+            if (showRendererDialog) { showRendererDialog = false; closed = true }
+            if (showRefreshRateDialog) { showRefreshRateDialog = false; closed = true }
+            if (showBackupOptionsDialog) { showBackupOptionsDialog = false; closed = true }
+            if (showRestoreDialog) { showRestoreDialog = false; closed = true }
+            closed
+        },
+        scrollState = listState,
+        onScrollDelta = { delta ->
+            scrollBehavior.state.heightOffset =
+                (scrollBehavior.state.heightOffset - delta)
+                    .coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
+        }
+    )
 
     val createDocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         uri?.let {
@@ -271,7 +303,8 @@ fun TweakScreen(
                     NavDockAction(
                         icon = Icons.Outlined.Cloud,
                         contentDescription = stringResource(R.string.cd_menu),
-                        onClick = { showBackupRestoreSheet = true }
+                        onClick = { showBackupRestoreSheet = true },
+                        topActionBadge = true
                     )
                 )
             )
@@ -289,7 +322,7 @@ fun TweakScreen(
 
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource(),
+            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(page = pageIndex),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp + safeAreaStartInset(),
@@ -334,7 +367,9 @@ fun TweakScreen(
                                         title = stringResource(R.string.perf_lite_mode),
                                         summary = stringResource(R.string.perf_lite_mode_desc),
                                         checked = viewModel.liteState!!,
-                                        onCheckedChange = { viewModel.updateLiteMode(it) }
+                                        onCheckedChange = { viewModel.updateLiteMode(it) },
+                                        focusKey = "tweaks.perf_lite",
+                                        focusIndex = 2
                                     )
                                 }
                             },
@@ -357,7 +392,9 @@ fun TweakScreen(
                                                         stringResource(R.string.str_fpsgo_unavailable)
                                                 )
                                             },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                            focusKey = "tweaks.fpsgo",
+                                            focusIndex = 2
                                         )
                                     }
                                 }
@@ -385,7 +422,9 @@ fun TweakScreen(
                                         title = stringResource(R.string.game_preload),
                                         summary = stringResource(R.string.game_preload_desc),
                                         checked = viewModel.preloadState!!,
-                                        onCheckedChange = { viewModel.updatePreloadMode(it) }
+                                        onCheckedChange = { viewModel.updatePreloadMode(it) },
+                                        focusKey = "tweaks.game_preload",
+                                        focusIndex = 4
                                     )
                                 }
                             }
@@ -397,7 +436,9 @@ fun TweakScreen(
                                             title = stringResource(R.string.memory_killer),
                                             summary = stringResource(R.string.memory_killer_desc),
                                             checked = viewModel.memKillerState!!,
-                                            onCheckedChange = { viewModel.updateMemoryKiller(it) }
+                                            onCheckedChange = { viewModel.updateMemoryKiller(it) },
+                                            focusKey = "tweaks.memory_killer",
+                                            focusIndex = 4
                                         )
                                     }
                                 }
@@ -410,7 +451,9 @@ fun TweakScreen(
                                             title = stringResource(R.string.app_priority_control),
                                             summary = stringResource(R.string.app_priority_control_desc),
                                             checked = viewModel.appPriorState!!,
-                                            onCheckedChange = { viewModel.updateAppPriority(it) }
+                                            onCheckedChange = { viewModel.updateAppPriority(it) },
+                                            focusKey = "tweaks.app_priority",
+                                            focusIndex = 4
                                         )
                                     }
                                 }
@@ -422,7 +465,9 @@ fun TweakScreen(
                                         title = stringResource(R.string.dnd_mode_gaming),
                                         summary = stringResource(R.string.dnd_mode_gaming_desc),
                                         checked = viewModel.dndState!!,
-                                        onCheckedChange = { viewModel.updateDndMode(it) }
+                                        onCheckedChange = { viewModel.updateDndMode(it) },
+                                        focusKey = "tweaks.dnd",
+                                        focusIndex = 4
                                     )
                                 }
                             }
@@ -434,7 +479,9 @@ fun TweakScreen(
                                             title = stringResource(R.string.trim_filesystem),
                                             summary = stringResource(R.string.trim_filesystem_desc),
                                             checked = viewModel.fstrimState!!,
-                                            onCheckedChange = { viewModel.updateFstrim(it) }
+                                            onCheckedChange = { viewModel.updateFstrim(it) },
+                                            focusKey = "tweaks.fstrim",
+                                            focusIndex = 4
                                         )
                                     }
                                 }
@@ -446,7 +493,9 @@ fun TweakScreen(
                                         onClick = { navController.navigate("governorsettings") },
                                         headlineContent = { Text(stringResource(R.string.gov_settings)) },
                                         supportingContent = { Text(stringResource(R.string.gov_settingsdesc)) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                        focusKey = "tweaks.governors",
+                                        focusIndex = 4
                                     )
                                 }
                             }
@@ -476,7 +525,10 @@ fun TweakScreen(
                                 value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
                                 showArrow = true,
                                 highlight = true,
-                                isLoading = viewModel.isRefreshRateLoading
+                                isLoading = viewModel.isRefreshRateLoading,
+                                focusKey = "tweaks.refresh_rate",
+                                focusIndex = 5,
+                                horizontalNav = HorizontalNav.BLOCK_LEFT
                             ) {
                                 showRefreshRateDialog = true
                             }
@@ -496,7 +548,10 @@ fun TweakScreen(
                                 }.uppercase(),
                                 showArrow = true,
                                 highlight = true,
-                                isLoading = viewModel.isRendererLoading
+                                isLoading = viewModel.isRendererLoading,
+                                focusKey = "tweaks.renderer",
+                                focusIndex = 5,
+                                horizontalNav = HorizontalNav.BLOCK_RIGHT
                             ) {
                                 showRendererDialog = true
                             }
@@ -519,7 +574,9 @@ fun TweakScreen(
                                         onClick = { navController.navigate("bypasschg") },
                                         headlineContent = { Text(stringResource(R.string.bcharging)) },
                                         supportingContent = { Text(stringResource(R.string.bcharging_desc)) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                        focusKey = "tweaks.bypass_charge",
+                                        focusIndex = 7
                                     )
                                 }
                             },
@@ -530,7 +587,9 @@ fun TweakScreen(
                                         title = stringResource(R.string.thermalcore_service),
                                         summary = stringResource(R.string.thermalcore_service_desc),
                                         checked = viewModel.thermalState!!,
-                                        onCheckedChange = { viewModel.updateThermalCore(it) }
+                                        onCheckedChange = { viewModel.updateThermalCore(it) },
+                                        focusKey = "tweaks.thermalcore",
+                                        focusIndex = 7
                                     )
                                 }
                             }
@@ -552,7 +611,9 @@ fun TweakScreen(
                                     onClick = { navController.navigate("colorscheme") },
                                     headlineContent = { Text(stringResource(R.string.color_scheme)) },
                                     supportingContent = { Text(stringResource(R.string.schemecolordesc)) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                    focusKey = "tweaks.colors",
+                                    focusIndex = 9
                                 )
                             }
                         },
@@ -563,7 +624,9 @@ fun TweakScreen(
                                     onClick = { navController.navigate("preferenced") },
                                     headlineContent = { Text(stringResource(R.string.prefs)) },
                                     supportingContent = { Text(stringResource(R.string.prefsdesc)) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                    focusKey = "tweaks.prefs",
+                                    focusIndex = 9
                                 )
                             }
                         }
@@ -576,14 +639,20 @@ fun TweakScreen(
     RootAppDialog {
         BackupRestoreBottomSheet(
             show = showBackupRestoreSheet,
-            onDismiss = { showBackupRestoreSheet = false },
+            onDismiss = {
+                showBackupRestoreSheet = false
+                requestHideBackupRestoreSheet = false
+            },
             onBackup = {
                 showBackupRestoreSheet = false
+                requestHideBackupRestoreSheet = false
                 showBackupOptionsDialog = true
             },
             onRestore = {
                 openDocLauncher.launch(arrayOf("application/octet-stream", "*/*"))
-            }
+            },
+            externalHideRequest = requestHideBackupRestoreSheet,
+            onExternalHideConsumed = { requestHideBackupRestoreSheet = false }
         )
     }
 
@@ -610,11 +679,31 @@ fun TweakScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupTweaks = !optBackupTweaks }) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .gamepadFocusOutline(
+                            shape = RoundedCornerShape(12.dp),
+                            focusKey = "dialog.backup.tweaks",
+                            onActivate = { optBackupTweaks = !optBackupTweaks }
+                        )
+                        .clickable { optBackupTweaks = !optBackupTweaks }
+                ) {
                     Checkbox(checked = optBackupTweaks, onCheckedChange = { optBackupTweaks = it })
                     Text(stringResource(R.string.str_tweak_configuration_settings), color = MaterialTheme.colorScheme.onSurface)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupApplist = !optBackupApplist }) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .gamepadFocusOutline(
+                            shape = RoundedCornerShape(12.dp),
+                            focusKey = "dialog.backup.applist",
+                            onActivate = { optBackupApplist = !optBackupApplist }
+                        )
+                        .clickable { optBackupApplist = !optBackupApplist }
+                ) {
                     Checkbox(checked = optBackupApplist, onCheckedChange = { optBackupApplist = it })
                     Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -675,7 +764,17 @@ fun TweakScreen(
                     }
 
                     if (result.hasTweaks) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .gamepadFocusOutline(
+                                    shape = RoundedCornerShape(12.dp),
+                                    focusKey = "dialog.restore.tweaks",
+                                    onActivate = { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }
+                                )
+                                .clickable { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }
+                        ) {
                             Checkbox(
                                 checked = optRestoreTweaks && !isSocMismatch,
                                 onCheckedChange = { if (!isSocMismatch) optRestoreTweaks = it },
@@ -685,7 +784,17 @@ fun TweakScreen(
                         }
                     }
                     if (result.hasApplist) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optRestoreApplist = !optRestoreApplist }) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .gamepadFocusOutline(
+                                    shape = RoundedCornerShape(12.dp),
+                                    focusKey = "dialog.restore.applist",
+                                    onActivate = { optRestoreApplist = !optRestoreApplist }
+                                )
+                                .clickable { optRestoreApplist = !optRestoreApplist }
+                        ) {
                             Checkbox(checked = optRestoreApplist, onCheckedChange = { optRestoreApplist = it })
                             Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
                         }
@@ -813,11 +922,15 @@ fun ExpressiveTile(
     highlight: Boolean,
     showArrow: Boolean = false,
     isLoading: Boolean = false,
+    focusKey: String? = null,
+    focusIndex: Int? = null,
+    horizontalNav: HorizontalNav = HorizontalNav.BLOCK_BOTH,
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
     val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
+    val tileShape = azShape(26.dp)
 
     val iconBoxBgColor by animateColorAsState(
         targetValue = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -833,11 +946,18 @@ fun ExpressiveTile(
 
     Surface(
         modifier = modifier
-            .clip(azShape(26.dp))
+            .clip(tileShape)
+            .gamepadFocusOutline(
+                shape = tileShape,
+                onActivate = onClick,
+                focusKey = focusKey,
+                focusIndex = focusIndex,
+                horizontalNav = horizontalNav
+            )
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,
-        shape = azShape(26.dp)
+        shape = tileShape
     ) {
         Column(
             modifier = Modifier.padding(14.dp)
@@ -925,6 +1045,7 @@ fun TweakScreenTopAppBar(
     Box(
     modifier = modifier
         .fillMaxWidth()
+        .gamepadNotFocusable()
         .appBarFade(MaterialTheme.colorScheme.surface, scrollBehavior.state.overlappedFraction)
         .statusBarsPadding()
     ) {
@@ -956,20 +1077,24 @@ fun TweakScreenTopAppBar(
                 scrolledContainerColor = Color.Transparent
             ),
             actions = {
-                IconButton(
-                    onClick = onSearchClick,
-                    modifier = Modifier.gamepadFocusOutline(shape = CircleShape)
-                ) {
-                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                GamepadActionBadge(topAction = false) {
+                    IconButton(
+                        onClick = onSearchClick,
+                        modifier = Modifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                    }
                 }
-                IconButton(
-                    onClick = onMoreClick,
-                    modifier = onMoreModifier.gamepadFocusOutline(shape = CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Cloud,
-                        contentDescription = stringResource(R.string.cd_menu)
-                    )
+                GamepadActionBadge(topAction = true) {
+                    IconButton(
+                        onClick = onMoreClick,
+                        modifier = onMoreModifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Cloud,
+                            contentDescription = stringResource(R.string.cd_menu)
+                        )
+                    }
                 }
             },
             scrollBehavior = scrollBehavior,

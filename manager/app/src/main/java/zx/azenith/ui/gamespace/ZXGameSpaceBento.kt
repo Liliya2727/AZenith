@@ -84,21 +84,25 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -121,6 +125,7 @@ import kotlinx.coroutines.delay
 import zx.azenith.R
 import zx.azenith.ui.component.GamepadFocusNav
 import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.GamepadShortcuts
 import zx.azenith.ui.component.ZXDropDownState
 import zx.azenith.ui.component.zxDropDownAnchor
 import kotlin.math.roundToInt
@@ -151,6 +156,9 @@ internal object BentoShapes {
     val Circle: RoundedPolygon by lazy { MaterialShapes.Circle.normalized() }
 }
 
+/** True while the Bento wall is open; gates tile hover and Cross activation. */
+private val LocalBentoActive = compositionLocalOf { true }
+
 /**
  * Bento container: staggered spring entrance, squish + corner morph on press, lift on d-pad focus.
  * [content] receives the live engagement fraction as a lambda so children animate in the draw
@@ -173,6 +181,8 @@ internal fun BentoTile(
     var touchPressed by remember { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     val requester = remember { FocusRequester() }
+    val bentoActive = LocalBentoActive.current
+    val onClickState = rememberUpdatedState(onClick)
 
     val press = animateFloatAsState(
         targetValue = if (clickPressed || touchPressed) 1f else 0f,
@@ -180,10 +190,24 @@ internal fun BentoTile(
         label = "BentoPress"
     )
     val lift = animateFloatAsState(
-        targetValue = if (focused && GamepadInput.active) 1f else 0f,
+        targetValue = if (focused && bentoActive && GamepadInput.active) 1f else 0f,
         animationSpec = motion.defaultSpatialSpec(),
         label = "BentoLift"
     )
+
+    // When the wall collapses the tile can stay focused, so drop the hover and
+    // unpublish its Cross activation. Without this the profile tile keeps hovering
+    // and a status/link tile's stale activation can reopen the wall on the next Cross.
+    LaunchedEffect(bentoActive) {
+        if (!bentoActive) {
+            focused = false
+            GamepadShortcuts.clearActivation(requester)
+            // Drop the remembered callback too: restoreFocus() would otherwise
+            // reassert the old activation on a tile that no longer belongs to
+            // the open wall, which can reopen it from a lower card.
+            GamepadShortcuts.forgetActivation(requester)
+        }
+    }
     val fill = animateColorAsState(container, motion.defaultEffectsSpec(), label = "BentoFill")
 
     val enter = remember { Animatable(0f) }
@@ -196,15 +220,34 @@ internal fun BentoTile(
     val engaged = { maxOf(press.value, lift.value) }
 
     val interactive = if (onClick != null) {
+        DisposableEffect(requester) {
+            onDispose {
+                GameSpaceHintState.clearFocus(requester)
+                GameSpaceOverlayState.clearBaseFocus(requester)
+            }
+        }
         Modifier
             .onFocusChanged {
                 focused = it.isFocused
-                if (it.isFocused) GamepadFocusNav.publishLastFocused(requester)
+                if (it.isFocused && bentoActive) {
+                    GamepadFocusNav.publishLastFocused(requester)
+                    GameSpaceOverlayState.recordBaseFocus(requester)
+                    // Cross activates the focused card; no outline ring is drawn
+                    // in GameSpace, the slight lift above is the focus cue. Read the
+                    // click through updated state so a recomposition can't leave a stale one.
+                    GamepadShortcuts.publishActivation(requester) { onClickState.value?.invoke() }
+                    GameSpaceHintState.setFocus(requester, GameSpaceFocusKind.BentoTile)
+                } else {
+                    GamepadShortcuts.clearActivation(requester)
+                    GameSpaceHintState.clearFocus(requester)
+                }
             }
             .focusRequester(requester)
             .clickable(
                 interactionSource = interaction,
-                indication = ripple(color = contentColor),
+                // No ripple: the press squish below is the only feedback, and a
+                // ripple/focus indication would be the unwanted highlight.
+                indication = null,
                 onClick = onClick
             )
     } else {
@@ -523,10 +566,19 @@ internal fun HubBentoGrid(
 ) {
     val scheme = MaterialTheme.colorScheme
 
+    CompositionLocalProvider(LocalBentoActive provides (expandProgress > 0.5f)) {
     BentoMorphLayout(
         progress = expandProgress,
         compactHeight = compactHeight,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            // While the wall is open, keep d-pad focus inside the cards: Up on the
+            // top row and Down on the bottom row must stay put instead of jumping
+            // out to the wordmark pen above. Same group-exit guard the dialog uses.
+            .focusGroup()
+            .focusProperties {
+                if (expandProgress > 0.5f) onExit = { cancelFocusChange() }
+            }
     ) {
         MorphedProfileTile(
             progress = expandProgress,
@@ -619,6 +671,7 @@ internal fun HubBentoGrid(
             onClick = onLearnMore
         )
     }
+    }
 }
 
 @Composable
@@ -657,7 +710,10 @@ private fun MorphedProfileTile(
     val effectiveClick = if (p < 0.35f) {
         if (isManualMode && onClick != null) onClick else onExpandClick
     } else {
-        onClick
+        // In auto mode there is no profile dropdown, but the tile must stay a
+        // focus target so d-pad can reach it. A no-op click keeps it focusable
+        // without opening anything.
+        onClick ?: {}
     }
 
     BentoTile(
@@ -838,7 +894,10 @@ private fun MorphedStatusTile(
         container = container,
         contentColor = onContainer,
         modifier = modifier,
-        onClick = if (p < 0.35f) onExpandClick else null,
+        // Status tiles have no detail action, but when the wall is open they must
+        // still be focus targets so d-pad can traverse the whole set instead of
+        // escaping the group (which read-only, non-focusable tiles used to do).
+        onClick = onExpandClick,
         restCorner = restCorner,
         engagedCorner = engagedCorner
     ) { engaged ->

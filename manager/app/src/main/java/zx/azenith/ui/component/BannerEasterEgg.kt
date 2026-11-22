@@ -98,6 +98,7 @@ fun BannerWithEasterEgg(
     isBlurEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     tone: BannerTone = BannerTone.Neutral,
+    horizontalNav: HorizontalNav = HorizontalNav.BLOCK_BOTH,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -124,27 +125,38 @@ fun BannerWithEasterEgg(
         label = "pressScale"
     )
 
+    // One action shared by touch long-press and a held Cross, so both reveal
+    // the same easter egg.
+    val revealEasterEgg: () -> Unit = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        buzz(context)
+        activated = !activated
+        if (activated) {
+            confettiState.reset()
+            burst++
+        }
+    }
+    val bannerShape = currentPersonalization().bannerCorner()
+
     Box(
         modifier = modifier
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
             }
-            .clip(currentPersonalization().bannerCorner())
-            .gamepadFocusOutline(register = true)
+            .clip(bannerShape)
+            .gamepadFocusOutline(
+                shape = bannerShape,
+                register = true,
+                horizontalNav = horizontalNav,
+                onActivate = onClick,
+                onHoldActivate = revealEasterEgg
+            )
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = androidx.compose.foundation.LocalIndication.current,
                 onClick = { onClick() },
-                onLongClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    buzz(context)
-                    activated = !activated
-                    if (activated) {
-                        confettiState.reset()
-                        burst++
-                    }
-                }
+                onLongClick = revealEasterEgg
             )
     ) {
         AnimatedContent(

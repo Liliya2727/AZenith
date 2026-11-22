@@ -16,21 +16,26 @@
 
 package zx.azenith.ui.gamespace
 
+import android.util.Log
+import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -64,24 +69,39 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -91,8 +111,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import zx.azenith.R
+import zx.azenith.ui.component.GamepadFocusNav
+import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.LocalGamepadFocusEnabled
+import zx.azenith.ui.component.gamepadActivation
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.gamespace.settings.SettingsAboutPane
 import zx.azenith.ui.gamespace.settings.SettingsAppearancePane
@@ -121,7 +148,7 @@ internal fun Modifier.springPressBounce(
         }
         .pointerInput(enabled) {
             awaitEachGesture {
-                awaitFirstDown(requireUnconsumed = false)
+                awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 scope.launch {
                     scaleAnim.animateTo(
                         targetValue = pressedScale,
@@ -131,7 +158,9 @@ internal fun Modifier.springPressBounce(
                         )
                     )
                 }
-                val upOrCancel = waitForUpOrCancellation()
+                do {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                } while (event.changes.any { it.pressed })
                 scope.launch {
                     scaleAnim.animateTo(
                         targetValue = 1f,
@@ -173,7 +202,16 @@ internal fun AdaptiveSettingsGrid(
         ) {
             rows.forEach { rowItems ->
                 if (columns == 1) {
-                    rowItems.first().invoke()
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusProperties {
+                                left = FocusRequester.Cancel
+                                right = FocusRequester.Cancel
+                            }
+                    ) {
+                        rowItems.first().invoke()
+                    }
                 } else {
                     Row(
                         modifier = Modifier
@@ -181,11 +219,19 @@ internal fun AdaptiveSettingsGrid(
                             .height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(spacing)
                     ) {
-                        rowItems.forEach { item ->
+                        rowItems.forEachIndexed { colIndex, item ->
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .fillMaxHeight(),
+                                    .fillMaxHeight()
+                                    .focusProperties {
+                                        if (colIndex == 0) {
+                                            left = FocusRequester.Cancel
+                                        }
+                                        if (colIndex == rowItems.lastIndex) {
+                                            right = FocusRequester.Cancel
+                                        }
+                                    },
                                 propagateMinConstraints = true
                             ) {
                                 item()
@@ -219,7 +265,110 @@ internal fun ZXGameSpaceSettingsStage(
     val motion = MaterialTheme.motionScheme
     val density = LocalDensity.current
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
 
+    val sidebarTabRequesters = remember {
+        SettingsSidebarTab.entries.associateWith { FocusRequester() }
+    }
+    val paneRequesters = remember {
+        SettingsSidebarTab.entries.associateWith { FocusRequester() }
+    }
+    val paneAttached = remember { mutableStateMapOf<SettingsSidebarTab, Boolean>() }
+    var rightPaneHasFocus by remember { mutableStateOf(false) }
+    var pendingFocusTab by remember { mutableStateOf<SettingsSidebarTab?>(null) }
+
+    // Initial focus when entering the Settings tab lands on the currently selected sidebar item.
+    LaunchedEffect(Unit) {
+        if (GameSpaceInputSource.isGamepadLast ||
+            GamepadInput.dpadMode ||
+            GamepadInput.controllerConnected
+        ) {
+            GamepadInput.onDpadKey()
+            withFrameNanos { }
+            val requester = sidebarTabRequesters[selectedTab]
+            val focused = requester != null && runCatching { requester.requestFocus() }.getOrDefault(false)
+            Log.d("PAD", "gs settings initialFocus tab=$selectedTab focused=$focused")
+        }
+    }
+
+    // Debounce focus-driven category switches (~75 ms) so rapid D-pad scrolling
+    // through the sidebar does not thrash heavy right-pane compositions.
+    LaunchedEffect(pendingFocusTab) {
+        val target = pendingFocusTab ?: return@LaunchedEffect
+        if (target == selectedTab) return@LaunchedEffect
+        delay(75L)
+        if (pendingFocusTab == target && target != selectedTab) {
+            Log.d("PAD", "gs settings category=$target from=$selectedTab source=focus")
+            onSelectTab(target)
+        }
+    }
+
+    val enterRightPane: (SettingsSidebarTab?) -> Unit = { explicitTab ->
+        val targetTab = explicitTab ?: pendingFocusTab ?: selectedTab
+        if (targetTab != selectedTab) {
+            Log.d("PAD", "gs settings category=$targetTab from=$selectedTab source=focusCommit")
+            onSelectTab(targetTab)
+        }
+        GamepadInput.onDpadKey()
+        scope.launch {
+            val targetRequester = paneRequesters.getValue(targetTab)
+            val attached = withTimeoutOrNull(600L) {
+                snapshotFlow { paneAttached[targetTab] == true }.first { it }
+            } == true
+            var focusedAttempt = -1
+            if (attached) {
+                var attempt = 0
+                withTimeoutOrNull(600L) {
+                    while (!rightPaneHasFocus) {
+                        attempt++
+                        val focused = runCatching { targetRequester.requestFocus() }.getOrDefault(false)
+                        if (focused && rightPaneHasFocus) {
+                            focusedAttempt = attempt
+                            break
+                        }
+                        withFrameNanos { }
+                        if (rightPaneHasFocus) {
+                            focusedAttempt = attempt
+                            break
+                        }
+                    }
+                }
+            }
+            Log.d("PAD", "gs settings enterRightPane tab=$targetTab attached=$attached attempt=$focusedAttempt hasFocus=$rightPaneHasFocus")
+        }
+    }
+
+    // Circle / B while focus is inside the right pane (and no sub-screen / dropdown
+    // overlay is open) returns focus to the currently selected sidebar item instead of exiting Settings.
+    BackHandler(
+        enabled = rightPaneHasFocus &&
+            !GameSpaceOverlayState.isAnyOpen &&
+            !zx.azenith.ui.component.ZXDropDownNav.isActive
+    ) {
+        AudioUtil.playCancel(context)
+        GamepadInput.onDpadKey()
+        // Unlock sidebar focusability before requesting focus on the selected tab:
+        // while rightPaneHasFocus is true, the sidebar Surface cancels onEnter and
+        // each sidebar tab has canFocus = false to prevent geometric D-pad jumps.
+        rightPaneHasFocus = false
+        val requester = sidebarTabRequesters[selectedTab]
+        var restored = requester != null && runCatching { requester.requestFocus() }.getOrDefault(false)
+        if (!restored && requester != null) {
+            scope.launch {
+                for (attempt in 1..6) {
+                    withFrameNanos { }
+                    restored = runCatching { requester.requestFocus() }.getOrDefault(false)
+                    if (restored) break
+                }
+                Log.d("PAD", "gs settings backToSidebar retry tab=$selectedTab restored=$restored")
+            }
+        } else {
+            Log.d("PAD", "gs settings backToSidebar tab=$selectedTab restored=$restored")
+        }
+    }
+
+    CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
     BoxWithConstraints(modifier = modifier) {
         val isCompactLandscape = maxWidth < 920.dp
         val sidebarWidth = if (isCompactLandscape) 78.dp else 220.dp
@@ -236,6 +385,29 @@ internal fun ZXGameSpaceSettingsStage(
                 modifier = Modifier
                     .width(sidebarWidth)
                     .fillMaxHeight()
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown &&
+                            (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+                                event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
+                        ) {
+                            Log.d("PAD", "gs settings sidebar block horizontal key=${event.nativeKeyEvent.keyCode}")
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    .focusProperties {
+                        canFocus = false
+                        left = FocusRequester.Cancel
+                        right = FocusRequester.Cancel
+                        if (rightPaneHasFocus) {
+                            onEnter = {
+                                cancelFocusChange()
+                                Log.d("PAD", "gs settings sidebar cancelEnter while rightPaneHasFocus")
+                            }
+                        }
+                    }
+                    .focusGroup()
             ) {
                 Column(
                     modifier = Modifier
@@ -323,6 +495,22 @@ internal fun ZXGameSpaceSettingsStage(
                                 val itemShape = RoundedCornerShape(16.dp)
                                 val contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurfaceVariant
 
+                                val tabHintOwner = remember(tab) { Any() }
+                                val tabRequester = sidebarTabRequesters.getValue(tab)
+                                val selectTabNow = {
+                                    AudioUtil.playOk(context)
+                                    pendingFocusTab = tab
+                                    if (selectedTab != tab) {
+                                        Log.d("PAD", "gs settings category=$tab from=$selectedTab source=tap")
+                                        onSelectTab(tab)
+                                    }
+                                }
+                                DisposableEffect(tabHintOwner) {
+                                    onDispose {
+                                        GameSpaceHintState.clearFocus(tabHintOwner)
+                                        GameSpaceOverlayState.clearBaseFocus(tabRequester)
+                                    }
+                                }
                                 Surface(
                                     shape = itemShape,
                                     color = Color.Transparent,
@@ -336,13 +524,42 @@ internal fun ZXGameSpaceSettingsStage(
                                                 tabPositions = tabPositions + (tab to (parentY to height))
                                             }
                                         }
-                                        .gamepadFocusOutline(shape = itemShape, register = true)
+                                        .focusRequester(tabRequester)
+                                        .focusProperties {
+                                            // Sidebar navigation is strictly vertical: DPAD_LEFT/RIGHT
+                                            // never jumps into the right pane, and while focus is in
+                                            // the right pane, DPAD_LEFT cannot escape back to the sidebar.
+                                            canFocus = !rightPaneHasFocus &&
+                                                !GameSpaceOverlayState.isAnyOpen &&
+                                                !zx.azenith.ui.component.ZXDropDownNav.isActive
+                                            left = FocusRequester.Cancel
+                                            right = FocusRequester.Cancel
+                                        }
+                                        .onFocusChanged {
+                                            if (it.isFocused) {
+                                                GameSpaceOverlayState.recordBaseFocus(tabRequester)
+                                                GameSpaceHintState.setFocus(tabHintOwner, GameSpaceFocusKind.SettingsTab)
+                                                if (GameSpaceInputSource.isGamepadLast &&
+                                                    (GamepadInput.dpadMode || GamepadInput.controllerConnected)
+                                                ) {
+                                                    pendingFocusTab = tab
+                                                }
+                                            } else {
+                                                GameSpaceHintState.clearFocus(tabHintOwner)
+                                            }
+                                        }
+                                        // No focus outline ring on sidebar tabs: the animated
+                                        // selected-tab pill fill is the visual indicator, and
+                                        // Cross/A moves focus into the right pane's first control.
+                                        .gamepadActivation {
+                                            AudioUtil.playOk(context)
+                                            enterRightPane(tab)
+                                        }
+                                        .focusable()
                                         .clip(itemShape)
                                         .springPressBounce(pressedScale = 0.94f)
-                                        .clickable {
-                                            AudioUtil.playOk(context)
-                                            onSelectTab(tab)
-                                        }
+                                        .focusProperties { canFocus = false }
+                                        .clickable(onClick = selectTabNow)
                                 ) {
                                     if (isCompactLandscape) {
                                         Box(
@@ -395,34 +612,90 @@ internal fun ZXGameSpaceSettingsStage(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .onFocusChanged {
+                        if (rightPaneHasFocus != it.hasFocus) {
+                            rightPaneHasFocus = it.hasFocus
+                            Log.d("PAD", "gs settings rightPaneHasFocus=${it.hasFocus} tab=$selectedTab")
+                        }
+                    }
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown &&
+                            (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+                                event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) &&
+                            !GamepadFocusNav.focusedSlider &&
+                            !zx.azenith.ui.component.ZXDropDownNav.isActive &&
+                            !GameSpaceOverlayState.isAnyOpen
+                        ) {
+                            val dir = if (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                                FocusDirection.Left
+                            } else {
+                                FocusDirection.Right
+                            }
+                            val moved = focusManager.moveFocus(dir)
+                            Log.d("PAD", "gs settings rightPane horizontal dir=$dir moved=$moved (kept focus in rightPane)")
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    .focusProperties {
+                        canFocus = false
+                        onExit = {
+                            if (requestedFocusDirection == FocusDirection.Left ||
+                                requestedFocusDirection == FocusDirection.Right
+                            ) {
+                                cancelFocusChange()
+                                Log.d("PAD", "gs settings rightPane cancelExit dir=$requestedFocusDirection")
+                            }
+                        }
+                    }
+                    .focusGroup()
             ) {
                 AnimatedContent(
                     targetState = selectedTab,
                     transitionSpec = {
-                        (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f))
-                            .togetherWith(fadeOut(motion.defaultEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), targetScale = 1.02f))
+                        fadeIn(animationSpec = tween(durationMillis = 110))
+                            .togetherWith(fadeOut(animationSpec = tween(durationMillis = 90)))
                     },
                     modifier = Modifier.fillMaxSize(),
                     label = "SettingsPaneTransition"
                 ) { tab ->
-                    when (tab) {
-                        SettingsSidebarTab.General -> SettingsGeneralPane()
-                        SettingsSidebarTab.Tweaks -> SettingsTweaksPane(
-                            profile = profile,
-                            profileValue = profileValue,
-                            refreshHz = refreshHz,
-                            onApplyProfile = onApplyProfile
-                        )
-                        SettingsSidebarTab.Appearance -> SettingsAppearancePane()
-                        SettingsSidebarTab.Audio -> SettingsAudioPane()
-                        SettingsSidebarTab.About -> SettingsAboutPane(
-                            deviceName = deviceName,
-                            chipsetName = chipsetName
-                        )
+                    DisposableEffect(tab) {
+                        onDispose { paneAttached.remove(tab) }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .onGloballyPositioned { paneAttached[tab] = true }
+                            .focusRequester(paneRequesters.getValue(tab))
+                            .focusProperties {
+                                canFocus = false
+                                if (tab != selectedTab) {
+                                    onEnter = { cancelFocusChange() }
+                                }
+                            }
+                            .focusGroup()
+                    ) {
+                        when (tab) {
+                            SettingsSidebarTab.General -> SettingsGeneralPane()
+                            SettingsSidebarTab.Tweaks -> SettingsTweaksPane(
+                                profile = profile,
+                                profileValue = profileValue,
+                                refreshHz = refreshHz,
+                                onApplyProfile = onApplyProfile
+                            )
+                            SettingsSidebarTab.Appearance -> SettingsAppearancePane()
+                            SettingsSidebarTab.Audio -> SettingsAudioPane()
+                            SettingsSidebarTab.About -> SettingsAboutPane(
+                                deviceName = deviceName,
+                                chipsetName = chipsetName
+                            )
+                        }
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -435,7 +708,9 @@ internal fun SettingsSwitchCard(
     modifier: Modifier = Modifier,
     summary: String? = null,
     shape: Shape = RoundedCornerShape(20.dp),
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    focusRequester: FocusRequester? = null,
+    onPositioned: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -457,6 +732,16 @@ internal fun SettingsSwitchCard(
         label = "SwitchCardIconTint"
     )
 
+    val toggleCard = {
+        val newVal = !checked
+        if (newVal) {
+            AudioUtil.playOk(context)
+        } else {
+            AudioUtil.playCancel(context)
+        }
+        onCheckedChange(newVal)
+    }
+
     Surface(
         shape = shape,
         color = scheme.surfaceContainerHigh.copy(alpha = if (enabled) 0.85f else 0.45f),
@@ -464,20 +749,23 @@ internal fun SettingsSwitchCard(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 72.dp)
+            .then(if (onPositioned != null) Modifier.onGloballyPositioned { onPositioned() } else Modifier)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .then(if (enabled) Modifier.springPressBounce(pressedScale = 0.97f) else Modifier)
-            .gamepadFocusOutline(shape = shape, register = enabled)
-            .clip(shape)
             .then(
                 if (enabled) {
-                    Modifier.clickable {
-                        val newVal = !checked
-                        if (newVal) {
-                            AudioUtil.playOk(context)
-                        } else {
-                            AudioUtil.playCancel(context)
-                        }
-                        onCheckedChange(newVal)
-                    }
+                    Modifier.gamepadFocusOutline(
+                        shape = shape,
+                        register = true,
+                        onActivate = toggleCard
+                    )
+                } else Modifier
+            )
+            .clip(shape)
+            .focusProperties { canFocus = false }
+            .then(
+                if (enabled) {
+                    Modifier.clickable(onClick = toggleCard)
                 } else Modifier
             )
     ) {
@@ -603,11 +891,18 @@ internal fun SettingsActionCard(
     summary: String? = null,
     trailingBadge: String? = null,
     shape: Shape = RoundedCornerShape(20.dp),
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    focusRequester: FocusRequester? = null,
+    onPositioned: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val iconShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 8.dp, bottomStart = 8.dp)
+
+    val triggerAction = {
+        AudioUtil.playOk(context)
+        onClick()
+    }
 
     Surface(
         shape = shape,
@@ -616,13 +911,21 @@ internal fun SettingsActionCard(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 72.dp)
+            .then(if (onPositioned != null) Modifier.onGloballyPositioned { onPositioned() } else Modifier)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .then(if (enabled) Modifier.springPressBounce(pressedScale = 0.97f) else Modifier)
-            .then(if (enabled) Modifier.gamepadFocusOutline(shape = shape, register = true) else Modifier)
+            .then(
+                if (enabled) {
+                    Modifier.gamepadFocusOutline(
+                        shape = shape,
+                        register = true,
+                        onActivate = triggerAction
+                    )
+                } else Modifier
+            )
             .clip(shape)
-            .clickable(enabled = enabled) {
-                AudioUtil.playOk(context)
-                onClick()
-            }
+            .focusProperties { canFocus = false }
+            .clickable(enabled = enabled, onClick = triggerAction)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),

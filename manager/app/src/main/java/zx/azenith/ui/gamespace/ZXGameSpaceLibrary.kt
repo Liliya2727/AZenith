@@ -65,6 +65,7 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -107,6 +108,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.GamepadFocusNav
 import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.gamepadActivation
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
@@ -131,7 +133,8 @@ internal fun LibraryGridStage(
     onExpandedChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     onNavigateUp: () -> Unit = {},
-    loading: Boolean = false
+    loading: Boolean = false,
+    filterFocusRequester: FocusRequester? = null
 ) {
     // Null until the user picks: the default follows whether games exist once the load lands.
     var scopeChoice by remember { mutableStateOf<Boolean?>(null) }
@@ -174,7 +177,8 @@ internal fun LibraryGridStage(
             onlyEnabled = onlyEnabled,
             onScopeChange = { scopeChoice = it },
             onToggleEnabled = { onlyEnabled = !onlyEnabled },
-            onNavigateUp = onNavigateUp
+            onNavigateUp = onNavigateUp,
+            focusRequester = filterFocusRequester
         )
 
         Spacer(Modifier.height(12.dp))
@@ -248,7 +252,8 @@ private fun LibraryFilterBar(
     onlyEnabled: Boolean,
     onScopeChange: (Boolean) -> Unit,
     onToggleEnabled: () -> Unit,
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit,
+    focusRequester: FocusRequester? = null
 ) {
     Row(
         modifier = Modifier
@@ -270,7 +275,8 @@ private fun LibraryFilterBar(
                 icon = Icons.Rounded.SportsEsports,
                 label = "${stringResource(R.string.gamespace_tab_games)} ($gamesCount)",
                 shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
-                onClick = { onScopeChange(false) }
+                onClick = { onScopeChange(false) },
+                focusRequester = focusRequester
             )
             LibraryScopeButton(
                 checked = showAllApps,
@@ -296,9 +302,14 @@ private fun LibraryScopeButton(
     icon: ImageVector,
     label: String,
     shapes: ToggleButtonShapes,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null
 ) {
     val scheme = MaterialTheme.colorScheme
+    val filterHintOwner = remember { Any() }
+    DisposableEffect(filterHintOwner) {
+        onDispose { GameSpaceHintState.clearFocus(filterHintOwner) }
+    }
     ToggleButton(
         checked = checked,
         onCheckedChange = { if (it) onClick() },
@@ -312,7 +323,13 @@ private fun LibraryScopeButton(
         ),
         modifier = Modifier
             .semantics { role = Role.RadioButton }
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .onFocusChanged {
+                if (it.isFocused) GameSpaceHintState.setFocus(filterHintOwner, GameSpaceFocusKind.LibraryFilter)
+                else GameSpaceHintState.clearFocus(filterHintOwner)
+            }
             .gamepadFocusOutline(shape = CircleShape)
+            .gamepadActivation(onClick)
     ) {
         Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
@@ -359,6 +376,7 @@ internal fun ExpressiveFilterChip(
         modifier = Modifier
             .animateContentSize(spatialSpec)
             .gamepadFocusOutline(shape = CircleShape)
+            .gamepadActivation(onClick)
             .semantics { this.selected = isSelected }
     ) {
         Row(
@@ -453,6 +471,13 @@ private fun LibraryAppTile(
     val engaged = { maxOf(press.value, lift.value) }
     val corner = { lerp(LIBRARY_REST_CORNER, LIBRARY_ENGAGED_CORNER, engaged().coerceIn(0f, 1f)) }
 
+    DisposableEffect(requester) {
+        onDispose {
+            GameSpaceHintState.clearFocus(requester)
+            GameSpaceOverlayState.clearBaseFocus(requester)
+        }
+    }
+
     Box(
         modifier = modifier
             .graphicsLayer {
@@ -471,9 +496,16 @@ private fun LibraryAppTile(
             }
             .onFocusChanged {
                 focused = it.isFocused
-                if (it.isFocused) GamepadFocusNav.publishLastFocused(requester)
+                if (it.isFocused) {
+                    GamepadFocusNav.publishLastFocused(requester)
+                    GameSpaceOverlayState.recordBaseFocus(requester)
+                    GameSpaceHintState.setFocus(requester, GameSpaceFocusKind.LibraryTile)
+                } else {
+                    GameSpaceHintState.clearFocus(requester)
+                }
             }
             .focusRequester(requester)
+            .gamepadActivation(onClick)
             .clickable(
                 interactionSource = interaction,
                 indication = ripple(color = titleColor),

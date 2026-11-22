@@ -21,7 +21,11 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
+import android.util.Log
 import android.view.KeyEvent
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -36,6 +40,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import zx.azenith.ui.component.GamepadDirectionRepeat
+import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.GamepadStickScroll
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
@@ -49,18 +56,124 @@ import zx.azenith.ui.util.tapHaptic
  */
 class ZXGameSpaceActivity : ComponentActivity() {
 
+    companion object {
+        private const val TRIGGER_THRESHOLD = 0.5f
+    }
+
+    // Logical pressed state shared by the digital key and analog axis paths, so a
+    // controller that reports both can't toggle an overlay twice per press.
+    private var l2Held = false
+    private var r2Held = false
+
+    /** Feed a synthesized L2/R2 key through this window so the hub's key handler sees it. */
+    private fun emitTrigger(down: Boolean, keyCode: Int) {
+        val now = SystemClock.uptimeMillis()
+        val action = if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP
+        super.dispatchKeyEvent(KeyEvent(now, now, action, keyCode, 0))
+        Log.d("PAD", "trigger synth key=$keyCode down=$down")
+    }
+
+    /** Synthesized direction keys must dispatch through this window, not the manager's. */
+    private fun wireGamepadDirectionRepeat() {
+        GamepadDirectionRepeat.sendKey = { code, action, repeat ->
+            val now = android.os.SystemClock.uptimeMillis()
+            super@ZXGameSpaceActivity.dispatchKeyEvent(KeyEvent(now, now, action, code, repeat))
+        }
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        GameSpaceInputSource.onTouchEvent(event)
+        return super.dispatchTouchEvent(event)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        GameSpaceInputSource.onKeyEvent(event)
+        // Real L2/R2 digital keys: keep the shared held state in sync and swallow
+        // a duplicate arrived after we already synthesized the same press from
+        // the analog axis.
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_L2 ||
+            event.keyCode == KeyEvent.KEYCODE_BUTTON_R2
+        ) {
+            val isL2 = event.keyCode == KeyEvent.KEYCODE_BUTTON_L2
+            val held = if (isL2) l2Held else r2Held
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    GamepadInput.onDpadKey()
+                    if (event.repeatCount == 0) {
+                        if (held) {
+                            Log.d("PAD", "trigger duplicate key ignored key=${event.keyCode}")
+                            return true
+                        }
+                        if (isL2) l2Held = true else r2Held = true
+                    }
+                }
+                KeyEvent.ACTION_UP -> {
+                    if (isL2) l2Held = false else r2Held = false
+                }
+            }
+        }
         if (event.keyCode == KeyEvent.KEYCODE_BUTTON_B || event.keyCode == KeyEvent.KEYCODE_ESCAPE) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 onBackPressedDispatcher.onBackPressed()
             }
             return true
         }
+        // Physical left/right feed the same accelerating pipeline as the stick
+        // and hat so a held direction sweeps the game ribbon. R1/L1 and other
+        // keys still reach the hub's own onPreviewKeyEvent handler.
+        if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+            event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+        ) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    GamepadInput.onDpadKey()
+                    GamepadDirectionRepeat.onDirectionDown(event.keyCode)
+                }
+                KeyEvent.ACTION_UP -> GamepadDirectionRepeat.releaseIf(event.keyCode)
+            }
+            return true
+        }
         return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        val source = event.source
+        val isJoystick = source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+        val isGamepad = source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
+        if (event.action == MotionEvent.ACTION_MOVE && (isJoystick || isGamepad)) {
+            // Analog triggers usually arrive only as motion axes (many pads never
+            // emit BUTTON_L2/R2 key events). Synthesize the digital keys the hub
+            // listens for. The shared held flag means a pad that sends both paths
+            // won't fire the same press twice.
+            val l2Value = maxOf(
+                event.getAxisValue(MotionEvent.AXIS_LTRIGGER),
+                event.getAxisValue(MotionEvent.AXIS_BRAKE)
+            )
+            val r2Value = maxOf(
+                event.getAxisValue(MotionEvent.AXIS_RTRIGGER),
+                event.getAxisValue(MotionEvent.AXIS_GAS)
+            )
+            val l2Down = l2Value >= TRIGGER_THRESHOLD
+            val r2Down = r2Value >= TRIGGER_THRESHOLD
+            if (l2Down != l2Held) {
+                l2Held = l2Down
+                if (l2Down) GameSpaceInputSource.onMotionEvent(event)
+                emitTrigger(l2Down, KeyEvent.KEYCODE_BUTTON_L2)
+            }
+            if (r2Down != r2Held) {
+                r2Held = r2Down
+                if (r2Down) GameSpaceInputSource.onMotionEvent(event)
+                emitTrigger(r2Down, KeyEvent.KEYCODE_BUTTON_R2)
+            }
+            GameSpaceGamepadMotion.handleStickAndHatMotion(event)
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        wireGamepadDirectionRepeat()
         TapHapticState.init(this)
         zx.azenith.ui.util.AudioUtil.isGameHubActive = true
         zx.azenith.ui.util.AudioUtil.init(this)
@@ -121,12 +234,16 @@ class ZXGameSpaceActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // This window owns direction-key dispatch while GameSpace is foreground.
+        wireGamepadDirectionRepeat()
         ZXSidePanelService.hide(this)
         BgmManager.onActivityResume(this)
     }
 
     override fun onPause() {
         super.onPause()
+        GamepadDirectionRepeat.release()
+        GamepadStickScroll.reset()
         BgmManager.onActivityPause()
     }
 

@@ -58,9 +58,11 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -128,6 +130,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.focus.focusProperties
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -139,6 +142,7 @@ import zx.azenith.ui.util.saveMediaDirectly
 import zx.azenith.ui.util.TapHapticState
 import zx.azenith.ui.util.AudioUtil
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -334,8 +338,20 @@ internal fun ZXGameSpaceTileRibbon(
             modifier = Modifier
                 .fillMaxHeight()
                 .offset { IntOffset(x = totalOffsetPx.roundToInt(), y = 0) }
-                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                .gamepadScreenEntry(),
+                .then(
+                    if (focusRequester != null) {
+                        Modifier
+                            .focusRequester(focusRequester)
+                            .onFocusChanged {
+                                if (it.isFocused) {
+                                    GameSpaceOverlayState.recordBaseFocus(focusRequester)
+                                }
+                            }
+                    } else {
+                        Modifier
+                    }
+                )
+                .focusable(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top
         ) {
@@ -354,7 +370,7 @@ internal fun ZXGameSpaceTileRibbon(
                             entry = item,
                             selectionFraction = selectionFraction,
                             selected = isSelected,
-                            onFocus = { onSelect(index) },
+                            onFocus = {},
                             onClick = {
                                 if (isSelected) {
                                     onActivate(item)
@@ -369,7 +385,7 @@ internal fun ZXGameSpaceTileRibbon(
                         entry = item,
                         selectionFraction = selectionFraction,
                         selected = isSelected,
-                        onFocus = { onSelect(index) },
+                        onFocus = {},
                         onClick = {
                             if (isSelected) {
                                 onActivate(item)
@@ -457,17 +473,21 @@ internal fun ZXGameSpaceRibbonTile(
     val borderWidth = lerp(0.dp, 1.5.dp, selectionFraction)
     val tilePadding = lerp(0.dp, 3.dp, selectionFraction)
 
+    val tileHintOwner = remember { Any() }
+    DisposableEffect(tileHintOwner) {
+        onDispose { GameSpaceHintState.clearFocus(tileHintOwner) }
+    }
+
     Box(
         modifier = modifier
             .size(tileSize)
-            .onFocusChanged { if (it.isFocused) onFocus() }
-            .gamepadFocusOutline(shape = outerShape, width = 2.dp)
             .clip(outerShape)
             .then(
                 if (borderWidth > 0.2.dp) {
                     Modifier.border(width = borderWidth, color = borderColor, shape = outerShape)
                 } else Modifier
             )
+            .focusProperties { canFocus = false }
             .clickable(onClick = onClick)
             .padding(tilePadding)
     ) {
@@ -790,45 +810,44 @@ internal fun WelcomeHubStage(
                     }
                     return Offset.Zero
                 }
-                if (expandedNow.value && fromDrag && available.y > 0f && scroll.value <= 0) {
-                    notifyExpanded.value(false)
-                    dragExpandDistance = 0f
+                // Touch drag down at the top closes the wall, but a focus-driven
+                // scroll does not: Compose reports focus scrolls as SideEffect, so
+                // the UserInput guard keeps gamepad Up from closing it. A fling is
+                // never allowed to close it (see onPreFling below).
+                if (fromDrag && available.y > 0f && scroll.value <= 0) {
+                    dragExpandDistance = (dragExpandDistance + available.y).coerceAtLeast(0f)
+                    if (dragExpandDistance >= expandThresholdPx) {
+                        notifyExpanded.value(false)
+                        dragExpandDistance = 0f
+                    }
                     return Offset(0f, available.y)
                 }
                 return Offset.Zero
             }
 
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                if (expandedNow.value && source == NestedScrollSource.UserInput && available.y > 0f && scroll.value <= 0) {
-                    notifyExpanded.value(false)
-                    dragExpandDistance = 0f
-                    return Offset(0f, available.y)
-                }
+                // No gesture collapse here; onPreScroll's threshold handles drags.
                 return Offset.Zero
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
+                val draggedUp = dragExpandDistance > 0f
                 dragExpandDistance = 0f
-                if (!expandedNow.value) {
-                    if (available.y < -200f) {
-                        notifyExpanded.value(true)
-                        return available
-                    }
-                } else {
-                    if (available.y > 200f && scroll.value <= 0) {
-                        notifyExpanded.value(false)
-                        return available
-                    }
+                // Expanding by an upward fling is fine, but only when the user
+                // actually dragged up. A collapse from Circle runs scrollTo(0),
+                // and the resulting programmatic/focus scroll can surface here as
+                // an upward fling — with focus on a lower tile (library, support,
+                // learn more) that would immediately reopen the wall. Requiring a
+                // real drag keeps those closes closed.
+                if (!expandedNow.value && draggedUp && available.y < -200f) {
+                    notifyExpanded.value(true)
+                    return available
                 }
                 return Velocity.Zero
             }
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
                 dragExpandDistance = 0f
-                if (expandedNow.value && available.y > 80f && scroll.value <= 0) {
-                    notifyExpanded.value(false)
-                    return available
-                }
                 return Velocity.Zero
             }
         }
@@ -1172,9 +1191,12 @@ internal fun HomeWordmark(
                     transformOrigin = TransformOrigin(1f, 1f)
                 }
                 .size(penSize)
-                .gamepadFocusOutline(shape = penShape, register = true)
                 .clip(penShape)
-                .clickable(onClick = onOpenHomeWallpaper)
+                // The wordmark pen sits above the Bento grid. A focusable node here
+                // is where Up from the top card escapes, so keep it touch-only.
+                .pointerInput(onOpenHomeWallpaper) {
+                    detectTapGestures { onOpenHomeWallpaper() }
+                }
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -1846,7 +1868,6 @@ internal fun GameHeroStage(
 ) {
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
-    val colorSpec = motion.defaultEffectsSpec<Color>()
 
     // In-place bounce animatables for action buttons (Play, Pen, Gear)
     val playPageBounce = remember { Animatable(1f) }
@@ -2004,27 +2025,6 @@ internal fun GameHeroStage(
                 }
             }
 
-            var penFocused by remember { mutableStateOf(false) }
-            val penBg by animateColorAsState(
-                targetValue = if (penFocused) scheme.secondaryContainer else scheme.surfaceContainerHigh,
-                animationSpec = colorSpec,
-                label = "PenBtnBg"
-            )
-
-            var gearFocused by remember { mutableStateOf(false) }
-            val gearBg by animateColorAsState(
-                targetValue = if (gearFocused) scheme.secondaryContainer else scheme.surfaceContainerHigh,
-                animationSpec = colorSpec,
-                label = "GearBtnBg"
-            )
-
-            var playFocused by remember { mutableStateOf(false) }
-            val playScale by animateFloatAsState(
-                targetValue = if (playFocused) 1.05f else 1f,
-                animationSpec = motion.defaultSpatialSpec(),
-                label = "PlayBtnScale"
-            )
-
             val haptic = LocalHapticFeedback.current
             val playInteractionSource = remember { MutableInteractionSource() }
             val isPlayPressed by playInteractionSource.collectIsPressedAsState()
@@ -2068,7 +2068,10 @@ internal fun GameHeroStage(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Two-stack of circular action buttons: Pen (wallpaper) & Gear (settings)
+                // Two-stack of circular action buttons: Pen (wallpaper) & Gear (settings).
+                // On a gamepad these actions are bound to X (Square), Y (Triangle) and Start,
+                // so keep the buttons touch-only to prevent stray focus landing on Pen after
+                // closing an overlay.
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -2076,17 +2079,16 @@ internal fun GameHeroStage(
                     // Top: Pen icon (Personalize game wallpaper)
                     Surface(
                         shape = CircleShape,
-                        color = penBg,
-                        contentColor = if (penFocused) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                        color = scheme.surfaceContainerHigh,
+                        contentColor = scheme.onSurfaceVariant,
                         modifier = Modifier
                             .size(34.dp)
                             .graphicsLayer {
                                 scaleX = penPageBounce.value
                                 scaleY = penPageBounce.value
                             }
-                            .onFocusChanged { penFocused = it.isFocused }
-                            .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
                             .clip(CircleShape)
+                            .focusProperties { canFocus = false }
                             .clickable(onClick = onOpenWallpaperSettings)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -2101,8 +2103,8 @@ internal fun GameHeroStage(
                     // Bottom: Original app settings gear icon
                     Surface(
                         shape = CircleShape,
-                        color = gearBg,
-                        contentColor = if (gearFocused) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                        color = scheme.surfaceContainerHigh,
+                        contentColor = scheme.onSurfaceVariant,
                         modifier = Modifier
                             .size(34.dp)
                             .graphicsLayer {
@@ -2110,9 +2112,8 @@ internal fun GameHeroStage(
                                 scaleY = gearPageBounce.value
                                 rotationZ = gearRotation.value
                             }
-                            .onFocusChanged { gearFocused = it.isFocused }
-                            .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
                             .clip(CircleShape)
+                            .focusProperties { canFocus = false }
                             .clickable(onClick = onOpenAppSettings)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -2137,14 +2138,13 @@ internal fun GameHeroStage(
                     modifier = Modifier
                         .height(81.dp)
                         .graphicsLayer {
-                            val combinedScale = playScale * playPageBounce.value * playHoldScale.value
+                            val combinedScale = playPageBounce.value * playHoldScale.value
                             scaleX = combinedScale
                             scaleY = combinedScale
                             transformOrigin = TransformOrigin.Center
                         }
-                        .onFocusChanged { playFocused = it.isFocused }
-                        .gamepadFocusOutline(shape = playButtonShape, width = 3.dp)
                         .clip(playButtonShape)
+                        .focusProperties { canFocus = false }
                         .clickable(
                             interactionSource = playInteractionSource,
                             indication = ripple(),

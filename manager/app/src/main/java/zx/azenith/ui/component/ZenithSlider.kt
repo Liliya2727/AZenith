@@ -16,6 +16,7 @@
 
 package zx.azenith.ui.component
 
+import android.view.KeyEvent
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -75,6 +79,13 @@ internal fun ZenithSlider(
     // Buzzing from onValueChange would fire once per frame of a drag, which reads as a rattle
     // rather than as detents. Tick on the index instead, so there is exactly one pulse per step.
     var lastTick by remember { mutableIntStateOf(Int.MIN_VALUE) }
+
+    // D-pad left/right is the slider's own keyboard gesture: one tick per press
+    // (one step when the slider has steps, otherwise a twentieth of the range).
+    val keyStep = run {
+        val span = valueRange.endInclusive - valueRange.start
+        if (steps > 0) span / (steps + 1) else span / 20f
+    }
 
     Box(
         modifier = modifier.pointerInput(enabled, valueRange, steps) {
@@ -128,7 +139,33 @@ internal fun ZenithSlider(
                 }
                 onValueChange(raw)
             },
-            modifier = Modifier.fillMaxWidth().gamepadFocusOutline(register = true),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onPreviewKeyEvent { event ->
+                    if (!enabled || event.type != KeyEventType.KeyDown) {
+                        return@onPreviewKeyEvent false
+                    }
+                    when (event.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            val next = (value - keyStep).coerceAtLeast(valueRange.start)
+                            if (next != value) {
+                                onValueChange(next)
+                                onValueChangeFinished()
+                            }
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            val next = (value + keyStep).coerceAtMost(valueRange.endInclusive)
+                            if (next != value) {
+                                onValueChange(next)
+                                onValueChangeFinished()
+                            }
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                .gamepadFocusOutline(register = true, slider = true),
             enabled = enabled,
             valueRange = valueRange,
             steps = steps,

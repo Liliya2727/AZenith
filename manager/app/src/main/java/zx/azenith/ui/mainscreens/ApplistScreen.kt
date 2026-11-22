@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -109,6 +110,7 @@ fun ApplistScreen(navController: NavController) {
 
     var isSearchMode by remember { mutableStateOf(false) }
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
+    var requestHideFilterSheet by rememberSaveable { mutableStateOf(false) }
     
     BackHandler(enabled = isSearchMode) {
         viewModel.clearSearch()
@@ -124,6 +126,44 @@ fun ApplistScreen(navController: NavController) {
             focusManager.clearFocus()
         }
     }
+
+    // Gamepad shortcuts: Square toggles the inline search, Triangle toggles the
+    // filter sheet. The page only registers while it is the visible pager page.
+    val isCurrentPage = LocalIsCurrentPagerPage.current
+    val isPagerActive = LocalMainPagerActive.current
+    val pageIndex = LocalPagerPageIndex.current
+    RegisterGamepadActions(
+        enabled = isCurrentPage && isPagerActive,
+        hasSearch = true,
+        isSearchOpen = isSearchMode,
+        onSearchToggle = {
+            if (isSearchMode) {
+                isSearchMode = false
+                viewModel.updateSearch(TextFieldValue(""))
+            } else {
+                isSearchMode = true
+            }
+        },
+        onSearchClose = {
+            isSearchMode = false
+            viewModel.updateSearch(TextFieldValue(""))
+        },
+        hasTopAction = true,
+        isTopActionOpen = showFilterSheet,
+        onTopAction = { showFilterSheet = !showFilterSheet },
+        onCloseOverlay = {
+            if (showFilterSheet && !requestHideFilterSheet) {
+                requestHideFilterSheet = true
+                true
+            } else false
+        },
+        scrollState = listState,
+        onScrollDelta = { delta ->
+            scrollBehavior.state.heightOffset =
+                (scrollBehavior.state.heightOffset - delta)
+                    .coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
+        }
+    )
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -164,7 +204,8 @@ fun ApplistScreen(navController: NavController) {
                         contentDescription = stringResource(R.string.cd_filter),
                         onClick = { showFilterSheet = true },
                         badgeCount = viewModel.activeFilterCount,
-                        highlighted = viewModel.activeFilterCount > 0
+                        highlighted = viewModel.activeFilterCount > 0,
+                        topActionBadge = true
                     ),
                     NavDockAction(
                         icon = Icons.Default.Search,
@@ -234,57 +275,61 @@ fun ApplistScreen(navController: NavController) {
                 ) {
                 ExpressiveLazyList(
                 state = listState,
+                modifier = Modifier.gamepadScreenEntry(page = pageIndex),
                 items = appsToDisplay,
                 key = { it.packageName },
-                contentPadding = listContentPadding
-            ) { app ->
-                ExpressiveListItem(
-                    onClick = { navController.navigate("app_settings/${app.packageName}") },
-                    headlineContent = {
-                        Text(
-                            text = app.label,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    supportingContent = {
-                        Column {
+                contentPadding = listContentPadding,
+                itemContentIndexed = { index, app ->
+                    ExpressiveListItem(
+                        onClick = { navController.navigate("app_settings/${app.packageName}") },
+                        headlineContent = {
                             Text(
-                                text = app.packageName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
+                                text = app.label,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                        },
+                        supportingContent = {
+                            Column {
+                                Text(
+                                    text = app.packageName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
 
-                            Row(modifier = Modifier.padding(top = 4.dp)) {
-                                if (app.isEnabledInConfig) {
-                                    LabelText(
-                                        text = stringResource(R.string.label_enabled),
-                                        color = Color(0xFF4CAF50)
-                                    )
-                                } else {
-                                    LabelText(stringResource(R.string.label_disabled), MaterialTheme.colorScheme.error)
-                                }
-                                if (app.isRecommended) {
-                                    LabelText(stringResource(R.string.label_recommended), MaterialTheme.colorScheme.primary)
-                                }
-                                if (app.isSystem) {
-                                    LabelText(stringResource(R.string.label_system), MaterialTheme.colorScheme.secondary)
+                                Row(modifier = Modifier.padding(top = 4.dp)) {
+                                    if (app.isEnabledInConfig) {
+                                        LabelText(
+                                            text = stringResource(R.string.label_enabled),
+                                            color = Color(0xFF4CAF50)
+                                        )
+                                    } else {
+                                        LabelText(stringResource(R.string.label_disabled), MaterialTheme.colorScheme.error)
+                                    }
+                                    if (app.isRecommended) {
+                                        LabelText(stringResource(R.string.label_recommended), MaterialTheme.colorScheme.primary)
+                                    }
+                                    if (app.isSystem) {
+                                        LabelText(stringResource(R.string.label_system), MaterialTheme.colorScheme.secondary)
+                                    }
                                 }
                             }
-                        }
-                    },
-                    leadingContent = {
-                        AppIconImage(
-                            app = app,
-                            size = 60.dp
-                        )
-                    }
-                )
+                        },
+                        leadingContent = {
+                            AppIconImage(
+                                app = app,
+                                size = 60.dp
+                            )
+                        },
+                        focusKey = app.packageName,
+                        focusIndex = index
+                    )
                 }
+            )
                 }
 
             PullToRefreshDefaults.LoadingIndicator(
@@ -299,10 +344,18 @@ fun ApplistScreen(navController: NavController) {
 
     AppFilterSheet(
         show = showFilterSheet,
-        onDismiss = { showFilterSheet = false },
+        onDismiss = {
+            requestHideFilterSheet = false
+            showFilterSheet = false
+        },
         viewModel = viewModel,
         onSystemFilterChange = { viewModel.systemFilter = it },
-        onReset = { viewModel.resetFilters() }
+        onReset = { viewModel.resetFilters() },
+        externalHideRequest = requestHideFilterSheet,
+        onExternalHideConsumed = {
+            requestHideFilterSheet = false
+            showFilterSheet = false
+        }
     )
 }
 
@@ -324,6 +377,7 @@ fun ApplistTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (!isSearchMode) Modifier.gamepadNotFocusable() else Modifier)
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
@@ -360,14 +414,22 @@ fun ApplistTopAppBar(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { onSearchModeChange(false) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                        IconButton(
+                            onClick = { onSearchModeChange(false) },
+                            modifier = Modifier.focusProperties { canFocus = false }
+                        ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back))
                         }
                     },
                     actions = {
                         if (searchQuery.text.isNotEmpty()) {
-                            IconButton(onClick = { onSearchChange(TextFieldValue("")) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
-                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear))
+                            GamepadActionBadge(topAction = false) {
+                                IconButton(
+                                    onClick = { onSearchChange(TextFieldValue("")) },
+                                    modifier = Modifier.focusProperties { canFocus = false }
+                                ) {
+                                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear))
+                                }
                             }
                         }
                     },
@@ -408,38 +470,49 @@ fun ApplistTopAppBar(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { onSearchModeChange(true) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
-                            Icon(Icons.Default.Search, stringResource(R.string.cd_search))
+                        // Square/X = search, Triangle/Y = the filter (top action).
+                        GamepadActionBadge(topAction = false) {
+                            IconButton(
+                                onClick = { onSearchModeChange(true) },
+                                modifier = Modifier.focusProperties { canFocus = false }
+                            ) {
+                                Icon(Icons.Default.Search, stringResource(R.string.cd_search))
+                            }
                         }
-                        IconButton(onClick = onOpenFilters, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
-                            BadgedBox(
-                                badge = {
-                                    AnimatedContent(
-                                        targetState = activeFilterCount,
-                                        transitionSpec = {
-                                            (scaleIn(
-                                                animationSpec = motionScheme.defaultSpatialSpec(),
-                                                initialScale = 0.4f
-                                            ) + fadeIn(motionScheme.defaultEffectsSpec())) togetherWith
-                                                (scaleOut(
+                        GamepadActionBadge(topAction = true) {
+                            IconButton(
+                                onClick = onOpenFilters,
+                                modifier = Modifier.focusProperties { canFocus = false }
+                            ) {
+                                BadgedBox(
+                                    badge = {
+                                        AnimatedContent(
+                                            targetState = activeFilterCount,
+                                            transitionSpec = {
+                                                (scaleIn(
                                                     animationSpec = motionScheme.defaultSpatialSpec(),
-                                                    targetScale = 0.4f
-                                                ) + fadeOut(motionScheme.defaultEffectsSpec()))
-                                        },
-                                        label = "filterBadge"
-                                    ) { count ->
-                                        if (count > 0) {
-                                            Badge { Text(count.toString()) }
+                                                    initialScale = 0.4f
+                                                ) + fadeIn(motionScheme.defaultEffectsSpec())) togetherWith
+                                                    (scaleOut(
+                                                        animationSpec = motionScheme.defaultSpatialSpec(),
+                                                        targetScale = 0.4f
+                                                    ) + fadeOut(motionScheme.defaultEffectsSpec()))
+                                            },
+                                            label = "filterBadge"
+                                        ) { count ->
+                                            if (count > 0) {
+                                                Badge { Text(count.toString()) }
+                                            }
                                         }
                                     }
+                                ) {
+                                    Icon(
+                                        Icons.Default.FilterList,
+                                        contentDescription = stringResource(R.string.cd_filter),
+                                        tint = if (activeFilterCount > 0) colorScheme.primary
+                                               else colorScheme.onSurfaceVariant
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    Icons.Default.FilterList,
-                                    contentDescription = stringResource(R.string.cd_filter),
-                                    tint = if (activeFilterCount > 0) colorScheme.primary
-                                           else colorScheme.onSurfaceVariant
-                                )
                             }
                         }
                     }

@@ -76,6 +76,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -88,6 +89,7 @@ import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.component.GamepadStickScrollEffect
 
 
 /**
@@ -105,6 +107,20 @@ private val ABOUT_ROW_ITEMS: Map<String, Int> = mapOf(
 fun AboutScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            navController.safePopBackStack()
+            true
+        },
+        scrollState = listState,
+        onScrollDelta = { delta ->
+            scrollBehavior.state.heightOffset =
+                (scrollBehavior.state.heightOffset - delta)
+                    .coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
+        },
+    )
 
     // Search results land here: entry id -> the LazyColumn item
     // holding that row.
@@ -112,7 +128,6 @@ fun AboutScreen(navController: NavController) {
         owns = { it.startsWith("about.") },
         indexOf = { id -> ABOUT_ROW_ITEMS[id] }
     )
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -136,7 +151,10 @@ fun AboutScreen(navController: NavController) {
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+            modifier = Modifier
+                .fillMaxSize()
+                .hazePageSource()
+                .gamepadScreenEntry(scopeKey = "subscreen:about"),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp,
@@ -414,7 +432,7 @@ private fun OpenSourceRow(
             .fillMaxWidth()
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
-            .gamepadFocusOutline(shape = shape, register = true)
+            .gamepadFocusOutline(shape = shape, register = true, onActivate = onClick)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -486,6 +504,7 @@ fun AboutTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadNotFocusable()
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
@@ -497,7 +516,10 @@ fun AboutTopAppBar(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },       

@@ -55,6 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -86,6 +87,14 @@ fun FasScreen(navController: NavController) {
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            navController.safePopBackStack()
+            true
+        },
+        scrollState = listState,
+    )
     
 
     Scaffold(
@@ -100,7 +109,10 @@ fun FasScreen(navController: NavController) {
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+            modifier = Modifier
+                .fillMaxSize()
+                .hazePageSource()
+                .gamepadScreenEntry(scopeKey = "subscreen:fas"),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp,
@@ -154,6 +166,7 @@ fun FasTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadNotFocusable()
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
@@ -165,7 +178,10 @@ fun FasTopAppBar(
                 ) 
             },
             navigationIcon = {
-                IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },       

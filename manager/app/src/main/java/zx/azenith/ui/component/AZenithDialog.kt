@@ -17,6 +17,8 @@
 package zx.azenith.ui.component
 
 import android.content.Context
+import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -46,10 +48,16 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -114,16 +122,45 @@ fun AZenithDialog(
     val containerColor = spec.containerColor ?: MaterialTheme.colorScheme.surfaceContainerHigh
 
     var wasVisible by remember { mutableStateOf(false) }
+    val dialogFocusManager = LocalFocusManager.current
     LaunchedEffect(visible) {
         if (visible) {
             wasVisible = true
+            Log.d("PAD", "dialog opened dismissible=${spec.dismissible}")
             dialogRequester.requestFocus()
+            // Focusing the root is not enough: Cross invokes the activation of
+            // an outlined control, so step into the first button/checkbox and
+            // retry briefly while the dialog's content is being laid out.
+            val seedStart = android.os.SystemClock.uptimeMillis()
+            // Always make at least one attempt: the previous screen's row can
+            // still be the published activation during the frame the dialog opens.
+            for (attempt in 0 until 16) {
+                withFrameNanos { }
+                val moved = runCatching {
+                    dialogFocusManager.moveFocus(FocusDirection.Next) ||
+                        dialogFocusManager.moveFocus(FocusDirection.Down) ||
+                        dialogFocusManager.moveFocus(FocusDirection.Enter)
+                }.getOrDefault(false)
+                if (moved && GamepadShortcuts.hasRowFocus) break
+                if (android.os.SystemClock.uptimeMillis() - seedStart >= 500) break
+                kotlinx.coroutines.delay(32)
+            }
+            Log.d(
+                "PAD",
+                "dialog seed rowFocus=${GamepadShortcuts.hasRowFocus} " +
+                    "ms=${android.os.SystemClock.uptimeMillis() - seedStart}"
+            )
         } else if (wasVisible) {
             // The dialog's focused node is disposed along with it and nothing re-seeds focus,
             // so without this the d-pad has nothing to move from once a dialog closes.
             wasVisible = false
-            kotlinx.coroutines.delay(150)
-            GamepadFocusNav.restoreFocus()
+            // The card's exit transition is Motion.DurationShort4 (200ms). Restoring
+            // before it finishes focuses a dialog row that is still composed but on
+            // its way out; when that row is disposed focus vanishes with it and X
+            // has nothing left to activate. Wait for the rows to be gone first.
+            kotlinx.coroutines.delay(Motion.DurationShort4.toLong() + 80L)
+            val returned = GamepadFocusNav.restoreFocus()
+            Log.d("PAD", "dialog closed focusReturn=$returned rowFocus=${GamepadShortcuts.hasRowFocus}")
         }
     }
     Box(
@@ -132,6 +169,28 @@ fun AZenithDialog(
             .onGloballyPositioned { rootSize = it.size }
             .focusRequester(dialogRequester)
             .focusGroup()
+            // Circle / B: the shared key watch defers to the dialog shell while
+            // one is open, so dismiss here and keep the animated hide path.
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown &&
+                    event.nativeKeyEvent.repeatCount == 0 &&
+                    event.nativeKeyEvent.keyCode in setOf(
+                        KeyEvent.KEYCODE_BUTTON_B,
+                        KeyEvent.KEYCODE_BUTTON_SELECT,
+                        KeyEvent.KEYCODE_ESCAPE
+                    )
+                ) {
+                    if (visible && spec.dismissible) {
+                        Log.d("PAD", "dialog BACK dismiss")
+                        onDismiss()
+                    } else {
+                        Log.d("PAD", "dialog BACK ignored dismissible=${spec.dismissible}")
+                    }
+                    true
+                } else {
+                    false
+                }
+            }
             .gamepadKeyWatch()
             .focusProperties {
                 // A dialog is modal: while it is up a d-pad may not walk out to the

@@ -22,6 +22,9 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -94,6 +97,7 @@ import kotlin.math.abs
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
@@ -105,7 +109,11 @@ import zx.azenith.ui.gamespace.isGameSpaceEnabled
 import zx.azenith.ui.gamespace.isHandoffDone
 import zx.azenith.ui.gamespace.setHandoffDone
 import zx.azenith.ui.gamespace.launchGameSpaceDirectly
+import zx.azenith.ui.component.GamepadAction
+import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.GamepadKeymap
 import zx.azenith.ui.mainscreens.*
+import zx.azenith.ui.navigation.safePopBackStack
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.*
@@ -122,7 +130,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
+        wireGamepadDirectionRepeat()
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
@@ -197,12 +207,109 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Route synthesized direction keys through this window's view hierarchy. */
+    private fun wireGamepadDirectionRepeat() {
+        GamepadDirectionRepeat.sendKey = { code, action, repeat ->
+            val now = android.os.SystemClock.uptimeMillis()
+            super@MainActivity.dispatchKeyEvent(KeyEvent(now, now, action, code, repeat))
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        // GameSpace is a separate Activity that rebinds sendKey to its own window;
+        // take it back when the manager comes to the foreground again.
+        wireGamepadDirectionRepeat()
         zx.azenith.ui.gamespace.ZXSidePanelService.hide(this)
         if (isStandingByForGameSpace) {
             isStandingByForGameSpace = false
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (GamepadKeymap.map(event.keyCode) != GamepadAction.NONE) {
+            GamepadInput.onDpadKey()
+        }
+        // Physical D-pad directions are folded into the same synthesized-key
+        // pipeline as the hat and analogue stick, so all three drive focus, the
+        // horizontal policy and slider ticks identically. OS key repeats are
+        // swallowed; GamepadDirectionRepeat supplies an accelerated sequence.
+        val code = event.keyCode
+        if (code == KeyEvent.KEYCODE_DPAD_UP || code == KeyEvent.KEYCODE_DPAD_DOWN ||
+            code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT
+        ) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> GamepadDirectionRepeat.onDirectionDown(code)
+                KeyEvent.ACTION_UP -> GamepadDirectionRepeat.releaseIf(code)
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    /**
+     * Map an analogue axis pair to one D-pad key. The dominant axis wins, so a
+     * mostly-vertical stick walks rows and a mostly-horizontal one ticks sliders.
+     * Both the hat and the left stick use this, then feed [GamepadDirectionRepeat]
+     * exactly like the physical pad.
+     */
+    private fun axisDirection(x: Float, y: Float): Int? {
+        val threshold = 0.5f
+        if (abs(x) <= threshold && abs(y) <= threshold) return null
+        return if (abs(x) >= abs(y)) {
+            if (x < 0f) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+        } else {
+            if (y < 0f) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
+        }
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        val source = event.source
+        val isJoystick = source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+        val isGamepad = source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
+        if (event.action == MotionEvent.ACTION_MOVE && (isJoystick || isGamepad)) {
+            // Hat/D-pad axes first: one synthesized D-pad key, same as the pad.
+            val hatDir = axisDirection(
+                event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+            )
+            if (hatDir != null) {
+                GamepadInput.onDpadKey()
+                GamepadDirectionRepeat.onDirectionDown(hatDir)
+                return true
+            }
+
+            // Right stick vertical scroll.
+            val rz = event.getAxisValue(MotionEvent.AXIS_RZ)
+            val ry = event.getAxisValue(MotionEvent.AXIS_RY)
+            val vertical = if (abs(rz) >= abs(ry)) rz else ry
+            GamepadStickScroll.onAxisY(vertical)
+
+            // Left stick: identical behaviour to the D-pad via the same pipeline.
+            val stickDir = axisDirection(
+                event.getAxisValue(MotionEvent.AXIS_X),
+                event.getAxisValue(MotionEvent.AXIS_Y)
+            )
+            if (stickDir != null) {
+                GamepadInput.onDpadKey()
+                GamepadDirectionRepeat.onDirectionDown(stickDir)
+            } else {
+                GamepadDirectionRepeat.release()
+            }
+
+            if (abs(vertical) > GamepadStickScroll.DEADZONE) {
+                GamepadInput.onDpadKey()
+            }
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // A controller that disappears mid-deflection would otherwise leave a
+        // constant scroll axis behind; drop it when we leave the foreground.
+        GamepadStickScroll.reset()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -354,6 +461,8 @@ fun MainScreen(fromTileType: String? = null) {
     }
 
     val coroutineScope = rememberCoroutineScope()
+
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val appPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
@@ -486,6 +595,27 @@ fun MainScreen(fromTileType: String? = null) {
     ) {
         RootDialogsProvider {
             val isAnyDialogOpen = zx.azenith.ui.component.LocalActiveDialogCount.current.value > 0 || installingDialog.isShown || updateDialog.isShown || rebootDialog.isShown
+
+            // Gamepad shortcuts: main pager context. L1/R1 and the global Circle
+            // fallback are published here once; the pages publish their own
+            // search/top-action handlers through RegisterGamepadActions.
+            GamepadShortcuts.isOnMainPager = isOnMainPager
+            GamepadShortcuts.pageCount = pagerRoutes.size
+            GamepadShortcuts.pageIndex = pagerState.currentPage
+            val targetCurrentPage = if (isOnMainPager) pagerState.currentPage else -1
+            if (GamepadFocusNav.currentPage != targetCurrentPage) {
+                android.util.Log.d("PAD", "pageChange current=${GamepadFocusNav.currentPage} target=$targetCurrentPage")
+                GamepadFocusNav.currentPage = targetCurrentPage
+            }
+            LaunchedEffect(isOnMainPager) {
+                if (isOnMainPager && GamepadInput.dpadMode) {
+                    delay(200)
+                    GamepadFocusNav.restoreFocus()
+                }
+            }
+
+            // L1/R1 and the global Circle fallback are published below, once
+            // onNavSelected exists (it owns the animated page switch).
             
             androidx.activity.compose.BackHandler(enabled = isOnMainPager && !isAnyDialogOpen) {
                 if (showExitConfirm) {
@@ -563,15 +693,12 @@ fun MainScreen(fromTileType: String? = null) {
                                 else -> if (absOffset < 0.5f) 1f else 0f
                             }
 
-                            // One entry point per page: the bar jumps to the page on
-                            // screen so a d-pad can leave the bottom bar.
-                            val pageEntry = remember(page) { androidx.compose.ui.focus.FocusRequester() }
-                            LaunchedEffect(page, pagerState.currentPage) {
-                                if (page == pagerState.currentPage) {
-                                    zx.azenith.ui.component.GamepadFocusNav.publishPageEntry(pageEntry)
-                                    zx.azenith.ui.component.GamepadFocusNav.publishLastEntry(pageEntry)
-                                }
-                            }
+                            // Only the page on screen may be reached by d-pad search:
+                            // the pager keeps all four pages composed, so without this
+                            // the search sees four candidate subtrees at the same
+                            // geometry and cannot pick one. Entry focus comes from each
+                            // screen's gamepadScreenEntry(), which is a real focus
+                            // target, so no container-level requester is needed here.
                             
                             val pageModifier = if (!useScrollAnimation) {
                                 Modifier.graphicsLayer {
@@ -615,9 +742,6 @@ fun MainScreen(fromTileType: String? = null) {
                             Box(
                                 modifier = pageModifier
                                     .fillMaxSize()
-                                    // The d-pad entry point into this page, published to the
-                                    // bottom bar while this page is the one on screen.
-                                    .focusRequester(pageEntry)
                                     .focusGroup()
                                     // Only the page on screen may be reached by d-pad search:
                                     // the pager keeps all four pages composed, so without this
@@ -626,10 +750,30 @@ fun MainScreen(fromTileType: String? = null) {
                                     .focusProperties { canFocus = page == pagerState.currentPage }
                             ) {
                                 when (pagerRoutes[page]) {
-                                    "home" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { HomeScreen() }
-                                    "applist" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { ApplistScreen(navController) }
-                                    "tweaks" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { TweakScreen(navController) }
-                                    "settings" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { SettingsScreen(navController) }
+                                    "home" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) {
+                                        CompositionLocalProvider(
+                                            zx.azenith.ui.component.LocalPagerPageIndex provides page,
+                                            zx.azenith.ui.component.LocalMainPagerActive provides isOnMainPager
+                                        ) { HomeScreen() }
+                                    }
+                                    "applist" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) {
+                                        CompositionLocalProvider(
+                                            zx.azenith.ui.component.LocalPagerPageIndex provides page,
+                                            zx.azenith.ui.component.LocalMainPagerActive provides isOnMainPager
+                                        ) { ApplistScreen(navController) }
+                                    }
+                                    "tweaks" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) {
+                                        CompositionLocalProvider(
+                                            zx.azenith.ui.component.LocalPagerPageIndex provides page,
+                                            zx.azenith.ui.component.LocalMainPagerActive provides isOnMainPager
+                                        ) { TweakScreen(navController) }
+                                    }
+                                    "settings" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) {
+                                        CompositionLocalProvider(
+                                            zx.azenith.ui.component.LocalPagerPageIndex provides page,
+                                            zx.azenith.ui.component.LocalMainPagerActive provides isOnMainPager
+                                        ) { SettingsScreen(navController) }
+                                    }
                                 }
                             }
                             
@@ -850,6 +994,51 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     }
                     highlightRoute.value = route
+                }
+
+                // L1/R1: switch pager pages, clamped at both ends, and land the
+                // ring on the new page's first row. Only live on the main pager
+                // (subscreens and open dialogs are excluded by the key handler).
+                DisposableEffect(isOnMainPager, pagerState, pagerRoutes) {
+                    if (isOnMainPager) {
+                        GamepadShortcuts.onPageTarget = { rawTarget ->
+                            val target = rawTarget.coerceIn(0, pagerRoutes.lastIndex)
+                            if (target != pagerState.currentPage || pagerState.isScrollInProgress) {
+                                onNavSelected(pagerRoutes[target])
+                                coroutineScope.launch {
+                                    // Wait for the animated switch to settle, then
+                                    // put the ring on the new page's first row.
+                                    snapshotFlow {
+                                        pagerState.settledPage to pagerState.isScrollInProgress
+                                    }.first { (settled, scrolling) -> !scrolling && settled == target }
+                                    withFrameNanos { }
+                                    GamepadFocusNav.requestPageEntry(target)
+                                }
+                            } else {
+                                coroutineScope.launch {
+                                    withFrameNanos { }
+                                    GamepadFocusNav.requestPageEntry(target)
+                                }
+                            }
+                        }
+                    } else {
+                        GamepadShortcuts.onPageTarget = null
+                    }
+
+                    // Circle on a spread-out subscreen pops it through the same
+                    // safe path the back arrow uses. On the root pager this is a
+                    // no-op, so Circle never exits the app.
+                    GamepadShortcuts.onGlobalBack = {
+                        if (!isOnMainPager) {
+                            navController.safePopBackStack()
+                        }
+                        true
+                    }
+
+                    onDispose {
+                        GamepadShortcuts.onPageTarget = null
+                        GamepadShortcuts.onGlobalBack = null
+                    }
                 }
 
                 if (isLandscape) {
@@ -1115,6 +1304,9 @@ fun BottomNavBar(
 
     Box(
         modifier = modifier
+            // The bar is chrome, never a D-pad destination: pruning focus at
+            // this root removes the whole bar and every tab inside it.
+            .focusProperties { canFocus = false }
             // The bar is a full-width strip; it hugs its own content vertically.
             .fillMaxWidth()
             .then(insetPadding)
@@ -1250,6 +1442,9 @@ fun BottomNavBar(
                     ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // L1 / R1 hints at the bar's two ends while a controller is in
+                    // use. Decoration only — the bar root is pruned from d-pad focus.
+                    zx.azenith.ui.component.GamepadShoulderHint(left = true)
                     // Pinned divides the screen evenly. Floating sizes every tab to
                     // its own label, so the row hugs and the slider shrinks the
                     // icons, the gaps and the margins together. Weighting them
@@ -1261,6 +1456,7 @@ fun BottomNavBar(
                     navItemsContent(
                         if (pinnedProgress > 0.01f) Modifier.weight(pinnedProgress) else Modifier
                     )
+                    zx.azenith.ui.component.GamepadShoulderHint(left = false)
             }
         }
     }
@@ -1430,15 +1626,7 @@ private fun NavPill(
                 .defaultMinSize(minWidth = 48.dp * sizeScale)
                 .clip(shape)
                 .background(bgColor)
-                .gamepadFocusOutline(shape = shape)
-                .focusProperties {
-                    // The bar is the last stop on its own edge, and the search cannot
-                    // cross from it into the pager's page, so the way out is explicit:
-                    // Up, which is the direction the page is in from here.
-                    if (interactive) {
-                        up = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                    }
-                }
+                .focusProperties { canFocus = false }
                 .then(
                     if (interactive) Modifier.clickable(
                         interactionSource = interactionSource,
@@ -1486,13 +1674,7 @@ private fun NavPill(
                 .defaultMinSize(minWidth = 48.dp * sizeScale)
                 .clip(shape)
                 .background(bgColor)
-                .gamepadFocusOutline(shape = shape)
-                .focusProperties {
-                    // Same escape as the stacked pill above: up, into the page.
-                    if (interactive) {
-                        up = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                    }
-                }
+                .focusProperties { canFocus = false }
                 .then(
                     if (interactive) Modifier.clickable(
                         interactionSource = interactionSource,

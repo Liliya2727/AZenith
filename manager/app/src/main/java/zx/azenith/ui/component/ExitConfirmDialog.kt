@@ -47,12 +47,10 @@ fun ExitConfirmDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = {
-                    onConfirm()
-                },
+                onClick = { onConfirm() },
                 modifier = Modifier
                     .focusRequester(confirmRequest)
-                    .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                    .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), onActivate = { onConfirm() })
             ) {
                 Text(stringResource(R.string.dialog_exit_confirm_button), color = MaterialTheme.colorScheme.error)
             }
@@ -60,7 +58,7 @@ fun ExitConfirmDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), onActivate = onDismiss)
             ) {
                 Text(stringResource(R.string.dialog_cancel))
             }

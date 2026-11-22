@@ -81,8 +81,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -107,6 +111,8 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.ui.component.GamepadFocusRoot
+import zx.azenith.ui.component.GamepadShortcuts
+import zx.azenith.ui.component.LocalGamepadFocusEnabled
 import zx.azenith.ui.component.ZXDropDownNav
 import zx.azenith.ui.util.TapHapticState
 import zx.azenith.ui.util.AudioUtil
@@ -154,6 +160,7 @@ fun ZXGameSpaceHub(
 
     val scope = rememberCoroutineScope()
     val ribbonFocusRequester = remember { FocusRequester() }
+    val libraryFilterFocusRequester = remember { FocusRequester() }
     var category by rememberSaveable { mutableStateOf(TopCategory.Games) }
     var selectedSettingsTab by rememberSaveable { mutableStateOf(SettingsSidebarTab.General) }
 
@@ -214,14 +221,41 @@ fun ZXGameSpaceHub(
         }
     }
 
+    // Keep selectedRibbonIndex anchored to the same logical entry (especially Library
+    // and the current Game) when enabling/disabling a game shifts ribbonEntries indices.
+    var trackedEntryKey by remember { mutableStateOf<Any>(RibbonEntry.Welcome) }
+    var lastRibbonEntries by remember { mutableStateOf(ribbonEntries) }
+    if (lastRibbonEntries !== ribbonEntries) {
+        val remapped = when (val key = trackedEntryKey) {
+            RibbonEntry.Welcome -> 0
+            RibbonEntry.Library -> ribbonEntries.indexOf(RibbonEntry.Library)
+            RibbonEntry.WrapToFirst -> ribbonEntries.indexOf(RibbonEntry.WrapToFirst)
+            is String -> ribbonEntries.indexOfFirst { it is RibbonEntry.Game && it.app.packageName == key }
+            else -> -1
+        }
+        if (remapped >= 0) {
+            selectedRibbonIndex = remapped
+        }
+        lastRibbonEntries = ribbonEntries
+    }
+
     var previousRibbonIndex by remember { mutableIntStateOf(0) }
     val safeIndex = selectedRibbonIndex.coerceIn(0, ribbonEntries.lastIndex)
     val isNavigatingForward = (safeIndex >= previousRibbonIndex && !(previousRibbonIndex == 0 && safeIndex == ribbonEntries.lastIndex)) ||
         (previousRibbonIndex == ribbonEntries.lastIndex && safeIndex == 0)
+    LaunchedEffect(safeIndex) {
+        if (safeIndex != previousRibbonIndex) {
+            android.util.Log.d("PAD", "gs ribbon index=$previousRibbonIndex -> $safeIndex entry=${ribbonEntries[safeIndex]}")
+        }
+    }
     SideEffect {
         previousRibbonIndex = safeIndex
     }
     val activeEntry = ribbonEntries[safeIndex]
+    trackedEntryKey = when (activeEntry) {
+        is RibbonEntry.Game -> activeEntry.app.packageName
+        else -> activeEntry
+    }
     val activeStageType = activeEntry.stageType
     var lastGameApp by remember { mutableStateOf(enabledApps.firstOrNull()) }
     if (activeEntry is RibbonEntry.Game) {
@@ -236,6 +270,84 @@ fun ZXGameSpaceHub(
         if (activeEntry != RibbonEntry.Library) libraryExpanded = false
     }
 
+    // Keep an invisible focus anchor on the collapsed Games ribbon so Compose always
+    // delivers key events to GamepadFocusRoot's onPreviewKeyEvent (especially on
+    // GameHeroStage where action buttons are touch-only).
+    val shouldFocusRibbon = category == TopCategory.Games &&
+        !homeExpanded &&
+        !libraryExpanded &&
+        !searchOpen &&
+        !exitPrompt &&
+        !sidePanelPromptOpen &&
+        tuningPkg == null &&
+        wallpaperPkg == null &&
+        !nowPlayingOpen &&
+        !quickSettingsOpen &&
+        !GameSpaceOverlayState.isAnyOpen &&
+        !ZXDropDownNav.isActive
+    LaunchedEffect(shouldFocusRibbon, activeStageType) {
+        if (shouldFocusRibbon) {
+            withFrameNanos { }
+            runCatching { ribbonFocusRequester.requestFocus() }
+        }
+    }
+
+    val hintOwner = remember { Any() }
+    val hintScreen = when {
+        category == TopCategory.Settings -> GameSpaceScreenId.Settings
+        activeEntry == RibbonEntry.Welcome && homeExpanded -> GameSpaceScreenId.WelcomeExpanded
+        activeEntry == RibbonEntry.Welcome -> GameSpaceScreenId.Welcome
+        activeEntry is RibbonEntry.Game -> GameSpaceScreenId.Game
+        activeEntry == RibbonEntry.Library && libraryExpanded -> GameSpaceScreenId.LibraryExpanded
+        activeEntry == RibbonEntry.Library -> GameSpaceScreenId.Library
+        else -> GameSpaceScreenId.WrapToFirst
+    }
+    val hintOverlayOpen = introActive ||
+        GameSpaceOverlayState.isAnyOpen ||
+        ZXDropDownNav.isActive ||
+        exitPrompt ||
+        sidePanelPromptOpen ||
+        tuningPkg != null ||
+        wallpaperPkg != null ||
+        nowPlayingOpen ||
+        quickSettingsOpen ||
+        searchOpen
+
+    val isTopLevelPopupOpen = exitPrompt ||
+        sidePanelPromptOpen ||
+        tuningPkg != null ||
+        wallpaperPkg != null ||
+        nowPlayingOpen ||
+        quickSettingsOpen ||
+        searchOpen
+
+    val isPopupConfinementActive = GameSpaceOverlayState.isAnyOpen ||
+        ZXDropDownNav.isActive ||
+        isTopLevelPopupOpen
+
+    // Clear stale Manager main-pager flag while GameSpace owns the foreground so
+    // GamepadFocusRoot's gamepadKeyWatch never blocks horizontal D-pad in popups/settings.
+    DisposableEffect(Unit) {
+        val prevOnMainPager = GamepadShortcuts.isOnMainPager
+        GamepadShortcuts.isOnMainPager = false
+        onDispose {
+            GamepadShortcuts.isOnMainPager = prevOnMainPager
+        }
+    }
+
+    LaunchedEffect(hintScreen) {
+        GameSpaceHintState.setScreen(hintOwner, hintScreen)
+    }
+    LaunchedEffect(hintOverlayOpen) {
+        GameSpaceHintState.setOverlayOpen(hintOwner, hintOverlayOpen)
+    }
+    DisposableEffect(hintOwner) {
+        onDispose {
+            GameSpaceHintState.clearScreen(hintOwner)
+            GameSpaceHintState.clearOverlay(hintOwner)
+        }
+    }
+
     val clock = rememberClock()
     val battery = rememberBatteryState()
     val ramState = rememberRamState()
@@ -247,10 +359,20 @@ fun ZXGameSpaceHub(
     val overlayHazeState = remember { HazeState() }
     val backdropHazeState = remember { HazeState() }
     val baseDensity = LocalDensity.current
+    val focusManager = LocalFocusManager.current
     val scaleFactor = appScalePercent.coerceIn(60, 150) / 100f
 
+    // The WrapToFirst stage is the ribbon's end stop: every face button, like
+    // Circle, returns to the first entry instead of running its normal action.
+    val backToStart: () -> Unit = { selectedRibbonIndex = 0 }
+
     val handleBack: () -> Unit = {
-        if (exitPrompt) {
+        // Circle is a plain BackHandler: dismiss an open dropdown first, then
+        // walk the shell's own back stack. This used to live in a manual
+        // onPreviewKeyEvent branch that the Activity consumed before it fired.
+        if (ZXDropDownNav.isActive) {
+            ZXDropDownNav.dismissTop()
+        } else if (exitPrompt) {
             exitPrompt = false
         } else if (sidePanelPromptOpen) {
             sidePanelPromptOpen = false
@@ -271,6 +393,11 @@ fun ZXGameSpaceHub(
             searchQuery = ""
         } else if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
             homeExpanded = false
+            // Clear the focused tile right now, not when the collapse animation
+            // crosses 0.5. A lower card (library/support/learn more) still holding
+            // focus makes the scroll container keep it in view, which the stage
+            // gate reads as an upward scroll/fling and expands the wall again.
+            focusManager.clearFocus()
         } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
             libraryExpanded = false
         } else if (selectedRibbonIndex != 0) {
@@ -284,7 +411,11 @@ fun ZXGameSpaceHub(
         LocalDensity provides Density(
             density = baseDensity.density * scaleFactor,
             fontScale = baseDensity.fontScale
-        )
+        ),
+        // GameSpace is being reworked: opt the whole subtree out of gamepad
+        // focus (no ring, no activation, no focus seeding) while keeping the
+        // Activity's back/search and the hub's own L1/R1 keys working.
+        LocalGamepadFocusEnabled provides false
     ) {
     GamepadFocusRoot(
         modifier = Modifier
@@ -294,42 +425,208 @@ fun ZXGameSpaceHub(
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_BUTTON_L1 -> {
-                            category = TopCategory.Games
-                            true
-                        }
-                        KeyEvent.KEYCODE_BUTTON_R1 -> {
-                            category = TopCategory.Settings
-                            true
-                        }
-                        KeyEvent.KEYCODE_BUTTON_B,
-                        KeyEvent.KEYCODE_ESCAPE -> {
-                            // A menu overlays the shell, so the pad's back closes the menu
-                            // instead of walking out of the screen underneath it.
-                            if (ZXDropDownNav.isActive) {
-                                ZXDropDownNav.dismissTop()
-                            } else {
-                                handleBack()
+                            if (!isPopupConfinementActive) {
+                                category = TopCategory.Games
                             }
                             true
                         }
-                        KeyEvent.KEYCODE_DPAD_UP -> {
-                            if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
-                                homeExpanded = false
-                                scope.launch {
-                                    welcomeScroll.animateScrollTo(0)
-                                    delay(50)
-                                    runCatching { ribbonFocusRequester.requestFocus() }
+                        KeyEvent.KEYCODE_BUTTON_R1 -> {
+                            if (!isPopupConfinementActive) {
+                                category = TopCategory.Settings
+                            }
+                            true
+                        }
+                        // Triggers + Select drive the shell overlays. Consume them
+                        // here so the global watcher can't read Select as Back.
+                        KeyEvent.KEYCODE_BUTTON_SELECT -> {
+                            if (isPopupConfinementActive && !searchOpen) {
+                                false
+                            } else {
+                                if (event.nativeKeyEvent.repeatCount == 0) {
+                                    quickSettingsOpen = false
+                                    nowPlayingOpen = false
+                                    category = TopCategory.Games
+                                    searchOpen = !searchOpen
+                                    if (!searchOpen) searchQuery = ""
                                 }
                                 true
-                            } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
-                                libraryExpanded = false
-                                scope.launch {
-                                    delay(50)
-                                    runCatching { ribbonFocusRequester.requestFocus() }
+                            }
+                        }
+                        // R2 toggles quick settings, L2 toggles now playing (and also closes
+                        // quick settings when quick settings is the active overlay).
+                        KeyEvent.KEYCODE_BUTTON_R2 -> {
+                            if (event.nativeKeyEvent.repeatCount == 0) {
+                                if (!isPopupConfinementActive || quickSettingsOpen || nowPlayingOpen || searchOpen) {
+                                    searchOpen = false
+                                    searchQuery = ""
+                                    nowPlayingOpen = false
+                                    quickSettingsOpen = !quickSettingsOpen
+                                }
+                            }
+                            true
+                        }
+                        KeyEvent.KEYCODE_BUTTON_L2 -> {
+                            if (event.nativeKeyEvent.repeatCount == 0) {
+                                if (quickSettingsOpen) {
+                                    quickSettingsOpen = false
+                                } else if (!isPopupConfinementActive || nowPlayingOpen || searchOpen) {
+                                    searchOpen = false
+                                    searchQuery = ""
+                                    nowPlayingOpen = !nowPlayingOpen
+                                }
+                            }
+                            true
+                        }
+                        // Face buttons: Triangle = the stage's primary action,
+                        // Square = wallpaper settings, Start = launch the game.
+                        // Suppressed while any popup/overlay is open.
+                        KeyEvent.KEYCODE_BUTTON_Y -> {
+                            if (isPopupConfinementActive) {
+                                true
+                            } else if (category != TopCategory.Games) {
+                                false
+                            } else {
+                                android.util.Log.d("PAD", "gs key Y idx=$safeIndex entry=$activeEntry")
+                                when (activeEntry) {
+                                    RibbonEntry.Welcome -> {
+                                        homeExpanded = true
+                                        // Drop focus into the Bento cards instead of letting
+                                        // it land back on the (now non-focusable) top bar.
+                                        scope.launch {
+                                            withFrameNanos { }
+                                            focusManager.moveFocus(FocusDirection.Down)
+                                        }
+                                    }
+                                    is RibbonEntry.Game -> tuningPkg = lastGameApp?.packageName
+                                    RibbonEntry.Library -> {
+                                        // Collapse the ribbon and drop focus straight into the
+                                        // filter bar / applist below it.
+                                        libraryExpanded = true
+                                        scope.launch {
+                                            withFrameNanos { }
+                                            runCatching { libraryFilterFocusRequester.requestFocus() }
+                                        }
+                                    }
+                                    RibbonEntry.WrapToFirst -> backToStart()
+                                }
+                                true
+                            }
+                        }
+                        KeyEvent.KEYCODE_BUTTON_X -> {
+                            if (isPopupConfinementActive) {
+                                true
+                            } else if (category != TopCategory.Games) {
+                                false
+                            } else if (activeEntry == RibbonEntry.WrapToFirst) {
+                                backToStart()
+                                true
+                            } else {
+                                android.util.Log.d("PAD", "gs key X idx=$safeIndex entry=$activeEntry")
+                                wallpaperPkg = if (activeEntry is RibbonEntry.Game) {
+                                    lastGameApp?.packageName
+                                } else {
+                                    "home"
+                                }
+                                true
+                            }
+                        }
+                        KeyEvent.KEYCODE_BUTTON_A -> {
+                            // While a popup is open, pass Cross through to the popup's
+                            // focused control. On the end stop of the base ribbon, return
+                            // to the first entry.
+                            if (isPopupConfinementActive) {
+                                false
+                            } else if (category == TopCategory.Games &&
+                                activeEntry == RibbonEntry.WrapToFirst
+                            ) {
+                                backToStart()
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        KeyEvent.KEYCODE_BUTTON_START -> {
+                            if (isPopupConfinementActive) {
+                                false
+                            } else if (category == TopCategory.Games && activeEntry is RibbonEntry.Game) {
+                                if (event.nativeKeyEvent.repeatCount == 0) {
+                                    android.util.Log.d("PAD", "gs key START idx=$safeIndex pkg=${lastGameApp?.packageName}")
+                                    lastGameApp?.let { requestAppLaunch(it) }
                                 }
                                 true
                             } else {
                                 false
+                            }
+                        }
+                        KeyEvent.KEYCODE_DPAD_UP,
+                        KeyEvent.KEYCODE_DPAD_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT,
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            // While any popup/overlay is open, never let the base stage or
+                            // ribbon intercept D-pad keys; pass straight through to the
+                            // confined popup and its focused sliders/controls.
+                            if (isPopupConfinementActive) {
+                                false
+                            } else {
+                                val keyCode = event.nativeKeyEvent.keyCode
+                                // With the Bento wall open, every direction belongs to
+                                // focus navigation between the cards: no outline ring is
+                                // drawn, the lift is the cue, and Cross activates. Move
+                                // focus ourselves and consume the key — letting it fall
+                                // through would hit gamepadKeyWatch's pager block rule.
+                                if (category == TopCategory.Games &&
+                                    !searchOpen && activeEntry == RibbonEntry.Welcome && homeExpanded
+                                ) {
+                                    val direction = when (keyCode) {
+                                        KeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
+                                        KeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
+                                        KeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
+                                        else -> FocusDirection.Right
+                                    }
+                                    focusManager.moveFocus(direction)
+                                    true
+                                } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
+                                    // The library is open: every direction walks focus between
+                                    // the filter bar and app tiles. Up that reaches the filter
+                                    // simply stops there — the filter row consumes it — instead
+                                    // of reopening the ribbon.
+                                    val direction = when (keyCode) {
+                                        KeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
+                                        KeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
+                                        KeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
+                                        else -> FocusDirection.Right
+                                    }
+                                    focusManager.moveFocus(direction)
+                                    true
+                                } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                                    keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                                ) {
+                                    // On the collapsed ribbon, vertical keys must do nothing:
+                                    // focus search would otherwise land on the top-bar tabs or
+                                    // the collapsed Bento tiles and paint their highlight.
+                                    if (category == TopCategory.Games && !searchOpen) {
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                } else if (category != TopCategory.Games || searchOpen) {
+                                    false
+                                } else {
+                                    // Horizontal pad walks the ribbon to locate a game.
+                                    // Repeats arrive from GamepadDirectionRepeat accelerating.
+                                    val forward = keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                                    val next = (safeIndex + if (forward) 1 else -1)
+                                        .coerceIn(0, ribbonEntries.lastIndex)
+                                    if (next != safeIndex) {
+                                        selectedRibbonIndex = next
+                                        if (ribbonEntries.getOrNull(next) != RibbonEntry.Welcome) {
+                                            homeExpanded = false
+                                        }
+                                        // Scroll sound/haptic come from the ribbon's own
+                                        // index-crossing effect; playing it here too doubled it.
+                                    }
+                                    true
+                                }
                             }
                         }
                         else -> false
@@ -522,7 +819,13 @@ fun ZXGameSpaceHub(
                                     scaleOut(animationSpec = motion.defaultSpatialSpec(), targetScale = 1.01f)
                             )
                     },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .focusProperties {
+                            if (isTopLevelPopupOpen) {
+                                canFocus = false
+                            }
+                        },
                     label = "CategoryStageTransition"
                 ) { currentCategory ->
                     when (currentCategory) {
@@ -609,7 +912,6 @@ fun ZXGameSpaceHub(
                                                                     if (TapHapticState.enabled.value) {
                                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                     }
-                                                                    AudioUtil.playScroll(context)
                                                                     if (safeIndex < ribbonEntries.lastIndex) {
                                                                         val next = safeIndex + 1
                                                                         selectedRibbonIndex = next
@@ -623,7 +925,6 @@ fun ZXGameSpaceHub(
                                                                     if (TapHapticState.enabled.value) {
                                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                     }
-                                                                    AudioUtil.playScroll(context)
                                                                     if (safeIndex > 0) {
                                                                         val prev = safeIndex - 1
                                                                         selectedRibbonIndex = prev
@@ -738,12 +1039,15 @@ fun ZXGameSpaceHub(
                                                 onOpenSettings = { tuningPkg = it.packageName },
                                                 onExpandedChange = { if (activeEntry == RibbonEntry.Library) libraryExpanded = it },
                                                 onClose = { selectedRibbonIndex = 0 },
-                                                onNavigateUp = { ribbonFocusRequester.requestFocus() },
-                                                loading = loading
+                                                // Up at the filter row stops there; it must not
+                                                // reopen the ribbon. Closing the library is Circle.
+                                                onNavigateUp = {},
+                                                loading = loading,
+                                                filterFocusRequester = libraryFilterFocusRequester
                                             )
 
                                             RibbonStageType.WrapToFirst -> WrapToFirstStage(
-                                                onReturnToFirst = { selectedRibbonIndex = 0 }
+                                                onReturnToFirst = backToStart
                                             )
                                         }
                                     }
@@ -778,8 +1082,16 @@ fun ZXGameSpaceHub(
                     ZXGameSpaceSearchPane(
                         query = searchQuery,
                         apps = allApps,
-                        onLaunch = requestAppLaunch,
-                        onOpenSettings = { tuningPkg = it.packageName },
+                        onLaunch = { app ->
+                            searchOpen = false
+                            searchQuery = ""
+                            requestAppLaunch(app)
+                        },
+                        onOpenSettings = { app ->
+                            searchOpen = false
+                            searchQuery = ""
+                            tuningPkg = app.packageName
+                        },
                         onNavigateToSettingsTab = { tab ->
                             selectedSettingsTab = tab
                             category = TopCategory.Settings

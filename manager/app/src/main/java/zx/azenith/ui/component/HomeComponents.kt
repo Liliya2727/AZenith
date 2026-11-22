@@ -67,6 +67,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -255,6 +256,7 @@ fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> 
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadNotFocusable()
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
@@ -281,8 +283,13 @@ fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> 
                 scrolledContainerColor = Color.Transparent,
             ),
             actions = {
-                IconButton(onClick = onRebootClick) {
-                    Icon(imageVector = Icons.Filled.PowerSettingsNew, contentDescription = stringResource(R.string.reboot))
+                GamepadActionBadge(topAction = true) {
+                    IconButton(
+                        onClick = onRebootClick,
+                        modifier = Modifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(imageVector = Icons.Filled.PowerSettingsNew, contentDescription = stringResource(R.string.reboot))
+                    }
                 }
             },
             scrollBehavior = scrollBehavior,
@@ -533,6 +540,7 @@ fun InfoTile(
     isLoading: Boolean = false,
     tone: InfoTileTone = InfoTileTone.Neutral,
     iconOverride: ImageVector? = null,
+    horizontalNav: HorizontalNav = HorizontalNav.BLOCK_BOTH,
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -574,6 +582,12 @@ fun InfoTile(
     Surface(
         modifier = modifier
             .clip(cardShape)
+            .gamepadFocusOutline(
+                shape = cardShape,
+                onActivate = onClick,
+                register = true,
+                horizontalNav = horizontalNav
+            )
             .clickable { onClick() }
             .animateContentSize(animationSpec = tween(BlurCrossfadeDurationMillis)),
         color = cardBgColor,
@@ -697,9 +711,11 @@ fun DeviceInfoCard() {
         label = "expandArrowRotation"
     )
 
+    val shape = currentPersonalization().widgetCorner(26.dp)
     Surface(
-        shape = currentPersonalization().widgetCorner(26.dp),
+        shape = shape,
         color = colorScheme.surfaceColorAtElevation(1.dp),
+        modifier = Modifier.gamepadFocusOutline(shape = shape, onActivate = { isExpanded = !isExpanded }, register = true),
         onClick = { isExpanded = !isExpanded }
     ) {
         Column(
@@ -879,6 +895,7 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
+            .gamepadFocusOutline(shape = shape, onActivate = onClick, register = true)
             .clickable { onClick() }
     ) {
         Row(
@@ -929,7 +946,9 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
 fun RebootBottomSheet(
     show: Boolean,
     onDismiss: () -> Unit,
-    onReboot: (String) -> Unit
+    onReboot: (String) -> Unit,
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
 
     val context = LocalContext.current
@@ -960,6 +979,8 @@ fun RebootBottomSheet(
             val reason = options.getOrNull(index)?.second ?: return@AZenithSheet
             onReboot(reason)
         },
+        externalHideRequest = externalHideRequest,
+        onExternalHideConsumed = onExternalHideConsumed,
     )
 }
 

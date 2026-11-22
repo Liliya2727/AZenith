@@ -74,6 +74,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     val coroutineScope = rememberCoroutineScope()
 
     var showRebootSheet by remember { mutableStateOf(false) }
+    var requestHideRebootSheet by remember { mutableStateOf(false) }
     var showProfileDialog by remember { mutableStateOf(false) }
     val profileDialogOrigin = rememberDialogOrigin()
     val profileTileModifier = profileDialogOrigin.trackedModifier()
@@ -89,6 +90,32 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         viewModel.refreshAiMode()
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     }
+
+    // Gamepad: Home has no search, so Square does nothing. Triangle toggles the
+    // power action (the reboot sheet) that sits beside search.
+    val isCurrentPage = LocalIsCurrentPagerPage.current
+    val isPagerActive = LocalMainPagerActive.current
+    val pageIndex = LocalPagerPageIndex.current
+    RegisterGamepadActions(
+        enabled = isCurrentPage && isPagerActive,
+        hasSearch = false,
+        hasTopAction = true,
+        isTopActionOpen = showRebootSheet,
+        onTopAction = { showRebootSheet = !showRebootSheet },
+        onCloseOverlay = {
+            when {
+                showRebootSheet && !requestHideRebootSheet -> { requestHideRebootSheet = true; true }
+                showProfileDialog -> { showProfileDialog = false; true }
+                else -> false
+            }
+        },
+        scrollState = listState,
+        onScrollDelta = { delta ->
+            scrollBehavior.state.heightOffset =
+                (scrollBehavior.state.heightOffset - delta)
+                    .coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
+        }
+    )
 
     // Turning auto mode back on takes manual switching away, so a dialog left
     // open across that change would keep offering a choice that no longer applies.
@@ -112,7 +139,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     NavDockAction(
                         icon = Icons.Rounded.PowerSettingsNew,
                         contentDescription = stringResource(R.string.reboot),
-                        onClick = { showRebootSheet = true }
+                        onClick = { showRebootSheet = true },
+                        topActionBadge = true
                     )
                 )
             )
@@ -129,7 +157,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource(),
+            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(page = pageIndex),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding() + 16.dp,
                 start = 16.dp + safeAreaStartInset(),
@@ -193,7 +221,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     isBannerEnabled = uiState.isBannerEnabled,
                                     isBlurEnabled = isBlurEnabled,
                                     modifier = Modifier.fillMaxSize(),
-                                    tone = bannerTone
+                                    tone = bannerTone,
+                                    horizontalNav = HorizontalNav.PASS_BOTH
                                 ) { }
                             }
 
@@ -208,7 +237,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     value = stringResource(uiState.currentProfileRes), 
                                     highlight = (uiState.currentProfileRes != R.string.status_initializing), 
                                     showArrow = uiState.autoMode == "0",
-                                    isLoading = uiState.isProfileApplying
+                                    isLoading = uiState.isProfileApplying,
+                                    horizontalNav = HorizontalNav.PASS_BOTH
                                 ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                                 InfoTile(
@@ -218,7 +248,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     label = stringResource(R.string.root_access),
                                     value = stringResource(rootValueRes(uiState.rootStatusState)),
                                     tone = rootTone(uiState.rootStatusState),
-                                    highlight = false
+                                    highlight = false,
+                                    horizontalNav = HorizontalNav.BLOCK_RIGHT
                                 ) {
                                     viewModel.refreshRootStatus { changed ->
                                         if (changed) {
@@ -295,7 +326,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 value = stringResource(uiState.currentProfileRes), 
                                 highlight = (uiState.currentProfileRes != R.string.status_initializing), 
                                 showArrow = uiState.autoMode == "0",
-                                isLoading = uiState.isProfileApplying
+                                isLoading = uiState.isProfileApplying,
+                                horizontalNav = HorizontalNav.BLOCK_LEFT
                             ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                             InfoTile(
@@ -305,7 +337,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 label = stringResource(R.string.root_access),
                                 value = stringResource(rootValueRes(uiState.rootStatusState)),
                                 tone = rootTone(uiState.rootStatusState),
-                                highlight = false
+                                highlight = false,
+                                horizontalNav = HorizontalNav.BLOCK_RIGHT
                             ) {
                                 viewModel.refreshRootStatus { changed ->
                                     if (changed) {
@@ -332,8 +365,13 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     RootAppDialog {
         RebootBottomSheet(
             show = showRebootSheet,
-            onDismiss = { showRebootSheet = false },
-            onReboot = { reason -> viewModel.rebootDevice(reason) }
+            onDismiss = {
+                showRebootSheet = false
+                requestHideRebootSheet = false
+            },
+            onReboot = { reason -> viewModel.rebootDevice(reason) },
+            externalHideRequest = requestHideRebootSheet,
+            onExternalHideConsumed = { requestHideRebootSheet = false }
         )
     }
 

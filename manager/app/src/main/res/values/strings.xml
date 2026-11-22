@@ -131,6 +131,14 @@
     <string name="gamespace_enter">Enter Game Space</string>
     <string name="gamespace_enter_desc">Hand off to the shell right now</string>
     <string name="gamespace_hint">D-Pad Navigate · A Select · B Back · L1/R1 Switch Tab</string>
+    <string name="gamespace_hint_select">Select</string>
+    <string name="gamespace_hint_play">Play</string>
+    <string name="gamespace_hint_open">Open</string>
+    <string name="gamespace_hint_back">Back</string>
+    <string name="gamespace_hint_exit">Exit</string>
+    <string name="gamespace_hint_home">Home</string>
+    <string name="gamespace_hint_tuning">Settings</string>
+    <string name="gamespace_hint_wallpaper">Wallpaper</string>
     <string name="gamespace_inside">Inside the shell</string>
     <string name="gamespace_inside_control">Quick toggles for the tweaks, next pass</string>
     <string name="gamespace_inside_library">Every installed game in one tile row, launched from the shell</string>

@@ -57,6 +57,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
@@ -140,6 +141,8 @@ fun AZenithSheet(
     style: SheetRowStyle = SheetRowStyle.Action,
     onItemClick: (Int) -> Unit = {},
     items: List<SheetItem> = emptyList(),
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
     AZenithSheet(
         show = show,
@@ -152,6 +155,8 @@ fun AZenithSheet(
         onItemClick = onItemClick,
         items = items,
         content = null,
+        externalHideRequest = externalHideRequest,
+        onExternalHideConsumed = onExternalHideConsumed,
     )
 }
 
@@ -172,6 +177,8 @@ fun AZenithSheetContent(
     subtitle: String? = null,
     titleBlurBoxed: Boolean = false,
     content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit,
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
     AZenithSheet(
         show = show,
@@ -184,6 +191,8 @@ fun AZenithSheetContent(
         onItemClick = {},
         items = emptyList(),
         content = content,
+        externalHideRequest = externalHideRequest,
+        onExternalHideConsumed = onExternalHideConsumed,
     )
 }
 
@@ -200,6 +209,8 @@ private fun AZenithSheet(
     onItemClick: (Int) -> Unit,
     items: List<SheetItem>,
     content: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)?,
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
     if (!show) return
 
@@ -216,8 +227,9 @@ private fun AZenithSheet(
     // Hides the sheet with an animation, then calls the caller's onDismiss and the
     // afterHide callback. Material invokes onDismissRequest only after its own
     // scrim/drag hide has completed, so that callback must not try to hide again.
-    // This helper is only for in-content dismissals (Done and option selection).
-    val hideSheet: (() -> Unit) -> Unit = { afterHide ->
+    // This helper is only for in-content/programmatic dismissals.
+    val hideSheet: (() -> Unit) -> Unit = hideSheet@{ afterHide ->
+        if (sheetState.targetValue == SheetValue.Hidden) return@hideSheet
         scope.launch {
             try {
                 sheetState.hide()
@@ -229,6 +241,11 @@ private fun AZenithSheet(
                 currentOnDismiss()
                 afterHide()
             }
+        }
+    }
+    LaunchedEffect(externalHideRequest) {
+        if (externalHideRequest && show) {
+            hideSheet { onExternalHideConsumed() }
         }
     }
     val dismissSheet: () -> Unit = { hideSheet {} }
@@ -505,7 +522,7 @@ private fun SheetRow(
                     else -> Color.Transparent
                 }
             )
-            .gamepadFocusOutline(shape = rowShape(first && paintsGroupFill, last && paintsGroupFill))
+            .gamepadFocusOutline(shape = rowShape(first && paintsGroupFill, last && paintsGroupFill), onActivate = onClick)
             .clickable(enabled = item.enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,

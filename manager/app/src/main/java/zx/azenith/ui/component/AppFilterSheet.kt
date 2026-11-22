@@ -122,6 +122,8 @@ fun AppFilterSheet(
     viewModel: ApplistViewmodel,
     onSystemFilterChange: (ApplistViewmodel.SystemFilter) -> Unit,
     onReset: () -> Unit,
+    externalHideRequest: Boolean = false,
+    onExternalHideConsumed: () -> Unit = {},
 ) {
     if (!show) return
 
@@ -136,83 +138,86 @@ fun AppFilterSheet(
         title = stringResource(R.string.filter_sheet_title),
         subtitle = stringResource(R.string.filter_sheet_subtitle),
         titleBlurBoxed = true,
-    ) { dismissSheet ->
-        val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        // Gate mirrors the sheet's own read: solid split sections exist only
-        // over the blurred body, and the sections are never haze themselves.
-        val context = LocalContext.current
-        val settingsPrefs = remember(context) {
-            context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
-        }
-        val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-        val sectionGap = if (isBlurEnabled) 2.dp else 16.dp
-        val m = currentPersonalization().cornerMultiplier
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 560.dp)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-                .padding(top = if (isBlurEnabled) 8.dp else 4.dp, bottom = navBar + 16.dp)
-        ) {
-            ShownCountBadge(shownCount = shownCount)
-
-            Spacer(modifier = Modifier.height(16.dp))
-            FilterGroup(
-                title = stringResource(R.string.filter_group_type),
-                boxed = isBlurEnabled,
-                shape = topShape(m)
-            ) {
-                FilterToggleButton(
-                    label = stringResource(R.string.filter_games),
-                    selected = viewModel.filterGames,
-                    count = gamesCount,
-                    onClick = { viewModel.filterGames = !viewModel.filterGames }
-                )
+        externalHideRequest = externalHideRequest,
+        onExternalHideConsumed = onExternalHideConsumed,
+        content = { dismissSheet ->
+            val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            // Gate mirrors the sheet's own read: solid split sections exist only
+            // over the blurred body, and the sections are never haze themselves.
+            val context = LocalContext.current
+            val settingsPrefs = remember(context) {
+                context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
             }
+            val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+            val sectionGap = if (isBlurEnabled) 2.dp else 16.dp
+            val m = currentPersonalization().cornerMultiplier
 
-            Spacer(modifier = Modifier.height(sectionGap))
-            FilterGroup(
-                title = stringResource(R.string.filter_group_service),
-                boxed = isBlurEnabled
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 560.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(top = if (isBlurEnabled) 8.dp else 4.dp, bottom = navBar + 16.dp)
             ) {
-                FilterToggleButton(
-                    label = stringResource(R.string.filter_enabled),
-                    selected = viewModel.filterEnabled,
-                    count = enabledCount,
-                    onClick = { viewModel.filterEnabled = !viewModel.filterEnabled }
-                )
-                FilterToggleButton(
-                    label = stringResource(R.string.filter_disabled),
-                    selected = viewModel.filterDisabled,
-                    count = disabledCount,
-                    onClick = { viewModel.filterDisabled = !viewModel.filterDisabled }
-                )
-            }
+                ShownCountBadge(shownCount = shownCount)
 
-            Spacer(modifier = Modifier.height(sectionGap))
-            FilterGroup(
-                title = stringResource(R.string.filter_group_system),
-                boxed = isBlurEnabled
-            ) {
-                SystemSegmentRow(
-                    current = viewModel.systemFilter,
-                    onSelect = onSystemFilterChange,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+                Spacer(modifier = Modifier.height(16.dp))
+                FilterGroup(
+                    title = stringResource(R.string.filter_group_type),
+                    boxed = isBlurEnabled,
+                    shape = topShape(m)
+                ) {
+                    FilterToggleButton(
+                        label = stringResource(R.string.filter_games),
+                        selected = viewModel.filterGames,
+                        count = gamesCount,
+                        onClick = { viewModel.filterGames = !viewModel.filterGames }
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(if (isBlurEnabled) 2.dp else 24.dp))
-            if (isBlurEnabled) {
-                SolidSectionBox(shape = bottomShape(m)) {
+                Spacer(modifier = Modifier.height(sectionGap))
+                FilterGroup(
+                    title = stringResource(R.string.filter_group_service),
+                    boxed = isBlurEnabled
+                ) {
+                    FilterToggleButton(
+                        label = stringResource(R.string.filter_enabled),
+                        selected = viewModel.filterEnabled,
+                        count = enabledCount,
+                        onClick = { viewModel.filterEnabled = !viewModel.filterEnabled }
+                    )
+                    FilterToggleButton(
+                        label = stringResource(R.string.filter_disabled),
+                        selected = viewModel.filterDisabled,
+                        count = disabledCount,
+                        onClick = { viewModel.filterDisabled = !viewModel.filterDisabled }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(sectionGap))
+                FilterGroup(
+                    title = stringResource(R.string.filter_group_system),
+                    boxed = isBlurEnabled
+                ) {
+                    SystemSegmentRow(
+                        current = viewModel.systemFilter,
+                        onSelect = onSystemFilterChange,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(if (isBlurEnabled) 2.dp else 24.dp))
+                if (isBlurEnabled) {
+                    SolidSectionBox(shape = bottomShape(m)) {
+                        FilterActions(onReset = onReset, onDismiss = dismissSheet)
+                    }
+                } else {
                     FilterActions(onReset = onReset, onDismiss = dismissSheet)
                 }
-            } else {
-                FilterActions(onReset = onReset, onDismiss = dismissSheet)
             }
         }
-    }
+    )
 }
 
 /**

@@ -119,7 +119,10 @@ data class NavDockAction(
     val contentDescription: String,
     val onClick: () -> Unit,
     val badgeCount: Int = 0,
-    val highlighted: Boolean = false
+    val highlighted: Boolean = false,
+    // Which face-glyph badge to draw on the tile: Triangle/Y for a page's top
+    // action, Square/X (the default) for search.
+    val topActionBadge: Boolean = false
 )
 
 /**
@@ -265,6 +268,9 @@ fun NavDock(
 
     Box(
         modifier = modifier
+            // The dock is chrome: never a D-pad destination, and every row
+            // inside it inherits the exclusion from this root.
+            .gamepadNotFocusable()
             // Read in the layout block, not in this body: a frame of the spring then
             // invalidates layout alone, instead of recomposing the panel's rows, labels
             // and action tiles sixty times a second.
@@ -296,12 +302,7 @@ fun NavDock(
                     .fillMaxSize()
                     .innerEdgeHairline(scheme.outlineVariant.copy(alpha = 0.6f))
                     .windowInsetsPadding(safeInsets)
-                    .gamepadFocusOutline(shape = RoundedCornerShape(0.dp))
-                    .focusProperties {
-                        if (interactive) {
-                            right = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                        }
-                    }
+                    .focusProperties { canFocus = false }
                     .then(
                         if (interactive) Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -395,6 +396,11 @@ fun NavDock(
                     .padding(top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(rowGap)
             ) {
+                // L1 sits directly above the first destination (Home), R1 directly
+                // below the last (Settings). They live in the scrolling column so
+                // they stay next to those rows when the list overflows.
+                GamepadShoulderHint(left = true)
+
                 // The travelling selection pill. Drawn inside the scrolling column so it
                 // travels with the rows. Its own corner radius is half the row height, which
                 // is what makes it a pill at any row height; mid-travel it stretches along
@@ -448,6 +454,8 @@ fun NavDock(
                                 onClick = { onItemSelected(item.route) }
                             )
                         }
+                        // R1 below the last destination (Settings).
+                        GamepadShoulderHint(left = false)
                     }
                 }
             }
@@ -547,16 +555,7 @@ private fun DockActionButton(
             .height(NAV_DOCK_ACTION_HEIGHT * scale)
             .clip(RoundedCornerShape(percent = 50))
             .background(background)
-            .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
-            .focusProperties {
-                if (interactive) {
-                    val pageEntry = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                    // The actions are the dock's last stop: up is the rows above,
-                    // and the way back into the page is sideways.
-                    left = pageEntry
-                    right = pageEntry
-                }
-            }
+            .focusProperties { canFocus = false }
             .then(
                 if (interactive) Modifier.clickable(
                     interactionSource = interactionSource,
@@ -566,8 +565,18 @@ private fun DockActionButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (action.badgeCount > 0) {
-            BadgedBox(badge = { Badge { Text(action.badgeCount.toString()) } }) {
+        // Same lower-left controller badge as the portrait top-bar actions.
+        GamepadActionBadge(topAction = action.topActionBadge) {
+            if (action.badgeCount > 0) {
+                BadgedBox(badge = { Badge { Text(action.badgeCount.toString()) } }) {
+                    Icon(
+                        imageVector = action.icon,
+                        contentDescription = action.contentDescription,
+                        tint = tint,
+                        modifier = Modifier.size(24.dp * scale)
+                    )
+                }
+            } else {
                 Icon(
                     imageVector = action.icon,
                     contentDescription = action.contentDescription,
@@ -575,13 +584,6 @@ private fun DockActionButton(
                     modifier = Modifier.size(24.dp * scale)
                 )
             }
-        } else {
-            Icon(
-                imageVector = action.icon,
-                contentDescription = action.contentDescription,
-                tint = tint,
-                modifier = Modifier.size(24.dp * scale)
-            )
         }
     }
 }
@@ -617,7 +619,7 @@ private fun DockIconButton(
             .size(NAV_DOCK_ICON_BUTTON_SIZE * scale)
             .clip(shape)
             .background(layer)
-            .gamepadFocusOutline(shape = shape)
+            .focusProperties { canFocus = false }
             .then(
                 if (interactive) Modifier.clickable(
                     interactionSource = interactionSource,
@@ -682,20 +684,8 @@ private fun DockRow(
         modifier = Modifier
             .fillMaxWidth()
             .height((if (compact) NAV_DOCK_ROW_HEIGHT_COMPACT else NAV_DOCK_ROW_HEIGHT) * scale)
-            // The row's own feedback is shaped like the selection pill, not a rectangle:
-            // a focus or press tint with different corners lands on the pill visibly
-            // mismatched.
             .background(background, RoundedCornerShape(percent = 50))
-            .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
-            .focusProperties {
-                if (interactive) {
-                    // A dock's up/down belong to its own rows; the way out is
-                    // sideways, back into the page.
-                    val pageEntry = GamepadFocusNav.pageEntry ?: FocusRequester.Default
-                    left = pageEntry
-                    right = pageEntry
-                }
-            }
+            .focusProperties { canFocus = false }
             .then(
                 if (interactive) Modifier.clickable(
                     interactionSource = interactionSource,

@@ -18,6 +18,7 @@ package zx.azenith.ui.gamespace.settings
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -53,6 +54,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -92,6 +94,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
@@ -101,11 +104,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -129,12 +136,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.AppIconImage
+import zx.azenith.ui.component.LocalGamepadFocusEnabled
 import zx.azenith.ui.component.MediaBannerRenderer
+import zx.azenith.ui.component.RegisterGamepadActions
 import zx.azenith.ui.component.ScaleConfirmationDialog
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadKeyWatch
+import zx.azenith.ui.gamespace.BindGameSpaceDialogGamepad
 import zx.azenith.ui.gamespace.GAMESPACE_PRESET_KEY_COLORS
+import zx.azenith.ui.gamespace.GameSpaceInputSource
+import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.gamespace.GameSpaceSwitch
 import zx.azenith.ui.theme.ColorEngine
 import zx.azenith.ui.theme.ColorMode
@@ -219,6 +231,26 @@ internal fun SettingsAppearancePane(
         mutableIntStateOf(prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150))
     }
     var pendingScaleConfirm by remember { mutableStateOf<Int?>(null) }
+    var lastScaleOriginRequester by remember { mutableStateOf<FocusRequester?>(null) }
+    var wasPendingScaleConfirm by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pendingScaleConfirm) {
+        if (pendingScaleConfirm != null) {
+            wasPendingScaleConfirm = true
+        } else if (wasPendingScaleConfirm) {
+            wasPendingScaleConfirm = false
+            val origin = lastScaleOriginRequester
+            if (origin != null && GameSpaceInputSource.isGamepadLast) {
+                var restored = false
+                for (attempt in 1..12) {
+                    withFrameNanos { }
+                    restored = runCatching { origin.requestFocus() }.getOrDefault(false)
+                    if (restored) break
+                }
+                Log.d("PAD", "gs appearance restoreOrigin scaleDialog restored=$restored")
+            }
+        }
+    }
     var wallpaperDimmingIntensity by remember {
         mutableIntStateOf(prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100))
     }
@@ -294,6 +326,7 @@ internal fun SettingsAppearancePane(
     }
 
     val followMonet = keyColorValue == 0
+    zx.azenith.ui.component.RegisterGamepadActions(columnScrollState = scrollState)
 
     Column(
         modifier = modifier
@@ -381,8 +414,9 @@ internal fun SettingsAppearancePane(
 
         AppScaleSection(
             initialScale = appScalePercent,
-            onScaleCommitted = { next ->
+            onScaleCommitted = { next, originRequester ->
                 if (next != confirmedScale) {
+                    lastScaleOriginRequester = originRequester
                     pendingScaleConfirm = next
                     appScalePercent = next
                     prefs.edit().putInt("gamespace_app_scale", next).apply()
@@ -535,8 +569,13 @@ private fun CustomizeSidePanelSection(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
-                                    .gamepadFocusOutline(shape = cardShape, register = true)
+                                    .gamepadFocusOutline(
+                                        shape = cardShape,
+                                        register = true,
+                                        onActivate = { onSideChanged(sideKey) }
+                                    )
                                     .clip(cardShape)
+                                    .focusProperties { canFocus = false }
                                     .clickable { onSideChanged(sideKey) }
                             ) {
                                 Column(
@@ -666,18 +705,24 @@ private fun CustomizeSidePanelSection(
                                         label = "SensPresetRadius"
                                     )
                                     val pillShape = RoundedCornerShape(percent = pillRadius)
+                                    val selectSensPreset = {
+                                        sliderSensitivity = targetVal
+                                        onSensitivityCommitted(targetVal)
+                                    }
                                     Surface(
                                         shape = pillShape,
                                         color = if (selected) scheme.primary else scheme.surfaceContainerLow,
                                         contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
                                         modifier = Modifier
                                             .weight(1f)
-                                            .gamepadFocusOutline(shape = pillShape, register = true)
+                                            .gamepadFocusOutline(
+                                                shape = pillShape,
+                                                register = true,
+                                                onActivate = selectSensPreset
+                                            )
                                             .clip(pillShape)
-                                            .clickable {
-                                                sliderSensitivity = targetVal
-                                                onSensitivityCommitted(targetVal)
-                                            }
+                                            .focusProperties { canFocus = false }
+                                            .clickable(onClick = selectSensPreset)
                                     ) {
                                         Box(
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
@@ -777,18 +822,24 @@ private fun CustomizeSidePanelSection(
                                     label = "LengthPresetRadius"
                                 )
                                 val pillShape = RoundedCornerShape(percent = pillRadius)
+                                val selectLengthPreset = {
+                                    sliderLength = targetVal
+                                    onLengthCommitted(targetVal)
+                                }
                                 Surface(
                                     shape = pillShape,
                                     color = if (selected) scheme.primary else scheme.surfaceContainerLow,
                                     contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .gamepadFocusOutline(shape = pillShape, register = true)
+                                        .gamepadFocusOutline(
+                                            shape = pillShape,
+                                            register = true,
+                                            onActivate = selectLengthPreset
+                                        )
                                         .clip(pillShape)
-                                        .clickable {
-                                            sliderLength = targetVal
-                                            onLengthCommitted(targetVal)
-                                        }
+                                        .focusProperties { canFocus = false }
+                                        .clickable(onClick = selectLengthPreset)
                                 ) {
                                     Box(
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
@@ -899,7 +950,17 @@ private fun HomeWallpaperSection(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .gamepadFocusOutline(
+                            shape = CircleShape,
+                            register = true,
+                            onActivate = { onWallpaperEnabledChanged(!isWallpaperEnabled) }
+                        )
+                        .clip(CircleShape)
+                        .focusProperties { canFocus = false }
+                        .clickable { onWallpaperEnabledChanged(!isWallpaperEnabled) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = if (isWallpaperEnabled) "Enabled" else "Off",
@@ -908,7 +969,7 @@ private fun HomeWallpaperSection(
                     )
                     GameSpaceSwitch(
                         checked = isWallpaperEnabled,
-                        onCheckedChange = onWallpaperEnabledChanged
+                        onCheckedChange = null
                     )
                 }
             }
@@ -1011,8 +1072,13 @@ private fun HomeWallpaperSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .gamepadFocusOutline(shape = chooseShape, register = true)
+                            .gamepadFocusOutline(
+                                shape = chooseShape,
+                                register = true,
+                                onActivate = onChooseWallpaper
+                            )
                             .clip(chooseShape)
+                            .focusProperties { canFocus = false }
                             .clickable(onClick = onChooseWallpaper)
                     ) {
                         Row(
@@ -1049,8 +1115,13 @@ private fun HomeWallpaperSection(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp)
-                                .gamepadFocusOutline(shape = resetShape, register = true)
+                                .gamepadFocusOutline(
+                                    shape = resetShape,
+                                    register = true,
+                                    onActivate = onResetWallpaper
+                                )
                                 .clip(resetShape)
+                                .focusProperties { canFocus = false }
                                 .clickable(onClick = onResetWallpaper)
                         ) {
                             Row(
@@ -1183,8 +1254,13 @@ private fun HomeWallpaperSection(
                 contentColor = scheme.onSurface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .gamepadFocusOutline(shape = shapesToggleShape, register = true)
+                    .gamepadFocusOutline(
+                        shape = shapesToggleShape,
+                        register = true,
+                        onActivate = { onFloatingShapesToggled(!floatingShapesEnabled) }
+                    )
                     .clip(shapesToggleShape)
+                    .focusProperties { canFocus = false }
                     .clickable { onFloatingShapesToggled(!floatingShapesEnabled) }
             ) {
                 Row(
@@ -1222,7 +1298,7 @@ private fun HomeWallpaperSection(
                     }
                     GameSpaceSwitch(
                         checked = floatingShapesEnabled,
-                        onCheckedChange = onFloatingShapesToggled
+                        onCheckedChange = null
                     )
                 }
             }
@@ -1268,6 +1344,25 @@ private fun GameWallpaperSection(
 
     var showBatchDialog by remember { mutableStateOf(false) }
     var pendingBatchUri by remember { mutableStateOf<String?>(null) }
+    val batchChooseRequester = remember { FocusRequester() }
+    var wasBatchDialogOpen by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showBatchDialog) {
+        if (showBatchDialog) {
+            wasBatchDialogOpen = true
+        } else if (wasBatchDialogOpen) {
+            wasBatchDialogOpen = false
+            if (GameSpaceInputSource.isGamepadLast) {
+                var restored = false
+                for (attempt in 1..12) {
+                    withFrameNanos { }
+                    restored = runCatching { batchChooseRequester.requestFocus() }.getOrDefault(false)
+                    if (restored) break
+                }
+                Log.d("PAD", "gs appearance restoreOrigin batchWallpaperDialog restored=$restored")
+            }
+        }
+    }
 
     val batchImagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -1393,19 +1488,26 @@ private fun GameWallpaperSection(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val batchShape = RoundedCornerShape(16.dp)
+                        val launchBatchPicker = {
+                            batchImagePicker.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                            )
+                        }
                         Surface(
                             shape = batchShape,
                             color = scheme.primary,
                             contentColor = scheme.onPrimary,
                             modifier = Modifier
                                 .weight(1f)
-                                .gamepadFocusOutline(shape = batchShape, register = true)
+                                .focusRequester(batchChooseRequester)
+                                .gamepadFocusOutline(
+                                    shape = batchShape,
+                                    register = true,
+                                    onActivate = launchBatchPicker
+                                )
                                 .clip(batchShape)
-                                .clickable {
-                                    batchImagePicker.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                                    )
-                                }
+                                .focusProperties { canFocus = false }
+                                .clickable(onClick = launchBatchPicker)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -1429,20 +1531,26 @@ private fun GameWallpaperSection(
                         }
 
                         val resetShape = RoundedCornerShape(16.dp)
+                        val resetAllBatchAction = {
+                            val pkgs = targetGames.map { it.packageName }
+                            if (pkgs.isNotEmpty()) {
+                                context.batchResetGameWallpapers(pkgs)
+                                Toast.makeText(context, "Reset all game wallpapers to default", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                         Surface(
                             shape = resetShape,
                             color = scheme.surfaceContainerHighest,
                             contentColor = scheme.error,
                             modifier = Modifier
-                                .gamepadFocusOutline(shape = resetShape, register = true)
+                                .gamepadFocusOutline(
+                                    shape = resetShape,
+                                    register = true,
+                                    onActivate = resetAllBatchAction
+                                )
                                 .clip(resetShape)
-                                .clickable {
-                                    val pkgs = targetGames.map { it.packageName }
-                                    if (pkgs.isNotEmpty()) {
-                                        context.batchResetGameWallpapers(pkgs)
-                                        Toast.makeText(context, "Reset all game wallpapers to default", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
+                                .focusProperties { canFocus = false }
+                                .clickable(onClick = resetAllBatchAction)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -1515,8 +1623,13 @@ private fun GameWallpaperOptionRow(
         contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
         modifier = Modifier
             .fillMaxWidth()
-            .gamepadFocusOutline(shape = cardShape, register = true)
+            .gamepadFocusOutline(
+                shape = cardShape,
+                register = true,
+                onActivate = onClick
+            )
             .clip(cardShape)
+            .focusProperties { canFocus = false }
             .clickable(onClick = onClick)
     ) {
         Row(
@@ -1577,8 +1690,28 @@ private fun ApplyGameWallpaperDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
+        BindGameSpaceDialogGamepad()
+        val dialogToken = remember { Any() }
+        val allGamesRequester = remember { FocusRequester() }
+        val gameListState = rememberLazyListState()
+        DisposableEffect(Unit) {
+            GameSpaceOverlayState.acquire(dialogToken, "ApplyGameWallpaperDialog")
+            onDispose {
+                GameSpaceOverlayState.release(dialogToken)
+            }
+        }
+        LaunchedEffect(Unit) {
+            if (GameSpaceInputSource.isGamepadLast) {
+                for (attempt in 1..12) {
+                    withFrameNanos { }
+                    if (runCatching { allGamesRequester.requestFocus() }.getOrDefault(false)) break
+                }
+            }
+        }
+        RegisterGamepadActions(scrollState = gameListState)
+        CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
             color = scheme.surfaceContainerHigh,
             contentColor = scheme.onSurface,
             modifier = (if (isLandscape) {
@@ -1651,7 +1784,9 @@ private fun ApplyGameWallpaperDialog(
                     }
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier
+                            .size(32.dp)
+                            .focusProperties { canFocus = false }
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
@@ -1702,7 +1837,14 @@ private fun ApplyGameWallpaperDialog(
                                     contentColor = if (applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .focusRequester(allGamesRequester)
+                                        .gamepadFocusOutline(
+                                            shape = allShape,
+                                            register = true,
+                                            onActivate = { applyToAll = true }
+                                        )
                                         .clip(allShape)
+                                        .focusProperties { canFocus = false }
                                         .clickable { applyToAll = true }
                                 ) {
                                     Row(
@@ -1737,7 +1879,13 @@ private fun ApplyGameWallpaperDialog(
                                     contentColor = if (!applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .gamepadFocusOutline(
+                                            shape = selectShape,
+                                            register = true,
+                                            onActivate = { applyToAll = false }
+                                        )
                                         .clip(selectShape)
+                                        .focusProperties { canFocus = false }
                                         .clickable { applyToAll = false }
                                 ) {
                                     Row(
@@ -1839,13 +1987,21 @@ private fun ApplyGameWallpaperDialog(
                                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                             TextButton(
                                                 onClick = { selectedSet = games.map { it.packageName }.toSet() },
-                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                                modifier = Modifier.gamepadFocusOutline(
+                                                    shape = CircleShape,
+                                                    onActivate = { selectedSet = games.map { it.packageName }.toSet() }
+                                                )
                                             ) {
                                                 Text("Select All", style = MaterialTheme.typography.labelSmall)
                                             }
                                             TextButton(
                                                 onClick = { selectedSet = emptySet() },
-                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                                modifier = Modifier.gamepadFocusOutline(
+                                                    shape = CircleShape,
+                                                    onActivate = { selectedSet = emptySet() }
+                                                )
                                             ) {
                                                 Text("Deselect All", style = MaterialTheme.typography.labelSmall)
                                             }
@@ -1853,6 +2009,7 @@ private fun ApplyGameWallpaperDialog(
                                     }
 
                                     LazyColumn(
+                                        state = gameListState,
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxWidth(),
@@ -1860,19 +2017,26 @@ private fun ApplyGameWallpaperDialog(
                                     ) {
                                         items(games) { game ->
                                             val isChecked = selectedSet.contains(game.packageName)
+                                            val toggleGame = {
+                                                selectedSet = if (isChecked) {
+                                                    selectedSet - game.packageName
+                                                } else {
+                                                    selectedSet + game.packageName
+                                                }
+                                            }
                                             Surface(
                                                 shape = RoundedCornerShape(10.dp),
                                                 color = if (isChecked) scheme.primaryContainer.copy(alpha = 0.35f) else scheme.surfaceContainerLow,
                                                 modifier = Modifier
                                                     .fillMaxWidth()
+                                                    .gamepadFocusOutline(
+                                                        shape = RoundedCornerShape(10.dp),
+                                                        register = true,
+                                                        onActivate = toggleGame
+                                                    )
                                                     .clip(RoundedCornerShape(10.dp))
-                                                    .clickable {
-                                                        selectedSet = if (isChecked) {
-                                                            selectedSet - game.packageName
-                                                        } else {
-                                                            selectedSet + game.packageName
-                                                        }
-                                                    }
+                                                    .focusProperties { canFocus = false }
+                                                    .clickable(onClick = toggleGame)
                                             ) {
                                                 Row(
                                                     modifier = Modifier
@@ -1900,13 +2064,7 @@ private fun ApplyGameWallpaperDialog(
                                                     }
                                                     Checkbox(
                                                         checked = isChecked,
-                                                        onCheckedChange = { checked ->
-                                                            selectedSet = if (checked) {
-                                                                selectedSet + game.packageName
-                                                            } else {
-                                                                selectedSet - game.packageName
-                                                            }
-                                                        }
+                                                        onCheckedChange = null
                                                     )
                                                 }
                                             }
@@ -1946,7 +2104,14 @@ private fun ApplyGameWallpaperDialog(
                                     contentColor = if (applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
                                     modifier = Modifier
                                         .weight(1f)
+                                        .focusRequester(allGamesRequester)
+                                        .gamepadFocusOutline(
+                                            shape = allShape,
+                                            register = true,
+                                            onActivate = { applyToAll = true }
+                                        )
                                         .clip(allShape)
+                                        .focusProperties { canFocus = false }
                                         .clickable { applyToAll = true }
                                 ) {
                                     Row(
@@ -1974,7 +2139,13 @@ private fun ApplyGameWallpaperDialog(
                                     contentColor = if (!applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
                                     modifier = Modifier
                                         .weight(1f)
+                                        .gamepadFocusOutline(
+                                            shape = selectShape,
+                                            register = true,
+                                            onActivate = { applyToAll = false }
+                                        )
                                         .clip(selectShape)
+                                        .focusProperties { canFocus = false }
                                         .clickable { applyToAll = false }
                                 ) {
                                     Row(
@@ -2010,13 +2181,21 @@ private fun ApplyGameWallpaperDialog(
                                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                         TextButton(
                                             onClick = { selectedSet = games.map { it.packageName }.toSet() },
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            modifier = Modifier.gamepadFocusOutline(
+                                                shape = CircleShape,
+                                                onActivate = { selectedSet = games.map { it.packageName }.toSet() }
+                                            )
                                         ) {
                                             Text("Select All", style = MaterialTheme.typography.labelSmall)
                                         }
                                         TextButton(
                                             onClick = { selectedSet = emptySet() },
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            modifier = Modifier.gamepadFocusOutline(
+                                                shape = CircleShape,
+                                                onActivate = { selectedSet = emptySet() }
+                                            )
                                         ) {
                                             Text("Deselect All", style = MaterialTheme.typography.labelSmall)
                                         }
@@ -2024,6 +2203,7 @@ private fun ApplyGameWallpaperDialog(
                                 }
 
                                 LazyColumn(
+                                    state = gameListState,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxWidth(),
@@ -2031,19 +2211,26 @@ private fun ApplyGameWallpaperDialog(
                                 ) {
                                     items(games) { game ->
                                         val isChecked = selectedSet.contains(game.packageName)
+                                        val toggleGame = {
+                                            selectedSet = if (isChecked) {
+                                                selectedSet - game.packageName
+                                            } else {
+                                                selectedSet + game.packageName
+                                            }
+                                        }
                                         Surface(
                                             shape = RoundedCornerShape(12.dp),
                                             color = if (isChecked) scheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
                                             modifier = Modifier
                                                 .fillMaxWidth()
+                                                .gamepadFocusOutline(
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    register = true,
+                                                    onActivate = toggleGame
+                                                )
                                                 .clip(RoundedCornerShape(12.dp))
-                                                .clickable {
-                                                    selectedSet = if (isChecked) {
-                                                        selectedSet - game.packageName
-                                                    } else {
-                                                        selectedSet + game.packageName
-                                                    }
-                                                }
+                                                .focusProperties { canFocus = false }
+                                                .clickable(onClick = toggleGame)
                                         ) {
                                             Row(
                                                 modifier = Modifier
@@ -2069,13 +2256,7 @@ private fun ApplyGameWallpaperDialog(
                                                 }
                                                 Checkbox(
                                                     checked = isChecked,
-                                                    onCheckedChange = { checked ->
-                                                        selectedSet = if (checked) {
-                                                            selectedSet + game.packageName
-                                                        } else {
-                                                            selectedSet - game.packageName
-                                                        }
-                                                    }
+                                                    onCheckedChange = null
                                                 )
                                             }
                                         }
@@ -2105,23 +2286,37 @@ private fun ApplyGameWallpaperDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.gamepadFocusOutline(
+                            shape = CircleShape,
+                            onActivate = onDismiss
+                        )
+                    ) {
                         Text("Cancel")
                     }
                     Spacer(Modifier.width(8.dp))
                     val targetCount = if (applyToAll) games.size else selectedSet.size
-                    Button(
-                        onClick = {
+                    val applySelection = {
+                        if (targetCount > 0) {
                             val targetList = if (applyToAll) games.map { it.packageName } else selectedSet.toList()
                             onApply(targetList)
-                        },
+                        }
+                    }
+                    Button(
+                        onClick = applySelection,
                         enabled = targetCount > 0,
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.gamepadFocusOutline(
+                            shape = RoundedCornerShape(14.dp),
+                            onActivate = applySelection
+                        )
                     ) {
                         Text("Apply ($targetCount)")
                     }
                 }
             }
+        }
         }
     }
 }
@@ -2208,8 +2403,13 @@ private fun ThemeModeSection(
                         contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
                         modifier = Modifier
                             .weight(1f)
-                            .gamepadFocusOutline(shape = shape, register = true)
+                            .gamepadFocusOutline(
+                                shape = shape,
+                                register = true,
+                                onActivate = { onModeSelected(value) }
+                            )
                             .clip(shape)
+                            .focusProperties { canFocus = false }
                             .clickable { onModeSelected(value) }
                     ) {
                         Row(
@@ -2240,10 +2440,14 @@ private fun ThemeModeSection(
 @Composable
 private fun AppScaleSection(
     initialScale: Int,
-    onScaleCommitted: (Int) -> Unit
+    onScaleCommitted: (Int, FocusRequester) -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
     var sliderScalePercent by remember(initialScale) { mutableIntStateOf(initialScale) }
+    val decreaseRequester = remember { FocusRequester() }
+    val resetRequester = remember { FocusRequester() }
+    val increaseRequester = remember { FocusRequester() }
+    val sliderRequester = remember { FocusRequester() }
 
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -2296,19 +2500,28 @@ private fun AppScaleSection(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val stepBtnShape = RoundedCornerShape(12.dp)
+                    val decreaseScaleAction = {
+                        if (sliderScalePercent > 60) {
+                            val next = (sliderScalePercent - 5).coerceIn(60, 150)
+                            sliderScalePercent = next
+                            onScaleCommitted(next, decreaseRequester)
+                        }
+                    }
                     Surface(
                         shape = stepBtnShape,
                         color = scheme.surfaceContainerHighest,
                         contentColor = scheme.onSurface,
                         modifier = Modifier
                             .size(34.dp)
-                            .gamepadFocusOutline(shape = stepBtnShape, register = true)
+                            .focusRequester(decreaseRequester)
+                            .gamepadFocusOutline(
+                                shape = stepBtnShape,
+                                register = true,
+                                onActivate = decreaseScaleAction
+                            )
                             .clip(stepBtnShape)
-                            .clickable(enabled = sliderScalePercent > 60) {
-                                val next = (sliderScalePercent - 5).coerceIn(60, 150)
-                                sliderScalePercent = next
-                                onScaleCommitted(next)
-                            }
+                            .focusProperties { canFocus = false }
+                            .clickable(enabled = sliderScalePercent > 60, onClick = decreaseScaleAction)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -2319,17 +2532,24 @@ private fun AppScaleSection(
                         }
                     }
 
+                    val resetScaleAction = {
+                        sliderScalePercent = 85
+                        onScaleCommitted(85, resetRequester)
+                    }
                     Surface(
                         shape = CircleShape,
                         color = if (sliderScalePercent == 85) scheme.primaryContainer else scheme.primary,
                         contentColor = if (sliderScalePercent == 85) scheme.onPrimaryContainer else scheme.onPrimary,
                         modifier = Modifier
-                            .gamepadFocusOutline(shape = CircleShape, register = true)
+                            .focusRequester(resetRequester)
+                            .gamepadFocusOutline(
+                                shape = CircleShape,
+                                register = true,
+                                onActivate = resetScaleAction
+                            )
                             .clip(CircleShape)
-                            .clickable {
-                                sliderScalePercent = 85
-                                onScaleCommitted(85)
-                            }
+                            .focusProperties { canFocus = false }
+                            .clickable(onClick = resetScaleAction)
                     ) {
                         Text(
                             text = "${sliderScalePercent}%",
@@ -2338,19 +2558,28 @@ private fun AppScaleSection(
                         )
                     }
 
+                    val increaseScaleAction = {
+                        if (sliderScalePercent < 150) {
+                            val next = (sliderScalePercent + 5).coerceIn(60, 150)
+                            sliderScalePercent = next
+                            onScaleCommitted(next, increaseRequester)
+                        }
+                    }
                     Surface(
                         shape = stepBtnShape,
                         color = scheme.surfaceContainerHighest,
                         contentColor = scheme.onSurface,
                         modifier = Modifier
                             .size(34.dp)
-                            .gamepadFocusOutline(shape = stepBtnShape, register = true)
+                            .focusRequester(increaseRequester)
+                            .gamepadFocusOutline(
+                                shape = stepBtnShape,
+                                register = true,
+                                onActivate = increaseScaleAction
+                            )
                             .clip(stepBtnShape)
-                            .clickable(enabled = sliderScalePercent < 150) {
-                                val next = (sliderScalePercent + 5).coerceIn(60, 150)
-                                sliderScalePercent = next
-                                onScaleCommitted(next)
-                            }
+                            .focusProperties { canFocus = false }
+                            .clickable(enabled = sliderScalePercent < 150, onClick = increaseScaleAction)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -2370,13 +2599,14 @@ private fun AppScaleSection(
                     sliderScalePercent = snapped
                 },
                 onValueChangeFinished = {
-                    onScaleCommitted(sliderScalePercent)
+                    onScaleCommitted(sliderScalePercent, sliderRequester)
                 },
                 valueRange = 60f..150f,
                 steps = 17,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(28.dp)
+                    .focusRequester(sliderRequester)
             )
         }
     }
@@ -2443,8 +2673,13 @@ private fun PaletteSection(
                         color = if (followMonet) scheme.primary else scheme.surfaceContainerHighest,
                         contentColor = if (followMonet) scheme.onPrimary else scheme.onSurface,
                         modifier = Modifier
-                            .gamepadFocusOutline(shape = monetPillShape, register = true)
+                            .gamepadFocusOutline(
+                                shape = monetPillShape,
+                                register = true,
+                                onActivate = onFollowMonet
+                            )
                             .clip(monetPillShape)
+                            .focusProperties { canFocus = false }
                             .clickable(onClick = onFollowMonet)
                     ) {
                         Row(
@@ -2465,19 +2700,25 @@ private fun PaletteSection(
                     }
 
                     val presetPillShape = RoundedCornerShape(percent = if (!followMonet) 50 else 28)
+                    val selectPresetMode = {
+                        if (keyColorValue == 0) {
+                            val firstPreset = GAMESPACE_PRESET_KEY_COLORS.first().first
+                            onSelectPreset(firstPreset)
+                        }
+                    }
                     Surface(
                         shape = presetPillShape,
                         color = if (!followMonet) scheme.primary else scheme.surfaceContainerHighest,
                         contentColor = if (!followMonet) scheme.onPrimary else scheme.onSurface,
                         modifier = Modifier
-                            .gamepadFocusOutline(shape = presetPillShape, register = true)
+                            .gamepadFocusOutline(
+                                shape = presetPillShape,
+                                register = true,
+                                onActivate = selectPresetMode
+                            )
                             .clip(presetPillShape)
-                            .clickable {
-                                if (keyColorValue == 0) {
-                                    val firstPreset = GAMESPACE_PRESET_KEY_COLORS.first().first
-                                    onSelectPreset(firstPreset)
-                                }
-                            }
+                            .focusProperties { canFocus = false }
+                            .clickable(onClick = selectPresetMode)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
@@ -2525,8 +2766,13 @@ private fun PaletteSection(
                             modifier = Modifier
                                 .width(84.dp)
                                 .height(112.dp)
-                                .gamepadFocusOutline(shape = shape, register = true)
+                                .gamepadFocusOutline(
+                                    shape = shape,
+                                    register = true,
+                                    onActivate = { showAllPresets = true }
+                                )
                                 .clip(shape)
+                                .focusProperties { canFocus = false }
                                 .clickable { showAllPresets = true }
                         ) {
                             Column(
@@ -2569,8 +2815,13 @@ private fun PaletteSection(
                             modifier = Modifier
                                 .width(84.dp)
                                 .height(112.dp)
-                                .gamepadFocusOutline(shape = shape, register = true)
+                                .gamepadFocusOutline(
+                                    shape = shape,
+                                    register = true,
+                                    onActivate = { showAllPresets = false }
+                                )
                                 .clip(shape)
+                                .focusProperties { canFocus = false }
                                 .clickable { showAllPresets = false }
                         ) {
                             Column(
@@ -2641,8 +2892,13 @@ internal fun GameSpacePaletteSwatch(
         color = if (selected) swatchScheme.primaryContainer else currentScheme.surfaceContainerHighest,
         modifier = Modifier
             .width(84.dp)
-            .gamepadFocusOutline(shape = shape, register = true)
+            .gamepadFocusOutline(
+                shape = shape,
+                register = true,
+                onActivate = onClick
+            )
             .clip(shape)
+            .focusProperties { canFocus = false }
             .clickable(onClick = onClick)
     ) {
         Column(

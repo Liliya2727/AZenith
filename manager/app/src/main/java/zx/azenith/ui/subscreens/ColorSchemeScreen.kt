@@ -58,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -118,16 +119,16 @@ private val COLORS_ROW_ITEMS: Map<String, Int> = mapOf(
 
 /**
  * Landscape splits the screen in two lists, so each has its own index space.
- * Left: info(0) illustration(1).
- * Right: presets title(0) presets(1) scheme title(2) rgb(3) saturation(4).
+ * Left: illustration(0) — no searchable rows.
+ * Right: info card(0) presets title(1) presets(2) scheme title(3) rgb(4) saturation(5).
  */
 private val COLORS_LEFT_ITEMS: Map<String, Int> = emptyMap()
 private val COLORS_RIGHT_ITEMS: Map<String, Int> = mapOf(
-    "colors.presets" to 0,
-    "colors.red" to 3,
-    "colors.green" to 3,
-    "colors.blue" to 3,
-    "colors.saturation" to 4
+    "colors.presets" to 1,
+    "colors.red" to 4,
+    "colors.green" to 4,
+    "colors.blue" to 4,
+    "colors.saturation" to 5
 )
 
 @Composable
@@ -152,6 +153,15 @@ fun ColorSchemeSettings(navController: NavController) {
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
+
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            navController.safePopBackStack()
+            true
+        },
+        scrollState = if (isLandscape) rightListState else listState,
+    )
 
     var redVal by remember { mutableFloatStateOf(1000f) }
     var greenVal by remember { mutableFloatStateOf(1000f) }
@@ -252,27 +262,31 @@ fun ColorSchemeSettings(navController: NavController) {
             val bottomPad = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
             if (isLandscape) {
-                // Two panes: info + illustration on the left, the presets and
-                // sliders on the right, so neither side needs a long scroll.
+                // Two panes: illustration on the left, the info card and presets
+                // on the right, so neither side needs a long scroll.
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Illustration pane: no focus targets, so the d-pad entry
+                    // belongs to the controls pane on the right.
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
                             .weight(0.42f)
                             .fillMaxHeight()
-                            .hazePageSource()
-                            .gamepadScreenEntry(),
+                            .hazePageSource(),
                         contentPadding = PaddingValues(
                             top = innerPadding.calculateTopPadding(),
                             bottom = bottomPad
-                        )
+                        ),
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        introItems(colorScheme, illustrationHeight = 120.dp)
+                        // Landscape: fill the pane instead of a fixed 120dp so the
+                        // illustration scales with the available height.
+                        illustrationItem(colorScheme, illustrationHeight = null)
                     }
 
                     LazyColumn(
@@ -280,12 +294,16 @@ fun ColorSchemeSettings(navController: NavController) {
                         modifier = Modifier
                             .weight(0.58f)
                             .fillMaxHeight()
-                            .gamepadScreenEntry(),
+                            .hazePageSource()
+                            .gamepadScreenEntry(scopeKey = "subscreen:colorscheme"),
                         contentPadding = PaddingValues(
                             top = innerPadding.calculateTopPadding(),
                             bottom = bottomPad
                         )
                     ) {
+                        // Info card first, in the same scrolling list, but not a
+                        // focus target: seeding must land on the first preset.
+                        infoCardItem(colorScheme)
                         presetItems(rightJumpPulse, selectedPreset ?: matchingPreset, onPreset)
                         schemeItems(
                             jumpPulse = rightJumpPulse,
@@ -302,7 +320,10 @@ fun ColorSchemeSettings(navController: NavController) {
             } else {
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazePageSource()
+                        .gamepadScreenEntry(scopeKey = "subscreen:colorscheme"),
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding(),
                         start = 16.dp,
@@ -310,7 +331,8 @@ fun ColorSchemeSettings(navController: NavController) {
                         bottom = bottomPad
                     )
                 ) {
-                    introItems(colorScheme, illustrationHeight = 200.dp)
+                    infoCardItem(colorScheme)
+                    illustrationItem(colorScheme, illustrationHeight = 200.dp)
                     presetItems(jumpPulse, selectedPreset ?: matchingPreset, onPreset)
                     schemeItems(
                         jumpPulse = jumpPulse,
@@ -328,8 +350,13 @@ fun ColorSchemeSettings(navController: NavController) {
     }
 }
 
-/** Items 0 and 1: the info card and the illustration. */
-private fun LazyListScope.introItems(colorScheme: ColorScheme, illustrationHeight: Dp) {
+/**
+ * The info card. Not an action: `canFocus = false` keeps it out of d-pad
+ * search even though the shared card applies a focus outline for clickable
+ * callers. Portrait places it before the illustration; landscape places it
+ * at the top of the right pane's scrolling list.
+ */
+private fun LazyListScope.infoCardItem(colorScheme: ColorScheme) {
     item {
         ExpressiveList(
             content = listOf(
@@ -340,19 +367,34 @@ private fun LazyListScope.introItems(colorScheme: ColorScheme, illustrationHeigh
                         },
                         leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                         containerColor = colorScheme.surfaceContainerLow,
-                        onClick = {}
+                        onClick = {},
+                        modifier = Modifier.gamepadNotFocusable()
                     )
                 }
             )
         )
         Spacer(modifier = Modifier.height(16.dp))
     }
+}
 
+/**
+ * The illustration. Pure decoration, never a focus target.
+ *
+ * A null [illustrationHeight] fills the lazy list's viewport (landscape), so the
+ * pane decides the size instead of a hardcoded dp; portrait keeps its fixed height.
+ */
+private fun LazyListScope.illustrationItem(
+    colorScheme: ColorScheme,
+    illustrationHeight: Dp? = null,
+) {
     item {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(illustrationHeight),
+                .then(
+                    if (illustrationHeight != null) Modifier.height(illustrationHeight)
+                    else Modifier.fillParentMaxHeight(0.82f)
+                ),
             shape = azShape(26.dp),
             color = colorScheme.surfaceContainerLow
         ) {
@@ -639,6 +681,7 @@ fun ColorSchemeTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadNotFocusable()
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
@@ -650,7 +693,10 @@ fun ColorSchemeTopAppBar(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },

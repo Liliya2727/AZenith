@@ -46,6 +46,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -122,6 +123,7 @@ fun SettingsScreen(
     )
     
     var showLogBottomSheet by remember { mutableStateOf(false) }
+    var requestHideLogSheet by remember { mutableStateOf(false) }
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
     
@@ -131,6 +133,7 @@ fun SettingsScreen(
         mutableStateOf(isLauncherIconEnabled(context)) 
     }
     var showChangelogSheet by remember { mutableStateOf(false) }
+    var requestHideChangelogSheet by remember { mutableStateOf(false) }
     var changelogText by remember { mutableStateOf("") }
     
     LaunchedEffect(Unit) {
@@ -163,6 +166,36 @@ fun SettingsScreen(
             pendingToggle = null
         },
         onDismiss = { pendingToggle = null }
+    )
+
+    // Gamepad shortcuts: Square opens Settings search, Triangle toggles the
+    // changelog sheet.
+    val isCurrentPage = LocalIsCurrentPagerPage.current
+    val isPagerActive = LocalMainPagerActive.current
+    val pageIndex = LocalPagerPageIndex.current
+    RegisterGamepadActions(
+        enabled = isCurrentPage && isPagerActive,
+        hasSearch = true,
+        isSearchOpen = false,
+        onSearchToggle = { navController.navigate(SearchTab.Settings.searchRoute) },
+        hasTopAction = true,
+        isTopActionOpen = showChangelogSheet,
+        onTopAction = { showChangelogSheet = !showChangelogSheet },
+        onCloseOverlay = {
+            var closed = false
+            if (showChangelogSheet && !requestHideChangelogSheet) { requestHideChangelogSheet = true; closed = true }
+            if (showLogBottomSheet && !requestHideLogSheet) { requestHideLogSheet = true; closed = true }
+            if (loadingDialog.isShown) { loadingDialog.hide(); closed = true }
+            if (uninstallDialog.isShown) { uninstallDialog.cancel(); closed = true }
+            if (rebootDialog.isShown) { rebootDialog.cancel(); closed = true }
+            closed
+        },
+        scrollState = listState,
+        onScrollDelta = { delta ->
+            scrollBehavior.state.heightOffset =
+                (scrollBehavior.state.heightOffset - delta)
+                    .coerceIn(scrollBehavior.state.heightOffsetLimit, 0f)
+        }
     )
 
     fun toggleWithRebootCheck(key: String, isChecked: Boolean, apply: () -> Unit) {
@@ -255,7 +288,8 @@ fun SettingsScreen(
                         NavDockAction(
                             icon = Icons.AutoMirrored.Rounded.TextSnippet,
                             contentDescription = stringResource(R.string.cd_changelog),
-                            onClick = { showChangelogSheet = true }
+                            onClick = { showChangelogSheet = true },
+                            topActionBadge = true
                         )
                     )
                 )
@@ -272,7 +306,7 @@ fun SettingsScreen(
         ) { innerPadding ->
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().hazePageSource(),
+                modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(page = pageIndex),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
                     start = 16.dp + safeAreaStartInset(),
@@ -313,7 +347,9 @@ fun SettingsScreen(
                                                                                 icon = Icons.Filled.Vibration,
                                                                                 title = stringResource(R.string.tap_haptic_feedback),
                                                                                 checked = uiState.tapHaptic,
-                                                                                onCheckedChange = settingsViewModel::onTapHapticToggle
+                                                                                onCheckedChange = settingsViewModel::onTapHapticToggle,
+                                                                                focusKey = "settings.tap_haptic",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -323,7 +359,9 @@ fun SettingsScreen(
                                                                                 icon = Icons.Filled.Notifications,
                                                                                 title = stringResource(R.string.show_toast),
                                                                                 checked = uiState.stateToast,
-                                                                                onCheckedChange = settingsViewModel::setShowToast
+                                                                                onCheckedChange = settingsViewModel::setShowToast,
+                                                                                focusKey = "settings.show_toast",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -333,7 +371,9 @@ fun SettingsScreen(
                                                                                 icon = Icons.Filled.NotificationsActive,
                                                                                 title = stringResource(R.string.show_notifications),
                                                                                 checked = uiState.profileNotifications,
-                                                                                onCheckedChange = settingsViewModel::setProfileNotifications
+                                                                                onCheckedChange = settingsViewModel::setProfileNotifications,
+                                                                                focusKey = "settings.profile_notifications",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -344,7 +384,9 @@ fun SettingsScreen(
                                                                                 title = stringResource(R.string.disable_auto_mode),
                                                                                 summary = stringResource(R.string.disable_auto_mode_desc),
                                                                                 checked = uiState.autoMode,
-                                                                                onCheckedChange = settingsViewModel::setAutoMode
+                                                                                onCheckedChange = settingsViewModel::setAutoMode,
+                                                                                focusKey = "settings.disable_auto_mode",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -360,7 +402,9 @@ fun SettingsScreen(
                                                                                         settingsViewModel.setDisableTweak(isChecked)
                                                                                         RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
                                                                                     }
-                                                                                }
+                                                                                },
+                                                                                focusKey = "settings.disable_tweak",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 },
@@ -371,7 +415,9 @@ fun SettingsScreen(
                                                                                 title = stringResource(R.string.profile_timeout),
                                                                                 summary = stringResource(R.string.profile_timeout_desc),
                                                                                 checked = uiState.profileTimeout,
-                                                                                onCheckedChange = settingsViewModel::setProfileTimeout
+                                                                                onCheckedChange = settingsViewModel::setProfileTimeout,
+                                                                                focusKey = "settings.profile_timeout",
+                                                                                focusIndex = 2
                                                                             )
                                     }
                                 }
@@ -405,7 +451,9 @@ fun SettingsScreen(
                                                                                     }
                                         
                                                                                     pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
-                                                                                }
+                                                                                },
+                                                                                focusKey = "settings.show_icon",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 },
@@ -424,7 +472,9 @@ fun SettingsScreen(
                                                                                 headlineContent = { Text(stringResource(R.string.restart_service)) },
                                                                                 supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
                                                                                 leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
-                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                                                                focusKey = "settings.restart_service",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 },
@@ -435,7 +485,9 @@ fun SettingsScreen(
                                                                                 headlineContent = { Text(stringResource(R.string.save_log)) },
                                                                                 supportingContent = { Text(stringResource(R.string.save_log_desc)) },
                                                                                 leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
-                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                                                                focusKey = "settings.save_log",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 },
@@ -445,7 +497,9 @@ fun SettingsScreen(
                                                                                 icon = Icons.Filled.BugReport,
                                                                                 title = stringResource(R.string.allow_verbose_log),
                                                                                 checked = uiState.debugMode,
-                                                                                onCheckedChange = settingsViewModel::setDebugMode
+                                                                                onCheckedChange = settingsViewModel::setDebugMode,
+                                                                                focusKey = "settings.verbose_log",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 },
@@ -456,7 +510,9 @@ fun SettingsScreen(
                                             headlineContent = { Text(stringResource(R.string.section_experimental)) },
                                             supportingContent = { Text(stringResource(R.string.experimental_menu_desc)) },
                                             leadingContent = { LeadingIcon(icon = Icons.Rounded.Science) },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                            focusKey = "settings.experimental",
+                                            focusIndex = 4
                                         )
                                     }
                                 },
@@ -473,7 +529,9 @@ fun SettingsScreen(
                                                                                 },
                                                                                 headlineContent = { Text(stringResource(R.string.uninstall)) },
                                                                                 leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
-                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                                                                focusKey = "settings.uninstall",
+                                                                                focusIndex = 4
                                                                             )
                                     }
                                 }
@@ -496,7 +554,9 @@ fun SettingsScreen(
                                                                     Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
                                                                 },
                                                                 leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) },
-                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                                                                focusKey = "settings.about",
+                                                                focusIndex = 6
                                                             )
                             }
                         }
@@ -513,7 +573,10 @@ fun SettingsScreen(
         RootAppDialog {
             AZenithSheet(
                 show = showLogBottomSheet,
-                onDismiss = { showLogBottomSheet = false },
+                onDismiss = {
+                    showLogBottomSheet = false
+                    requestHideLogSheet = false
+                },
                 title = stringResource(R.string.str_logs_diagnostics),
                 style = SheetRowStyle.Action,
                 items = listOf(
@@ -549,41 +612,49 @@ fun SettingsScreen(
                         }
                     }
                 },
+                externalHideRequest = requestHideLogSheet,
+                onExternalHideConsumed = { requestHideLogSheet = false },
             )
         }
         RootAppDialog {
             AZenithSheetContent(
                 show = showChangelogSheet,
-                onDismiss = { showChangelogSheet = false },
+                onDismiss = {
+                    showChangelogSheet = false
+                    requestHideChangelogSheet = false
+                },
                 title = stringResource(R.string.str_changelog),
-            ) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
+                externalHideRequest = requestHideChangelogSheet,
+                onExternalHideConsumed = { requestHideChangelogSheet = false },
+                content = {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp)
-                ) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    MarkdownText(
-                        markdown = changelogText,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(
-                        modifier = Modifier.height(
-                            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 64.dp
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        MarkdownText(
+                            markdown = changelogText,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         )
-                    )
+                        Spacer(
+                            modifier = Modifier.height(
+                                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 64.dp
+                            )
+                        )
+                    }
                 }
-            }
+            )
         }
 
     }
@@ -615,6 +686,7 @@ fun SettingsScreenTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadNotFocusable()
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
@@ -642,20 +714,24 @@ fun SettingsScreenTopAppBar(
                 )
             },
             actions = {
-                IconButton(
-                    onClick = onSearchClick,
-                    modifier = Modifier.gamepadFocusOutline(shape = CircleShape)
-                ) {
-                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                GamepadActionBadge(topAction = false) {
+                    IconButton(
+                        onClick = onSearchClick,
+                        modifier = Modifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                    }
                 }
-                IconButton(
-                    onClick = onChangelogClick,
-                    modifier = Modifier.gamepadFocusOutline(shape = CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.TextSnippet,
-                        contentDescription = stringResource(R.string.cd_changelog)
-                    )
+                GamepadActionBadge(topAction = true) {
+                    IconButton(
+                        onClick = onChangelogClick,
+                        modifier = Modifier.focusProperties { canFocus = false }
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.TextSnippet,
+                            contentDescription = stringResource(R.string.cd_changelog)
+                        )
+                    }
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(

@@ -56,10 +56,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -87,6 +86,7 @@ import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.TweakViewModel
 import zx.azenith.ui.navigation.rememberScopedStoreOwner
+import zx.azenith.ui.component.gamepadScreenEntry
 
 /**
  * Which LazyColumn item holds each searchable row, so a search result can scroll
@@ -116,6 +116,14 @@ fun GovSettings(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    RegisterGamepadActions(
+        enabled = true,
+        onBack = {
+            navController.safePopBackStack()
+            true
+        },
+        scrollState = listState,
+    )
 
     // Search results land here: entry id -> the LazyColumn item
     // holding that row.
@@ -127,8 +135,6 @@ fun GovSettings(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    val listRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-
     val isReady by produceState(false) {
         // Allow navigation slide animation to finish smoothly
         delay(200)
@@ -136,10 +142,6 @@ fun GovSettings(
         if (!viewModel.isUiLoaded) {
             viewModel.loadAllConfiguration(context)
         }
-    }
-    LaunchedEffect(Unit) {
-        delay(150)
-        listRequester.requestFocus()
     }
 
 
@@ -155,7 +157,10 @@ fun GovSettings(
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource().focusRequester(listRequester).focusGroup(),
+            modifier = Modifier
+                .fillMaxSize()
+                .hazePageSource()
+                .gamepadScreenEntry(scopeKey = "subscreen:governors"),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp,
@@ -365,6 +370,7 @@ fun GovSettingsTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadNotFocusable()
             .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
@@ -376,7 +382,10 @@ fun GovSettingsTopAppBar(
                 ) 
             },
             navigationIcon = {
-                IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.focusProperties { canFocus = false }
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },       
