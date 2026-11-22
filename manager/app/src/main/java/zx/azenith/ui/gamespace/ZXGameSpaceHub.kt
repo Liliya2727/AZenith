@@ -248,6 +248,28 @@ fun ZXGameSpaceHub(
         if (activeEntry != RibbonEntry.Library) libraryExpanded = false
     }
 
+    // Keep an invisible focus anchor on the collapsed Games ribbon so Compose always
+    // delivers key events to GamepadFocusRoot's onPreviewKeyEvent (especially on
+    // GameHeroStage where action buttons are touch-only).
+    val shouldFocusRibbon = category == TopCategory.Games &&
+        !homeExpanded &&
+        !libraryExpanded &&
+        !searchOpen &&
+        !exitPrompt &&
+        !sidePanelPromptOpen &&
+        tuningPkg == null &&
+        wallpaperPkg == null &&
+        !nowPlayingOpen &&
+        !quickSettingsOpen &&
+        !GameSpaceOverlayState.isAnyOpen &&
+        !ZXDropDownNav.isActive
+    LaunchedEffect(shouldFocusRibbon, activeStageType) {
+        if (shouldFocusRibbon) {
+            withFrameNanos { }
+            runCatching { ribbonFocusRequester.requestFocus() }
+        }
+    }
+
     val hintOwner = remember { Any() }
     val hintScreen = when {
         category == TopCategory.Settings -> GameSpaceScreenId.Settings

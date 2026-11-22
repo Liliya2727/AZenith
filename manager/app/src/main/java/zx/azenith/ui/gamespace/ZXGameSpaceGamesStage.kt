@@ -58,6 +58,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -337,7 +338,20 @@ internal fun ZXGameSpaceTileRibbon(
             modifier = Modifier
                 .fillMaxHeight()
                 .offset { IntOffset(x = totalOffsetPx.roundToInt(), y = 0) }
-                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
+                .then(
+                    if (focusRequester != null) {
+                        Modifier
+                            .focusRequester(focusRequester)
+                            .onFocusChanged {
+                                if (it.isFocused) {
+                                    GameSpaceOverlayState.recordBaseFocus(focusRequester)
+                                }
+                            }
+                    } else {
+                        Modifier
+                    }
+                )
+                .focusable(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top
         ) {
