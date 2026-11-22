@@ -229,10 +229,14 @@ object GameLauncher {
                     GameLaunchResult.Failure(msg)
                 } else {
                     val userId = currentUserId()
-                    val cmd = "am start --activity-no-animation --user $userId " +
+                    // Note: -f MUST precede --activity-no-animation because am start's -f
+                    // replaces the intent flags rather than OR-ing them; putting
+                    // --activity-no-animation after -f produces flg=0x10210000 (f=NO_ANIMATION).
+                    val cmd = "am start --user $userId " +
                         "-a android.intent.action.MAIN " +
                         "-c android.intent.category.LAUNCHER " +
                         "-f 0x10200000 " +
+                        "--activity-no-animation " +
                         "-n ${shellSingleQuote(component)}"
                     val stdout = mutableListOf<String>()
                     val stderr = mutableListOf<String>()
