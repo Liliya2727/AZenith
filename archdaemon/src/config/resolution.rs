@@ -3,15 +3,49 @@
 use crate::core::DaemonContext;
 use crate::IS_DEFAULT;
 use crate::sysprop::get_or_default;
-use crate::{log_debug, log_info, log_warn};
-use crate::shell::systemv;
+use crate::{log_debug, log_error, log_info, log_warn};
+use crate::shell::{CmdResult, systemv_capture_both};
+
+const ERROR_PATTERNS: &[&str] = &[
+    "Invalid",
+    "not supported",
+    "not of game type",
+    "Unknown command",
+    "No intervention",
+    "Error",
+];
+
+fn output_has_error(output: &str) -> bool {
+    ERROR_PATTERNS.iter().any(|pat| output.contains(pat))
+}
+
+fn run_res_cmd(cmd: &str) -> (CmdResult, bool) {
+    let res = systemv_capture_both(cmd);
+    let has_err = res.exit_code != 0 || output_has_error(&res.output);
+    if has_err {
+        log_error!(
+            "resolution",
+            "cmd failed rc={} cmd=\"{}\" out=\"{}\"",
+            res.exit_code,
+            cmd,
+            res.output
+        );
+    }
+    (res, !has_err)
+}
 
 // ---------------------------------------------------------------------------
 // get_prop_int
 // ---------------------------------------------------------------------------
 fn get_prop_int(prop: &str) -> i32 {
-    let val = get_or_default(prop, "0");
-    val.parse::<i32>().unwrap_or(0)
+    let val = get_or_default(prop, "");
+    match val.trim().parse::<i32>() {
+        Ok(v) => v,
+        Err(_) => {
+            log_warn!("resolution", "failed to parse prop={} raw={:?}", prop, val);
+            0
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -28,7 +62,8 @@ fn apply_game_set(pkg: &str, downscale: &str, fps: &str) -> bool {
     }
     cmd.push_str(&format!(" {pkg}"));
 
-    systemv(&cmd) == 0
+    let (_, ok) = run_res_cmd(&cmd);
+    ok
 }
 
 // ---------------------------------------------------------------------------
@@ -44,18 +79,28 @@ fn apply_legacy(pkg: &str, downscale: &str, fps: &str) -> bool {
         config.push_str(&format!(",fps={fps}"));
     }
 
-    if systemv(&format!("cmd device_config put game_overlay {pkg} {config}")) != 0 {
+    let (_, ok_put) = run_res_cmd(&format!("cmd device_config put game_overlay {pkg} {config}"));
+    if !ok_put {
         return false;
     }
 
-    systemv(&format!("cmd game mode 2 {pkg}")) == 0
+    let (_, ok_mode) = run_res_cmd(&format!("cmd game mode 2 {pkg}"));
+    ok_mode
 }
 
 // ---------------------------------------------------------------------------
 // apply_resolution_target
 // ---------------------------------------------------------------------------
 pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &str, fps: &str) -> bool {
+    let first_for_pkg = ctx.render.last_resolution_log_pkg.as_deref() != Some(pkg);
+    if first_for_pkg {
+        ctx.render.last_resolution_log_pkg = Some(pkg.to_string());
+    }
+
     if IS_DEFAULT!(downscale) && IS_DEFAULT!(fps) {
+        if first_for_pkg {
+            log_info!("resolution", "skip pkg={pkg} reason=default_settings");
+        }
         return false;
     }
 
@@ -66,8 +111,16 @@ pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &s
 
     let sdk = get_prop_int("ro.build.version.sdk");
     if sdk < 31 {
-        log_debug!("resolution", "game mode API unsupported sdk={sdk}");
+        if first_for_pkg {
+            log_info!("resolution", "skip pkg={pkg} sdk={sdk} reason=sdk_below_31");
+        } else {
+            log_debug!("resolution", "game mode API unsupported sdk={sdk}");
+        }
         return false;
+    }
+
+    if first_for_pkg {
+        log_info!("resolution", "init pkg={pkg} sdk={sdk} downscale={downscale} fps={fps}");
     }
 
     if sdk >= 33 {
@@ -79,7 +132,7 @@ pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &s
                 if IS_DEFAULT!(fps) { "-" } else { fps });
             return true;
         }
-        log_warn!("resolution", "cmd game set failed pkg={pkg}, falling back to device_config",);
+        log_warn!("resolution", "cmd game set failed pkg={pkg}, falling back to device_config");
     }
 
     if !apply_legacy(pkg, downscale, fps) {
@@ -104,12 +157,13 @@ pub fn restore_resolution_target(ctx: &mut DaemonContext, pkg: &str) {
     }
 
     if ctx.render.used_legacy_fallback {
-        systemv(&format!("cmd device_config delete game_overlay {pkg}"));
-        if systemv(&format!("cmd game reset {pkg}")) != 0 {
-            systemv(&format!("cmd game mode 1 {pkg}"));
+        let _ = run_res_cmd(&format!("cmd device_config delete game_overlay {pkg}"));
+        let (_, ok_reset) = run_res_cmd(&format!("cmd game reset {pkg}"));
+        if !ok_reset {
+            let _ = run_res_cmd(&format!("cmd game mode 1 {pkg}"));
         }
     } else {
-        systemv(&format!("cmd game reset --mode 2 {pkg}"));
+        let _ = run_res_cmd(&format!("cmd game reset --mode 2 {pkg}"));
     }
 
     log_info!("resolution", "reset pkg={pkg} legacy={}", if ctx.render.used_legacy_fallback { 1 } else { 0 });

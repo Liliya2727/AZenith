@@ -325,6 +325,8 @@ pub struct RenderState {
     /// True once the manual-mode sidepanel has been broadcast for the
     /// active game; reset whenever the tracked game changes or is dropped.
     pub manual_sidepanel_shown: bool,
+    /// Tracks the last package for which initial resolution SDK info was logged.
+    pub last_resolution_log_pkg: Option<String>,
 }
 
 // ---------------------------------------------------------------------------

@@ -52,6 +52,97 @@ pub fn systemv(command: &str) -> c_int {
 }
 
 // ---------------------------------------------------------------------------
+// CmdResult + systemv_capture_both — fork + execle capturing stdout & stderr
+// ---------------------------------------------------------------------------
+pub const CAPTURE_BOTH_MAX_BYTES: usize = 1024;
+
+#[derive(Debug, Clone)]
+pub struct CmdResult {
+    pub exit_code: c_int,
+    pub output: String,
+}
+
+pub fn systemv_capture_both(command: &str) -> CmdResult {
+    let (pipe_r, pipe_w) = match create_pipe() {
+        Some(p) => p,
+        None => {
+            log_error!("shell", "systemv_capture_both pipe failed errno={}", std::io::Error::last_os_error());
+            return CmdResult { exit_code: -1, output: String::new() };
+        }
+    };
+
+    let c_command = match std::ffi::CString::new(command) {
+        Ok(c) => c,
+        Err(_) => {
+            unsafe { libc::close(pipe_r); libc::close(pipe_w); }
+            return CmdResult { exit_code: -1, output: String::new() };
+        }
+    };
+
+    let pid = unsafe { libc::fork() };
+    if pid == -1 {
+        log_error!("shell", "systemv_capture_both fork failed errno={}", std::io::Error::last_os_error());
+        unsafe { libc::close(pipe_r); libc::close(pipe_w); }
+        return CmdResult { exit_code: -1, output: String::new() };
+    }
+
+    if pid == 0 {
+        unsafe {
+            libc::dup2(pipe_w, 1);
+            libc::dup2(pipe_w, 2);
+            libc::close(pipe_r);
+            libc::close(pipe_w);
+
+            let env = std::ffi::CString::new(MY_PATH).unwrap();
+            let envp = [env.as_ptr(), std::ptr::null()];
+            libc::execle(
+                b"/system/bin/sh\0".as_ptr() as *const c_char,
+                b"sh\0".as_ptr() as *const c_char,
+                b"-c\0".as_ptr() as *const c_char,
+                c_command.as_ptr(),
+                std::ptr::null::<c_char>(),
+                envp.as_ptr(),
+            );
+            libc::_exit(127);
+        }
+    }
+
+    unsafe { libc::close(pipe_w); }
+
+    let mut output = Vec::with_capacity(CAPTURE_BOTH_MAX_BYTES);
+    let mut buf = [0u8; 512];
+    loop {
+        match unsafe { libc::read(pipe_r, buf.as_mut_ptr() as *mut _, buf.len()) } {
+            -1 => break,
+            0 => break,
+            n => {
+                let n = n as usize;
+                if output.len() < CAPTURE_BOTH_MAX_BYTES {
+                    let take = n.min(CAPTURE_BOTH_MAX_BYTES - output.len());
+                    output.extend_from_slice(&buf[..take]);
+                }
+            }
+        }
+    }
+    unsafe { libc::close(pipe_r); }
+
+    let mut status: c_int = 0;
+    let exit_code = if unsafe { libc::waitpid(pid, &mut status, 0) } == -1 {
+        -1
+    } else if libc::WIFEXITED(status) {
+        libc::WEXITSTATUS(status)
+    } else {
+        -1
+    };
+
+    let text = String::from_utf8_lossy(&output)
+        .trim_end_matches(&['\n', '\r'][..])
+        .to_string();
+
+    CmdResult { exit_code, output: text }
+}
+
+// ---------------------------------------------------------------------------
 // execute_command — capture shell command output
 // ---------------------------------------------------------------------------
 pub fn execute_command(command: &str) -> Option<String> {

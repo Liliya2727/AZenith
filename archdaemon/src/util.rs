@@ -159,9 +159,23 @@ pub fn toast(message: &str) {
 pub fn restart_target_app(pkg: &str) {
     log_info!("daemon", "restarting app pkg={} reason=pending_changes", pkg);
     let safe_pkg = escape_shell_string(pkg);
-    systemv(&format!(
+    let cmd = format!(
         "am force-stop '{safe_pkg}' && am start -n \"$(cmd package resolve-activity --brief '{safe_pkg}' | tail -n 1)\""
-    ));
+    );
+    let res = crate::shell::systemv_capture_both(&cmd);
+    if res.exit_code != 0
+        || res.output.contains("Error")
+        || res.output.contains("Exception")
+        || res.output.contains("No activity")
+    {
+        log_error!(
+            "daemon",
+            "restart_target_app failed pkg={} rc={} out={}",
+            pkg,
+            res.exit_code,
+            res.output
+        );
+    }
     std::thread::sleep(std::time::Duration::from_millis(700));
 }
 
