@@ -196,6 +196,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StatusBarGuard.restoreIfPending(this)
         wireGamepadDirectionRepeat()
         TapHapticState.init(this)
         zx.azenith.ui.util.AudioUtil.isGameHubActive = true
@@ -255,8 +256,14 @@ class ZXGameSpaceActivity : ComponentActivity() {
         return scheme.surface.toArgb()
     }
 
+    override fun onStart() {
+        super.onStart()
+        StatusBarGuard.restoreIfPending(this)
+    }
+
     override fun onResume() {
         super.onResume()
+        StatusBarGuard.restoreIfPending(this)
         // This window owns direction-key dispatch while GameSpace is foreground.
         wireGamepadDirectionRepeat()
         ZXSidePanelService.hide(this)

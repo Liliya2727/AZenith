@@ -17,6 +17,7 @@
 package zx.azenith.ui.gamespace
 
 import android.content.Context
+import android.os.Build
 import android.view.KeyEvent
 import zx.azenith.ui.theme.ColorMode
 import androidx.activity.compose.BackHandler
@@ -661,16 +662,32 @@ fun ZXGameSpaceHub(
             }
     ) {
         // Dynamic full-bleed atmospheric backdrop driven by the selected ribbon entry.
+        // The launch blur is a graphicsLayer renderEffect on this wrapper; its radius is read
+        // inside the lambda so the ramp never recomposes.
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .hazeSource(backdropHazeState)
-                .hazeSource(overlayHazeState, zIndex = 0f)
+                .graphicsLayer {
+                    val radiusDp = launchController.blurDpAnim.value
+                    renderEffect = if (radiusDp > 0.01f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val px = radiusDp * density
+                        androidx.compose.ui.graphics.BlurEffect(px, px, androidx.compose.ui.graphics.TileMode.Clamp)
+                    } else {
+                        null
+                    }
+                }
         ) {
-            ZXGameSpaceStageBackdrop(
-                entry = activeEntry,
-                launchShapesElapsedMs = { launchController.shapesElapsedMsAnim.value }
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(backdropHazeState)
+                    .hazeSource(overlayHazeState, zIndex = 0f)
+            ) {
+                ZXGameSpaceStageBackdrop(
+                    entry = activeEntry,
+                    launchShapesElapsedMs = { launchController.shapesElapsedMsAnim.value }
+                )
+            }
         }
 
         // Hub UI + popups layer: fades and scales down as one layer during game launch
@@ -681,7 +698,7 @@ fun ZXGameSpaceHub(
                 .graphicsLayer {
                     val p = launchController.contentFadeAnim.value
                     alpha = (1f - p).coerceIn(0f, 1f)
-                    val s = 1f - (1f - CONTENT_END_SCALE) * p
+                    val s = 1f + (UI_OUT_END_SCALE - 1f) * p
                     scaleX = s
                     scaleY = s
                 }

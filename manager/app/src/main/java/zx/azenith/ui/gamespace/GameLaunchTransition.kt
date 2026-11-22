@@ -30,6 +30,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -47,14 +48,20 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
 import com.topjohnwu.superuser.Shell
+import java.io.File
+import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,40 +73,67 @@ import zx.azenith.ui.util.BgmManager
 
 private const val TAG = "GameLaunch"
 
-const val PREF_GAME_LAUNCH_TRANSITION_ENABLED = "gamespace_launch_transition_enabled"
+// ============================================================================
+// Config keys (SharedPreferences "settings"). Config only, no UI.
+// ============================================================================
+const val PREF_GAME_LAUNCH_TRANSITION = "gamespace_launch_transition" // default on
+const val PREF_GAME_LAUNCH_HIDE_STATUSBAR = "gamespace_launch_hide_statusbar" // default on
 private const val SETTINGS_PREFS = "settings"
+private const val WALLPAPER_ENABLED_PREF = "gamespace_wallpaper_enabled"
+private const val LEGACY_WALLPAPER_ENABLED_PREF = "enable_banner_image"
 
 fun isGameLaunchTransitionEnabled(context: Context): Boolean =
     context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
-        .getBoolean(PREF_GAME_LAUNCH_TRANSITION_ENABLED, true)
+        .getBoolean(PREF_GAME_LAUNCH_TRANSITION, true)
+
+fun isGameLaunchHideStatusBarEnabled(context: Context): Boolean =
+    context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+        .getBoolean(PREF_GAME_LAUNCH_HIDE_STATUSBAR, true)
 
 // ============================================================================
-// Game-launch transition tuning constants (timings in ms, magnitudes as floats)
+// Tuning constants (timings in ms, magnitudes as floats). Everything lives here.
+//
+// Timeline (defaults):
+//   0    UI out (220), shapes fly out (350 + 0..100 stagger), wallpaper blur (0..300)
+//   160  scrim darkens (260)
+//   320  wordmark in (220) + SOUND
+//   540  hold (600), wordmark scale 1.00 -> 1.04 linear
+//   1140 wordmark out (220)
+//   1360 empty dark screen for PRE_LAUNCH_DELAY_MS (1000)
+//   2360 status bar hidden + game launched; restore POST_LAUNCH_RESTORE_DELAY_MS later
 // ============================================================================
-internal const val CONTENT_FADE_START_MS = 0
-internal const val CONTENT_FADE_DURATION_MS = 280
-internal const val CONTENT_END_SCALE = 0.97f
+internal const val UI_OUT_MS = 220
+internal const val UI_OUT_END_SCALE = 1.04f
 
-internal const val SHAPES_FLYOUT_START_MS = 0
-internal const val SHAPES_FLYOUT_DURATION_MS = 450
-internal const val SHAPES_MAX_STAGGER_MS = 120
+internal const val SHAPES_FLYOUT_DURATION_MS = 350
+internal const val SHAPES_MAX_STAGGER_MS = 100
 internal const val SHAPES_END_SCALE = 1.22f
 internal val SHAPES_FLYOUT_DISTANCE_DP = 420.dp
 
-internal const val SCRIM_START_MS = 120
-internal const val SCRIM_DURATION_MS = 400 // 120..520 ms
-internal const val SCRIM_MAX_ALPHA = 0.94f
+internal const val BLUR_START_MS = 0
+internal const val BLUR_MS = 300
+internal const val LAUNCH_BLUR_DP = 24f
 
-internal const val WORDMARK_START_MS = 380
-internal const val WORDMARK_DURATION_MS = 420 // 380..800 ms
-internal const val WORDMARK_START_SCALE = 0.90f
-internal const val WORDMARK_END_SCALE = 1.00f
+internal const val SCRIM_START_MS = 160
+internal const val SCRIM_MS = 260
+internal const val SCRIM_MAX_ALPHA = 0.95f
+
+internal const val WORDMARK_START_MS = 320
+internal const val WORDMARK_IN_MS = 220
+internal const val WORDMARK_IN_START_SCALE = 0.92f
+internal const val WORDMARK_LETTER_SPACING_EM = 0.4f
+internal const val HOLD_MS = 600
+internal const val HOLD_END_SCALE = 1.04f
+internal const val WORDMARK_OUT_MS = 220
+internal const val WORDMARK_OUT_END_SCALE = 1.12f
+
+internal const val PRE_LAUNCH_DELAY_MS = 1000L
+internal const val POST_LAUNCH_RESTORE_DELAY_MS = 1000L
 
 internal const val BGM_DUCK_TARGET = 0.12f
 internal const val BGM_DUCK_FADE_MS = 220L
 
-internal const val LAUNCH_AT_MS = 700L
-internal const val WATCHDOG_TIMEOUT_MS = 4000L
+internal const val WATCHDOG_AFTER_LAUNCH_MS = 4000L
 internal const val RECOVERY_FADE_MS = 200
 internal const val IMMEDIATE_GUARD_MS = 500L
 
@@ -112,6 +146,8 @@ object GameLaunchInputLock {
     var isLocked: Boolean = false
 }
 
+enum class GameLaunchPhase { Animating, PreLaunch, Launching }
+
 /**
  * State of the GameSpace game-launch transition, hosted at the Hub level.
  */
@@ -119,7 +155,7 @@ sealed interface GameLaunchState {
     data object Idle : GameLaunchState
     data class Running(
         val packageName: String,
-        val progress: Float = 0f
+        val phase: GameLaunchPhase = GameLaunchPhase.Animating
     ) : GameLaunchState
 }
 
@@ -129,6 +165,51 @@ sealed interface GameLaunchState {
 sealed interface GameLaunchResult {
     data object Success : GameLaunchResult
     data class Failure(val reason: String, val throwable: Throwable? = null) : GameLaunchResult
+}
+
+/**
+ * Status bar hide/restore bookkeeping. The restore never depends on an activity or a coroutine
+ * scope: it is dispatched as a detached root process together with the launch, and a pending
+ * marker file (created BEFORE the hide, removed by the detached restore) lets the next GameSpace
+ * start repair the state if that process was lost.
+ */
+object StatusBarGuard {
+    private const val FLAGS_HIDE = "clock system-icons notification-icons"
+    private const val MARKER_NAME = "statusbar_hide_pending"
+
+    private fun marker(context: Context) = File(context.applicationContext.filesDir, MARKER_NAME)
+
+    fun markPending(context: Context) {
+        runCatching { marker(context).writeText("1") }
+    }
+
+    fun isPending(context: Context): Boolean = marker(context).exists()
+
+    fun hideCommand(): String = "cmd statusbar send-disable-flag $FLAGS_HIDE"
+
+    /** Detached (new session, nohup) restore that outlives the app process. */
+    fun detachedRestoreCommand(context: Context, delayMs: Long): String {
+        val sec = String.format(Locale.US, "%.3f", delayMs / 1000.0)
+        val path = marker(context).absolutePath
+        return "setsid nohup sh -c 'sleep $sec; cmd statusbar send-disable-flag none; rm -f $path' " +
+            ">/dev/null 2>&1 &"
+    }
+
+    /** Blocking restore: call off the main thread. */
+    fun restoreNow(context: Context) {
+        runCatching {
+            Shell.cmd("cmd statusbar send-disable-flag none").exec()
+            marker(context).delete()
+        }.onFailure { Log.e(TAG, "Status bar restore failed", it) }
+    }
+
+    /** Non-blocking safety net for GameSpace onCreate/onStart/onResume. */
+    fun restoreIfPending(context: Context) {
+        if (!isPending(context)) return
+        val path = marker(context).absolutePath
+        Log.w(TAG, "Pending status bar marker found; restoring")
+        Shell.cmd("cmd statusbar send-disable-flag none", "rm -f $path").submit()
+    }
 }
 
 /**
@@ -151,13 +232,11 @@ object GameLauncher {
         Shell.isAppGrantedRoot() == true || Shell.getShell().isRoot
     }.getOrDefault(false)
 
-    private fun resolveLaunchComponent(context: Context, packageName: String, useRootFallback: Boolean): String? {
+    private fun resolveLaunchComponent(context: Context, packageName: String): String? {
         val fromPm = runCatching {
             context.packageManager.getLaunchIntentForPackage(packageName)?.component?.flattenToShortString()
         }.getOrNull()
         if (!fromPm.isNullOrBlank()) return fromPm
-
-        if (!useRootFallback) return null
 
         val out = mutableListOf<String>()
         val err = mutableListOf<String>()
@@ -209,73 +288,78 @@ object GameLauncher {
         }
     }
 
+    /** Root path: hide status bar + am start + detached restore in ONE shell invocation. */
+    private fun launchViaRoot(appContext: Context, packageName: String): GameLaunchResult? {
+        val component = resolveLaunchComponent(appContext, packageName)
+        if (component == null) {
+            val msg = "Unable to resolve launcher component for $packageName"
+            Log.e(TAG, msg)
+            return GameLaunchResult.Failure(msg)
+        }
+        val hide = isGameLaunchHideStatusBarEnabled(appContext)
+        val userId = currentUserId()
+        // -f MUST precede --activity-no-animation: -f replaces the intent flags, so the other
+        // order loses FLAG_ACTIVITY_NO_ANIMATION (verified: flg=0x10210000 only with this order).
+        val amCmd = "am start --user $userId " +
+            "-a android.intent.action.MAIN " +
+            "-c android.intent.category.LAUNCHER " +
+            "-f 0x10200000 " +
+            "--activity-no-animation " +
+            "-n ${shellSingleQuote(component)}"
+
+        val script = buildString {
+            if (hide) appendLine(StatusBarGuard.hideCommand())
+            appendLine(amCmd)
+            appendLine("RC=\$?")
+            if (hide) appendLine(StatusBarGuard.detachedRestoreCommand(appContext, POST_LAUNCH_RESTORE_DELAY_MS))
+            append("(exit \$RC)")
+        }
+        // The marker is written BEFORE the hide so a lost restore can always be repaired.
+        if (hide) StatusBarGuard.markPending(appContext)
+
+        val stdout = mutableListOf<String>()
+        val stderr = mutableListOf<String>()
+        val execResult = runCatching { Shell.cmd(script).to(stdout, stderr).exec() }
+            .getOrElse { t ->
+                Log.e(TAG, "Root shell execution threw for $packageName", t)
+                null
+            }
+
+        if (execResult == null) {
+            if (hide) StatusBarGuard.restoreNow(appContext)
+            return null // shell lost: caller tries the in-app fallback
+        }
+
+        val combined = (stdout + stderr).joinToString("\n")
+        if (execResult.code != 0 || hasLaunchErrorText(combined)) {
+            Log.e(TAG, "am start failed pkg=$packageName component=$component rc=${execResult.code} out=$combined")
+            if (hide) StatusBarGuard.restoreNow(appContext)
+            return if (hasLaunchErrorText(combined)) {
+                GameLaunchResult.Failure("am start error (rc=${execResult.code}): $combined")
+            } else {
+                null // plain non-zero rc: try the in-app fallback
+            }
+        }
+        Log.d(TAG, "am start succeeded pkg=$packageName component=$component hide=$hide out=$combined")
+        return GameLaunchResult.Success
+    }
+
     /**
-     * Executes the launch off the main thread via root `am start --activity-no-animation`,
-     * falling back to an in-app no-animation `startActivity` if the root shell is unavailable or fails.
+     * Runs the launch off the main thread. NonCancellable: once dispatched, the launch must
+     * finish its bookkeeping even if the activity pauses (which cancels the transition job).
      */
     suspend fun launch(
         context: Context,
         packageName: String,
         label: String? = null
-    ): GameLaunchResult {
+    ): GameLaunchResult = withContext(NonCancellable) {
         val appContext = context.applicationContext
         val result = withContext(Dispatchers.IO) {
-            val rootAvailable = isRootShellAvailable()
-            if (rootAvailable) {
-                val component = resolveLaunchComponent(appContext, packageName, useRootFallback = true)
-                if (component == null) {
-                    val msg = "Unable to resolve launcher component for $packageName"
-                    Log.e(TAG, msg)
-                    GameLaunchResult.Failure(msg)
-                } else {
-                    val userId = currentUserId()
-                    // Note: -f MUST precede --activity-no-animation because am start's -f
-                    // replaces the intent flags rather than OR-ing them; putting
-                    // --activity-no-animation after -f produces flg=0x10210000 (f=NO_ANIMATION).
-                    val cmd = "am start --user $userId " +
-                        "-a android.intent.action.MAIN " +
-                        "-c android.intent.category.LAUNCHER " +
-                        "-f 0x10200000 " +
-                        "--activity-no-animation " +
-                        "-n ${shellSingleQuote(component)}"
-                    val stdout = mutableListOf<String>()
-                    val stderr = mutableListOf<String>()
-                    val execResult = runCatching {
-                        Shell.cmd(cmd).to(stdout, stderr).exec()
-                    }.getOrElse { t ->
-                        Log.e(TAG, "Root shell execution threw for $packageName", t)
-                        null
-                    }
-
-                    if (execResult == null) {
-                        Log.e(TAG, "Root shell unavailable during launch for $packageName; trying in-app fallback")
-                        withContext(Dispatchers.Main) { launchViaInAppFallback(context, packageName) }
-                    } else {
-                        val combined = buildString {
-                            if (stdout.isNotEmpty()) append(stdout.joinToString("\n"))
-                            if (stderr.isNotEmpty()) {
-                                if (isNotEmpty()) append('\n')
-                                append(stderr.joinToString("\n"))
-                            }
-                        }
-                        if (execResult.code != 0 || hasLaunchErrorText(combined)) {
-                            Log.e(
-                                TAG,
-                                "am start failed pkg=$packageName component=$component rc=${execResult.code} out=$combined"
-                            )
-                            if (hasLaunchErrorText(combined)) {
-                                GameLaunchResult.Failure("am start error (rc=${execResult.code}): $combined")
-                            } else {
-                                withContext(Dispatchers.Main) { launchViaInAppFallback(context, packageName) }
-                            }
-                        } else {
-                            Log.d(TAG, "am start succeeded pkg=$packageName component=$component")
-                            GameLaunchResult.Success
-                        }
-                    }
-                }
+            if (isRootShellAvailable()) {
+                launchViaRoot(appContext, packageName)
+                    ?: withContext(Dispatchers.Main) { launchViaInAppFallback(context, packageName) }
             } else {
-                Log.w(TAG, "Root shell unavailable; using in-app no-animation fallback for $packageName")
+                Log.w(TAG, "Root shell unavailable; in-app no-animation fallback for $packageName")
                 withContext(Dispatchers.Main) { launchViaInAppFallback(context, packageName) }
             }
         }
@@ -290,13 +374,10 @@ object GameLauncher {
                 }
             }
         }
-
-        return result
+        result
     }
 
-    /**
-     * Fire-and-forget convenience wrapper for legacy callers.
-     */
+    /** Fire-and-forget convenience wrapper for legacy callers. */
     fun launchAsync(
         scope: CoroutineScope,
         context: Context,
@@ -306,20 +387,16 @@ object GameLauncher {
         scope.launch {
             val res = launch(context, packageName, label)
             if (res is GameLaunchResult.Failure) {
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.toast_app_launch_fail),
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, context.getString(R.string.toast_app_launch_fail), Toast.LENGTH_SHORT).show()
             }
         }
     }
 }
 
 /**
- * Coordinates the launchInProgress guard, transition animations, input lock, and watchdog
- * at the Hub level. All animated values are [Animatable] instances read inside
- * `graphicsLayer` lambdas so there is zero per-frame recomposition.
+ * Coordinates the launchInProgress guard, transition animations, input lock and watchdog at the
+ * Hub level. All animated values are [Animatable]s read strictly inside graphicsLayer lambdas,
+ * so there is no per-frame recomposition (including the blur radius).
  */
 @Stable
 class GameLaunchController {
@@ -329,12 +406,12 @@ class GameLaunchController {
     val isRunning: Boolean
         get() = state is GameLaunchState.Running
 
-    // Driven by Animatables and read strictly inside graphicsLayer / draw lambdas.
-    val contentFadeAnim = Animatable(0f) // 0 = normal, 1 = faded out
-    val shapesElapsedMsAnim = Animatable(0f) // 0..(SHAPES_FLYOUT_DURATION_MS + SHAPES_MAX_STAGGER_MS)
-    val scrimAlphaAnim = Animatable(0f) // 0..SCRIM_MAX_ALPHA
-    val wordmarkAlphaAnim = Animatable(0f) // 0..1
-    val wordmarkScaleAnim = Animatable(WORDMARK_START_SCALE) // WORDMARK_START_SCALE..WORDMARK_END_SCALE
+    val contentFadeAnim = Animatable(0f) // 0 = normal, 1 = Hub layer gone
+    val shapesElapsedMsAnim = Animatable(0f)
+    val blurDpAnim = Animatable(0f)
+    val scrimAlphaAnim = Animatable(0f)
+    val wordmarkAlphaAnim = Animatable(0f)
+    val wordmarkScaleAnim = Animatable(WORDMARK_IN_START_SCALE)
 
     private var activeJob: Job? = null
     private var watchdogJob: Job? = null
@@ -344,18 +421,57 @@ class GameLaunchController {
     var isActivityPaused: Boolean = false
 
     private fun animatorDurationScale(context: Context): Float = runCatching {
-        Settings.Global.getFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            1f
-        )
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
     }.getOrDefault(1f)
+
+    private fun wallpaperEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+        return prefs.getBoolean(WALLPAPER_ENABLED_PREF, prefs.getBoolean(LEGACY_WALLPAPER_ENABLED_PREF, true))
+    }
 
     private fun lockInput(locked: Boolean) {
         GameLaunchInputLock.isLocked = locked
         if (locked) {
             GamepadDirectionRepeat.release()
             GamepadStickScroll.reset()
+        }
+    }
+
+    private suspend fun resetChannels() {
+        contentFadeAnim.snapTo(0f)
+        shapesElapsedMsAnim.snapTo(0f)
+        blurDpAnim.snapTo(0f)
+        scrimAlphaAnim.snapTo(0f)
+        wordmarkAlphaAnim.snapTo(0f)
+        wordmarkScaleAnim.snapTo(WORDMARK_IN_START_SCALE)
+    }
+
+    private fun handleFailure(scope: CoroutineScope, context: Context, packageName: String, res: GameLaunchResult.Failure) {
+        Log.e(TAG, "Game launch failed for $packageName: ${res.reason}", res.throwable)
+        Toast.makeText(context, context.getString(R.string.toast_app_launch_fail), Toast.LENGTH_SHORT).show()
+        reverseToIdle(scope)
+    }
+
+    private suspend fun launchSafely(context: Context, packageName: String, label: String?): GameLaunchResult =
+        try {
+            GameLauncher.launch(context, packageName, label)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            Log.e(TAG, "Unexpected launch error for $packageName", t)
+            withContext(Dispatchers.IO + NonCancellable) { StatusBarGuard.restoreNow(context) }
+            GameLaunchResult.Failure("Unexpected error: ${t.message}", t)
+        }
+
+    private fun startWatchdog(scope: CoroutineScope, context: Context, packageName: String) {
+        watchdogJob?.cancel()
+        watchdogJob = scope.launch {
+            delay(WATCHDOG_AFTER_LAUNCH_MS)
+            if (isRunning && !isActivityPaused) {
+                Log.w(TAG, "Launch watchdog fired for $packageName ${WATCHDOG_AFTER_LAUNCH_MS}ms after launch; recovering")
+                withContext(Dispatchers.IO + NonCancellable) { StatusBarGuard.restoreNow(context) }
+                reverseToIdle(scope)
+            }
         }
     }
 
@@ -367,45 +483,7 @@ class GameLaunchController {
     ) {
         if (isRunning) return
 
-        val durationScale = animatorDurationScale(context)
-        val transitionEnabled = isGameLaunchTransitionEnabled(context)
-        if (!transitionEnabled || durationScale <= 0f) {
-            // Transition disabled or system animations off: skip transition and fire launch immediately.
-            state = GameLaunchState.Running(packageName = packageName, progress = 1f)
-            lockInput(true)
-            activeJob?.cancel()
-            watchdogJob?.cancel()
-            recoveryJob?.cancel()
-            recoveryJob = null
-            activeJob = scope.launch {
-                try {
-                    val res = try {
-                        GameLauncher.launch(context, packageName, label)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (t: Throwable) {
-                        Log.e(TAG, "Unexpected launch error for $packageName", t)
-                        GameLaunchResult.Failure("Unexpected error: ${t.message}", t)
-                    }
-                    if (res is GameLaunchResult.Failure) {
-                        Log.e(TAG, "Game launch failed for $packageName: ${res.reason}", res.throwable)
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.toast_app_launch_fail),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        delay(IMMEDIATE_GUARD_MS)
-                    }
-                } finally {
-                    lockInput(false)
-                    state = GameLaunchState.Idle
-                }
-            }
-            return
-        }
-
-        state = GameLaunchState.Running(packageName = packageName, progress = 0f)
+        val skipVisuals = !isGameLaunchTransitionEnabled(context) || animatorDurationScale(context) <= 0f
         lockInput(true)
         isActivityPaused = false
         activeJob?.cancel()
@@ -413,113 +491,85 @@ class GameLaunchController {
         recoveryJob?.cancel()
         recoveryJob = null
 
-        // t = 0 ms: duck BGM and play preloaded gamelaunch sound once.
+        if (skipVisuals) {
+            // No visuals, no pauses. The status bar hide/restore still applies inside launch().
+            state = GameLaunchState.Running(packageName, GameLaunchPhase.Launching)
+            activeJob = scope.launch {
+                try {
+                    val res = launchSafely(context, packageName, label)
+                    if (res is GameLaunchResult.Failure) {
+                        Log.e(TAG, "Game launch failed for $packageName: ${res.reason}", res.throwable)
+                        Toast.makeText(context, context.getString(R.string.toast_app_launch_fail), Toast.LENGTH_SHORT).show()
+                        lockInput(false)
+                        state = GameLaunchState.Idle
+                    } else {
+                        // Guard stays until the activity pauses (game took over) or the watchdog fires.
+                        startWatchdog(scope, context, packageName)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                }
+            }
+            return
+        }
+
+        state = GameLaunchState.Running(packageName, GameLaunchPhase.Animating)
+        // t = 0: duck BGM so the launch sound is audible.
         BgmManager.duckForLaunch(BGM_DUCK_TARGET, BGM_DUCK_FADE_MS)
-        AudioUtil.playGameLaunch()
+
+        val blurTarget = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && wallpaperEnabled(context)) {
+            LAUNCH_BLUR_DP
+        } else {
+            0f
+        }
+        val shapesTotalMs = SHAPES_FLYOUT_DURATION_MS + SHAPES_MAX_STAGGER_MS
 
         activeJob = scope.launch {
             try {
-                // Reset channels cleanly before starting.
-                contentFadeAnim.snapTo(0f)
-                shapesElapsedMsAnim.snapTo(0f)
-                scrimAlphaAnim.snapTo(0f)
-                wordmarkAlphaAnim.snapTo(0f)
-                wordmarkScaleAnim.snapTo(WORDMARK_START_SCALE)
-
-                // 0..280 ms: UI content fades 1 -> 0 with accelerating easing & slight scale-down.
-                val contentJob = launch {
-                    if (CONTENT_FADE_START_MS > 0) delay(CONTENT_FADE_START_MS.toLong())
-                    contentFadeAnim.animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(
-                            durationMillis = CONTENT_FADE_DURATION_MS,
-                            easing = FastOutLinearInEasing
-                        )
-                    )
-                }
-
-                // 0..450 ms (+ up to 120 ms stagger): floating shapes fly out radially.
-                val shapesTotalMs = SHAPES_FLYOUT_DURATION_MS + SHAPES_MAX_STAGGER_MS
-                val shapesJob = launch {
-                    if (SHAPES_FLYOUT_START_MS > 0) delay(SHAPES_FLYOUT_START_MS.toLong())
-                    shapesElapsedMsAnim.animateTo(
-                        targetValue = shapesTotalMs.toFloat(),
-                        animationSpec = tween(
-                            durationMillis = shapesTotalMs,
-                            easing = LinearEasing
-                        )
-                    )
-                }
-
-                // 120..520 ms: scrim darkens to near-opaque.
-                val scrimJob = launch {
-                    delay(SCRIM_START_MS.toLong())
-                    scrimAlphaAnim.animateTo(
-                        targetValue = SCRIM_MAX_ALPHA,
-                        animationSpec = tween(
-                            durationMillis = SCRIM_DURATION_MS,
-                            easing = FastOutSlowInEasing
-                        )
-                    )
-                }
-
-                // 380..800 ms: centered "AZenith" wordmark fades in with slight scale-up and stays.
-                val wordmarkJob = launch {
+                resetChannels()
+                coroutineScope {
+                    // 2. UI out + shapes fly out.
+                    launch {
+                        contentFadeAnim.animateTo(1f, tween(UI_OUT_MS, easing = FastOutLinearInEasing))
+                    }
+                    launch {
+                        shapesElapsedMsAnim.animateTo(shapesTotalMs.toFloat(), tween(shapesTotalMs, easing = LinearEasing))
+                    }
+                    // 3. Wallpaper blur ramp.
+                    if (blurTarget > 0f) launch {
+                        if (BLUR_START_MS > 0) delay(BLUR_START_MS.toLong())
+                        blurDpAnim.animateTo(blurTarget, tween(BLUR_MS, easing = FastOutSlowInEasing))
+                    }
+                    // 4. Scrim.
+                    launch {
+                        delay(SCRIM_START_MS.toLong())
+                        scrimAlphaAnim.animateTo(SCRIM_MAX_ALPHA, tween(SCRIM_MS, easing = FastOutSlowInEasing))
+                    }
+                    // 5-7. Wordmark: in (+ sound), hold, out.
                     delay(WORDMARK_START_MS.toLong())
-                    launch {
-                        wordmarkAlphaAnim.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(
-                                durationMillis = WORDMARK_DURATION_MS,
-                                easing = FastOutSlowInEasing
-                            )
-                        )
+                    AudioUtil.playGameLaunch() // exactly when the wordmark starts to appear
+                    coroutineScope {
+                        launch { wordmarkAlphaAnim.animateTo(1f, tween(WORDMARK_IN_MS, easing = LinearOutSlowInEasing)) }
+                        launch { wordmarkScaleAnim.animateTo(1f, tween(WORDMARK_IN_MS, easing = LinearOutSlowInEasing)) }
                     }
-                    launch {
-                        wordmarkScaleAnim.animateTo(
-                            targetValue = WORDMARK_END_SCALE,
-                            animationSpec = tween(
-                                durationMillis = WORDMARK_DURATION_MS,
-                                easing = FastOutSlowInEasing
-                            )
-                        )
+                    wordmarkScaleAnim.animateTo(HOLD_END_SCALE, tween(HOLD_MS, easing = LinearEasing))
+                    coroutineScope {
+                        launch { wordmarkAlphaAnim.animateTo(0f, tween(WORDMARK_OUT_MS, easing = FastOutLinearInEasing)) }
+                        launch { wordmarkScaleAnim.animateTo(WORDMARK_OUT_END_SCALE, tween(WORDMARK_OUT_MS, easing = FastOutLinearInEasing)) }
                     }
                 }
 
-                // Wait until LAUNCH_AT_MS, then fire the launch off the main thread.
-                delay(LAUNCH_AT_MS)
-                val res = try {
-                    GameLauncher.launch(context, packageName, label)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (t: Throwable) {
-                    Log.e(TAG, "Unexpected launch error for $packageName", t)
-                    GameLaunchResult.Failure("Unexpected error: ${t.message}", t)
-                }
+                // 8. Dark, empty screen.
+                state = GameLaunchState.Running(packageName, GameLaunchPhase.PreLaunch)
+                delay(PRE_LAUNCH_DELAY_MS)
+
+                // 9. Hide status bar + launch (one root invocation inside GameLauncher).
+                state = GameLaunchState.Running(packageName, GameLaunchPhase.Launching)
+                val res = launchSafely(context, packageName, label)
                 if (res is GameLaunchResult.Failure) {
-                    Log.e(TAG, "Game launch failed for $packageName: ${res.reason}", res.throwable)
-                    contentJob.cancel()
-                    shapesJob.cancel()
-                    scrimJob.cancel()
-                    wordmarkJob.cancel()
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.toast_app_launch_fail),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    reverseToIdle(scope)
+                    handleFailure(scope, context, packageName, res)
                 } else {
-                    // Start watchdog in case the game crashes on start or never takes focus.
-                    watchdogJob = scope.launch {
-                        delay(WATCHDOG_TIMEOUT_MS)
-                        if (isRunning && !isActivityPaused) {
-                            Log.w(
-                                TAG,
-                                "Launch transition watchdog triggered for $packageName after ${LAUNCH_AT_MS + WATCHDOG_TIMEOUT_MS}ms"
-                            )
-                            reverseToIdle(scope)
-                        }
-                    }
+                    startWatchdog(scope, context, packageName)
                 }
             } catch (_: CancellationException) {
                 // Lifecycle pause/reset cancelled the transition.
@@ -527,9 +577,7 @@ class GameLaunchController {
         }
     }
 
-    /**
-     * Smoothly fades the Hub UI and floating shapes back in and unlocks input.
-     */
+    /** Fades everything back, unlocks input, restores BGM. Status bar is handled by callers. */
     fun reverseToIdle(scope: CoroutineScope) {
         activeJob?.cancel()
         activeJob = null
@@ -541,36 +589,13 @@ class GameLaunchController {
 
         if (recoveryJob?.isActive == true) return
         recoveryJob = scope.launch {
-            launch {
-                contentFadeAnim.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
-                )
-            }
-            launch {
-                shapesElapsedMsAnim.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
-                )
-            }
-            launch {
-                scrimAlphaAnim.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
-                )
-            }
-            launch {
-                wordmarkAlphaAnim.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
-                )
-            }
-            launch {
-                wordmarkScaleAnim.animateTo(
-                    targetValue = WORDMARK_START_SCALE,
-                    animationSpec = tween(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
-                )
-            }
+            val spec = tween<Float>(RECOVERY_FADE_MS, easing = FastOutSlowInEasing)
+            launch { contentFadeAnim.animateTo(0f, spec) }
+            launch { shapesElapsedMsAnim.animateTo(0f, spec) }
+            launch { blurDpAnim.animateTo(0f, spec) }
+            launch { scrimAlphaAnim.animateTo(0f, spec) }
+            launch { wordmarkAlphaAnim.animateTo(0f, spec) }
+            launch { wordmarkScaleAnim.animateTo(WORDMARK_IN_START_SCALE, spec) }
         }
     }
 
@@ -590,6 +615,7 @@ class GameLaunchController {
         val needsReset = isRunning ||
             contentFadeAnim.value > 0.001f ||
             scrimAlphaAnim.value > 0.001f ||
+            blurDpAnim.value > 0.001f ||
             wordmarkAlphaAnim.value > 0.001f ||
             shapesElapsedMsAnim.value > 0.001f
         if (needsReset) {
@@ -610,9 +636,8 @@ class GameLaunchController {
 }
 
 /**
- * Full-screen overlay rendering the darkening theme scrim, centered AZenith wordmark,
- * and pointer-event blocker during a game-launch transition.
- * Reads [Animatable] values strictly inside `graphicsLayer` lambdas (zero per-frame recomposition).
+ * Full-screen overlay: theme scrim, centered "AZENITH" wordmark and the pointer blocker.
+ * Values are read inside graphicsLayer lambdas only.
  */
 @Composable
 internal fun GameLaunchTransitionOverlay(
@@ -620,16 +645,10 @@ internal fun GameLaunchTransitionOverlay(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
-    // Theme-only color with guaranteed contrast over MaterialTheme.colorScheme.scrim
-    // in both Light and Dark/AMOLED schemes.
-    val wordmarkColor = if (scheme.surface.luminance() > 0.5f) {
-        scheme.surface
-    } else {
-        scheme.onSurface
-    }
+    val wordmarkColor = if (scheme.surface.luminance() > 0.5f) scheme.surface else scheme.onSurface
+    val appName = stringResource(R.string.app_name)
 
     Box(modifier = modifier.fillMaxSize()) {
-        // Darkening scrim over the wallpaper layer.
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -637,29 +656,26 @@ internal fun GameLaunchTransitionOverlay(
                 .background(scheme.scrim)
         )
 
-        // Centered AZenith wordmark matching HomeWordmark / TopBar typography.
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                text = stringResource(R.string.app_name),
+                text = appName.uppercase(),
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontWeight = FontWeight.Black,
-                    letterSpacing = (-1.0).sp
+                    letterSpacing = WORDMARK_LETTER_SPACING_EM.em
                 ),
                 color = wordmarkColor,
                 maxLines = 1,
-                modifier = Modifier.graphicsLayer {
-                    val s = controller.wordmarkScaleAnim.value
-                    alpha = controller.wordmarkAlphaAnim.value
-                    scaleX = s
-                    scaleY = s
-                }
+                modifier = Modifier
+                    .semantics { contentDescription = appName }
+                    .graphicsLayer {
+                        val s = controller.wordmarkScaleAnim.value
+                        alpha = controller.wordmarkAlphaAnim.value
+                        scaleX = s
+                        scaleY = s
+                    }
             )
         }
 
-        // Swallow all pointer/touch events while the transition is active.
         if (controller.isRunning) {
             Box(
                 modifier = Modifier
