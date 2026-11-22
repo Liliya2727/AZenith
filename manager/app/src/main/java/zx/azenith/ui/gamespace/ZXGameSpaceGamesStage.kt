@@ -1854,7 +1854,6 @@ internal fun GameHeroStage(
 ) {
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
-    val colorSpec = motion.defaultEffectsSpec<Color>()
 
     // In-place bounce animatables for action buttons (Play, Pen, Gear)
     val playPageBounce = remember { Animatable(1f) }
@@ -2012,27 +2011,6 @@ internal fun GameHeroStage(
                 }
             }
 
-            var penFocused by remember { mutableStateOf(false) }
-            val penBg by animateColorAsState(
-                targetValue = if (penFocused) scheme.secondaryContainer else scheme.surfaceContainerHigh,
-                animationSpec = colorSpec,
-                label = "PenBtnBg"
-            )
-
-            var gearFocused by remember { mutableStateOf(false) }
-            val gearBg by animateColorAsState(
-                targetValue = if (gearFocused) scheme.secondaryContainer else scheme.surfaceContainerHigh,
-                animationSpec = colorSpec,
-                label = "GearBtnBg"
-            )
-
-            var playFocused by remember { mutableStateOf(false) }
-            val playScale by animateFloatAsState(
-                targetValue = if (playFocused) 1.05f else 1f,
-                animationSpec = motion.defaultSpatialSpec(),
-                label = "PlayBtnScale"
-            )
-
             val haptic = LocalHapticFeedback.current
             val playInteractionSource = remember { MutableInteractionSource() }
             val isPlayPressed by playInteractionSource.collectIsPressedAsState()
@@ -2072,22 +2050,14 @@ internal fun GameHeroStage(
                 label = "PlayBtnTonal"
             )
 
-            val penHintOwner = remember { Any() }
-            val gearHintOwner = remember { Any() }
-            val playHintOwner = remember { Any() }
-            DisposableEffect(penHintOwner, gearHintOwner, playHintOwner) {
-                onDispose {
-                    GameSpaceHintState.clearFocus(penHintOwner)
-                    GameSpaceHintState.clearFocus(gearHintOwner)
-                    GameSpaceHintState.clearFocus(playHintOwner)
-                }
-            }
-
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Two-stack of circular action buttons: Pen (wallpaper) & Gear (settings)
+                // Two-stack of circular action buttons: Pen (wallpaper) & Gear (settings).
+                // On a gamepad these actions are bound to X (Square), Y (Triangle) and Start,
+                // so keep the buttons touch-only to prevent stray focus landing on Pen after
+                // closing an overlay.
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -2095,21 +2065,16 @@ internal fun GameHeroStage(
                     // Top: Pen icon (Personalize game wallpaper)
                     Surface(
                         shape = CircleShape,
-                        color = penBg,
-                        contentColor = if (penFocused) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                        color = scheme.surfaceContainerHigh,
+                        contentColor = scheme.onSurfaceVariant,
                         modifier = Modifier
                             .size(34.dp)
                             .graphicsLayer {
                                 scaleX = penPageBounce.value
                                 scaleY = penPageBounce.value
                             }
-                            .onFocusChanged {
-                                penFocused = it.isFocused
-                                if (it.isFocused) GameSpaceHintState.setFocus(penHintOwner, GameSpaceFocusKind.WallpaperButton)
-                                else GameSpaceHintState.clearFocus(penHintOwner)
-                            }
-                            .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
                             .clip(CircleShape)
+                            .focusProperties { canFocus = false }
                             .clickable(onClick = onOpenWallpaperSettings)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -2124,8 +2089,8 @@ internal fun GameHeroStage(
                     // Bottom: Original app settings gear icon
                     Surface(
                         shape = CircleShape,
-                        color = gearBg,
-                        contentColor = if (gearFocused) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                        color = scheme.surfaceContainerHigh,
+                        contentColor = scheme.onSurfaceVariant,
                         modifier = Modifier
                             .size(34.dp)
                             .graphicsLayer {
@@ -2133,13 +2098,8 @@ internal fun GameHeroStage(
                                 scaleY = gearPageBounce.value
                                 rotationZ = gearRotation.value
                             }
-                            .onFocusChanged {
-                                gearFocused = it.isFocused
-                                if (it.isFocused) GameSpaceHintState.setFocus(gearHintOwner, GameSpaceFocusKind.AppSettingsButton)
-                                else GameSpaceHintState.clearFocus(gearHintOwner)
-                            }
-                            .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
                             .clip(CircleShape)
+                            .focusProperties { canFocus = false }
                             .clickable(onClick = onOpenAppSettings)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -2164,18 +2124,13 @@ internal fun GameHeroStage(
                     modifier = Modifier
                         .height(81.dp)
                         .graphicsLayer {
-                            val combinedScale = playScale * playPageBounce.value * playHoldScale.value
+                            val combinedScale = playPageBounce.value * playHoldScale.value
                             scaleX = combinedScale
                             scaleY = combinedScale
                             transformOrigin = TransformOrigin.Center
                         }
-                        .onFocusChanged {
-                            playFocused = it.isFocused
-                            if (it.isFocused) GameSpaceHintState.setFocus(playHintOwner, GameSpaceFocusKind.PlayButton)
-                            else GameSpaceHintState.clearFocus(playHintOwner)
-                        }
-                        .gamepadFocusOutline(shape = playButtonShape, width = 3.dp)
                         .clip(playButtonShape)
+                        .focusProperties { canFocus = false }
                         .clickable(
                             interactionSource = playInteractionSource,
                             indication = ripple(),

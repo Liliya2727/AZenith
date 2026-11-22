@@ -73,21 +73,12 @@ internal fun resolveGameSpaceHints(
     focusKind: GameSpaceFocusKind,
     @StringRes customConfirmLabelRes: Int?,
 ): List<GameSpaceHintItem> = when (screen) {
-    GameSpaceScreenId.Game -> buildList {
-        when (focusKind) {
-            GameSpaceFocusKind.PlayButton ->
-                add(GameSpaceHintItem(R.drawable.ic_gp_cross, customConfirmLabelRes ?: R.string.gamespace_hint_play))
-            GameSpaceFocusKind.WallpaperButton ->
-                add(GameSpaceHintItem(R.drawable.ic_gp_cross, customConfirmLabelRes ?: R.string.gamespace_hint_wallpaper))
-            GameSpaceFocusKind.AppSettingsButton ->
-                add(GameSpaceHintItem(R.drawable.ic_gp_cross, customConfirmLabelRes ?: R.string.gamespace_hint_tuning))
-            else -> Unit
-        }
-        add(GameSpaceHintItem(R.drawable.ic_gp_start, R.string.gamespace_hint_play))
-        add(GameSpaceHintItem(R.drawable.ic_gp_triangle, R.string.gamespace_hint_tuning))
-        add(GameSpaceHintItem(R.drawable.ic_gp_square, R.string.gamespace_hint_wallpaper))
-        add(GameSpaceHintItem(R.drawable.ic_gp_circle, R.string.gamespace_hint_back))
-    }
+    GameSpaceScreenId.Game -> listOf(
+        GameSpaceHintItem(R.drawable.ic_gp_start, R.string.gamespace_hint_play),
+        GameSpaceHintItem(R.drawable.ic_gp_triangle, R.string.gamespace_hint_tuning),
+        GameSpaceHintItem(R.drawable.ic_gp_square, R.string.gamespace_hint_wallpaper),
+        GameSpaceHintItem(R.drawable.ic_gp_circle, R.string.gamespace_hint_back),
+    )
 
     GameSpaceScreenId.WrapToFirst -> listOf(
         GameSpaceHintItem(R.drawable.ic_gp_cross, customConfirmLabelRes ?: R.string.gamespace_hint_home),
