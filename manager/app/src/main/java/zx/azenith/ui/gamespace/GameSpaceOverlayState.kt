@@ -267,7 +267,6 @@ internal fun GameSpacePopupContainer(
             modifier = modifier
                 .focusRequester(rootRequester)
                 .onFocusChanged { hasFocusInside = it.hasFocus }
-                .focusGroup()
                 .focusProperties {
                     if (visible) {
                         onExit = {
@@ -275,7 +274,8 @@ internal fun GameSpacePopupContainer(
                             Log.d("PAD", "gs focus trap cancelExit name=$name")
                         }
                     }
-                },
+                }
+                .focusGroup(),
             content = content,
         )
     }

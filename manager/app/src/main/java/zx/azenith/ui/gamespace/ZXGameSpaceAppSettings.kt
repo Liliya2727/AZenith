@@ -156,8 +156,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalFocusManager
 import zx.azenith.ui.component.GamepadFocusNav
+import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.rememberZXDropDownState
 import zx.azenith.ui.component.zxDropDownAnchor
@@ -213,8 +215,15 @@ internal fun ZXGameSpaceAppSettingsOverlay(
     val masterRequester = remember { FocusRequester() }
     val rightPaneRequester = remember { FocusRequester() }
     val rightPaneFirstRequester = remember { FocusRequester() }
+    var isRightPaneFirstAttached by remember { mutableStateOf(false) }
     var lastLeftRequester by remember { mutableStateOf<FocusRequester?>(null) }
     var rightPaneHasFocus by remember { mutableStateOf(false) }
+
+    LaunchedEffect(visible) {
+        if (visible && (GameSpaceInputSource.isGamepadLast || GamepadInput.dpadMode || GamepadInput.controllerConnected)) {
+            GamepadInput.onDpadKey()
+        }
+    }
 
     var activePkg by remember { mutableStateOf(packageName) }
     if (packageName != null) {
@@ -415,21 +424,63 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                             .onPreviewKeyEvent { event ->
                                 if (event.type == KeyEventType.KeyDown &&
                                     event.nativeKeyEvent.repeatCount == 0 &&
-                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT &&
-                                    localMasterOn
+                                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
                                 ) {
-                                    scope.launch {
-                                        val movedFirst = runCatching {
-                                            rightPaneFirstRequester.requestFocus()
-                                        }.getOrDefault(false)
-                                        if (!movedFirst) {
-                                            val gotPane = runCatching { rightPaneRequester.requestFocus() }.getOrDefault(false)
-                                            if (gotPane && !rightPaneHasFocus) {
-                                                runCatching { focusManager.moveFocus(FocusDirection.Next) }
+                                    val dropdownActive = zx.azenith.ui.component.ZXDropDownNav.isActive
+                                    val sliderFocused = GamepadFocusNav.focusedSlider
+                                    if (!localMasterOn || dropdownActive || sliderFocused) {
+                                        android.util.Log.d(
+                                            "PAD",
+                                            "gs appsettings DPAD_RIGHT ignored masterOn=$localMasterOn " +
+                                                "dropdown=$dropdownActive slider=$sliderFocused attached=$isRightPaneFirstAttached return=false"
+                                        )
+                                        false
+                                    } else if (isRightPaneFirstAttached) {
+                                        val reqOk = rightPaneFirstRequester.requestFocus()
+                                        val moveOk = if (!reqOk) {
+                                            focusManager.moveFocus(FocusDirection.Right)
+                                        } else {
+                                            false
+                                        }
+                                        val moved = reqOk || moveOk
+                                        android.util.Log.d(
+                                            "PAD",
+                                            "gs appsettings DPAD_RIGHT masterOn=$localMasterOn dropdown=$dropdownActive " +
+                                                "slider=$sliderFocused attached=true reqOk=$reqOk fallbackRight=$moveOk return=$moved"
+                                        )
+                                        moved
+                                    } else {
+                                        android.util.Log.d(
+                                            "PAD",
+                                            "gs appsettings DPAD_RIGHT masterOn=$localMasterOn dropdown=$dropdownActive " +
+                                                "slider=$sliderFocused attached=false scheduling bounded retry"
+                                        )
+                                        scope.launch {
+                                            var moved = false
+                                            for (attempt in 1..12) {
+                                                androidx.compose.runtime.withFrameNanos { }
+                                                if (isRightPaneFirstAttached) {
+                                                    val reqOk = rightPaneFirstRequester.requestFocus()
+                                                    val moveOk = if (!reqOk) {
+                                                        focusManager.moveFocus(FocusDirection.Right)
+                                                    } else {
+                                                        false
+                                                    }
+                                                    moved = reqOk || moveOk
+                                                    android.util.Log.d(
+                                                        "PAD",
+                                                        "gs appsettings DPAD_RIGHT retry attempt=$attempt reqOk=$reqOk fallbackRight=$moveOk moved=$moved"
+                                                    )
+                                                    if (moved) break
+                                                }
+                                            }
+                                            if (!moved) {
+                                                val fallback = focusManager.moveFocus(FocusDirection.Right)
+                                                android.util.Log.d("PAD", "gs appsettings DPAD_RIGHT retry exhausted fallbackRight=$fallback")
                                             }
                                         }
+                                        true
                                     }
-                                    true
                                 } else {
                                     false
                                 }
@@ -573,7 +624,15 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .focusRequester(masterRequester)
-                                        .onFocusChanged { if (it.isFocused) lastLeftRequester = masterRequester }
+                                        .onFocusChanged {
+                                            if (it.isFocused) {
+                                                lastLeftRequester = masterRequester
+                                                android.util.Log.d(
+                                                    "PAD",
+                                                    "gs appsettings focusHolder=masterSwitch dpadMode=${GamepadInput.dpadMode}"
+                                                )
+                                            }
+                                        }
                                         .gamepadFocusOutline(
                                             shape = masterShape,
                                             register = true,
@@ -614,13 +673,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                         }
                                         GameSpaceSwitch(
                                             checked = localMasterOn,
-                                            onCheckedChange = { isChecked ->
-                                                localMasterOn = isChecked
-                                                viewModel.toggleMasterSwitch(pkg, isChecked)
-                                                ApplistViewmodel.apps = ApplistViewmodel.apps.map {
-                                                    if (it.packageName == pkg) it.copy(isEnabledInConfig = isChecked) else it
-                                                }
-                                            }
+                                            onCheckedChange = null
                                         )
                                     }
                                 }
@@ -720,8 +773,9 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                     !zx.azenith.ui.component.ZXDropDownNav.isActive
                                 ) {
                                     val target = lastLeftRequester ?: masterRequester
-                                    runCatching { target.requestFocus() }
-                                    true
+                                    val moved = target.requestFocus()
+                                    android.util.Log.d("PAD", "gs appsettings DPAD_LEFT toLeftPanel moved=$moved")
+                                    moved
                                 } else {
                                     false
                                 }
@@ -832,7 +886,13 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                             )
                                         }
                                         item {
+                                            androidx.compose.runtime.DisposableEffect(Unit) {
+                                                onDispose { isRightPaneFirstAttached = false }
+                                            }
                                             ExpressiveList(
+                                                modifier = Modifier
+                                                    .focusRequester(rightPaneFirstRequester)
+                                                    .onGloballyPositioned { isRightPaneFirstAttached = true },
                                                 content = listOf {
                                                     ExpressiveDropdownItem(
                                                         icon = Icons.Rounded.Speed,
@@ -844,9 +904,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                             val value = listOf("default", "true", "false")[index]
                                                             viewModel.updateSetting(pkg, "perf_lite_mode", value)
                                                         },
-                                                        modifier = Modifier
-                                                            .focusRequester(rightPaneFirstRequester)
-                                                            .zxDropDownAnchor(liteModeMenu),
+                                                        modifier = Modifier.zxDropDownAnchor(liteModeMenu),
                                                         externalMenuState = liteModeMenu,
                                                         focusKey = "appsettings:perf_lite_mode"
                                                     )
@@ -1181,8 +1239,15 @@ internal fun ZXGameSpaceWallpaperOverlay(
     val wpThirdRequester = remember { FocusRequester() }
     val wpRightPaneRequester = remember { FocusRequester() }
     val wpRightPaneFirstRequester = remember { FocusRequester() }
+    var isWpRightPaneFirstAttached by remember { mutableStateOf(false) }
     var lastWpLeftRequester by remember { mutableStateOf<FocusRequester?>(null) }
     var wpRightPaneHasFocus by remember { mutableStateOf(false) }
+
+    LaunchedEffect(visible) {
+        if (visible && (GameSpaceInputSource.isGamepadLast || GamepadInput.dpadMode || GamepadInput.controllerConnected)) {
+            GamepadInput.onDpadKey()
+        }
+    }
 
     var activePkg by remember { mutableStateOf(packageName) }
     if (packageName != null) {
@@ -1395,18 +1460,61 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                     event.nativeKeyEvent.repeatCount == 0 &&
                                     event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
                                 ) {
-                                    scope.launch {
-                                        val movedFirst = runCatching {
-                                            wpRightPaneFirstRequester.requestFocus()
-                                        }.getOrDefault(false)
-                                        if (!movedFirst) {
-                                            val gotPane = runCatching { wpRightPaneRequester.requestFocus() }.getOrDefault(false)
-                                            if (gotPane && !wpRightPaneHasFocus) {
-                                                runCatching { focusManager.moveFocus(FocusDirection.Next) }
+                                    val dropdownActive = zx.azenith.ui.component.ZXDropDownNav.isActive
+                                    val sliderFocused = GamepadFocusNav.focusedSlider
+                                    if (dropdownActive || sliderFocused) {
+                                        android.util.Log.d(
+                                            "PAD",
+                                            "gs wallpaper DPAD_RIGHT ignored dropdown=$dropdownActive " +
+                                                "slider=$sliderFocused attached=$isWpRightPaneFirstAttached return=false"
+                                        )
+                                        false
+                                    } else if (isWpRightPaneFirstAttached) {
+                                        val reqOk = wpRightPaneFirstRequester.requestFocus()
+                                        val moveOk = if (!reqOk) {
+                                            focusManager.moveFocus(FocusDirection.Right)
+                                        } else {
+                                            false
+                                        }
+                                        val moved = reqOk || moveOk
+                                        android.util.Log.d(
+                                            "PAD",
+                                            "gs wallpaper DPAD_RIGHT dropdown=$dropdownActive slider=$sliderFocused " +
+                                                "attached=true reqOk=$reqOk fallbackRight=$moveOk return=$moved"
+                                        )
+                                        moved
+                                    } else {
+                                        android.util.Log.d(
+                                            "PAD",
+                                            "gs wallpaper DPAD_RIGHT dropdown=$dropdownActive slider=$sliderFocused " +
+                                                "attached=false scheduling bounded retry"
+                                        )
+                                        scope.launch {
+                                            var moved = false
+                                            for (attempt in 1..12) {
+                                                androidx.compose.runtime.withFrameNanos { }
+                                                if (isWpRightPaneFirstAttached) {
+                                                    val reqOk = wpRightPaneFirstRequester.requestFocus()
+                                                    val moveOk = if (!reqOk) {
+                                                        focusManager.moveFocus(FocusDirection.Right)
+                                                    } else {
+                                                        false
+                                                    }
+                                                    moved = reqOk || moveOk
+                                                    android.util.Log.d(
+                                                        "PAD",
+                                                        "gs wallpaper DPAD_RIGHT retry attempt=$attempt reqOk=$reqOk fallbackRight=$moveOk moved=$moved"
+                                                    )
+                                                    if (moved) break
+                                                }
+                                            }
+                                            if (!moved) {
+                                                val fallback = focusManager.moveFocus(FocusDirection.Right)
+                                                android.util.Log.d("PAD", "gs wallpaper DPAD_RIGHT retry exhausted fallbackRight=$fallback")
                                             }
                                         }
+                                        true
                                     }
-                                    true
                                 } else {
                                     false
                                 }
@@ -1577,7 +1685,12 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .focusRequester(wpFirstRequester)
-                                            .onFocusChanged { if (it.isFocused) lastWpLeftRequester = wpFirstRequester }
+                                            .onFocusChanged {
+                                                if (it.isFocused) {
+                                                    lastWpLeftRequester = wpFirstRequester
+                                                    android.util.Log.d("PAD", "gs wallpaper focusHolder=customStageSwitch dpadMode=${GamepadInput.dpadMode}")
+                                                }
+                                            }
                                             .gamepadFocusOutline(
                                                 shape = masterShape,
                                                 register = true,
@@ -1622,19 +1735,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                             }
                                             GameSpaceSwitch(
                                                 checked = isOverrideActive,
-                                                onCheckedChange = { isChecked ->
-                                                    val nextMode = if (isChecked) {
-                                                        if (customUri != null) "custom" else "follow_home"
-                                                    } else {
-                                                        "default"
-                                                    }
-                                                    selectedMode = nextMode
-                                                    context.setGameWallpaperMode(pkg, nextMode)
-                                                    if (isChecked && !isWallpaperEnabled) {
-                                                        isWallpaperEnabled = true
-                                                        context.setGameWallpaperEnabled(pkg, true)
-                                                    }
-                                                }
+                                                onCheckedChange = null
                                             )
                                         }
                                     }
@@ -1663,7 +1764,12 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .focusRequester(showWpRequester)
-                                        .onFocusChanged { if (it.isFocused) lastWpLeftRequester = showWpRequester }
+                                        .onFocusChanged {
+                                            if (it.isFocused) {
+                                                lastWpLeftRequester = showWpRequester
+                                                android.util.Log.d("PAD", "gs wallpaper focusHolder=showWallpaperSwitch dpadMode=${GamepadInput.dpadMode}")
+                                            }
+                                        }
                                         .gamepadFocusOutline(
                                             shape = wallpaperToggleShape,
                                             register = true,
@@ -1695,18 +1801,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         }
                                         GameSpaceSwitch(
                                             checked = isWallpaperEnabled,
-                                            onCheckedChange = { isChecked ->
-                                                isWallpaperEnabled = isChecked
-                                                if (isHome) {
-                                                    context.setHomeWallpaperEnabled(isChecked)
-                                                } else {
-                                                    context.setGameWallpaperEnabled(pkg, isChecked)
-                                                    if (!isChecked && isOverrideActive) {
-                                                        selectedMode = "default"
-                                                        context.setGameWallpaperMode(pkg, "default")
-                                                    }
-                                                }
-                                            }
+                                            onCheckedChange = null
                                         )
                                     }
                                 }
@@ -1728,7 +1823,12 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .focusRequester(wpThirdRequester)
-                                            .onFocusChanged { if (it.isFocused) lastWpLeftRequester = wpThirdRequester }
+                                            .onFocusChanged {
+                                                if (it.isFocused) {
+                                                    lastWpLeftRequester = wpThirdRequester
+                                                    android.util.Log.d("PAD", "gs wallpaper focusHolder=floatingShapesSwitch dpadMode=${GamepadInput.dpadMode}")
+                                                }
+                                            }
                                             .gamepadFocusOutline(
                                                 shape = shapesToggleShape,
                                                 register = true,
@@ -1766,10 +1866,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                             }
                                             GameSpaceSwitch(
                                                 checked = floatingShapesEnabled,
-                                                onCheckedChange = { isChecked ->
-                                                    floatingShapesEnabled = isChecked
-                                                    prefs.edit().putBoolean("gamespace_floating_shapes_enabled", isChecked).apply()
-                                                }
+                                                onCheckedChange = null
                                             )
                                         }
                                     }
@@ -1872,8 +1969,9 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                     !GamepadFocusNav.focusedSlider
                                 ) {
                                     val target = lastWpLeftRequester ?: wpFirstRequester
-                                    runCatching { target.requestFocus() }
-                                    true
+                                    val moved = target.requestFocus()
+                                    android.util.Log.d("PAD", "gs wallpaper DPAD_LEFT toLeftPanel moved=$moved")
+                                    moved
                                 } else {
                                     false
                                 }
@@ -2051,6 +2149,9 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
                                                         )
                                                     }
+                                                    androidx.compose.runtime.DisposableEffect(Unit) {
+                                                        onDispose { isWpRightPaneFirstAttached = false }
+                                                    }
                                                     Surface(
                                                         shape = chooseShape,
                                                         color = scheme.primary,
@@ -2058,6 +2159,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
                                                             .weight(1f)
+                                                            .onGloballyPositioned { isWpRightPaneFirstAttached = true }
                                                             .focusRequester(wpRightPaneFirstRequester)
                                                             .gamepadFocusOutline(
                                                                 shape = chooseShape,
