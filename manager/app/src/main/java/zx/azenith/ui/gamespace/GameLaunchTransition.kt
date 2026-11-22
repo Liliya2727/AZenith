@@ -334,6 +334,7 @@ class GameLaunchController {
 
     private var activeJob: Job? = null
     private var watchdogJob: Job? = null
+    private var recoveryJob: Job? = null
 
     @Volatile
     var isActivityPaused: Boolean = false
@@ -370,10 +371,20 @@ class GameLaunchController {
             lockInput(true)
             activeJob?.cancel()
             watchdogJob?.cancel()
+            recoveryJob?.cancel()
+            recoveryJob = null
             activeJob = scope.launch {
                 try {
-                    val res = GameLauncher.launch(context, packageName, label)
+                    val res = try {
+                        GameLauncher.launch(context, packageName, label)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "Unexpected launch error for $packageName", t)
+                        GameLaunchResult.Failure("Unexpected error: ${t.message}", t)
+                    }
                     if (res is GameLaunchResult.Failure) {
+                        Log.e(TAG, "Game launch failed for $packageName: ${res.reason}", res.throwable)
                         Toast.makeText(
                             context,
                             context.getString(R.string.toast_app_launch_fail),
@@ -395,6 +406,8 @@ class GameLaunchController {
         isActivityPaused = false
         activeJob?.cancel()
         watchdogJob?.cancel()
+        recoveryJob?.cancel()
+        recoveryJob = null
 
         // t = 0 ms: duck BGM and play preloaded gamelaunch sound once.
         BgmManager.duckForLaunch(BGM_DUCK_TARGET, BGM_DUCK_FADE_MS)
@@ -471,8 +484,16 @@ class GameLaunchController {
 
                 // Wait until LAUNCH_AT_MS, then fire the launch off the main thread.
                 delay(LAUNCH_AT_MS)
-                val res = GameLauncher.launch(context, packageName, label)
+                val res = try {
+                    GameLauncher.launch(context, packageName, label)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Unexpected launch error for $packageName", t)
+                    GameLaunchResult.Failure("Unexpected error: ${t.message}", t)
+                }
                 if (res is GameLaunchResult.Failure) {
+                    Log.e(TAG, "Game launch failed for $packageName: ${res.reason}", res.throwable)
                     contentJob.cancel()
                     shapesJob.cancel()
                     scrimJob.cancel()
@@ -514,7 +535,8 @@ class GameLaunchController {
         state = GameLaunchState.Idle
         BgmManager.restoreFromLaunch(RECOVERY_FADE_MS.toLong())
 
-        scope.launch {
+        if (recoveryJob?.isActive == true) return
+        recoveryJob = scope.launch {
             launch {
                 contentFadeAnim.animateTo(
                     targetValue = 0f,
@@ -554,6 +576,9 @@ class GameLaunchController {
         activeJob = null
         watchdogJob?.cancel()
         watchdogJob = null
+        recoveryJob?.cancel()
+        recoveryJob = null
+        lockInput(false)
     }
 
     fun onActivityResumed(scope: CoroutineScope) {
@@ -567,12 +592,14 @@ class GameLaunchController {
             reverseToIdle(scope)
         } else {
             lockInput(false)
+            BgmManager.restoreFromLaunch(0L)
         }
     }
 
     fun onDispose() {
         activeJob?.cancel()
         watchdogJob?.cancel()
+        recoveryJob?.cancel()
         lockInput(false)
         BgmManager.restoreFromLaunch(0L)
     }

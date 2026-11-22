@@ -198,6 +198,7 @@ fun ZXGameSpaceHub(
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> launchController.onActivityPaused()
+                androidx.lifecycle.Lifecycle.Event.ON_START,
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> launchController.onActivityResumed(scope)
                 else -> Unit
             }
