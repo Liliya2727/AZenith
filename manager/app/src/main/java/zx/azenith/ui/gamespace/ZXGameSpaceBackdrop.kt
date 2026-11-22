@@ -121,11 +121,12 @@ internal fun ZXGameSpaceStageBackdrop(
         onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
-    Crossfade(
-        targetState = entry,
-        animationSpec = tween(300),
-        label = "ZXGameSpaceBackdropCrossfade"
-    ) { current ->
+    Box(modifier = Modifier.fillMaxSize()) {
+        Crossfade(
+            targetState = entry,
+            animationSpec = tween(300),
+            label = "ZXGameSpaceBackdropCrossfade"
+        ) { current ->
         Box(modifier = Modifier.fillMaxSize().background(scheme.surfaceContainerLowest)) {
             val _trigger = gameWallpaperTrigger
             val isHomescreen = current == RibbonEntry.Welcome
@@ -305,13 +306,25 @@ internal fun ZXGameSpaceStageBackdrop(
                         )
                 )
             }
+        }
+        }
 
-            if ((isHomescreen || current is RibbonEntry.Game) && floatingShapesEnabled) {
-                ZXGameSpaceFloatingShapes(
-                    modifier = Modifier.fillMaxSize(),
-                    launchShapesElapsedMs = launchShapesElapsedMs
-                )
-            }
+        // Keep floating shapes outside Crossfade so scrolling across ribbon entries never
+        // duplicates or interrupts their idle drift.
+        val showFloatingShapes = floatingShapesEnabled &&
+            (entry == RibbonEntry.Welcome || entry is RibbonEntry.Game)
+        val shapesLayerAlpha by androidx.compose.animation.core.animateFloatAsState(
+            targetValue = if (showFloatingShapes) 1f else 0f,
+            animationSpec = tween(300),
+            label = "FloatingShapesLayerAlpha"
+        )
+        if (shapesLayerAlpha > 0.001f) {
+            ZXGameSpaceFloatingShapes(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = shapesLayerAlpha },
+                launchShapesElapsedMs = launchShapesElapsedMs
+            )
         }
     }
 }
