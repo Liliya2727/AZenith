@@ -111,11 +111,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -149,10 +151,13 @@ import com.topjohnwu.superuser.Shell
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import zx.azenith.R
 import androidx.compose.material3.HorizontalDivider
+import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.LocalGamepadFocusEnabled
 import zx.azenith.ui.component.RegisterGamepadActions
 import zx.azenith.ui.component.ZenithSlider
@@ -240,7 +245,10 @@ internal fun SettingsTweaksPane(
     var currentSubTab by remember { mutableStateOf(TweaksSubTab.Main) }
     var previousSubTab by remember { mutableStateOf(TweaksSubTab.Main) }
     val subTabCardRequesters = remember { TweaksSubTab.entries.associateWith { FocusRequester() } }
+    val subTabCardAttached = remember { mutableStateMapOf<TweaksSubTab, Boolean>() }
     val subTabPaneRequesters = remember { TweaksSubTab.entries.associateWith { FocusRequester() } }
+    val subTabFirstRequesters = remember { TweaksSubTab.entries.associateWith { FocusRequester() } }
+    val subTabFirstAttached = remember { mutableStateMapOf<TweaksSubTab, Boolean>() }
     val subTabOverlayToken = remember { Any() }
 
     DisposableEffect(currentSubTab) {
@@ -253,29 +261,56 @@ internal fun SettingsTweaksPane(
     }
 
     LaunchedEffect(currentSubTab) {
+        val useGamepad = GameSpaceInputSource.isGamepadLast ||
+            GamepadInput.dpadMode ||
+            GamepadInput.controllerConnected
         if (currentSubTab != TweaksSubTab.Main) {
-            if (GameSpaceInputSource.isGamepadLast) {
-                val targetRequester = subTabPaneRequesters.getValue(currentSubTab)
+            if (useGamepad) {
+                GamepadInput.onDpadKey()
+                val targetSubTab = currentSubTab
+                val firstRequester = subTabFirstRequesters.getValue(targetSubTab)
+                val paneRequester = subTabPaneRequesters.getValue(targetSubTab)
+                val attached = withTimeoutOrNull(600L) {
+                    snapshotFlow { subTabFirstAttached[targetSubTab] == true }.first { it }
+                } == true
                 var seeded = false
-                for (attempt in 1..12) {
-                    withFrameNanos { }
-                    seeded = runCatching { targetRequester.requestFocus() }.getOrDefault(false)
-                    if (seeded) break
+                if (attached) {
+                    seeded = runCatching { firstRequester.requestFocus() }.getOrDefault(false)
+                    if (!seeded) {
+                        withTimeoutOrNull(400L) {
+                            while (!seeded) {
+                                withFrameNanos { }
+                                seeded = runCatching { firstRequester.requestFocus() }.getOrDefault(false) ||
+                                    runCatching { paneRequester.requestFocus() }.getOrDefault(false)
+                            }
+                        }
+                    }
+                } else {
+                    seeded = runCatching { paneRequester.requestFocus() }.getOrDefault(false)
                 }
-                Log.d("PAD", "gs tweaks subTab=$currentSubTab seeded=$seeded")
+                Log.d("PAD", "gs tweaks subTab=$targetSubTab attached=$attached seeded=$seeded")
             }
         } else if (previousSubTab != TweaksSubTab.Main) {
-            if (GameSpaceInputSource.isGamepadLast) {
-                val originRequester = subTabCardRequesters[previousSubTab]
+            val fromSubTab = previousSubTab
+            if (useGamepad) {
+                GamepadInput.onDpadKey()
+                val originRequester = subTabCardRequesters[fromSubTab]
+                val attached = withTimeoutOrNull(600L) {
+                    snapshotFlow { subTabCardAttached[fromSubTab] == true }.first { it }
+                } == true
                 var restored = false
-                if (originRequester != null) {
-                    for (attempt in 1..12) {
-                        withFrameNanos { }
-                        restored = runCatching { originRequester.requestFocus() }.getOrDefault(false)
-                        if (restored) break
+                if (originRequester != null && attached) {
+                    restored = runCatching { originRequester.requestFocus() }.getOrDefault(false)
+                    if (!restored) {
+                        withTimeoutOrNull(400L) {
+                            while (!restored) {
+                                withFrameNanos { }
+                                restored = runCatching { originRequester.requestFocus() }.getOrDefault(false)
+                            }
+                        }
                     }
                 }
-                Log.d("PAD", "gs tweaks restoreOrigin from=$previousSubTab restored=$restored")
+                Log.d("PAD", "gs tweaks restoreOrigin from=$fromSubTab attached=$attached restored=$restored")
             }
         }
         previousSubTab = currentSubTab
@@ -306,17 +341,31 @@ internal fun SettingsTweaksPane(
         modifier = modifier.fillMaxSize(),
         label = "TweaksSubTabTransition"
     ) { subTab ->
+        DisposableEffect(subTab) {
+            onDispose {
+                subTabFirstAttached.remove(subTab)
+                if (subTab == TweaksSubTab.Main) {
+                    subTabCardAttached.clear()
+                }
+            }
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .focusRequester(subTabPaneRequesters.getValue(subTab))
-                .focusGroup()
                 .focusProperties {
-                    canFocus = (subTab == currentSubTab)
-                    if (subTab != TweaksSubTab.Main) {
-                        onExit = { cancelFocusChange() }
+                    canFocus = false
+                    if (subTab != currentSubTab) {
+                        onEnter = { cancelFocusChange() }
+                    } else if (subTab != TweaksSubTab.Main) {
+                        onExit = {
+                            if (currentSubTab == subTab) {
+                                cancelFocusChange()
+                            }
+                        }
                     }
                 }
+                .focusGroup()
         ) {
             when (subTab) {
                 TweaksSubTab.Main -> {
@@ -327,6 +376,7 @@ internal fun SettingsTweaksPane(
                         onApplyProfile = onApplyProfile,
                         tweakViewModel = tweakViewModel,
                         subTabCardRequesters = subTabCardRequesters,
+                        onCardPositioned = { cardTab -> subTabCardAttached[cardTab] = true },
                         onNavigateToSubTab = { target ->
                             AudioUtil.playOk(context)
                             currentSubTab = target
@@ -335,6 +385,8 @@ internal fun SettingsTweaksPane(
                 }
                 TweaksSubTab.BypassCharging -> {
                     BypassChargingSubPane(
+                        firstFocusRequester = subTabFirstRequesters.getValue(TweaksSubTab.BypassCharging),
+                        onFirstPositioned = { subTabFirstAttached[TweaksSubTab.BypassCharging] = true },
                         onBackClick = {
                             AudioUtil.playCancel(context)
                             currentSubTab = TweaksSubTab.Main
@@ -344,6 +396,8 @@ internal fun SettingsTweaksPane(
                 TweaksSubTab.Governors -> {
                     GovernorsSubPane(
                         tweakViewModel = tweakViewModel,
+                        firstFocusRequester = subTabFirstRequesters.getValue(TweaksSubTab.Governors),
+                        onFirstPositioned = { subTabFirstAttached[TweaksSubTab.Governors] = true },
                         onBackClick = {
                             AudioUtil.playCancel(context)
                             currentSubTab = TweaksSubTab.Main
@@ -352,6 +406,8 @@ internal fun SettingsTweaksPane(
                 }
                 TweaksSubTab.Preferenced -> {
                     PreferencedTweaksSubPane(
+                        firstFocusRequester = subTabFirstRequesters.getValue(TweaksSubTab.Preferenced),
+                        onFirstPositioned = { subTabFirstAttached[TweaksSubTab.Preferenced] = true },
                         onBackClick = {
                             AudioUtil.playCancel(context)
                             currentSubTab = TweaksSubTab.Main
@@ -360,6 +416,8 @@ internal fun SettingsTweaksPane(
                 }
                 TweaksSubTab.FpsGo -> {
                     FpsGoSubPane(
+                        firstFocusRequester = subTabFirstRequesters.getValue(TweaksSubTab.FpsGo),
+                        onFirstPositioned = { subTabFirstAttached[TweaksSubTab.FpsGo] = true },
                         onBackClick = {
                             AudioUtil.playCancel(context)
                             currentSubTab = TweaksSubTab.Main
@@ -368,6 +426,8 @@ internal fun SettingsTweaksPane(
                 }
                 TweaksSubTab.DisplayColor -> {
                     DisplayColorSubPane(
+                        firstFocusRequester = subTabFirstRequesters.getValue(TweaksSubTab.DisplayColor),
+                        onFirstPositioned = { subTabFirstAttached[TweaksSubTab.DisplayColor] = true },
                         onBackClick = {
                             AudioUtil.playCancel(context)
                             currentSubTab = TweaksSubTab.Main
@@ -387,6 +447,7 @@ private fun TweaksMainSubPane(
     onApplyProfile: (String) -> Unit,
     tweakViewModel: TweakViewModel,
     subTabCardRequesters: Map<TweaksSubTab, FocusRequester>,
+    onCardPositioned: (TweaksSubTab) -> Unit,
     onNavigateToSubTab: (TweaksSubTab) -> Unit
 ) {
     val context = LocalContext.current
@@ -824,6 +885,7 @@ private fun TweaksMainSubPane(
                     trailingBadge = "KCAL",
                     onClick = { onNavigateToSubTab(TweaksSubTab.DisplayColor) },
                     focusRequester = subTabCardRequesters[TweaksSubTab.DisplayColor],
+                    onPositioned = { onCardPositioned(TweaksSubTab.DisplayColor) },
                     shape = blockBottomShape
                 )
             }
@@ -844,6 +906,7 @@ private fun TweaksMainSubPane(
                     trailingBadge = if (bypassEnabled) "Active" else null,
                     onClick = { onNavigateToSubTab(TweaksSubTab.BypassCharging) },
                     focusRequester = subTabCardRequesters[TweaksSubTab.BypassCharging],
+                    onPositioned = { onCardPositioned(TweaksSubTab.BypassCharging) },
                     shape = blockTopShape
                 )
 
@@ -853,6 +916,7 @@ private fun TweaksMainSubPane(
                     summary = stringResource(R.string.gov_settingsdesc),
                     onClick = { onNavigateToSubTab(TweaksSubTab.Governors) },
                     focusRequester = subTabCardRequesters[TweaksSubTab.Governors],
+                    onPositioned = { onCardPositioned(TweaksSubTab.Governors) },
                     shape = blockMiddleShape
                 )
 
@@ -862,6 +926,7 @@ private fun TweaksMainSubPane(
                     summary = stringResource(R.string.prefsdesc),
                     onClick = { onNavigateToSubTab(TweaksSubTab.Preferenced) },
                     focusRequester = subTabCardRequesters[TweaksSubTab.Preferenced],
+                    onPositioned = { onCardPositioned(TweaksSubTab.Preferenced) },
                     shape = if (isMediaTek) blockMiddleShape else blockBottomShape
                 )
 
@@ -873,6 +938,7 @@ private fun TweaksMainSubPane(
                         trailingBadge = "MediaTek",
                         onClick = { onNavigateToSubTab(TweaksSubTab.FpsGo) },
                         focusRequester = subTabCardRequesters[TweaksSubTab.FpsGo],
+                        onPositioned = { onCardPositioned(TweaksSubTab.FpsGo) },
                         shape = blockBottomShape
                     )
                 }
@@ -917,6 +983,8 @@ private fun TweaksMainSubPane(
 // ---------------------------------------------------------------------------
 @Composable
 private fun BypassChargingSubPane(
+    firstFocusRequester: FocusRequester,
+    onFirstPositioned: () -> Unit,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1219,6 +1287,8 @@ private fun BypassChargingSubPane(
                     },
                     checked = bypassState && isConfigured,
                     enabled = isConfigured,
+                    focusRequester = if (isConfigured) firstFocusRequester else null,
+                    onPositioned = if (isConfigured) onFirstPositioned else null,
                     onCheckedChange = { isChecked ->
                         bypassState = isChecked
                         val strVal = if (isChecked) "1" else "0"
@@ -1275,6 +1345,8 @@ private fun BypassChargingSubPane(
                         else -> bypassPath
                     },
                     enabled = availableNodes.isNotEmpty(),
+                    focusRequester = if (!isConfigured && availableNodes.isNotEmpty()) firstFocusRequester else null,
+                    onPositioned = if (!isConfigured && availableNodes.isNotEmpty()) onFirstPositioned else null,
                     onClick = { nodePickerDropDown.show() },
                     modifier = Modifier.zxDropDownAnchor(nodePickerDropDown),
                     shape = if (isConfigured) blockTopShape else blockSingleShape
@@ -1519,6 +1591,8 @@ private fun BypassChargingSubPane(
 @Composable
 private fun GovernorsSubPane(
     tweakViewModel: TweakViewModel,
+    firstFocusRequester: FocusRequester,
+    onFirstPositioned: () -> Unit,
     onBackClick: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -1566,6 +1640,8 @@ private fun GovernorsSubPane(
                     initialIndex = tweakViewModel.freqOffsetIndex ?: 0f,
                     labels = tweakViewModel.offsetLabels,
                     onSaved = { tweakViewModel.saveFreqOffset(it) },
+                    sliderFocusRequester = firstFocusRequester,
+                    onSliderPositioned = onFirstPositioned,
                     shape = blockTopShape
                 )
 
@@ -1747,6 +1823,8 @@ private fun GovernorsSubPane(
 // ---------------------------------------------------------------------------
 @Composable
 private fun PreferencedTweaksSubPane(
+    firstFocusRequester: FocusRequester,
+    onFirstPositioned: () -> Unit,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1798,6 +1876,8 @@ private fun PreferencedTweaksSubPane(
             title = stringResource(R.string.sched_tunes),
             summary = stringResource(R.string.sched_tunes_desc),
             checked = schedTunes,
+            focusRequester = firstFocusRequester,
+            onPositioned = onFirstPositioned,
             onCheckedChange = { isChecked ->
                 schedTunes = isChecked
                 PropertyUtils.set("persist.sys.azenithconf.schedtunes", if (isChecked) "1" else "0")
@@ -1968,6 +2048,8 @@ private fun PreferencedTweaksSubPane(
 // ---------------------------------------------------------------------------
 @Composable
 private fun FpsGoSubPane(
+    firstFocusRequester: FocusRequester,
+    onFirstPositioned: () -> Unit,
     onBackClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -2011,6 +2093,8 @@ private fun FpsGoSubPane(
                 title = stringResource(R.string.str_use_fpsgo_title),
                 summary = stringResource(R.string.str_use_fpsgo_summary),
                 checked = fpsgoState,
+                focusRequester = firstFocusRequester,
+                onPositioned = onFirstPositioned,
                 onCheckedChange = { isChecked ->
                     fpsgoState = isChecked
                     PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
@@ -2051,6 +2135,8 @@ private fun FpsGoSubPane(
 // ---------------------------------------------------------------------------
 @Composable
 private fun DisplayColorSubPane(
+    firstFocusRequester: FocusRequester,
+    onFirstPositioned: () -> Unit,
     onBackClick: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -2145,7 +2231,7 @@ private fun DisplayColorSubPane(
                     .padding(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                ColorPreset.entries.forEach { preset ->
+                ColorPreset.entries.forEachIndexed { index, preset ->
                     val isSelected = (selectedPreset ?: matchingPreset) == preset
                     val presetShape = RoundedCornerShape(14.dp)
                     Surface(
@@ -2154,6 +2240,15 @@ private fun DisplayColorSubPane(
                         contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
                         modifier = Modifier
                             .weight(1f)
+                            .then(
+                                if (index == 0) {
+                                    Modifier
+                                        .onGloballyPositioned { onFirstPositioned() }
+                                        .focusRequester(firstFocusRequester)
+                                } else {
+                                    Modifier
+                                }
+                            )
                             .gamepadFocusOutline(
                                 shape = presetShape,
                                 register = true,
@@ -2335,7 +2430,9 @@ private fun FreqOffsetSliderCard(
     labels: List<String>,
     onSaved: (Float) -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(20.dp)
+    shape: Shape = RoundedCornerShape(20.dp),
+    sliderFocusRequester: FocusRequester? = null,
+    onSliderPositioned: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     var sliderValue by remember(initialIndex) { mutableFloatStateOf(initialIndex) }
@@ -2409,7 +2506,10 @@ private fun FreqOffsetSliderCard(
                 onValueChange = { sliderValue = it },
                 onValueChangeFinished = { onSaved(sliderValue) },
                 valueRange = 0f..(labels.size - 1).coerceAtLeast(1).toFloat(),
-                steps = (labels.size - 2).coerceAtLeast(0)
+                steps = (labels.size - 2).coerceAtLeast(0),
+                modifier = Modifier
+                    .then(if (onSliderPositioned != null) Modifier.onGloballyPositioned { onSliderPositioned() } else Modifier)
+                    .then(if (sliderFocusRequester != null) Modifier.focusRequester(sliderFocusRequester) else Modifier)
             )
         }
     }

@@ -100,10 +100,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -116,6 +118,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -131,8 +134,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import zx.azenith.R
+import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.gamespace.GameSpaceInputSource
@@ -199,7 +205,10 @@ internal fun SettingsAudioPane(
     var previousSubTab by remember { mutableStateOf(AudioSubTab.Main) }
     val sfxCardRequester = remember { FocusRequester() }
     val bgmCardRequester = remember { FocusRequester() }
+    val subTabCardAttached = remember { mutableStateMapOf<AudioSubTab, Boolean>() }
     val subTabPaneRequesters = remember { AudioSubTab.entries.associateWith { FocusRequester() } }
+    val subTabFirstRequesters = remember { AudioSubTab.entries.associateWith { FocusRequester() } }
+    val subTabFirstAttached = remember { mutableStateMapOf<AudioSubTab, Boolean>() }
     val subTabOverlayToken = remember { Any() }
 
     DisposableEffect(currentSubTab) {
@@ -212,31 +221,60 @@ internal fun SettingsAudioPane(
     }
 
     LaunchedEffect(currentSubTab) {
+        val useGamepad = GameSpaceInputSource.isGamepadLast ||
+            GamepadInput.dpadMode ||
+            GamepadInput.controllerConnected
         if (currentSubTab != AudioSubTab.Main) {
-            if (GameSpaceInputSource.isGamepadLast) {
-                val targetRequester = subTabPaneRequesters.getValue(currentSubTab)
+            if (useGamepad) {
+                GamepadInput.onDpadKey()
+                val targetSubTab = currentSubTab
+                val firstRequester = subTabFirstRequesters.getValue(targetSubTab)
+                val paneRequester = subTabPaneRequesters.getValue(targetSubTab)
+                val attached = withTimeoutOrNull(600L) {
+                    snapshotFlow { subTabFirstAttached[targetSubTab] == true }.first { it }
+                } == true
                 var seeded = false
-                for (attempt in 1..12) {
-                    withFrameNanos { }
-                    seeded = runCatching { targetRequester.requestFocus() }.getOrDefault(false)
-                    if (seeded) break
+                if (attached) {
+                    seeded = runCatching { firstRequester.requestFocus() }.getOrDefault(false)
+                    if (!seeded) {
+                        withTimeoutOrNull(400L) {
+                            while (!seeded) {
+                                withFrameNanos { }
+                                seeded = runCatching { firstRequester.requestFocus() }.getOrDefault(false) ||
+                                    runCatching { paneRequester.requestFocus() }.getOrDefault(false)
+                            }
+                        }
+                    }
+                } else {
+                    seeded = runCatching { paneRequester.requestFocus() }.getOrDefault(false)
                 }
-                Log.d("PAD", "gs audio subTab=$currentSubTab seeded=$seeded")
+                Log.d("PAD", "gs audio subTab=$targetSubTab attached=$attached seeded=$seeded")
             }
         } else if (previousSubTab != AudioSubTab.Main) {
-            if (GameSpaceInputSource.isGamepadLast) {
-                val originRequester = if (previousSubTab == AudioSubTab.AdvancedSoundEffects) {
+            val fromSubTab = previousSubTab
+            if (useGamepad) {
+                GamepadInput.onDpadKey()
+                val originRequester = if (fromSubTab == AudioSubTab.AdvancedSoundEffects) {
                     sfxCardRequester
                 } else {
                     bgmCardRequester
                 }
+                val attached = withTimeoutOrNull(600L) {
+                    snapshotFlow { subTabCardAttached[fromSubTab] == true }.first { it }
+                } == true
                 var restored = false
-                for (attempt in 1..12) {
-                    withFrameNanos { }
+                if (attached) {
                     restored = runCatching { originRequester.requestFocus() }.getOrDefault(false)
-                    if (restored) break
+                    if (!restored) {
+                        withTimeoutOrNull(400L) {
+                            while (!restored) {
+                                withFrameNanos { }
+                                restored = runCatching { originRequester.requestFocus() }.getOrDefault(false)
+                            }
+                        }
+                    }
                 }
-                Log.d("PAD", "gs audio restoreOrigin from=$previousSubTab restored=$restored")
+                Log.d("PAD", "gs audio restoreOrigin from=$fromSubTab attached=$attached restored=$restored")
             }
         }
         previousSubTab = currentSubTab
@@ -292,17 +330,31 @@ internal fun SettingsAudioPane(
         modifier = modifier.fillMaxSize(),
         label = "AudioSubTabTransition"
     ) { subTab ->
+        DisposableEffect(subTab) {
+            onDispose {
+                subTabFirstAttached.remove(subTab)
+                if (subTab == AudioSubTab.Main) {
+                    subTabCardAttached.clear()
+                }
+            }
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .focusRequester(subTabPaneRequesters.getValue(subTab))
-                .focusGroup()
                 .focusProperties {
-                    canFocus = (subTab == currentSubTab)
-                    if (subTab != AudioSubTab.Main) {
-                        onExit = { cancelFocusChange() }
+                    canFocus = false
+                    if (subTab != currentSubTab) {
+                        onEnter = { cancelFocusChange() }
+                    } else if (subTab != AudioSubTab.Main) {
+                        onExit = {
+                            if (currentSubTab == subTab) {
+                                cancelFocusChange()
+                            }
+                        }
                     }
                 }
+                .focusGroup()
         ) {
             when (subTab) {
                 AudioSubTab.Main -> {
@@ -319,6 +371,7 @@ internal fun SettingsAudioPane(
                         playlistSize = playlist.size,
                         sfxCardRequester = sfxCardRequester,
                         bgmCardRequester = bgmCardRequester,
+                        onCardPositioned = { cardTab -> subTabCardAttached[cardTab] = true },
                         onOpenAdvancedSfx = {
                             AudioUtil.playOk(context)
                             currentSubTab = AudioSubTab.AdvancedSoundEffects
@@ -331,6 +384,8 @@ internal fun SettingsAudioPane(
                 }
                 AudioSubTab.AdvancedSoundEffects -> {
                     AudioAdvancedSoundEffectsSubPane(
+                        firstFocusRequester = subTabFirstRequesters.getValue(AudioSubTab.AdvancedSoundEffects),
+                        onFirstPositioned = { subTabFirstAttached[AudioSubTab.AdvancedSoundEffects] = true },
                         onBackClick = {
                             AudioUtil.playCancel(context)
                             currentSubTab = AudioSubTab.Main
@@ -347,6 +402,8 @@ internal fun SettingsAudioPane(
                         currentTrack = currentTrack,
                         isPlaying = isPlaying,
                         isShuffleEnabled = isShuffleEnabled,
+                        firstFocusRequester = subTabFirstRequesters.getValue(AudioSubTab.AdvancedBgm),
+                        onFirstPositioned = { subTabFirstAttached[AudioSubTab.AdvancedBgm] = true },
                         onAddMusicClick = {
                             audioPickerLauncher.launch(arrayOf("audio/*", "application/ogg"))
                         },
@@ -422,6 +479,7 @@ private fun AudioMainSubPane(
     playlistSize: Int,
     sfxCardRequester: FocusRequester,
     bgmCardRequester: FocusRequester,
+    onCardPositioned: (AudioSubTab) -> Unit,
     onOpenAdvancedSfx: () -> Unit,
     onOpenAdvancedBgm: () -> Unit
 ) {
@@ -530,6 +588,7 @@ private fun AudioMainSubPane(
                         summary = stringResource(R.string.sound_effects_advanced_desc),
                         onClick = onOpenAdvancedSfx,
                         focusRequester = sfxCardRequester,
+                        onPositioned = { onCardPositioned(AudioSubTab.AdvancedSoundEffects) },
                         shape = blockBottomShape
                     )
                 }
@@ -613,6 +672,7 @@ private fun AudioMainSubPane(
                         summary = stringResource(R.string.bgm_advanced_desc),
                         onClick = onOpenAdvancedBgm,
                         focusRequester = bgmCardRequester,
+                        onPositioned = { onCardPositioned(AudioSubTab.AdvancedBgm) },
                         shape = blockBottomShape
                     )
                 }
@@ -623,6 +683,8 @@ private fun AudioMainSubPane(
 
 @Composable
 private fun AudioAdvancedSoundEffectsSubPane(
+    firstFocusRequester: FocusRequester,
+    onFirstPositioned: () -> Unit,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -662,6 +724,8 @@ private fun AudioAdvancedSoundEffectsSubPane(
                 setSoundEffectsVolume(context, it)
                 AudioUtil.playOk(context)
             },
+            sliderFocusRequester = firstFocusRequester,
+            onSliderPositioned = onFirstPositioned,
             shape = blockSingleShape
         )
 
@@ -743,6 +807,8 @@ private fun AudioAdvancedBgmSubPane(
     currentTrack: BgmTrack?,
     isPlaying: Boolean,
     isShuffleEnabled: Boolean,
+    firstFocusRequester: FocusRequester,
+    onFirstPositioned: () -> Unit,
     onAddMusicClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
@@ -775,6 +841,8 @@ private fun AudioAdvancedBgmSubPane(
             onVolumeChangeFinished = {
                 BgmManager.setVolume(context, it)
             },
+            sliderFocusRequester = firstFocusRequester,
+            onSliderPositioned = onFirstPositioned,
             shape = blockSingleShape
         )
 
@@ -900,7 +968,9 @@ private fun VolumeSliderCard(
     onVolumeChange: (Int) -> Unit,
     onVolumeChangeFinished: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(18.dp)
+    shape: Shape = RoundedCornerShape(18.dp),
+    sliderFocusRequester: FocusRequester? = null,
+    onSliderPositioned: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     var sliderVolume by remember(volume) { mutableIntStateOf(volume) }
@@ -978,6 +1048,8 @@ private fun VolumeSliderCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(28.dp)
+                    .then(if (onSliderPositioned != null) Modifier.onGloballyPositioned { onSliderPositioned() } else Modifier)
+                    .then(if (sliderFocusRequester != null) Modifier.focusRequester(sliderFocusRequester) else Modifier)
             )
         }
     }
