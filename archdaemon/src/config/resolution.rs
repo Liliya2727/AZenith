@@ -358,21 +358,76 @@ fn restore_device_config(pkg: &str, prev: Option<&str>) {
     }
 }
 
-fn restore_from_snapshot(pkg: &str, snap: Option<&GameSnapshot>) {
+fn get_current_user_id() -> String {
+    let res = systemv_capture_both("am get-current-user");
+    let trimmed = res.output.trim();
+    if res.exit_code == 0 && !trimmed.is_empty() && trimmed.chars().all(|c| c.is_ascii_digit()) {
+        return trimmed.to_string();
+    }
+    log_warn!(
+        "resolution",
+        "am get-current-user failed rc={} out={:?}, defaulting to user 0",
+        res.exit_code,
+        res.output
+    );
+    "0".to_string()
+}
+
+fn restore_from_snapshot(pkg: &str, snap: Option<&GameSnapshot>, cap: GameCapability) {
+    let user_id = get_current_user_id();
     let Some(snap) = snap else {
-        log_warn!("resolution", "no snapshot for pkg={pkg}, falling back to reset --mode 2");
-        let _ = run_res_cmd(&format!("cmd game reset --mode 2 {pkg}"));
+        log_warn!("resolution", "no snapshot for pkg={pkg}, falling back to safe reset");
+        if cap == GameCapability::SetCustom {
+            let _ = run_res_cmd(&format!(
+                "cmd game set --user {user_id} --downscale disable --fps 0 {pkg}"
+            ));
+            let _ = run_res_cmd(&format!("cmd game mode --user {user_id} 1 {pkg}"));
+        } else {
+            let _ = run_res_cmd(&format!("cmd game reset --mode 2 --user {user_id} {pkg}"));
+        }
         return;
     };
 
     if !snap.parsed_ok {
-        log_warn!("resolution", "unparsed snapshot for pkg={pkg}, falling back to reset --mode 2");
-        let _ = run_res_cmd(&format!("cmd game reset --mode 2 {pkg}"));
+        log_warn!("resolution", "unparsed snapshot for pkg={pkg}, falling back to safe reset");
+        if cap == GameCapability::SetCustom {
+            let _ = run_res_cmd(&format!(
+                "cmd game set --user {user_id} --downscale disable --fps 0 {pkg}"
+            ));
+            let _ = run_res_cmd(&format!("cmd game mode --user {user_id} 1 {pkg}"));
+        } else {
+            let _ = run_res_cmd(&format!("cmd game reset --mode 2 --user {user_id} {pkg}"));
+        }
         return;
     }
 
-    if snap.had_mode2_config {
-        let mut cmd = String::from("cmd game set --mode 2");
+    if cap == GameCapability::SetCustom {
+        // A14+ uses custom mode (mode 4) so ROM mode-2 configs are never touched.
+        if snap.had_mode4_config {
+            let mut cmd = format!("cmd game set --user {user_id}");
+            if let Some(ref s) = snap.mode4_scaling {
+                if s.starts_with('-') {
+                    cmd.push_str(" --downscale disable");
+                } else {
+                    cmd.push_str(&format!(" --downscale {s}"));
+                }
+            } else {
+                cmd.push_str(" --downscale disable");
+            }
+            if let Some(ref f) = snap.mode4_fps {
+                cmd.push_str(&format!(" --fps {f}"));
+            } else {
+                cmd.push_str(" --fps 0");
+            }
+            cmd.push_str(&format!(" {pkg}"));
+            let _ = run_res_cmd(&cmd);
+        } else {
+            let _ = run_res_cmd(&format!(
+                "cmd game set --user {user_id} --downscale disable --fps 0 {pkg}"
+            ));
+        }
+    } else if snap.had_mode2_config {
+        let mut cmd = format!("cmd game set --mode 2 --user {user_id}");
         if let Some(ref s) = snap.mode2_scaling {
             if s.starts_with('-') {
                 cmd.push_str(" --downscale disable");
@@ -387,21 +442,39 @@ fn restore_from_snapshot(pkg: &str, snap: Option<&GameSnapshot>) {
         let _ = run_res_cmd(&cmd);
     } else {
         // AZenith created the mode-2 override where none existed previously.
-        let _ = run_res_cmd(&format!("cmd game reset --mode 2 {pkg}"));
+        let _ = run_res_cmd(&format!("cmd game reset --mode 2 --user {user_id} {pkg}"));
     }
 
     if let Some(ref mode) = snap.current_mode {
         if mode != "unsupported" {
-            let _ = run_res_cmd(&format!("cmd game mode {mode} {pkg}"));
+            let _ = run_res_cmd(&format!("cmd game mode --user {user_id} {mode} {pkg}"));
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// apply_game_set (Android 13+)
+// apply_game_set_custom (Android 14+, custom mode 4, preserves ROM mode 2)
 // ---------------------------------------------------------------------------
-fn apply_game_set(pkg: &str, downscale: &str, fps: &str) -> bool {
-    let mut cmd = String::from("cmd game set --mode 2");
+fn apply_game_set_custom(pkg: &str, user_id: &str, downscale: &str, fps: &str) -> bool {
+    let mut cmd = format!("cmd game set --user {user_id}");
+
+    if !IS_DEFAULT!(downscale) {
+        cmd.push_str(&format!(" --downscale {downscale}"));
+    }
+    if !IS_DEFAULT!(fps) {
+        cmd.push_str(&format!(" --fps {fps}"));
+    }
+    cmd.push_str(&format!(" {pkg}"));
+
+    let (_, ok) = run_res_cmd(&cmd);
+    ok
+}
+
+// ---------------------------------------------------------------------------
+// apply_game_set_mode2 (Android 13, requires --mode 2 first)
+// ---------------------------------------------------------------------------
+fn apply_game_set_mode2(pkg: &str, user_id: &str, downscale: &str, fps: &str) -> bool {
+    let mut cmd = format!("cmd game set --mode 2 --user {user_id}");
 
     if !IS_DEFAULT!(downscale) {
         cmd.push_str(&format!(" --downscale {downscale}"));
@@ -503,25 +576,38 @@ pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &s
     }
 
     let snapshot = capture_game_snapshot(pkg, cap);
+    let user_id = get_current_user_id();
 
-    if matches!(cap, GameCapability::SetCustom | GameCapability::SetMode) {
-        if apply_game_set(pkg, &norm_downscale, &norm_fps) {
+    if cap == GameCapability::SetCustom {
+        if apply_game_set_custom(pkg, &user_id, &norm_downscale, &norm_fps) {
             ctx.render.resolution_applied = true;
             ctx.render.used_legacy_fallback = false;
             ctx.render.resolution_snapshot = Some(snapshot);
-            log_info!("resolution", "applied pkg={pkg} sdk={sdk} cap={:?} downscale={} fps={}",
+            log_info!("resolution", "applied pkg={pkg} sdk={sdk} cap={:?} user={user_id} downscale={} fps={}",
                 cap,
                 if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
                 if IS_DEFAULT!(norm_fps) { "-" } else { &norm_fps });
             return true;
         }
-        log_warn!("resolution", "cmd game set failed pkg={pkg}, falling back to device_config");
+        log_warn!("resolution", "cmd game set (custom) failed pkg={pkg}, falling back to device_config");
+    } else if cap == GameCapability::SetMode {
+        if apply_game_set_mode2(pkg, &user_id, &norm_downscale, &norm_fps) {
+            ctx.render.resolution_applied = true;
+            ctx.render.used_legacy_fallback = false;
+            ctx.render.resolution_snapshot = Some(snapshot);
+            log_info!("resolution", "applied pkg={pkg} sdk={sdk} cap={:?} user={user_id} downscale={} fps={}",
+                cap,
+                if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
+                if IS_DEFAULT!(norm_fps) { "-" } else { &norm_fps });
+            return true;
+        }
+        log_warn!("resolution", "cmd game set --mode 2 failed pkg={pkg}, falling back to device_config");
     }
 
     if !apply_legacy(pkg, &norm_downscale, &norm_fps, snapshot.prev_device_config.as_deref()) {
         log_warn!("resolution", "legacy apply failed pkg={pkg} sdk={sdk}");
         if snapshot.parsed_ok {
-            restore_from_snapshot(pkg, Some(&snapshot));
+            restore_from_snapshot(pkg, Some(&snapshot), cap);
         }
         return false;
     }
@@ -544,12 +630,13 @@ pub fn restore_resolution_target(ctx: &mut DaemonContext, pkg: &str) {
     }
 
     let snap = ctx.render.resolution_snapshot.take();
+    let cap = probe_game_capability();
 
     if ctx.render.used_legacy_fallback {
         let prev_dc = snap.as_ref().and_then(|s| s.prev_device_config.as_deref());
         restore_device_config(pkg, prev_dc);
         if snap.as_ref().is_some_and(|s| s.parsed_ok) {
-            restore_from_snapshot(pkg, snap.as_ref());
+            restore_from_snapshot(pkg, snap.as_ref(), cap);
         } else {
             let (_, ok_reset) = run_res_cmd(&format!("cmd game reset {pkg}"));
             if !ok_reset {
@@ -557,7 +644,7 @@ pub fn restore_resolution_target(ctx: &mut DaemonContext, pkg: &str) {
             }
         }
     } else {
-        restore_from_snapshot(pkg, snap.as_ref());
+        restore_from_snapshot(pkg, snap.as_ref(), cap);
     }
 
     log_info!("resolution", "reset pkg={pkg} legacy={}", if ctx.render.used_legacy_fallback { 1 } else { 0 });
