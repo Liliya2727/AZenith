@@ -453,11 +453,104 @@ fn restore_from_snapshot(pkg: &str, snap: Option<&GameSnapshot>, cap: GameCapabi
 }
 
 // ---------------------------------------------------------------------------
-// apply_game_set_custom (Android 14+, custom mode 4, preserves ROM mode 2)
+// Post-apply verification (Stage 6)
 // ---------------------------------------------------------------------------
-fn apply_game_set_custom(pkg: &str, user_id: &str, downscale: &str, fps: &str) -> bool {
-    let mut cmd = format!("cmd game set --user {user_id}");
+fn verify_a14_custom_applied(pkg: &str, expected_downscale: &str) -> bool {
+    let res = systemv_capture_both(&format!("cmd game list-configs {pkg}"));
+    if res.exit_code != 0 || output_has_error(&res.output) {
+        log_error!(
+            "resolution",
+            "verify(A14+) list-configs failed pkg={pkg} rc={} out={:?}",
+            res.exit_code,
+            res.output
+        );
+        return false;
+    }
 
+    let (has_m4, m4_scaling, _) = parse_mode_block(&res.output, 4);
+    if !has_m4 {
+        log_error!(
+            "resolution",
+            "verify(A14+) mode-4 block missing pkg={pkg} out={:?}",
+            res.output
+        );
+        return false;
+    }
+
+    if !IS_DEFAULT!(expected_downscale) {
+        let expected = expected_downscale.parse::<f32>().ok();
+        let actual = m4_scaling.as_deref().and_then(|s| s.parse::<f32>().ok());
+        match (expected, actual) {
+            (Some(exp), Some(act)) if (exp - act).abs() < 0.01 => {}
+            _ => {
+                log_error!(
+                    "resolution",
+                    "verify(A14+) scaling mismatch pkg={pkg} expected={} actual={:?} out={:?}",
+                    expected_downscale,
+                    m4_scaling,
+                    res.output
+                );
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
+/// Verifies DOWNSCALED compat override via `dumpsys platform_compat` for A12/A13.
+/// UNTESTED on live Android 12/13 hardware (no device).
+fn verify_platform_compat_downscale(pkg: &str, expected_downscale: &str) -> bool {
+    if IS_DEFAULT!(expected_downscale) {
+        return true;
+    }
+    let cmd = format!("dumpsys platform_compat | grep -F '{pkg}'");
+    let res = systemv_capture_both(&cmd);
+    if res.exit_code != 0
+        || (!res.output.contains("DOWNSCALED") && !res.output.contains("168419799"))
+    {
+        log_error!(
+            "resolution",
+            "verify(A12/A13) platform_compat missing DOWNSCALED pkg={pkg} rc={} out={:?}",
+            res.exit_code,
+            res.output
+        );
+        return false;
+    }
+    true
+}
+
+// ---------------------------------------------------------------------------
+// apply_a12_downscale (Android 12 / 12L — UNTESTED, no device)
+// ---------------------------------------------------------------------------
+fn apply_a12_downscale(pkg: &str, downscale: &str) -> bool {
+    if IS_DEFAULT!(downscale) {
+        log_warn!("resolution", "A12 downscale path skipped pkg={pkg}: no downscale ratio");
+        return false;
+    }
+    let (_, ok) = run_res_cmd(&format!("cmd game downscale {downscale} {pkg}"));
+    if !ok {
+        return false;
+    }
+    if !verify_platform_compat_downscale(pkg, downscale) {
+        let _ = run_res_cmd(&format!("cmd game downscale disable {pkg}"));
+        return false;
+    }
+    true
+}
+
+// ---------------------------------------------------------------------------
+// apply_a13_mode2 (Android 13 — UNTESTED, no device)
+// Handles "--mode 2 not supported" via device_config pre-seed + short wait.
+// ---------------------------------------------------------------------------
+fn apply_a13_mode2(
+    pkg: &str,
+    user_id: &str,
+    downscale: &str,
+    fps: &str,
+    prev_dc: Option<&str>,
+) -> (bool, bool) {
+    let mut cmd = format!("cmd game set --mode 2 --user {user_id}");
     if !IS_DEFAULT!(downscale) {
         cmd.push_str(&format!(" --downscale {downscale}"));
     }
@@ -466,15 +559,66 @@ fn apply_game_set_custom(pkg: &str, user_id: &str, downscale: &str, fps: &str) -
     }
     cmd.push_str(&format!(" {pkg}"));
 
-    let (_, ok) = run_res_cmd(&cmd);
-    ok
+    let (res, ok) = run_res_cmd(&cmd);
+    if ok {
+        if verify_platform_compat_downscale(pkg, downscale) {
+            return (true, false);
+        }
+        let _ = run_res_cmd(&format!("cmd game reset --mode 2 --user {user_id} {pkg}"));
+        return (false, false);
+    }
+
+    if !res.output.contains("not supported") {
+        return (false, false);
+    }
+
+    log_info!(
+        "resolution",
+        "A13 mode 2 not supported pkg={pkg}, pre-seeding device_config game_overlay"
+    );
+    let mut config = String::from("mode=2");
+    if !IS_DEFAULT!(downscale) {
+        config.push_str(&format!(",downscaleFactor={downscale}"));
+    }
+    if !IS_DEFAULT!(fps) {
+        config.push_str(&format!(",fps={fps}"));
+    }
+
+    let (_, ok_put) = run_res_cmd(&format!("cmd device_config put game_overlay {pkg} {config}"));
+    if !ok_put {
+        return (false, false);
+    }
+
+    // Wait briefly for GameManagerService's async DeviceConfigListener to process the update.
+    std::thread::sleep(std::time::Duration::from_millis(150));
+
+    let (_, ok_retry) = run_res_cmd(&cmd);
+    let applied = if ok_retry {
+        true
+    } else {
+        let (_, ok_mode) = run_res_cmd(&format!("cmd game mode --user {user_id} 2 {pkg}"));
+        ok_mode
+    };
+
+    if !applied || !verify_platform_compat_downscale(pkg, downscale) {
+        log_warn!(
+            "resolution",
+            "A13 pre-seed apply/verify failed pkg={pkg}, reverting device_config"
+        );
+        restore_device_config(pkg, prev_dc);
+        let _ = run_res_cmd(&format!("cmd game reset --mode 2 --user {user_id} {pkg}"));
+        return (false, false);
+    }
+
+    (true, true)
 }
 
 // ---------------------------------------------------------------------------
-// apply_game_set_mode2 (Android 13, requires --mode 2 first)
+// apply_game_set_custom (Android 14+, custom mode 4, preserves ROM mode 2)
+// Note: Android 14 is UNTESTED (live-verified on Android 16).
 // ---------------------------------------------------------------------------
-fn apply_game_set_mode2(pkg: &str, user_id: &str, downscale: &str, fps: &str) -> bool {
-    let mut cmd = format!("cmd game set --mode 2 --user {user_id}");
+fn apply_game_set_custom(pkg: &str, user_id: &str, downscale: &str, fps: &str) -> bool {
+    let mut cmd = format!("cmd game set --user {user_id}");
 
     if !IS_DEFAULT!(downscale) {
         cmd.push_str(&format!(" --downscale {downscale}"));
@@ -578,30 +722,72 @@ pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &s
     let snapshot = capture_game_snapshot(pkg, cap);
     let user_id = get_current_user_id();
 
-    if cap == GameCapability::SetCustom {
-        if apply_game_set_custom(pkg, &user_id, &norm_downscale, &norm_fps) {
-            ctx.render.resolution_applied = true;
-            ctx.render.used_legacy_fallback = false;
-            ctx.render.resolution_snapshot = Some(snapshot);
-            log_info!("resolution", "applied pkg={pkg} sdk={sdk} cap={:?} user={user_id} downscale={} fps={}",
-                cap,
-                if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
-                if IS_DEFAULT!(norm_fps) { "-" } else { &norm_fps });
-            return true;
+    match cap {
+        GameCapability::SetCustom => {
+            if apply_game_set_custom(pkg, &user_id, &norm_downscale, &norm_fps) {
+                if verify_a14_custom_applied(pkg, &norm_downscale) {
+                    ctx.render.resolution_applied = true;
+                    ctx.render.used_legacy_fallback = false;
+                    ctx.render.used_downscale_cmd = false;
+                    ctx.render.resolution_snapshot = Some(snapshot);
+                    log_info!(
+                        "resolution",
+                        "applied & verified pkg={pkg} sdk={sdk} cap=SetCustom user={user_id} downscale={} fps={}",
+                        if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
+                        if IS_DEFAULT!(norm_fps) { "-" } else { &norm_fps }
+                    );
+                    return true;
+                }
+                log_error!(
+                    "resolution",
+                    "post-set verification failed pkg={pkg} sdk={sdk}, restoring snapshot"
+                );
+                restore_from_snapshot(pkg, Some(&snapshot), cap);
+                return false;
+            }
+            log_error!("resolution", "cmd game set (custom) failed pkg={pkg} sdk={sdk}");
+            return false;
         }
-        log_warn!("resolution", "cmd game set (custom) failed pkg={pkg}, falling back to device_config");
-    } else if cap == GameCapability::SetMode {
-        if apply_game_set_mode2(pkg, &user_id, &norm_downscale, &norm_fps) {
-            ctx.render.resolution_applied = true;
-            ctx.render.used_legacy_fallback = false;
-            ctx.render.resolution_snapshot = Some(snapshot);
-            log_info!("resolution", "applied pkg={pkg} sdk={sdk} cap={:?} user={user_id} downscale={} fps={}",
-                cap,
-                if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
-                if IS_DEFAULT!(norm_fps) { "-" } else { &norm_fps });
-            return true;
+        GameCapability::SetMode => {
+            let (ok, used_dc) = apply_a13_mode2(
+                pkg,
+                &user_id,
+                &norm_downscale,
+                &norm_fps,
+                snapshot.prev_device_config.as_deref(),
+            );
+            if ok {
+                ctx.render.resolution_applied = true;
+                ctx.render.used_legacy_fallback = used_dc;
+                ctx.render.used_downscale_cmd = false;
+                ctx.render.resolution_snapshot = Some(snapshot);
+                log_info!(
+                    "resolution",
+                    "applied & verified pkg={pkg} sdk={sdk} cap=SetMode used_dc={used_dc} user={user_id} downscale={} fps={}",
+                    if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
+                    if IS_DEFAULT!(norm_fps) { "-" } else { &norm_fps }
+                );
+                return true;
+            }
+            log_warn!("resolution", "A13 mode-2 path failed pkg={pkg} sdk={sdk}");
+            return false;
         }
-        log_warn!("resolution", "cmd game set --mode 2 failed pkg={pkg}, falling back to device_config");
+        GameCapability::Downscale => {
+            if apply_a12_downscale(pkg, &norm_downscale) {
+                ctx.render.resolution_applied = true;
+                ctx.render.used_legacy_fallback = false;
+                ctx.render.used_downscale_cmd = true;
+                ctx.render.resolution_snapshot = Some(snapshot);
+                log_info!(
+                    "resolution",
+                    "applied & verified pkg={pkg} sdk={sdk} cap=Downscale downscale={}",
+                    &norm_downscale
+                );
+                return true;
+            }
+            log_warn!("resolution", "cmd game downscale failed pkg={pkg}, trying legacy device_config");
+        }
+        GameCapability::None => return false,
     }
 
     if !apply_legacy(pkg, &norm_downscale, &norm_fps, snapshot.prev_device_config.as_deref()) {
@@ -612,8 +798,16 @@ pub fn apply_resolution_target(ctx: &mut DaemonContext, pkg: &str, downscale: &s
         return false;
     }
 
+    if !verify_platform_compat_downscale(pkg, &norm_downscale) {
+        log_error!("resolution", "legacy verify failed pkg={pkg} sdk={sdk}, reverting");
+        restore_device_config(pkg, snapshot.prev_device_config.as_deref());
+        let _ = run_res_cmd(&format!("cmd game mode 1 {pkg}"));
+        return false;
+    }
+
     ctx.render.resolution_applied = true;
     ctx.render.used_legacy_fallback = true;
+    ctx.render.used_downscale_cmd = false;
     ctx.render.resolution_snapshot = Some(snapshot);
     log_info!("resolution", "applied pkg={pkg} sdk={sdk} mode=legacy downscale={} fps={}",
         if IS_DEFAULT!(norm_downscale) { "-" } else { &norm_downscale },
@@ -632,21 +826,30 @@ pub fn restore_resolution_target(ctx: &mut DaemonContext, pkg: &str) {
     let snap = ctx.render.resolution_snapshot.take();
     let cap = probe_game_capability();
 
-    if ctx.render.used_legacy_fallback {
+    if ctx.render.used_downscale_cmd {
+        let _ = run_res_cmd(&format!("cmd game downscale disable {pkg}"));
+    } else if ctx.render.used_legacy_fallback {
         let prev_dc = snap.as_ref().and_then(|s| s.prev_device_config.as_deref());
         restore_device_config(pkg, prev_dc);
         if snap.as_ref().is_some_and(|s| s.parsed_ok) {
             restore_from_snapshot(pkg, snap.as_ref(), cap);
         } else {
-            let (_, ok_reset) = run_res_cmd(&format!("cmd game reset {pkg}"));
+            let user_id = get_current_user_id();
+            let (_, ok_reset) = run_res_cmd(&format!("cmd game reset --user {user_id} {pkg}"));
             if !ok_reset {
-                let _ = run_res_cmd(&format!("cmd game mode 1 {pkg}"));
+                let _ = run_res_cmd(&format!("cmd game mode --user {user_id} 1 {pkg}"));
             }
         }
     } else {
         restore_from_snapshot(pkg, snap.as_ref(), cap);
     }
 
-    log_info!("resolution", "reset pkg={pkg} legacy={}", if ctx.render.used_legacy_fallback { 1 } else { 0 });
+    log_info!(
+        "resolution",
+        "reset pkg={pkg} legacy={} downscale_cmd={}",
+        if ctx.render.used_legacy_fallback { 1 } else { 0 },
+        if ctx.render.used_downscale_cmd { 1 } else { 0 }
+    );
     ctx.render.resolution_applied = false;
+    ctx.render.used_downscale_cmd = false;
 }
