@@ -19,6 +19,7 @@ package zx.azenith.ui.util
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
+import android.os.SystemClock
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import java.util.concurrent.ConcurrentHashMap
@@ -106,13 +107,24 @@ object AudioUtil {
     @Volatile
     var isGameHubActive: Boolean = false
 
+    private const val SCROLL_COOLDOWN_MS = 40L
+    private const val FOCUS_COOLDOWN_MS = 45L
+    private const val ACTION_COOLDOWN_MS = 50L
+    private const val ACTION_SUPPRESS_FOCUS_MS = 140L
+
     private var soundPool: SoundPool? = null
     private var scrollSoundId = 0
+    private var scroll2SoundId = 0
     private var okSoundId = 0
     private var cancelSoundId = 0
     private var noticeSoundId = 0
     private var noticeBackSoundId = 0
     private var gameLaunchSoundId = 0
+
+    @Volatile private var lastScrollAtMs = 0L
+    @Volatile private var lastFocusAtMs = 0L
+    @Volatile private var lastActionAtMs = 0L
+    @Volatile private var lastFocusStreamId = 0
 
     private val loadedSoundIds = ConcurrentHashMap.newKeySet<Int>()
     private val pendingPlays = ConcurrentHashMap.newKeySet<Int>()
@@ -146,12 +158,15 @@ object AudioUtil {
                 loadedSoundIds.add(sampleId)
                 if (pendingPlays.remove(sampleId) && SoundEffectsState.enabled.value && isGameHubActive) {
                     val vol = (SoundEffectsState.volume.intValue / 100f).coerceIn(0f, 1f)
-                    p.play(sampleId, vol, vol, 1, 0, 1f)
+                    if (vol > 0f) {
+                        p.play(sampleId, vol, vol, 1, 0, 1f)
+                    }
                 }
             }
         }
 
         scrollSoundId = pool.load(appContext, R.raw.scroll, 1)
+        scroll2SoundId = pool.load(appContext, R.raw.scroll2, 1)
         okSoundId = pool.load(appContext, R.raw.ok, 1)
         cancelSoundId = pool.load(appContext, R.raw.cancel, 1)
         noticeSoundId = pool.load(appContext, R.raw.notice, 1)
@@ -167,59 +182,97 @@ object AudioUtil {
         runCatching { soundPool?.release() }
         soundPool = null
         scrollSoundId = 0
+        scroll2SoundId = 0
         okSoundId = 0
         cancelSoundId = 0
         noticeSoundId = 0
         noticeBackSoundId = 0
         gameLaunchSoundId = 0
+        lastScrollAtMs = 0L
+        lastFocusAtMs = 0L
+        lastActionAtMs = 0L
+        lastFocusStreamId = 0
         loadedSoundIds.clear()
         pendingPlays.clear()
         isInitialized = false
     }
 
-    private fun play(context: Context, soundId: Int) {
-        if (!isGameHubActive) return
-        if (!SoundEffectsState.enabled.value) return
+    private inline fun playResolved(
+        context: Context,
+        queueIfUnloaded: Boolean = true,
+        soundIdProvider: () -> Int
+    ): Int {
+        if (!isGameHubActive) return 0
+        if (!SoundEffectsState.enabled.value) return 0
         if (!isInitialized) {
             init(context)
         }
-        val pool = soundPool ?: return
+        val pool = soundPool ?: return 0
+        val soundId = soundIdProvider()
+        if (soundId == 0) return 0
         val vol = (SoundEffectsState.volume.intValue / 100f).coerceIn(0f, 1f)
-        if (loadedSoundIds.contains(soundId)) {
+        if (vol <= 0f) return 0
+        return if (loadedSoundIds.contains(soundId)) {
             pool.play(soundId, vol, vol, 1, 0, 1f)
         } else {
-            pendingPlays.add(soundId)
+            if (queueIfUnloaded) pendingPlays.add(soundId)
+            0
         }
     }
 
     fun playScroll(context: Context) {
         if (!SoundEffectsState.scrollEnabled.value) return
-        play(context, scrollSoundId)
+        val now = SystemClock.uptimeMillis()
+        if (now - lastScrollAtMs < SCROLL_COOLDOWN_MS) return
+        lastScrollAtMs = now
+        playResolved(context, queueIfUnloaded = false) { scrollSoundId }
     }
 
-    fun playOk(context: Context) {
-        TapHapticState.suppressSound = true
-        if (!SoundEffectsState.tapEnabled.value) return
-        play(context, okSoundId)
+    /**
+     * Plays the crisp focus-navigation sound (scroll2) for non-ribbon UI focus moves.
+     * Deduplicated against rapid repeats, suppressed briefly after action sounds (ok/cancel/notice),
+     * and stops any still-ringing previous focus stream to avoid muddy overlap.
+     */
+    fun playFocusMove() {
+        if (!isGameHubActive) return
+        if (!SoundEffectsState.enabled.value || !SoundEffectsState.scrollEnabled.value) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastActionAtMs < ACTION_SUPPRESS_FOCUS_MS) return
+        if (now - lastFocusAtMs < FOCUS_COOLDOWN_MS) return
+        val pool = soundPool ?: return
+        val id = scroll2SoundId
+        if (id == 0 || !loadedSoundIds.contains(id)) return
+        val vol = (SoundEffectsState.volume.intValue / 100f).coerceIn(0f, 1f)
+        if (vol <= 0f) return
+        lastFocusAtMs = now
+        val prevStream = lastFocusStreamId
+        if (prevStream != 0) {
+            pool.stop(prevStream)
+        }
+        lastFocusStreamId = pool.play(id, vol, vol, 1, 0, 1f)
     }
 
-    fun playCancel(context: Context) {
+    private inline fun playAction(
+        context: Context,
+        categoryEnabled: Boolean,
+        soundIdProvider: () -> Int
+    ) {
         TapHapticState.suppressSound = true
-        if (!SoundEffectsState.cancelEnabled.value) return
-        play(context, cancelSoundId)
+        val now = SystemClock.uptimeMillis()
+        val prevAction = lastActionAtMs
+        lastActionAtMs = now
+        if (!categoryEnabled) return
+        if (now - prevAction < ACTION_COOLDOWN_MS) return
+        playResolved(context, queueIfUnloaded = true, soundIdProvider = soundIdProvider)
     }
 
-    fun playNotice(context: Context) {
-        TapHapticState.suppressSound = true
-        if (!SoundEffectsState.noticeEnabled.value) return
-        play(context, noticeSoundId)
-    }
+    fun playOk(context: Context) = playAction(context, SoundEffectsState.tapEnabled.value) { okSoundId }
 
-    fun playNoticeBack(context: Context) {
-        TapHapticState.suppressSound = true
-        if (!SoundEffectsState.noticeEnabled.value) return
-        play(context, noticeBackSoundId)
-    }
+    fun playCancel(context: Context) = playAction(context, SoundEffectsState.cancelEnabled.value) { cancelSoundId }
+
+    fun playNotice(context: Context) = playAction(context, SoundEffectsState.noticeEnabled.value) { noticeSoundId }
+
+    fun playNoticeBack(context: Context) = playAction(context, SoundEffectsState.noticeEnabled.value) { noticeBackSoundId }
 
     /**
      * Plays the preloaded game-launch sound once if SFX are enabled and the sample is already loaded.
@@ -228,6 +281,7 @@ object AudioUtil {
     fun playGameLaunch() {
         if (!isGameHubActive) return
         if (!SoundEffectsState.enabled.value) return
+        lastActionAtMs = SystemClock.uptimeMillis()
         val pool = soundPool ?: return
         val id = gameLaunchSoundId
         if (id == 0 || !loadedSoundIds.contains(id)) return

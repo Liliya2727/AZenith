@@ -360,6 +360,7 @@ object GamepadShortcuts {
 
     private var activationToken: Any? = null
     private var activation: (() -> Unit)? = null
+    private var lastFocusSoundToken: Any? = null
 
     /**
      * Last activation callback published by each outlined node.
@@ -380,16 +381,24 @@ object GamepadShortcuts {
     var rootHasFocus: Boolean by mutableStateOf(false)
 
     fun publishActivation(token: Any, callback: (() -> Unit)?) {
+        val focusMoved = token !== lastFocusSoundToken
         activationToken = token
         activation = callback
         if (callback != null) activationByRequester[token] = callback
         GamepadFocusNav.publishLastFocusedToken(token)
+        if (focusMoved) {
+            lastFocusSoundToken = token
+            if (GamepadInput.active) {
+                zx.azenith.ui.util.AudioUtil.playFocusMove()
+            }
+        }
     }
 
     fun clearActivation(token: Any) {
         if (activationToken === token) {
             activationToken = null
             activation = null
+            lastFocusSoundToken = null
         }
         // Keep the remembered callback: the node may still be focused in the
         // main window while a dialog window above it comes and goes.
@@ -400,6 +409,7 @@ object GamepadShortcuts {
         val callback = activationByRequester[token] ?: return false
         activationToken = token
         activation = callback
+        lastFocusSoundToken = token
         Log.d("PAD", "activation reassert focusKeyRemembered token=${token.javaClass.simpleName}")
         return true
     }
