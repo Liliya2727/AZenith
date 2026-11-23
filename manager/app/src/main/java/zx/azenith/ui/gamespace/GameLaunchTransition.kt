@@ -44,6 +44,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -97,7 +99,7 @@ fun isGameLaunchHideStatusBarEnabled(context: Context): Boolean =
 // Timeline (3-part sequence, defaults):
 //   Part 1 (0..300 ms):     UI out (300, scale 1.00 -> 1.06 + fade) & floating shapes scatter fast (420 + 0..80 stagger)
 //   Pause  (300..800 ms):   POST_UI_OUT_DELAY_MS (500)
-//   Part 2 (800..1750 ms):  wallpaper blur in (250, 0 -> 24 dp), then hold blur (700)
+//   Part 2 (800..1750 ms):  wallpaper blur in (250, 0 -> 48 dp), then hold blur (700)
 //   Part 3 (1750 ms+):      pure black scrim (260) + wordmark in (220, 70% size) + SOUND,
 //                           hold (600), wordmark out (220), pre-launch dark screen (1000), launch
 // ============================================================================
@@ -113,11 +115,15 @@ internal const val POST_UI_OUT_DELAY_MS = 400
 internal const val BLUR_START_MS = UI_OUT_MS + POST_UI_OUT_DELAY_MS
 internal const val BLUR_MS = 250
 internal const val BLUR_HOLD_MS = 400
-internal const val LAUNCH_BLUR_DP = 24f
+internal const val LAUNCH_BLUR_DP = 48f
 
 internal const val SCRIM_START_MS = BLUR_START_MS + BLUR_MS + BLUR_HOLD_MS
 internal const val SCRIM_MS = 260
 internal const val SCRIM_MAX_ALPHA = 1.0f
+
+internal const val WALLPAPER_SCALE_START_MS = BLUR_START_MS + BLUR_MS
+internal const val WALLPAPER_SCALE_MS = BLUR_HOLD_MS + SCRIM_MS
+internal const val WALLPAPER_END_SCALE = 1.06f
 
 internal const val WORDMARK_START_MS = SCRIM_START_MS
 internal const val WORDMARK_IN_MS = 220
@@ -128,6 +134,7 @@ internal const val HOLD_MS = 600
 internal const val HOLD_END_SCALE = 1.04f
 internal const val WORDMARK_OUT_MS = 220
 internal const val WORDMARK_OUT_END_SCALE = 1.12f
+internal const val BLACKOUT_MS = 260
 
 internal const val PRE_LAUNCH_DELAY_MS = 1000L
 internal const val POST_LAUNCH_RESTORE_DELAY_MS = 1000L
@@ -411,7 +418,9 @@ class GameLaunchController {
     val contentFadeAnim = Animatable(0f) // 0 = normal, 1 = Hub layer gone
     val shapesElapsedMsAnim = Animatable(0f)
     val blurDpAnim = Animatable(0f)
+    val wallpaperScaleAnim = Animatable(1f)
     val scrimAlphaAnim = Animatable(0f)
+    val blackoutAlphaAnim = Animatable(0f)
     val wordmarkAlphaAnim = Animatable(0f)
     val wordmarkScaleAnim = Animatable(WORDMARK_IN_START_SCALE)
 
@@ -443,7 +452,9 @@ class GameLaunchController {
         contentFadeAnim.snapTo(0f)
         shapesElapsedMsAnim.snapTo(0f)
         blurDpAnim.snapTo(0f)
+        wallpaperScaleAnim.snapTo(1f)
         scrimAlphaAnim.snapTo(0f)
+        blackoutAlphaAnim.snapTo(0f)
         wordmarkAlphaAnim.snapTo(0f)
         wordmarkScaleAnim.snapTo(WORDMARK_IN_START_SCALE)
     }
@@ -519,11 +530,13 @@ class GameLaunchController {
         // t = 0: duck BGM so the launch sound is audible.
         BgmManager.duckForLaunch(BGM_DUCK_TARGET, BGM_DUCK_FADE_MS)
 
-        val blurTarget = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && wallpaperEnabled(context)) {
+        val hasWallpaper = wallpaperEnabled(context)
+        val blurTarget = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasWallpaper) {
             LAUNCH_BLUR_DP
         } else {
             0f
         }
+        val wallpaperScaleTarget = if (hasWallpaper) WALLPAPER_END_SCALE else 1f
         val shapesTotalMs = SHAPES_FLYOUT_DURATION_MS + SHAPES_MAX_STAGGER_MS
 
         activeJob = scope.launch {
@@ -542,6 +555,11 @@ class GameLaunchController {
                         if (BLUR_START_MS > 0) delay(BLUR_START_MS.toLong())
                         blurDpAnim.animateTo(blurTarget, tween(BLUR_MS, easing = FastOutSlowInEasing))
                     }
+                    // 3b. Wallpaper scale-up between blur and black scrim / wordmark.
+                    if (wallpaperScaleTarget > 1f) launch {
+                        delay(WALLPAPER_SCALE_START_MS.toLong())
+                        wallpaperScaleAnim.animateTo(wallpaperScaleTarget, tween(WALLPAPER_SCALE_MS, easing = FastOutSlowInEasing))
+                    }
                     // 4. Scrim.
                     launch {
                         delay(SCRIM_START_MS.toLong())
@@ -559,6 +577,8 @@ class GameLaunchController {
                         launch { wordmarkAlphaAnim.animateTo(0f, tween(WORDMARK_OUT_MS, easing = FastOutLinearInEasing)) }
                         launch { wordmarkScaleAnim.animateTo(WORDMARK_OUT_END_SCALE, tween(WORDMARK_OUT_MS, easing = FastOutLinearInEasing)) }
                     }
+                    // 7b. Fade from gradient scrim to pure black after the wordmark disappears.
+                    blackoutAlphaAnim.animateTo(1f, tween(BLACKOUT_MS, easing = FastOutSlowInEasing))
                 }
 
                 // 8. Dark, empty screen.
@@ -595,7 +615,9 @@ class GameLaunchController {
             launch { contentFadeAnim.animateTo(0f, spec) }
             launch { shapesElapsedMsAnim.animateTo(0f, spec) }
             launch { blurDpAnim.animateTo(0f, spec) }
+            launch { wallpaperScaleAnim.animateTo(1f, spec) }
             launch { scrimAlphaAnim.animateTo(0f, spec) }
+            launch { blackoutAlphaAnim.animateTo(0f, spec) }
             launch { wordmarkAlphaAnim.animateTo(0f, spec) }
             launch { wordmarkScaleAnim.animateTo(WORDMARK_IN_START_SCALE, spec) }
         }
@@ -617,7 +639,9 @@ class GameLaunchController {
         val needsReset = isRunning ||
             contentFadeAnim.value > 0.001f ||
             scrimAlphaAnim.value > 0.001f ||
+            blackoutAlphaAnim.value > 0.001f ||
             blurDpAnim.value > 0.001f ||
+            wallpaperScaleAnim.value > 1.001f ||
             wordmarkAlphaAnim.value > 0.001f ||
             shapesElapsedMsAnim.value > 0.001f
         if (needsReset) {
@@ -655,6 +679,45 @@ internal fun GameLaunchTransitionOverlay(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = controller.scrimAlphaAnim.value }
+                .drawBehind {
+                    val edgeColor = Color.Black.copy(alpha = 0.88f)
+                    val vEdge = size.height * 0.30f
+                    val hEdge = size.width * 0.24f
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(edgeColor, Color.Transparent),
+                            startY = 0f,
+                            endY = vEdge
+                        )
+                    )
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, edgeColor),
+                            startY = size.height - vEdge,
+                            endY = size.height
+                        )
+                    )
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(edgeColor, Color.Transparent),
+                            startX = 0f,
+                            endX = hEdge
+                        )
+                    )
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(Color.Transparent, edgeColor),
+                            startX = size.width - hEdge,
+                            endX = size.width
+                        )
+                    )
+                }
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = controller.blackoutAlphaAnim.value }
                 .background(Color.Black)
         )
 
