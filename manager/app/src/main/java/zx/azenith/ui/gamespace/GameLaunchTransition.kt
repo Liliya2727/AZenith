@@ -53,6 +53,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -661,6 +663,10 @@ class GameLaunchController {
     }
 }
 
+private val ChakraPetchFontFamily = FontFamily(
+    Font(R.font.chakra_petch_bold, FontWeight.Bold)
+)
+
 /**
  * Full-screen overlay: theme scrim, centered "AZENITH" wordmark and the pointer blocker.
  * Values are read inside graphicsLayer lambdas only.
@@ -726,9 +732,10 @@ internal fun GameLaunchTransitionOverlay(
             Text(
                 text = appName.uppercase(),
                 style = wordmarkStyle.copy(
+                    fontFamily = ChakraPetchFontFamily,
                     fontSize = wordmarkStyle.fontSize * WORDMARK_FONT_SCALE,
                     lineHeight = wordmarkStyle.lineHeight * WORDMARK_FONT_SCALE,
-                    fontWeight = FontWeight.Black,
+                    fontWeight = FontWeight.Bold,
                     letterSpacing = WORDMARK_LETTER_SPACING_EM.em
                 ),
                 color = wordmarkColor,
