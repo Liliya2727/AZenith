@@ -113,10 +113,10 @@ internal const val SHAPES_MAX_STAGGER_MS = 80
 internal const val SHAPES_END_SCALE = 1.25f
 internal val SHAPES_FLYOUT_DISTANCE_DP = 760.dp
 
-internal const val POST_UI_OUT_DELAY_MS = 400
+internal const val POST_UI_OUT_DELAY_MS = 300
 internal const val BLUR_START_MS = UI_OUT_MS + POST_UI_OUT_DELAY_MS
 internal const val BLUR_MS = 250
-internal const val BLUR_HOLD_MS = 400
+internal const val BLUR_HOLD_MS = 300
 internal const val LAUNCH_BLUR_DP = 48f
 
 internal const val SCRIM_START_MS = BLUR_START_MS + BLUR_MS + BLUR_HOLD_MS
@@ -139,7 +139,7 @@ internal const val WORDMARK_OUT_END_SCALE = 1.12f
 internal const val BLACKOUT_MS = 260
 
 internal const val PRE_LAUNCH_DELAY_MS = 1000L
-internal const val POST_LAUNCH_RESTORE_DELAY_MS = 1000L
+internal const val POST_LAUNCH_RESTORE_DELAY_MS = 5000L
 
 internal const val BGM_DUCK_TARGET = 0.12f
 internal const val BGM_DUCK_FADE_MS = 220L
