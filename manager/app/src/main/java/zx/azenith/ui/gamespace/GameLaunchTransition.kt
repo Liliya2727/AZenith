@@ -101,12 +101,16 @@ fun isGameLaunchHideStatusBarEnabled(context: Context): Boolean =
 // ============================================================================
 // Tuning constants (timings in ms, magnitudes as floats). Everything lives here.
 //
-// Timeline (3-part sequence, defaults):
-//   Part 1 (0..300 ms):     UI out (300, scale 1.00 -> 1.06 + fade) & floating shapes scatter fast (420 + 0..80 stagger)
-//   Pause  (300..800 ms):   POST_UI_OUT_DELAY_MS (500)
-//   Part 2 (800..1750 ms):  wallpaper blur in (250, 0 -> 48 dp), then hold blur (700)
-//   Part 3 (1750 ms+):      pure black scrim (260) + wordmark in (220, 70% size) + SOUND,
-//                           hold (600), wordmark out (220), pre-launch dark screen (1000), launch
+// Timeline (defaults, ms from START). Timings follow the PS3 boot sequence measured from a
+// reference recording: the chime leads the logo, the background darkens for about 0.7 s, the
+// logo fades in for about 0.5 s, holds about 0.4 s and vanishes in about 0.1 s.
+//   0..200      UI out (scale 1.00 -> 1.07 + fade), floating shapes scatter (400 + 0..80 stagger)
+//   200..600    POST_UI_OUT_DELAY_MS pause
+//   600..800    wallpaper blur in (0 -> LAUNCH_BLUR_DP), 800..1000 blur hold
+//   820..1000   wallpaper zoom
+//   1000..1700  black scrim (SCRIM_MS) + corner glows shrink; SOUND starts at 1000 (chime leads)
+//   1200..1700  wordmark in (WORDMARK_IN_MS), hold to 2100, out (WORDMARK_OUT_MS) to 2200
+//   2200..3200  PRE_LAUNCH_DELAY_MS dark screen, then status bar hide + am start at 3200
 // ============================================================================
 internal const val UI_OUT_MS = 200
 internal const val UI_OUT_END_SCALE = 1.07f
@@ -125,21 +129,24 @@ internal const val LAUNCH_BLUR_DP = 100f
 internal const val SCRIM_START_MS = BLUR_START_MS + BLUR_MS + BLUR_HOLD_MS
 internal const val SCRIM_MAX_ALPHA = 1.0f
 
-internal const val WORDMARK_START_MS = SCRIM_START_MS
-internal const val WORDMARK_IN_MS = 220
-internal const val WORDMARK_IN_START_SCALE = 0.92f
+// PS3: the chime starts about 200 ms before the logo becomes visible. The sound and the scrim
+// start at SCRIM_START_MS, the wordmark follows WORDMARK_LAG_MS later (0 = sound exactly with text).
+internal const val WORDMARK_LAG_MS = 200
+internal const val WORDMARK_START_MS = SCRIM_START_MS + WORDMARK_LAG_MS
+internal const val WORDMARK_IN_MS = 500
+internal const val WORDMARK_IN_START_SCALE = 0.98f
 internal const val WORDMARK_FONT_SCALE = 0.70f
 internal const val WORDMARK_LETTER_SPACING_EM = 0.4f
-internal const val HOLD_MS = 600
-internal const val HOLD_END_SCALE = 1.04f
-internal const val WORDMARK_OUT_MS = 220
-internal const val WORDMARK_OUT_END_SCALE = 1.12f
-internal const val GLOW_OUT_LEAD_MS = 100
-internal const val SCRIM_MS = WORDMARK_IN_MS + HOLD_MS + WORDMARK_OUT_MS - GLOW_OUT_LEAD_MS
+internal const val HOLD_MS = 400
+internal const val HOLD_END_SCALE = 1.005f
+internal const val WORDMARK_OUT_MS = 100
+internal const val WORDMARK_OUT_END_SCALE = 1.05f
+internal const val GLOW_OUT_LEAD_MS = 100 // no longer used by SCRIM_MS (kept so nothing breaks)
+internal const val SCRIM_MS = 700
 internal const val BLACKOUT_MS = 260
 
 internal const val WALLPAPER_SCALE_MS = 180
-internal const val WALLPAPER_SCALE_START_MS = WORDMARK_START_MS - WALLPAPER_SCALE_MS
+internal const val WALLPAPER_SCALE_START_MS = SCRIM_START_MS - WALLPAPER_SCALE_MS
 internal const val WALLPAPER_END_SCALE = 1.10f
 
 internal const val PRE_LAUNCH_DELAY_MS = 1000L
@@ -568,26 +575,31 @@ class GameLaunchController {
                         delay(WALLPAPER_SCALE_START_MS.toLong())
                         wallpaperScaleAnim.animateTo(wallpaperScaleTarget, tween(WALLPAPER_SCALE_MS, easing = FastOutSlowInEasing))
                     }
-                    // 4. Scrim darkens steadily from wallpaper zoom until the wordmark finishes fading out.
+                    // 4. Scrim darkens steadily over SCRIM_MS (PS3: about 0.7 s).
                     launch {
                         delay(SCRIM_START_MS.toLong())
                         scrimAlphaAnim.animateTo(SCRIM_MAX_ALPHA, tween(SCRIM_MS, easing = LinearEasing))
                     }
-                    // 5-7. Wordmark: in (+ sound), hold, out; corner glows vanish 100ms before wordmark ends.
+                    // 5. Sound + corner glow shrink + blackout start together with the scrim
+                    //    (PS3: the chime leads the logo by WORDMARK_LAG_MS).
+                    launch {
+                        delay(SCRIM_START_MS.toLong())
+                        AudioUtil.playGameLaunch()
+                        val glowDurationMs = SCRIM_MS.coerceAtLeast(100)
+                        launch {
+                            scrimGlowScaleAnim.animateTo(
+                                0f,
+                                tween(glowDurationMs, easing = FastOutSlowInEasing)
+                            )
+                        }
+                        launch {
+                            val blackoutDelayMs = (glowDurationMs - BLACKOUT_MS).coerceAtLeast(0).toLong()
+                            if (blackoutDelayMs > 0L) delay(blackoutDelayMs)
+                            blackoutAlphaAnim.animateTo(1f, tween(BLACKOUT_MS, easing = FastOutSlowInEasing))
+                        }
+                    }
+                    // 6. Wordmark: in, hold, out.
                     delay(WORDMARK_START_MS.toLong())
-                    AudioUtil.playGameLaunch() // exactly when the wordmark starts to appear
-                    val glowDurationMs = SCRIM_MS.coerceAtLeast(100)
-                    launch {
-                        scrimGlowScaleAnim.animateTo(
-                            0f,
-                            tween(glowDurationMs, easing = FastOutSlowInEasing)
-                        )
-                    }
-                    launch {
-                        val blackoutDelayMs = (glowDurationMs - BLACKOUT_MS).coerceAtLeast(0).toLong()
-                        if (blackoutDelayMs > 0L) delay(blackoutDelayMs)
-                        blackoutAlphaAnim.animateTo(1f, tween(BLACKOUT_MS, easing = FastOutSlowInEasing))
-                    }
                     coroutineScope {
                         launch { wordmarkAlphaAnim.animateTo(1f, tween(WORDMARK_IN_MS, easing = LinearOutSlowInEasing)) }
                         launch { wordmarkScaleAnim.animateTo(1f, tween(WORDMARK_IN_MS, easing = LinearOutSlowInEasing)) }
