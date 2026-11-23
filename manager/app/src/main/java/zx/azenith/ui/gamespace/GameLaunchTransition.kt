@@ -45,8 +45,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
@@ -663,8 +666,8 @@ class GameLaunchController {
     }
 }
 
-private val ChakraPetchFontFamily = FontFamily(
-    Font(R.font.chakra_petch_bold, FontWeight.Bold)
+private val OrbitronFontFamily = FontFamily(
+    Font(R.font.orbitron_bold, FontWeight.Bold)
 )
 
 /**
@@ -684,38 +687,39 @@ internal fun GameLaunchTransitionOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { alpha = controller.scrimAlphaAnim.value }
+                .graphicsLayer {
+                    alpha = controller.scrimAlphaAnim.value
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
                 .drawBehind {
-                    val edgeColor = Color.Black.copy(alpha = 0.88f)
-                    val vEdge = size.height * 0.30f
-                    val hEdge = size.width * 0.24f
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(edgeColor, Color.Transparent),
-                            startY = 0f,
-                            endY = vEdge
-                        )
+                    drawRect(Color.Black)
+                    val radius = minOf(size.width, size.height) * 0.72f
+                    val glowStops = arrayOf(
+                        0.0f to Color.Black.copy(alpha = 0.78f),
+                        0.50f to Color.Black.copy(alpha = 0.35f),
+                        1.0f to Color.Transparent
                     )
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, edgeColor),
-                            startY = size.height - vEdge,
-                            endY = size.height
-                        )
+                    val leftCenter = Offset(size.width * 0.24f, size.height * 1.04f)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colorStops = glowStops,
+                            center = leftCenter,
+                            radius = radius
+                        ),
+                        radius = radius,
+                        center = leftCenter,
+                        blendMode = BlendMode.DstOut
                     )
-                    drawRect(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(edgeColor, Color.Transparent),
-                            startX = 0f,
-                            endX = hEdge
-                        )
-                    )
-                    drawRect(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(Color.Transparent, edgeColor),
-                            startX = size.width - hEdge,
-                            endX = size.width
-                        )
+                    val rightCenter = Offset(size.width * 0.76f, size.height * 1.04f)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colorStops = glowStops,
+                            center = rightCenter,
+                            radius = radius
+                        ),
+                        radius = radius,
+                        center = rightCenter,
+                        blendMode = BlendMode.DstOut
                     )
                 }
         )
@@ -732,7 +736,7 @@ internal fun GameLaunchTransitionOverlay(
             Text(
                 text = appName.uppercase(),
                 style = wordmarkStyle.copy(
-                    fontFamily = ChakraPetchFontFamily,
+                    fontFamily = OrbitronFontFamily,
                     fontSize = wordmarkStyle.fontSize * WORDMARK_FONT_SCALE,
                     lineHeight = wordmarkStyle.lineHeight * WORDMARK_FONT_SCALE,
                     fontWeight = FontWeight.Bold,
