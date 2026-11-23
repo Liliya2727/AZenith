@@ -697,9 +697,6 @@ fun ZXGameSpaceHub(
                     } else {
                         null
                     }
-                    val scale = launchController.wallpaperScaleAnim.value
-                    scaleX = scale
-                    scaleY = scale
                 }
         ) {
             Box(

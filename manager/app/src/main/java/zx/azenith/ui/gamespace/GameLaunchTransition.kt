@@ -46,10 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
@@ -141,13 +139,8 @@ internal const val HOLD_MS = 400
 internal const val HOLD_END_SCALE = 1.005f
 internal const val WORDMARK_OUT_MS = 100
 internal const val WORDMARK_OUT_END_SCALE = 1.05f
-internal const val GLOW_OUT_LEAD_MS = 100 // no longer used by SCRIM_MS (kept so nothing breaks)
+internal const val GLOW_OUT_LEAD_MS = 100
 internal const val SCRIM_MS = 700
-internal const val BLACKOUT_MS = 260
-
-internal const val WALLPAPER_SCALE_MS = 180
-internal const val WALLPAPER_SCALE_START_MS = SCRIM_START_MS - WALLPAPER_SCALE_MS
-internal const val WALLPAPER_END_SCALE = 1.10f
 
 internal const val PRE_LAUNCH_DELAY_MS = 1000L
 internal const val POST_LAUNCH_RESTORE_DELAY_MS = 5000L
@@ -431,10 +424,8 @@ class GameLaunchController {
     val contentFadeAnim = Animatable(0f) // 0 = normal, 1 = Hub layer gone
     val shapesElapsedMsAnim = Animatable(0f)
     val blurDpAnim = Animatable(0f)
-    val wallpaperScaleAnim = Animatable(1f)
     val scrimAlphaAnim = Animatable(0f)
     val scrimGlowScaleAnim = Animatable(1f)
-    val blackoutAlphaAnim = Animatable(0f)
     val wordmarkAlphaAnim = Animatable(0f)
     val wordmarkScaleAnim = Animatable(WORDMARK_IN_START_SCALE)
 
@@ -466,10 +457,8 @@ class GameLaunchController {
         contentFadeAnim.snapTo(0f)
         shapesElapsedMsAnim.snapTo(0f)
         blurDpAnim.snapTo(0f)
-        wallpaperScaleAnim.snapTo(1f)
         scrimAlphaAnim.snapTo(0f)
         scrimGlowScaleAnim.snapTo(1f)
-        blackoutAlphaAnim.snapTo(0f)
         wordmarkAlphaAnim.snapTo(0f)
         wordmarkScaleAnim.snapTo(WORDMARK_IN_START_SCALE)
     }
@@ -545,13 +534,11 @@ class GameLaunchController {
         // t = 0: duck BGM so the launch sound is audible.
         BgmManager.duckForLaunch(BGM_DUCK_TARGET, BGM_DUCK_FADE_MS)
 
-        val hasWallpaper = wallpaperEnabled(context)
-        val blurTarget = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasWallpaper) {
+        val blurTarget = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && wallpaperEnabled(context)) {
             LAUNCH_BLUR_DP
         } else {
             0f
         }
-        val wallpaperScaleTarget = if (hasWallpaper) WALLPAPER_END_SCALE else 1f
         val shapesTotalMs = SHAPES_FLYOUT_DURATION_MS + SHAPES_MAX_STAGGER_MS
 
         activeJob = scope.launch {
@@ -570,33 +557,21 @@ class GameLaunchController {
                         if (BLUR_START_MS > 0) delay(BLUR_START_MS.toLong())
                         blurDpAnim.animateTo(blurTarget, tween(BLUR_MS, easing = FastOutSlowInEasing))
                     }
-                    // 3b. Wallpaper scale-up between blur and black scrim / wordmark.
-                    if (wallpaperScaleTarget > 1f) launch {
-                        delay(WALLPAPER_SCALE_START_MS.toLong())
-                        wallpaperScaleAnim.animateTo(wallpaperScaleTarget, tween(WALLPAPER_SCALE_MS, easing = FastOutSlowInEasing))
-                    }
                     // 4. Scrim darkens steadily over SCRIM_MS (PS3: about 0.7 s).
                     launch {
                         delay(SCRIM_START_MS.toLong())
                         scrimAlphaAnim.animateTo(SCRIM_MAX_ALPHA, tween(SCRIM_MS, easing = LinearEasing))
                     }
-                    // 5. Sound + corner glow shrink + blackout start together with the scrim
-                    //    (PS3: the chime leads the logo by WORDMARK_LAG_MS).
+                    // 5. Sound + subtle Material You corner glow that slowly fades out before wordmark finishes.
                     launch {
                         delay(SCRIM_START_MS.toLong())
                         AudioUtil.playGameLaunch()
-                        val glowDurationMs = SCRIM_MS.coerceAtLeast(100)
-                        launch {
-                            scrimGlowScaleAnim.animateTo(
-                                0f,
-                                tween(glowDurationMs, easing = FastOutSlowInEasing)
-                            )
-                        }
-                        launch {
-                            val blackoutDelayMs = (glowDurationMs - BLACKOUT_MS).coerceAtLeast(0).toLong()
-                            if (blackoutDelayMs > 0L) delay(blackoutDelayMs)
-                            blackoutAlphaAnim.animateTo(1f, tween(BLACKOUT_MS, easing = FastOutSlowInEasing))
-                        }
+                        val glowDurationMs = (WORDMARK_LAG_MS + WORDMARK_IN_MS + HOLD_MS + WORDMARK_OUT_MS - GLOW_OUT_LEAD_MS)
+                            .coerceAtLeast(100)
+                        scrimGlowScaleAnim.animateTo(
+                            0f,
+                            tween(glowDurationMs, easing = FastOutSlowInEasing)
+                        )
                     }
                     // 6. Wordmark: in, hold, out.
                     delay(WORDMARK_START_MS.toLong())
@@ -645,10 +620,8 @@ class GameLaunchController {
             launch { contentFadeAnim.animateTo(0f, spec) }
             launch { shapesElapsedMsAnim.animateTo(0f, spec) }
             launch { blurDpAnim.animateTo(0f, spec) }
-            launch { wallpaperScaleAnim.animateTo(1f, spec) }
             launch { scrimAlphaAnim.animateTo(0f, spec) }
             launch { scrimGlowScaleAnim.animateTo(1f, spec) }
-            launch { blackoutAlphaAnim.animateTo(0f, spec) }
             launch { wordmarkAlphaAnim.animateTo(0f, spec) }
             launch { wordmarkScaleAnim.animateTo(WORDMARK_IN_START_SCALE, spec) }
         }
@@ -671,9 +644,7 @@ class GameLaunchController {
             contentFadeAnim.value > 0.001f ||
             scrimAlphaAnim.value > 0.001f ||
             scrimGlowScaleAnim.value < 0.999f ||
-            blackoutAlphaAnim.value > 0.001f ||
             blurDpAnim.value > 0.001f ||
-            wallpaperScaleAnim.value > 1.001f ||
             wordmarkAlphaAnim.value > 0.001f ||
             shapesElapsedMsAnim.value > 0.001f
         if (needsReset) {
@@ -710,55 +681,50 @@ internal fun GameLaunchTransitionOverlay(
     val wordmarkColor = if (scheme.surface.luminance() > 0.5f) scheme.surface else scheme.onSurface
     val appName = stringResource(R.string.app_name)
 
+    val primaryGlow = scheme.primary
+    val tertiaryGlow = scheme.tertiary
+
     Box(modifier = modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    alpha = controller.scrimAlphaAnim.value
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
+                .graphicsLayer { alpha = controller.scrimAlphaAnim.value }
+                .background(Color.Black)
                 .drawBehind {
-                    drawRect(Color.Black)
-                    val radius = minOf(size.width, size.height) * 0.52f * controller.scrimGlowScaleAnim.value
-                    if (radius > 1f) {
-                        val glowStops = arrayOf(
-                            0.0f to Color.Black.copy(alpha = 0.78f),
-                            0.50f to Color.Black.copy(alpha = 0.35f),
-                            1.0f to Color.Transparent
-                        )
+                    val glow = controller.scrimGlowScaleAnim.value
+                    val radius = minOf(size.width, size.height) * 0.56f * (0.45f + 0.55f * glow)
+                    if (glow > 0.005f && radius > 1f) {
                         val horizontalInsetPx = size.width * 0.20f
                         val topRightCenter = Offset(size.width - horizontalInsetPx, 0f)
                         drawCircle(
                             brush = Brush.radialGradient(
-                                colorStops = glowStops,
+                                colorStops = arrayOf(
+                                    0.0f to primaryGlow.copy(alpha = 0.24f * glow),
+                                    0.45f to primaryGlow.copy(alpha = 0.09f * glow),
+                                    1.0f to Color.Transparent
+                                ),
                                 center = topRightCenter,
                                 radius = radius
                             ),
                             radius = radius,
-                            center = topRightCenter,
-                            blendMode = BlendMode.DstOut
+                            center = topRightCenter
                         )
                         val bottomLeftCenter = Offset(horizontalInsetPx, size.height)
                         drawCircle(
                             brush = Brush.radialGradient(
-                                colorStops = glowStops,
+                                colorStops = arrayOf(
+                                    0.0f to tertiaryGlow.copy(alpha = 0.22f * glow),
+                                    0.45f to tertiaryGlow.copy(alpha = 0.08f * glow),
+                                    1.0f to Color.Transparent
+                                ),
                                 center = bottomLeftCenter,
                                 radius = radius
                             ),
                             radius = radius,
-                            center = bottomLeftCenter,
-                            blendMode = BlendMode.DstOut
+                            center = bottomLeftCenter
                         )
                     }
                 }
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = controller.blackoutAlphaAnim.value }
-                .background(Color.Black)
         )
 
         val wordmarkStyle = MaterialTheme.typography.displayLarge
