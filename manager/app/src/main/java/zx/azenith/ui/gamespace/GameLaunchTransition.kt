@@ -108,7 +108,7 @@ fun isGameLaunchHideStatusBarEnabled(context: Context): Boolean =
 //   Part 3 (1750 ms+):      pure black scrim (260) + wordmark in (220, 70% size) + SOUND,
 //                           hold (600), wordmark out (220), pre-launch dark screen (1000), launch
 // ============================================================================
-internal const val UI_OUT_MS = 250
+internal const val UI_OUT_MS = 200
 internal const val UI_OUT_END_SCALE = 1.07f
 
 internal const val SHAPES_FLYOUT_DURATION_MS = 400
@@ -116,20 +116,16 @@ internal const val SHAPES_MAX_STAGGER_MS = 80
 internal const val SHAPES_END_SCALE = 1.25f
 internal val SHAPES_FLYOUT_DISTANCE_DP = 760.dp
 
-internal const val POST_UI_OUT_DELAY_MS = 250
+internal const val POST_UI_OUT_DELAY_MS = 400
 internal const val BLUR_START_MS = UI_OUT_MS + POST_UI_OUT_DELAY_MS
 internal const val BLUR_MS = 200
-internal const val BLUR_HOLD_MS = 400
+internal const val BLUR_HOLD_MS = 200
 internal const val LAUNCH_BLUR_DP = 100f
 
 internal const val SCRIM_START_MS = BLUR_START_MS + BLUR_MS + BLUR_HOLD_MS
 internal const val SCRIM_MS = 380
 internal const val SCRIM_MAX_ALPHA = 1.0f
 internal const val SCRIM_GLOW_END_SCALE = 0.18f
-
-internal const val WALLPAPER_SCALE_START_MS = BLUR_START_MS + BLUR_MS
-internal const val WALLPAPER_SCALE_MS = BLUR_HOLD_MS + SCRIM_MS
-internal const val WALLPAPER_END_SCALE = 1.06f
 
 internal const val WORDMARK_START_MS = SCRIM_START_MS
 internal const val WORDMARK_IN_MS = 220
@@ -141,6 +137,10 @@ internal const val HOLD_END_SCALE = 1.04f
 internal const val WORDMARK_OUT_MS = 220
 internal const val WORDMARK_OUT_END_SCALE = 1.12f
 internal const val BLACKOUT_MS = 260
+
+internal const val WALLPAPER_SCALE_START_MS = WORDMARK_START_MS
+internal const val WALLPAPER_SCALE_MS = WORDMARK_IN_MS + HOLD_MS + WORDMARK_OUT_MS
+internal const val WALLPAPER_END_SCALE = 1.06f
 
 internal const val PRE_LAUNCH_DELAY_MS = 1000L
 internal const val POST_LAUNCH_RESTORE_DELAY_MS = 5000L
