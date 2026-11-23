@@ -108,19 +108,19 @@ fun isGameLaunchHideStatusBarEnabled(context: Context): Boolean =
 //   Part 3 (1750 ms+):      pure black scrim (260) + wordmark in (220, 70% size) + SOUND,
 //                           hold (600), wordmark out (220), pre-launch dark screen (1000), launch
 // ============================================================================
-internal const val UI_OUT_MS = 300
-internal const val UI_OUT_END_SCALE = 1.06f
+internal const val UI_OUT_MS = 250
+internal const val UI_OUT_END_SCALE = 1.07f
 
 internal const val SHAPES_FLYOUT_DURATION_MS = 400
 internal const val SHAPES_MAX_STAGGER_MS = 80
 internal const val SHAPES_END_SCALE = 1.25f
 internal val SHAPES_FLYOUT_DISTANCE_DP = 760.dp
 
-internal const val POST_UI_OUT_DELAY_MS = 300
+internal const val POST_UI_OUT_DELAY_MS = 250
 internal const val BLUR_START_MS = UI_OUT_MS + POST_UI_OUT_DELAY_MS
-internal const val BLUR_MS = 250
-internal const val BLUR_HOLD_MS = 300
-internal const val LAUNCH_BLUR_DP = 48f
+internal const val BLUR_MS = 200
+internal const val BLUR_HOLD_MS = 400
+internal const val LAUNCH_BLUR_DP = 100f
 
 internal const val SCRIM_START_MS = BLUR_START_MS + BLUR_MS + BLUR_HOLD_MS
 internal const val SCRIM_MS = 260
