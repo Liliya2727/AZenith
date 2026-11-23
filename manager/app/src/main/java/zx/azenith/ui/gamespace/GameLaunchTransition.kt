@@ -123,7 +123,6 @@ internal const val BLUR_HOLD_MS = 200
 internal const val LAUNCH_BLUR_DP = 100f
 
 internal const val SCRIM_START_MS = BLUR_START_MS + BLUR_MS + BLUR_HOLD_MS
-internal const val SCRIM_MS = 380
 internal const val SCRIM_MAX_ALPHA = 1.0f
 internal const val SCRIM_GLOW_END_SCALE = 0.18f
 
@@ -136,6 +135,8 @@ internal const val HOLD_MS = 600
 internal const val HOLD_END_SCALE = 1.04f
 internal const val WORDMARK_OUT_MS = 220
 internal const val WORDMARK_OUT_END_SCALE = 1.12f
+internal const val SCRIM_MS = WORDMARK_IN_MS + HOLD_MS + WORDMARK_OUT_MS
+internal const val POST_WORDMARK_GLOW_DELAY_MS = 100L
 internal const val BLACKOUT_MS = 260
 
 internal const val WALLPAPER_SCALE_START_MS = WORDMARK_START_MS - 100
@@ -568,10 +569,10 @@ class GameLaunchController {
                         delay(WALLPAPER_SCALE_START_MS.toLong())
                         wallpaperScaleAnim.animateTo(wallpaperScaleTarget, tween(WALLPAPER_SCALE_MS, easing = FastOutSlowInEasing))
                     }
-                    // 4. Scrim darkens gradually, leaving corner glows that shrink while the wordmark is shown.
+                    // 4. Scrim darkens steadily from wallpaper zoom until the wordmark finishes fading out.
                     launch {
                         delay(SCRIM_START_MS.toLong())
-                        scrimAlphaAnim.animateTo(SCRIM_MAX_ALPHA, tween(SCRIM_MS, easing = FastOutSlowInEasing))
+                        scrimAlphaAnim.animateTo(SCRIM_MAX_ALPHA, tween(SCRIM_MS, easing = LinearEasing))
                     }
                     // 5-7. Wordmark: in (+ sound), hold, out, with shrinking corner glows.
                     delay(WORDMARK_START_MS.toLong())
@@ -592,7 +593,8 @@ class GameLaunchController {
                         launch { wordmarkAlphaAnim.animateTo(0f, tween(WORDMARK_OUT_MS, easing = FastOutLinearInEasing)) }
                         launch { wordmarkScaleAnim.animateTo(WORDMARK_OUT_END_SCALE, tween(WORDMARK_OUT_MS, easing = FastOutLinearInEasing)) }
                     }
-                    // 7b. Collapse remaining corner glow and fade to pure black after the wordmark disappears.
+                    // 7b. Keep the subtle corner glow for 100ms after wordmark out, then collapse to pure black.
+                    delay(POST_WORDMARK_GLOW_DELAY_MS)
                     coroutineScope {
                         launch { scrimGlowScaleAnim.animateTo(0f, tween(BLACKOUT_MS, easing = FastOutSlowInEasing)) }
                         launch { blackoutAlphaAnim.animateTo(1f, tween(BLACKOUT_MS, easing = FastOutSlowInEasing)) }
@@ -715,7 +717,7 @@ internal fun GameLaunchTransitionOverlay(
                             0.50f to Color.Black.copy(alpha = 0.35f),
                             1.0f to Color.Transparent
                         )
-                        val insetPx = 10.dp.toPx()
+                        val insetPx = 30.dp.toPx()
                         val topRightCenter = Offset(size.width - insetPx, insetPx)
                         drawCircle(
                             brush = Brush.radialGradient(
