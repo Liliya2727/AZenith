@@ -715,8 +715,8 @@ internal fun GameLaunchTransitionOverlay(
                             0.50f to Color.Black.copy(alpha = 0.35f),
                             1.0f to Color.Transparent
                         )
-                        val insetPx = 30.dp.toPx()
-                        val topRightCenter = Offset(size.width - insetPx, insetPx)
+                        val horizontalInsetPx = size.width * 0.20f
+                        val topRightCenter = Offset(size.width - horizontalInsetPx, 0f)
                         drawCircle(
                             brush = Brush.radialGradient(
                                 colorStops = glowStops,
@@ -727,7 +727,7 @@ internal fun GameLaunchTransitionOverlay(
                             center = topRightCenter,
                             blendMode = BlendMode.DstOut
                         )
-                        val bottomLeftCenter = Offset(insetPx, size.height - insetPx)
+                        val bottomLeftCenter = Offset(horizontalInsetPx, size.height)
                         drawCircle(
                             brush = Brush.radialGradient(
                                 colorStops = glowStops,
