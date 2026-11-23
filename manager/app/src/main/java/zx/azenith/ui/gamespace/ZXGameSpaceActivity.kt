@@ -199,6 +199,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
         StatusBarGuard.restoreIfPending(this)
         wireGamepadDirectionRepeat()
         TapHapticState.init(this)
+        volumeControlStream = android.media.AudioManager.STREAM_MUSIC
         zx.azenith.ui.util.AudioUtil.isGameHubActive = true
         zx.azenith.ui.util.AudioUtil.init(this)
         BgmManager.init(this)
@@ -267,6 +268,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
         // This window owns direction-key dispatch while GameSpace is foreground.
         wireGamepadDirectionRepeat()
         ZXSidePanelService.hide(this)
+        zx.azenith.ui.util.AudioUtil.onActivityResume(this)
         BgmManager.onActivityResume(this)
     }
 
@@ -274,6 +276,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
         super.onPause()
         GamepadDirectionRepeat.release()
         GamepadStickScroll.reset()
+        zx.azenith.ui.util.AudioUtil.onActivityPause()
         BgmManager.onActivityPause()
     }
 

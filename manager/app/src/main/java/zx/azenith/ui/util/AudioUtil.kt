@@ -18,7 +18,13 @@ package zx.azenith.ui.util
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.media.SoundPool
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -111,15 +117,23 @@ object AudioUtil {
     private const val FOCUS_COOLDOWN_MS = 45L
     private const val ACTION_COOLDOWN_MS = 50L
     private const val ACTION_SUPPRESS_FOCUS_MS = 140L
+    private const val ROUTE_REBUILD_DEBOUNCE_MS = 300L
 
-    private var soundPool: SoundPool? = null
-    private var scrollSoundId = 0
-    private var scroll2SoundId = 0
-    private var okSoundId = 0
-    private var cancelSoundId = 0
-    private var noticeSoundId = 0
-    private var noticeBackSoundId = 0
-    private var gameLaunchSoundId = 0
+    private var appContextRef: Context? = null
+    private var audioManagerRef: AudioManager? = null
+    private var deviceCallback: AudioDeviceCallback? = null
+    private var lastExternalOutputIds: Set<Int> = emptySet()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var pendingRebuild: Runnable? = null
+
+    @Volatile private var soundPool: SoundPool? = null
+    @Volatile private var scrollSoundId = 0
+    @Volatile private var scroll2SoundId = 0
+    @Volatile private var okSoundId = 0
+    @Volatile private var cancelSoundId = 0
+    @Volatile private var noticeSoundId = 0
+    @Volatile private var noticeBackSoundId = 0
+    @Volatile private var gameLaunchSoundId = 0
 
     @Volatile private var lastScrollAtMs = 0L
     @Volatile private var lastFocusAtMs = 0L
@@ -132,20 +146,42 @@ object AudioUtil {
     @Volatile
     private var isInitialized = false
 
-    @Synchronized
-    fun init(context: Context) {
-        if (isInitialized) return
-        val appContext = context.applicationContext
-        SoundEffectsState.enabled.value = isSoundEffectsEnabled(appContext)
-        SoundEffectsState.volume.intValue = getSoundEffectsVolume(appContext)
-        SoundEffectsState.tapEnabled.value = isTapSoundEnabled(appContext)
-        SoundEffectsState.scrollEnabled.value = isScrollSoundEnabled(appContext)
-        SoundEffectsState.cancelEnabled.value = isCancelSoundEnabled(appContext)
-        SoundEffectsState.noticeEnabled.value = isNoticeSoundEnabled(appContext)
+    private fun isExternalOutputDevice(device: AudioDeviceInfo): Boolean {
+        if (!device.isSink) return false
+        return when (device.type) {
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+            AudioDeviceInfo.TYPE_HEARING_AID,
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+            AudioDeviceInfo.TYPE_USB_DEVICE -> true
+            else -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                (device.type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                    device.type == AudioDeviceInfo.TYPE_BLE_SPEAKER)
+        }
+    }
 
+    private fun snapshotExternalOutputs(am: AudioManager): Set<Int> =
+        runCatching {
+            am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                .filter(::isExternalOutputDevice)
+                .mapTo(HashSet()) { it.id }
+        }.getOrDefault(emptySet())
+
+    private fun buildSoundPoolLocked(appContext: Context) {
+        runCatching { soundPool?.release() }
+        soundPool = null
+        loadedSoundIds.clear()
+        pendingPlays.clear()
+        lastFocusStreamId = 0
+
+        // Use USAGE_MEDIA + CONTENT_TYPE_MUSIC (matching BgmManager) so AudioPolicyManager
+        // routes SFX strictly through STRATEGY_MEDIA (BT A2DP / LE Audio / wired headset)
+        // instead of sonification dual-routing that can leak to the phone speaker or drop on BT.
         val attrs = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
             .build()
 
         val pool = SoundPool.Builder()
@@ -174,11 +210,96 @@ object AudioUtil {
         gameLaunchSoundId = pool.load(appContext, R.raw.gamelaunch, 1)
 
         soundPool = pool
+    }
+
+    private fun scheduleRouteRebuild() {
+        val appContext = appContextRef ?: return
+        pendingRebuild?.let { mainHandler.removeCallbacks(it) }
+        val runnable = Runnable {
+            synchronized(this@AudioUtil) {
+                if (!isInitialized) return@synchronized
+                buildSoundPoolLocked(appContext)
+            }
+        }
+        pendingRebuild = runnable
+        mainHandler.postDelayed(runnable, ROUTE_REBUILD_DEBOUNCE_MS)
+    }
+
+    @Synchronized
+    fun init(context: Context) {
+        if (isInitialized) return
+        val appContext = context.applicationContext
+        appContextRef = appContext
+        SoundEffectsState.enabled.value = isSoundEffectsEnabled(appContext)
+        SoundEffectsState.volume.intValue = getSoundEffectsVolume(appContext)
+        SoundEffectsState.tapEnabled.value = isTapSoundEnabled(appContext)
+        SoundEffectsState.scrollEnabled.value = isScrollSoundEnabled(appContext)
+        SoundEffectsState.cancelEnabled.value = isCancelSoundEnabled(appContext)
+        SoundEffectsState.noticeEnabled.value = isNoticeSoundEnabled(appContext)
+
+        buildSoundPoolLocked(appContext)
+
+        val am = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        if (am != null) {
+            audioManagerRef = am
+            lastExternalOutputIds = snapshotExternalOutputs(am)
+            val cb = object : AudioDeviceCallback() {
+                override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+                    handleRouteChange(am)
+                }
+
+                override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+                    handleRouteChange(am)
+                }
+            }
+            deviceCallback = cb
+            runCatching { am.registerAudioDeviceCallback(cb, mainHandler) }
+        }
+
         isInitialized = true
+    }
+
+    private fun handleRouteChange(am: AudioManager) {
+        val current = snapshotExternalOutputs(am)
+        if (current != lastExternalOutputIds) {
+            lastExternalOutputIds = current
+            scheduleRouteRebuild()
+        }
+    }
+
+    @Synchronized
+    fun onActivityPause() {
+        pendingRebuild?.let { mainHandler.removeCallbacks(it) }
+        pendingRebuild = null
+        runCatching { soundPool?.autoPause() }
+    }
+
+    @Synchronized
+    fun onActivityResume(context: Context) {
+        if (!isInitialized) return
+        val am = audioManagerRef ?: (context.applicationContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)
+        if (am != null) {
+            val current = snapshotExternalOutputs(am)
+            if (current != lastExternalOutputIds) {
+                lastExternalOutputIds = current
+                buildSoundPoolLocked(context.applicationContext)
+                return
+            }
+        }
+        runCatching { soundPool?.autoResume() }
     }
 
     @Synchronized
     fun release() {
+        pendingRebuild?.let { mainHandler.removeCallbacks(it) }
+        pendingRebuild = null
+        deviceCallback?.let { cb ->
+            runCatching { audioManagerRef?.unregisterAudioDeviceCallback(cb) }
+        }
+        deviceCallback = null
+        audioManagerRef = null
+        appContextRef = null
+        lastExternalOutputIds = emptySet()
         runCatching { soundPool?.release() }
         soundPool = null
         scrollSoundId = 0
@@ -213,7 +334,7 @@ object AudioUtil {
         val vol = (SoundEffectsState.volume.intValue / 100f).coerceIn(0f, 1f)
         if (vol <= 0f) return 0
         return if (loadedSoundIds.contains(soundId)) {
-            pool.play(soundId, vol, vol, 1, 0, 1f)
+            runCatching { pool.play(soundId, vol, vol, 1, 0, 1f) }.getOrDefault(0)
         } else {
             if (queueIfUnloaded) pendingPlays.add(soundId)
             0
@@ -247,9 +368,9 @@ object AudioUtil {
         lastFocusAtMs = now
         val prevStream = lastFocusStreamId
         if (prevStream != 0) {
-            pool.stop(prevStream)
+            runCatching { pool.stop(prevStream) }
         }
-        lastFocusStreamId = pool.play(id, vol, vol, 1, 0, 1f)
+        lastFocusStreamId = runCatching { pool.play(id, vol, vol, 1, 0, 1f) }.getOrDefault(0)
     }
 
     private inline fun playAction(
@@ -287,6 +408,6 @@ object AudioUtil {
         if (id == 0 || !loadedSoundIds.contains(id)) return
         val vol = (SoundEffectsState.volume.intValue / 100f).coerceIn(0f, 1f)
         if (vol <= 0f) return
-        pool.play(id, vol, vol, 1, 0, 1f)
+        runCatching { pool.play(id, vol, vol, 1, 0, 1f) }
     }
 }
