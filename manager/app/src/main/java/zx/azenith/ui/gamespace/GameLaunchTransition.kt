@@ -138,7 +138,7 @@ internal const val WORDMARK_OUT_MS = 220
 internal const val WORDMARK_OUT_END_SCALE = 1.12f
 internal const val BLACKOUT_MS = 260
 
-internal const val WALLPAPER_SCALE_START_MS = WORDMARK_START_MS
+internal const val WALLPAPER_SCALE_START_MS = WORDMARK_START_MS - 100
 internal const val WALLPAPER_SCALE_MS = WORDMARK_IN_MS + HOLD_MS + WORDMARK_OUT_MS
 internal const val WALLPAPER_END_SCALE = 1.06f
 
@@ -715,7 +715,8 @@ internal fun GameLaunchTransitionOverlay(
                             0.50f to Color.Black.copy(alpha = 0.35f),
                             1.0f to Color.Transparent
                         )
-                        val topRightCenter = Offset(size.width, 0f)
+                        val insetPx = 10.dp.toPx()
+                        val topRightCenter = Offset(size.width - insetPx, insetPx)
                         drawCircle(
                             brush = Brush.radialGradient(
                                 colorStops = glowStops,
@@ -726,7 +727,7 @@ internal fun GameLaunchTransitionOverlay(
                             center = topRightCenter,
                             blendMode = BlendMode.DstOut
                         )
-                        val bottomLeftCenter = Offset(0f, size.height)
+                        val bottomLeftCenter = Offset(insetPx, size.height - insetPx)
                         drawCircle(
                             brush = Brush.radialGradient(
                                 colorStops = glowStops,
