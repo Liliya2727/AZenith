@@ -693,7 +693,7 @@ internal fun GameLaunchTransitionOverlay(
                 }
                 .drawBehind {
                     drawRect(Color.Black)
-                    val radius = minOf(size.width, size.height) * 0.72f
+                    val radius = minOf(size.width, size.height) * 0.43f
                     val glowStops = arrayOf(
                         0.0f to Color.Black.copy(alpha = 0.78f),
                         0.50f to Color.Black.copy(alpha = 0.35f),
