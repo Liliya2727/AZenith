@@ -138,9 +138,9 @@ internal const val GLOW_OUT_LEAD_MS = 100
 internal const val SCRIM_MS = WORDMARK_IN_MS + HOLD_MS + WORDMARK_OUT_MS - GLOW_OUT_LEAD_MS
 internal const val BLACKOUT_MS = 260
 
-internal const val WALLPAPER_SCALE_START_MS = WORDMARK_START_MS - 100
-internal const val WALLPAPER_SCALE_MS = WORDMARK_IN_MS + HOLD_MS + WORDMARK_OUT_MS
-internal const val WALLPAPER_END_SCALE = 1.06f
+internal const val WALLPAPER_SCALE_MS = 180
+internal const val WALLPAPER_SCALE_START_MS = WORDMARK_START_MS - WALLPAPER_SCALE_MS
+internal const val WALLPAPER_END_SCALE = 1.10f
 
 internal const val PRE_LAUNCH_DELAY_MS = 1000L
 internal const val POST_LAUNCH_RESTORE_DELAY_MS = 5000L
@@ -708,7 +708,7 @@ internal fun GameLaunchTransitionOverlay(
                 }
                 .drawBehind {
                     drawRect(Color.Black)
-                    val radius = minOf(size.width, size.height) * 0.43f * controller.scrimGlowScaleAnim.value
+                    val radius = minOf(size.width, size.height) * 0.52f * controller.scrimGlowScaleAnim.value
                     if (radius > 1f) {
                         val glowStops = arrayOf(
                             0.0f to Color.Black.copy(alpha = 0.78f),
