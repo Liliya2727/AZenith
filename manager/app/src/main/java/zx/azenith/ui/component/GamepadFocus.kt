@@ -631,6 +631,8 @@ object GamepadFocusNav {
 
     private val focusHistory = ArrayDeque<FocusRequester>()
 
+    fun lastFocusedRequester(): FocusRequester? = focusHistory.lastOrNull()
+
     fun publishLastFocused(requester: FocusRequester) {
         publishLastFocusedToken(requester)
     }

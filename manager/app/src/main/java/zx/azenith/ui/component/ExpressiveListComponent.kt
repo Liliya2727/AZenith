@@ -585,9 +585,10 @@ fun ExpressiveDropdownItem(
             if (!menuState.expanded) return@LaunchedEffect
         }
         Log.d("PAD", "dropdown popup ${if (menuState.expanded) "opened" else "closed"} title=$title")
-        if (!menuState.expanded) {
+        if (!menuState.expanded && externalMenuState == null) {
             // Return focus to the dropdown row after the sheet/popup closes.
-            GamepadFocusNav.restoreFocus()
+            // External ZXDropDownMenu handles its own focus restoration after releasing its focus trap.
+            menuState.restoreReturnFocus()
             Log.d("PAD", "dropdown focus restore requested title=$title focusKey=$focusKey")
         }
     }

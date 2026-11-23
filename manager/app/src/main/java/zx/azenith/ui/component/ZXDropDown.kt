@@ -138,12 +138,29 @@ class ZXDropDownState internal constructor() {
     var anchor: ZXDropDownAnchor? by mutableStateOf(null)
         internal set
 
+    internal var returnFocusRequester: FocusRequester? = null
+
     fun show() {
+        if (!expanded) {
+            returnFocusRequester = GamepadFocusNav.lastFocusedRequester()
+        }
         expanded = true
     }
 
     fun dismiss() {
         expanded = false
+    }
+
+    internal fun restoreReturnFocus(): Boolean {
+        val target = returnFocusRequester
+        if (target != null) {
+            val got = runCatching { target.requestFocus() }.getOrDefault(false)
+            if (got) {
+                GamepadShortcuts.reassertActivation(target)
+                return true
+            }
+        }
+        return GamepadFocusNav.restoreFocus()
     }
 }
 
@@ -358,7 +375,7 @@ fun <T> ZXDropDownMenu(
                     if (useGamepad) {
                         GamepadInput.onDpadKey()
                         withFrameNanos { }
-                        val restored = GamepadFocusNav.restoreFocus()
+                        val restored = state.restoreReturnFocus()
                         Log.d("PAD", "gs dropdown closed restoreImmediate=$restored")
                     }
                 }
@@ -367,11 +384,12 @@ fun <T> ZXDropDownMenu(
                 if (openedBefore) {
                     withFrameNanos { }
                     if (!GamepadShortcuts.hasRowFocus &&
-                        (GameSpaceInputSource.isGamepadLast || GamepadInput.dpadMode)
+                        (GameSpaceInputSource.isGamepadLast || GamepadInput.dpadMode || GamepadInput.controllerConnected)
                     ) {
-                        val restored = GamepadFocusNav.restoreFocus()
+                        val restored = state.restoreReturnFocus()
                         Log.d("PAD", "gs dropdown closed restoreAfterDispose=$restored")
                     }
+                    state.returnFocusRequester = null
                 }
             }
         }
