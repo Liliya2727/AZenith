@@ -199,7 +199,10 @@ object BgmManager {
             val stepMs = fadeDurationMs / steps
             for (i in 1..steps) {
                 val t = i.toFloat() / steps.toFloat()
-                duckMultiplier = start + (target - start) * t
+                // Quadratic ease-out matches perceptual loudness so the fade-out sounds
+                // smooth all the way to silence instead of dropping off abruptly at the end.
+                val inv = 1f - t
+                duckMultiplier = target + (start - target) * (inv * inv)
                 applyEffectiveVolume()
                 delay(stepMs)
             }
@@ -222,7 +225,8 @@ object BgmManager {
             val stepMs = fadeDurationMs / steps
             for (i in 1..steps) {
                 val t = i.toFloat() / steps.toFloat()
-                duckMultiplier = start + (1f - start) * t
+                val eased = t * t
+                duckMultiplier = start + (1f - start) * eased
                 applyEffectiveVolume()
                 delay(stepMs)
             }
@@ -900,13 +904,14 @@ object BgmManager {
 
     fun onActivityResume(context: Context) {
         isGameHubActive = true
-        restoreFromLaunch(fadeDurationMs = 0L)
+        val wasDucked = duckMultiplier < 0.99f
         if (_isEnabled.value) {
             val flac = flacPlayer
             val player = mediaPlayer
             if (flac != null) {
                 try {
                     if (!flac.isPlaying) {
+                        applyEffectiveVolume()
                         flac.start()
                         _isPlaying.value = true
                         startPositionTracker()
@@ -917,6 +922,7 @@ object BgmManager {
             } else if (player != null) {
                 try {
                     if (!player.isPlaying) {
+                        applyEffectiveVolume()
                         player.start()
                         _isPlaying.value = true
                         startPositionTracker()
@@ -929,13 +935,12 @@ object BgmManager {
                 playCurrentTrack(context.applicationContext)
             }
         }
+        restoreFromLaunch(fadeDurationMs = if (wasDucked) 300L else 0L)
     }
 
     fun onActivityPause() {
         duckJob?.cancel()
         duckJob = null
-        duckMultiplier = 1f
-        applyEffectiveVolume()
         stopPositionTracker()
         try {
             flacPlayer?.pause()

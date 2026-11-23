@@ -144,8 +144,8 @@ internal const val BLACKOUT_MS = 260
 internal const val PRE_LAUNCH_DELAY_MS = 1000L
 internal const val POST_LAUNCH_RESTORE_DELAY_MS = 5000L
 
-internal const val BGM_DUCK_TARGET = 0.12f
-internal const val BGM_DUCK_FADE_MS = 220L
+internal const val BGM_DUCK_TARGET = 0f
+internal const val BGM_DUCK_FADE_MS = 900L
 
 internal const val WATCHDOG_AFTER_LAUNCH_MS = 5000L
 internal const val RECOVERY_FADE_MS = 200
