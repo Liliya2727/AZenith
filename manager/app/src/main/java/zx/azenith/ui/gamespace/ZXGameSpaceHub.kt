@@ -90,6 +90,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.KeyEventType
@@ -670,8 +671,29 @@ fun ZXGameSpaceHub(
                 .graphicsLayer {
                     val radiusDp = launchController.blurDpAnim.value
                     renderEffect = if (radiusDp > 0.01f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        val px = radiusDp * density
-                        androidx.compose.ui.graphics.BlurEffect(px, px, androidx.compose.ui.graphics.TileMode.Clamp)
+                        // Chain up to 4 passes of 25dp each: Skia/HWUI single-pass blur caps out
+                        // around ~25-30dp, so chaining multiple passes makes high-dp blur truly
+                        // smooth and uniform ("rata") all the way up to 100dp.
+                        val maxPassPx = 25f * density
+                        var remainingPx = radiusDp * density
+                        var effect: android.graphics.RenderEffect? = null
+                        var passes = 0
+                        while (remainingPx > 0.5f && passes < 4) {
+                            val stepPx = remainingPx.coerceAtMost(maxPassPx)
+                            val blur = android.graphics.RenderEffect.createBlurEffect(
+                                stepPx,
+                                stepPx,
+                                android.graphics.Shader.TileMode.CLAMP
+                            )
+                            effect = if (effect == null) {
+                                blur
+                            } else {
+                                android.graphics.RenderEffect.createChainEffect(blur, effect)
+                            }
+                            remainingPx -= stepPx
+                            passes++
+                        }
+                        effect?.asComposeRenderEffect()
                     } else {
                         null
                     }
