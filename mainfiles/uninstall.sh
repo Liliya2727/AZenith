@@ -2,6 +2,7 @@
 
 #
 # Copyright (C) 2026-2027 Zexshia
+# Modified by: mymod fork - ramd Phase 1 teardown
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,7 +39,16 @@ q sys.azenith-rianixiathermalcore
 q sys.azenith-service
 q sys.azenith-appmonitoring
 q sys.azenith-fpsclient
-        
+
+# Stop RAM daemon and drop its state
+RAMD="/data/adb/modules/AZenith/ramd/ram_daemon.sh"
+if [ -f "$RAMD" ]; then
+    sh "$RAMD" stop 2>/dev/null
+elif [ -f "/data/local/tmp/vixun/ramd.pid" ]; then
+    kill "$(cat /data/local/tmp/vixun/ramd.pid)" 2>/dev/null
+fi
+rm -rf "/data/local/tmp/vixun"
+
 pm uninstall zx.azenith >/dev/null 2>&1 &
 
 for dir in "/data/adb/ap/bin" "/data/adb/ksu/bin"; do

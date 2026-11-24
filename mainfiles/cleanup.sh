@@ -2,6 +2,7 @@
 
 #
 # Copyright (C) 2026-2027 Zexshia
+# Modified by: mymod fork - ramd Phase 1 teardown
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,6 +30,12 @@ cleanup_modules() {
     # Wait for PackageManager before uninstalling
     until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 2; done
     pm uninstall zx.azenith >/dev/null 2>&1
+
+    # Stop RAM daemon and drop its state
+    if [ -f "/data/local/tmp/vixun/ramd.pid" ]; then
+        kill "$(cat /data/local/tmp/vixun/ramd.pid)" 2>/dev/null
+    fi
+    rm -rf "/data/local/tmp/vixun"
 
     rm -rf \
         "/data/adb/.config/AZenith" \
