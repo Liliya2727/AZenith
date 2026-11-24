@@ -36,6 +36,13 @@ pub(crate) const MAX_RECENT: usize = 30;
 /// new main process and cancel the close instead of dropping the app.
 pub(crate) const MAIN_DEATH_GRACE: Duration = Duration::from_secs(2);
 
+/// A pid not confirmed alive for this long is dropped from the process table.
+/// `onProcessDied` normally removes entries, but a missed callback (system_server
+/// churn, daemon restart) used to leave them in memory forever.
+const PROC_TTL: Duration = Duration::from_secs(15 * 60);
+/// Upper bound for the "ever seen" package table used by the task parser.
+const MAX_KNOWN_APPS: usize = 512;
+
 /// Screen on/off, battery saver, zen mode, battery level and charging state.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub(crate) struct SysStat {
@@ -81,6 +88,10 @@ pub(crate) struct St {
     /// death grace: an auxiliary process alone must never keep a game in
     /// background_apps (archdaemon uses that pid to latch performance).
     apps: BTreeMap<String, (i32, i32)>,
+    /// Last time each pid / package was actually confirmed alive. Used only
+    /// for bounded pruning; neither map is part of the published output.
+    proc_seen: BTreeMap<i32, Instant>,
+    app_seen: BTreeMap<String, Instant>,
     /// true once the task manager returned its task list; from then on the
     /// task list, not process death, decides what leaves background_apps.
     recents_seen: bool,
@@ -97,6 +108,8 @@ static ST: LazyLock<Mutex<St>> = LazyLock::new(|| {
         main_pids: BTreeSet::new(),
         pending_close: BTreeMap::new(),
         apps: BTreeMap::new(),
+        proc_seen: BTreeMap::new(),
+        app_seen: BTreeMap::new(),
         recents_seen: false,
         sys: SysStat::default(),
         last_status: String::new(),
@@ -105,6 +118,26 @@ static ST: LazyLock<Mutex<St>> = LazyLock::new(|| {
 });
 
 pub(crate) fn st() -> MutexGuard<'static, St> { ST.lock().unwrap_or_else(|e| e.into_inner()) }
+
+/// Record a live process together with its freshness timestamp.
+fn note_proc(s: &mut St, pid: i32, pkg: &str, uid: i32) {
+    s.procs.insert(pid, (pkg.to_string(), uid));
+    s.proc_seen.insert(pid, Instant::now());
+}
+
+/// Record a seen package, evicting the least recently seen entry at the cap.
+/// `apps` is only a name cache for the task parcel parser, so dropping the
+/// oldest entry is harmless while keeping the table bounded.
+fn note_app(s: &mut St, pkg: &str, pid: i32, uid: i32) {
+    if !s.apps.contains_key(pkg) && s.apps.len() >= MAX_KNOWN_APPS {
+        if let Some(oldest) = s.app_seen.iter().min_by_key(|(_, t)| **t).map(|(k, _)| k.clone()) {
+            s.apps.remove(&oldest);
+            s.app_seen.remove(&oldest);
+        }
+    }
+    s.apps.insert(pkg.to_string(), (pid, uid));
+    s.app_seen.insert(pkg.to_string(), Instant::now());
+}
 
 /// The packages of the known app processes (currently alive).
 pub(crate) fn known_packages() -> Vec<String> {
@@ -130,6 +163,22 @@ pub(crate) fn known_apps() -> Vec<String> {
 pub(crate) fn cleanup_stale() {
     let mut s = st();
     let mut changed = false;
+
+    // Prune pids whose death callback was missed. The focused process is kept
+    // even if AMS has gone quiet, so the foreground app is never dropped.
+    let now = Instant::now();
+    let focused_pid = s.focused.as_ref().map(|(_, pid, _)| *pid);
+    let stale: Vec<i32> = s.proc_seen.iter()
+        .filter(|(pid, seen)| **pid != focused_pid.unwrap_or(0) && now.duration_since(**seen) > PROC_TTL)
+        .map(|(pid, _)| *pid)
+        .collect();
+    for pid in stale {
+        s.procs.remove(&pid);
+        s.main_pids.remove(&pid);
+        s.proc_seen.remove(&pid);
+        changed = true;
+    }
+
     let live: std::collections::HashSet<String> = s.procs.values().map(|(p, _)| p.clone()).collect();
     let focused = s.focused.as_ref().map(|(p, _, _)| p.clone());
     if !s.recents_seen {
@@ -166,32 +215,43 @@ pub(crate) fn set_recent(list: Vec<String>) {
     let live: std::collections::HashSet<String> = st().procs.values().map(|(p, _)| p.clone()).collect();
     let mut s = st();
     s.recents_seen = true;
+    let mut next = s.recent.clone();
     // Only replace `recent` when we have a real multi-task snapshot. A focused-
     // only (or empty) reply is not a full recents list; wiping on it would
     // remove background apps on every focus change.
     if list.len() > 1 {
-        s.recent.clear();
+        next.clear();
         for p in list {
-            if s.recent.len() >= MAX_RECENT {
+            if next.len() >= MAX_RECENT {
                 break;
             }
-            if !s.recent.contains(&p) {
-                s.recent.push(p);
+            if !next.contains(&p) {
+                next.push(p);
             }
         }
     }
+    let mut focus_cleared = false;
     if let Some(ref f) = focused {
         if live.contains(f) {
-            if let Some(pos) = s.recent.iter().position(|x| x == f) {
-                s.recent.remove(pos);
+            if let Some(pos) = next.iter().position(|x| x == f) {
+                next.remove(pos);
             }
-            s.recent.insert(0, f.clone());
+            next.insert(0, f.clone());
         } else {
-            s.focused = None;
+            focus_cleared = true;
         }
     }
+    // The task manager refreshes this list every 2 s. Publishing an unchanged
+    // list still deep-clones the whole process table; skip it entirely.
+    let changed = next != s.recent || focus_cleared;
+    s.recent = next;
+    if focus_cleared {
+        s.focused = None;
+    }
     drop(s);
-    publish("recent");
+    if changed {
+        publish("recent");
+    }
 }
 
 /// True for the uid range of the user apps (10000..19999).
@@ -440,11 +500,11 @@ pub(crate) fn set_focused(pkg: &str, pid: i32, uid: i32, why: &str) {
         push_recent(&mut s, &pkg);
         // The focused app must always be known in the process table, even when
         // its onProcessStarted event was missed.
-        s.procs.insert(pid, (pkg.to_string(), uid));
+        note_proc(&mut s, pid, &pkg, uid);
         // A process that hosts an activity is the app's main process.
         s.main_pids.insert(pid);
         s.pending_close.remove(&pkg);
-        s.apps.insert(pkg, (pid, uid));
+        note_app(&mut s, &pkg, pid, uid);
     }
     publish(why);
 }
@@ -456,7 +516,8 @@ pub(crate) fn add_proc(pid: i32, pkg: &str, uid: i32, main: bool) {
         let mut s = st();
         let e = s.procs.entry(pid).or_insert_with(|| (pkg.clone(), uid));
         if e.0 != pkg || e.1 != uid { *e = (pkg.clone(), uid); }
-        s.apps.insert(pkg.clone(), (pid, uid));
+        s.proc_seen.entry(pid).or_insert_with(Instant::now);
+        note_app(&mut s, &pkg, pid, uid);
         if main {
             s.main_pids.insert(pid);
             // A new main process means the app restarted: cancel the close.
@@ -490,6 +551,7 @@ pub(crate) fn remove_proc(pid: i32, why: &str) {
 /// Remove `pid` from `s`. Returns (package, was it the main process, publish).
 fn remove_proc_from(s: &mut St, pid: i32, now: Instant) -> (Option<String>, bool, bool) {
     let removed = s.procs.remove(&pid).map(|(p, _)| p);
+    s.proc_seen.remove(&pid);
     let was_main = s.main_pids.remove(&pid);
     if let Some(ref pkg) = removed {
         // The UI process is gone. Auxiliary processes may keep running, but an
@@ -510,6 +572,7 @@ fn remove_proc_from(s: &mut St, pid: i32, now: Instant) -> (Option<String>, bool
         if !s.procs.values().any(|(p, _)| p == pkg) {
             s.recent.retain(|x| x != pkg);
             s.apps.remove(pkg);
+            s.app_seen.remove(pkg);
             s.pending_close.remove(pkg);
         }
     }
@@ -632,8 +695,8 @@ pub(crate) fn seed() {
     {
         let mut s = st();
         for a in &apps {
-            s.procs.insert(a.pid, (a.pkg.clone(), a.uid));
-            s.apps.insert(a.pkg.clone(), (a.pid, a.uid));
+            note_proc(&mut s, a.pid, &a.pkg, a.uid);
+            note_app(&mut s, &a.pkg, a.pid, a.uid);
             if a.main {
                 s.main_pids.insert(a.pid);
             }
@@ -700,6 +763,11 @@ mod tests {
             apps: procs
                 .iter()
                 .map(|(pid, pkg)| (pkg.to_string(), (*pid, 10000 + pid)))
+                .collect(),
+            proc_seen: procs.iter().map(|(pid, _)| (*pid, Instant::now())).collect(),
+            app_seen: procs
+                .iter()
+                .map(|(pid, pkg)| (pkg.to_string(), Instant::now()))
                 .collect(),
             recents_seen: false,
             sys: SysStat::default(),
