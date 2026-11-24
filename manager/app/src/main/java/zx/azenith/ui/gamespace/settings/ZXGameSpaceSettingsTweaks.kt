@@ -150,6 +150,7 @@ import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -2160,12 +2161,27 @@ private fun DisplayColorSubPane(
 
     val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
 
+    // Each slider frame used to fork a root `service call SurfaceFlinger`.
+    // Debounce so a drag results in one call once the value settles, instead
+    // of one shell process per recomposition.
+    val applyScope = rememberCoroutineScope()
+    var rgbJob by remember { mutableStateOf<Job?>(null) }
+    var satJob by remember { mutableStateOf<Job?>(null) }
+
     val applyRGB = { r: Float, g: Float, b: Float ->
-        Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${r / 1000f} f 0 f 0 f 0 f 0 f ${g / 1000f} f 0 f 0 f 0 f 0 f ${b / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
+        rgbJob?.cancel()
+        rgbJob = applyScope.launch(Dispatchers.IO) {
+            delay(80)
+            Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${r / 1000f} f 0 f 0 f 0 f 0 f ${g / 1000f} f 0 f 0 f 0 f 0 f ${b / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
+        }
     }
 
     val applySat = { s: Float ->
-        Shell.cmd("service call SurfaceFlinger 1022 f ${s / 1000f}").submit()
+        satJob?.cancel()
+        satJob = applyScope.launch(Dispatchers.IO) {
+            delay(80)
+            Shell.cmd("service call SurfaceFlinger 1022 f ${s / 1000f}").submit()
+        }
     }
 
     val saveToProp = {
