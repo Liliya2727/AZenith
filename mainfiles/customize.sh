@@ -1,5 +1,6 @@
 #
 # Copyright (C) 2026-2027 Zexshia
+# Modified by: mymod fork - ramd Phase 1 install (extract to $MODPATH/ramd)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -231,6 +232,9 @@ if [ ! -f "$MODULE_CONFIG/gamelist/azenithApplist.json" ]; then
 fi
 echo "- Extracting module banner..."
 extract "$ZIPFILE" module.banner.jpg "$MODPATH"
+echo "- Extracting ramd..."
+unzip -o "$ZIPFILE" 'ramd/*' -d "$MODPATH" >&2
+[ -d "$MODPATH/ramd" ] && chmod +x "$MODPATH/ramd/"*.sh
 
 # Skip mountify
 touch "$MODPATH/skip_mountify"
