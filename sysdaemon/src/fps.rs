@@ -718,6 +718,12 @@ impl StreamTracker {
             }
         }
         self.active = next;
+        // Only the active stream can produce intervals in the next window.
+        // Without this, every Surface pointer ever seen during a long game
+        // leaves a permanent entry in last_ktime (counts is cleared, this was
+        // not). A newly selected stream correctly starts without a previous
+        // timestamp, matching the "first frame yields no interval" rule.
+        self.last_ktime.retain(|k, _| Some(*k) == self.active);
         self.counts.clear();
         fps
     }
