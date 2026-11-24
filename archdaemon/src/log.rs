@@ -9,6 +9,9 @@ use crate::io::write2file;
 use crate::util::timern;
 
 use std::fs;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::OnceLock;
+use std::time::Instant;
 
 fn safe_component(component: &str) -> &str {
     if component.is_empty() { "daemon" } else { component }
@@ -142,8 +145,25 @@ pub fn external_vlog(_level: i32, tag: &str, message: &str, _args: std::fmt::Arg
     logcat(ANDROID_LOG_INFO, LOG_TAG_PROFILE, &format!("[{comp}] {body}"));
 }
 
+/// Debug mode is a system property that never changes during a gaming session.
+/// Reading it on every `log_debug!` call meant a bionic property lookup plus a
+/// String allocation even when debug logging was off. Cache it and refresh at
+/// most once every 5 s so a runtime `setprop` is still picked up eventually.
 fn debug_enabled() -> bool {
-    get_or_default("persist.sys.azenith.debugmode", "false").as_str() == "true"
+    static FLAG: OnceLock<AtomicBool> = OnceLock::new();
+    static CHECKED_MS: AtomicU64 = AtomicU64::new(0);
+    static ORIGIN: OnceLock<Instant> = OnceLock::new();
+
+    let flag = FLAG.get_or_init(|| AtomicBool::new(false));
+    let origin = ORIGIN.get_or_init(Instant::now);
+    let now_ms = origin.elapsed().as_millis() as u64;
+    let last = CHECKED_MS.load(Ordering::Relaxed);
+    if now_ms.saturating_sub(last) >= 5_000 {
+        let enabled = get_or_default("persist.sys.azenith.debugmode", "false").as_str() == "true";
+        flag.store(enabled, Ordering::Relaxed);
+        CHECKED_MS.store(now_ms, Ordering::Relaxed);
+    }
+    flag.load(Ordering::Relaxed)
 }
 
 // ---------------------------------------------------------------------------
