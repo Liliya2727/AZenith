@@ -176,6 +176,9 @@ pub fn print_help() {
     println!("     -bpl,  --bypasspathlist   Show all embedded bypass charging paths");
     println!("     -rp,   --restorepending   Undo a bypass node left ON by an interrupted test");
     println!();
+    println!("     preload [OPTIONS] <PATHS> Run vmtouch-compatible page-cache preloader");
+    println!("                               Use 'sys.azenith-service preload --help' for options");
+    println!();
     println!("     -V,    --version          Show AZenith current version");
     println!();
     println!("     -h,    --help             Display this help message and exit");

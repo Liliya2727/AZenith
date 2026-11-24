@@ -19,7 +19,6 @@ on:
       - "binder_resolver/**"
       - "sysdaemon/**"
       - "mainfiles/**"
-      - "preloadbin/**"
       - "thermalcore/**"
       - "azenithApplist.json"
       - "version"
@@ -108,46 +107,6 @@ jobs:
         with:
           name: binder-resolver-apk
           path: sysdaemon/binder_resolver.apk
-          retention-days: 1
-          if-no-files-found: error
-
-  build-preloadbin:
-    name: Build Preload Binary
-    needs: [check-flag]
-    if: needs.check-flag.outputs.compile_apk != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
-        with:
-          fetch-depth: 0
-
-      - name: Determine Build Type
-        id: build_type
-        run: |
-          V_TYPE=$(cat version_type | tr -d '\n\r ')
-          echo "V_TYPE=$V_TYPE" >> $GITHUB_ENV
-          echo "Build mode set to: $V_TYPE"
-
-      - name: NDK Setup
-        uses: nttld/setup-ndk@v1.6.0
-        with:
-          ndk-version: r30
-
-      - name: Compile Preload Binary
-        working-directory: ./preloadbin
-        run: |
-          if [ "$V_TYPE" == "experimental" ]; then
-            ndk-build NDK_DEBUG=1
-          else
-            ndk-build
-          fi
-
-      - name: Upload Preload Binary
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: preloadbin-libs
-          path: preloadbin/libs
           retention-days: 1
           if-no-files-found: error
 
@@ -459,7 +418,7 @@ jobs:
 
   package:
     name: Package Flashable Zip
-    needs: [check-flag, build-preloadbin, build-rust, build-sysdaemon, build-manager]
+    needs: [check-flag, build-rust, build-sysdaemon, build-manager]
     if: needs.check-flag.outputs.compile_apk != 'true'
     runs-on: ubuntu-latest
     steps:
@@ -479,12 +438,6 @@ jobs:
             echo "APK_SUBDIR=release" >> $GITHUB_ENV
           fi
           echo "Build mode set to: $V_TYPE"
-
-      - name: Download Preload Binary
-        uses: actions/download-artifact@v4
-        with:
-          name: preloadbin-libs
-          path: preloadbin/libs
 
       - name: Download Daemon
         uses: actions/download-artifact@v4
@@ -530,7 +483,6 @@ jobs:
 
       - name: Restore Executable Permissions
         run: |
-          find preloadbin/libs -type f -exec chmod +x {} +
           find archdaemon/target thermalcore/target binprofiles/target binutils/target binpreferenced/target sysdaemon/target -type f -exec chmod +x {} +
 
       - name: Compile Flashable Zip
