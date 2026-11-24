@@ -55,6 +55,11 @@ pub fn increment_nofile_rlimit() -> Result<(), String> {
     Ok(())
 }
 
+#[allow(clippy::unnecessary_cast)]
+const fn mode_bits(m: libc::mode_t) -> u32 {
+    m as u32
+}
+
 /// Check whether `mincore(2)` is expected to report accurate residency on Linux >= 5.2.
 pub fn can_do_mincore(st: &libc::stat) -> bool {
     let mut uts: libc::utsname = unsafe { std::mem::zeroed() };
@@ -84,8 +89,8 @@ pub fn can_do_mincore(st: &libc::stat) -> bool {
     let uid = unsafe { libc::geteuid() };
     let gid = unsafe { libc::getegid() };
     st.st_uid == uid
-        || (st.st_gid == gid && (st.st_mode & libc::S_IWGRP) != 0)
-        || (st.st_mode & libc::S_IWOTH) != 0
+        || (st.st_gid == gid && (st.st_mode & mode_bits(libc::S_IWGRP)) != 0)
+        || (st.st_mode & mode_bits(libc::S_IWOTH)) != 0
         || uid == 0
 }
 
@@ -171,7 +176,7 @@ pub fn process_file(
         return Ok(());
     }
 
-    let len_of_file: i64 = if (sb.st_mode & libc::S_IFMT) == libc::S_IFBLK {
+    let len_of_file: i64 = if (sb.st_mode & mode_bits(libc::S_IFMT)) == mode_bits(libc::S_IFBLK) {
         let mut blk_size: u64 = 0;
         let rc = unsafe {
             libc::ioctl(

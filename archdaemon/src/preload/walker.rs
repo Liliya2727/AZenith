@@ -12,6 +12,11 @@ use super::stats::{PreloadConfig, PreloadObserver, Stats};
 pub const MAX_CRAWL_DEPTH: usize = 1024;
 const MAX_OPENDIR_RETRIES: usize = 8;
 
+#[allow(clippy::unnecessary_cast)]
+const fn mode_bits(m: libc::mode_t) -> u32 {
+    m as u32
+}
+
 /// Stateful crawler shared across batch entries and positional arguments.
 pub struct Crawler {
     dedup: InodeDedup,
@@ -77,8 +82,8 @@ impl Crawler {
                         continue;
                     }
 
-                    let file_type = sb.st_mode & libc::S_IFMT;
-                    if file_type == libc::S_IFLNK {
+                    let file_type = sb.st_mode & mode_bits(libc::S_IFMT);
+                    if file_type == mode_bits(libc::S_IFLNK) {
                         obs.warning(&format!("not following symbolic link {clean_disp}"));
                         continue;
                     }
@@ -106,7 +111,7 @@ impl Crawler {
                         continue;
                     }
 
-                    if file_type == libc::S_IFDIR {
+                    if file_type == mode_bits(libc::S_IFDIR) {
                         if active_dirs.contains(&(dev, ino)) {
                             obs.warning(&format!("symbolic link loop detected: {clean_disp}"));
                             continue;
@@ -136,7 +141,9 @@ impl Crawler {
                         for child in children.into_iter().rev() {
                             stack.push(Frame::Visit(child));
                         }
-                    } else if file_type == libc::S_IFREG || file_type == libc::S_IFBLK {
+                    } else if file_type == mode_bits(libc::S_IFREG)
+                        || file_type == mode_bits(libc::S_IFBLK)
+                    {
                         if cfg.filters.is_empty() || cfg.filters.matches_basename(&clean) {
                             self.stats.total_files = self.stats.total_files.saturating_add(1);
                             process_file(&clean, cfg, &mut self.stats, obs)?;
