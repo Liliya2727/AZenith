@@ -10,8 +10,8 @@ writes, and how its profile engine and FPS recorder work.
 
 > Companion project notes: this repo also ships `sysdaemon` (the app
 > monitor + FPS client supervisor), `thermalcore` (thermal telemetry),
-> `binprofiles` / `binutils` / `binpreferenced` (profile & tweak
-> helpers), `preloadbin`, the `manager` app (sidepanel UI), and the
+> `binprofiles` / `binutils` (profile & tweak helpers),
+> `preloadbin`, the `manager` app (sidepanel UI), and the
 > `binder_resolver` APK embedded into `sysdaemon`. Those are referenced
 > where relevant but are not part of this crate.
 
@@ -28,8 +28,8 @@ packages listed in `gamelist/azenithApplist.json`.
 
 Profile application, bypass charging, notifications, logging, process
 monitoring and FPS recording live in this one binary. The other Rust
-binaries (`binprofiles`, `binutils`, `binpreferenced`,
-`sysdaemon`, `thermalcore`) are separate crates that ship alongside it.
+binaries (`binprofiles`, `binutils`, `sysdaemon`, `thermalcore`)
+are separate crates that ship alongside it.
 
 Runtime behaviour is driven by system properties under
 `persist.sys.azenith.*` (daemon state), `persist.sys.azenithconf.*`

@@ -11,8 +11,8 @@ publisher work.
 > Companion project notes: this repo also ships `archdaemon` (the core
 > performance daemon that consumes `app_status`, `current_fps` and
 > `current_frametime`), `thermalcore` (thermal telemetry),
-> `binprofiles` / `binutils` / `binpreferenced` (profile & tweak
-> helpers), `preloadbin`, the `manager` app (sidepanel UI), and the
+> `binprofiles` / `binutils` (profile & tweak helpers),
+> `preloadbin`, the `manager` app (sidepanel UI), and the
 > `binder_resolver` APK embedded into this binary. Those are referenced
 > where relevant but are not part of this crate.
 
