@@ -2,6 +2,7 @@
 
 #
 # Copyright (C) 2026-2027 Zexshia
+# Modified by: mymod fork - ramd Phase 1 boot start
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,6 +58,9 @@ STATE=$(getprop persist.sys.azenith.state)
 
 # Dump and save refresh rates id
 "$BIN_SVC" --get_rr_modes
+
+# Start RAM daemon (shell) before the exec'd daemons replace this shell
+[ -f "$MODDIR/ramd/ram_daemon.sh" ] && sh "$MODDIR/ramd/ram_daemon.sh" >/dev/null 2>&1 &
 
 # Exec Binder Companion Daemon
 "$BIN_MON"
