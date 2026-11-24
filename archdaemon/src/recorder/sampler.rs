@@ -53,12 +53,18 @@ pub fn sample_once(sess: &mut Session, t: i64) {
     row.bat_lvl = read_int(Path::new("/sys/class/power_supply/battery/capacity")).unwrap_or(-1);
 
     let line = row.to_csv();
-    let _ = std::io::Write::write_all(&mut sess.writer, format!("{}\n", line).as_bytes());
-    sess.samples.push(row);
+    if let Err(e) = std::io::Write::write_all(&mut sess.writer, format!("{}\n", line).as_bytes()) {
+        crate::log_error!("recorder", "csv write failed path={:?} error={}", sess.csv_path, e);
+    }
+    sess.sample_accum.push(&row);
     sess.rows_since_flush += 1;
     if sess.rows_since_flush >= super::FLUSH_EVERY {
-        let _ = sess.writer.flush();
-        let _ = sess.writer.get_ref().sync_all();
+        if let Err(e) = sess.writer.flush() {
+            crate::log_error!("recorder", "csv flush failed path={:?} error={}", sess.csv_path, e);
+        }
+        if let Err(e) = sess.writer.get_ref().sync_all() {
+            crate::log_error!("recorder", "csv sync failed path={:?} error={}", sess.csv_path, e);
+        }
         sess.rows_since_flush = 0;
     }
 }

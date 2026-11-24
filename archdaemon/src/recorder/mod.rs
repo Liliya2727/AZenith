@@ -178,7 +178,9 @@ pub struct Session {
     pub csv_path: PathBuf,
     pub json_path: PathBuf,
     pub writer: BufWriter<std::fs::File>,
-    pub samples: Vec<Sample>,
+    /// Streaming aggregates for the JSON summary. Replaces the old
+    /// `Vec<Sample>` that grew by one entry per second for the whole session.
+    pub sample_accum: writer::SampleAccum,
     pub rows_since_flush: usize,
     /// One sample per second, deadline-based: next_deadline += 1s after each
     /// written row so a slow read delays the row instead of dropping `t`.
@@ -266,6 +268,7 @@ impl Recorder {
             }
         }
         write_record_state("idle");
+        retention::apply_retention();
     }
 
     /// Handle a record_cmd write ("start" | "stop").
@@ -356,7 +359,7 @@ impl Recorder {
             csv_path,
             json_path,
             writer,
-            samples: Vec::new(),
+            sample_accum: writer::SampleAccum::new(),
             rows_since_flush: 0,
             next_deadline: began_at + Duration::from_secs(1),
             last_written_t: 0,
@@ -454,8 +457,12 @@ impl Recorder {
         let duration_str = format!("{:02}:{:02}", duration / 60, duration % 60);
 
         // Flush the CSV writer before reading the file.
-        let _ = sess.writer.flush();
-        let _ = sess.writer.get_ref().sync_all();
+        if let Err(e) = sess.writer.flush() {
+            crate::log_error!("recorder", "csv flush failed path={:?} error={}", sess.csv_path, e);
+        }
+        if let Err(e) = sess.writer.get_ref().sync_all() {
+            crate::log_error!("recorder", "csv sync failed path={:?} error={}", sess.csv_path, e);
+        }
 
         if duration < MIN_SESSION_SECS {
             let _ = std::fs::remove_file(&sess.csv_path);
