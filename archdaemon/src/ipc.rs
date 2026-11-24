@@ -17,9 +17,8 @@ use crate::fileops;
 
 use nix::poll::{poll, PollFlags, PollFd, PollTimeout};
 use std::os::fd::BorrowedFd;
-use std::sync::atomic::{AtomicI32, Ordering};
-use std::thread;
-use std::time::Duration;
+use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // inotify_event structure from <sys/inotify.h>
 #[repr(C)]
@@ -56,6 +55,24 @@ static API_WATCH_FD: AtomicI32 = AtomicI32::new(-1);
 static WD_API_PROFILE: AtomicI32 = AtomicI32::new(-1);
 static WD_API_MODES: AtomicI32 = AtomicI32::new(-1);
 static WD_REC_CMD: AtomicI32 = AtomicI32::new(-1);
+
+/// A single atomic applist rewrite produces several inotify events (CREATE +
+/// MODIFY + CLOSE_WRITE + MOVED_TO). One full JSON parse is enough; the
+/// debounce also covers a rapid burst of rewrites from the app.
+static LAST_APPLIST_RELOAD_MS: AtomicU64 = AtomicU64::new(0);
+const APPLIST_RELOAD_DEBOUNCE_MS: u64 = 250;
+/// `record_cmd` only exists after the first overlay tap. Retrying
+/// `inotify_add_watch` on every loop iteration is wasted syscalls while it is
+/// absent, but a 500 ms backoff still feels immediate when it appears.
+static LAST_REC_CMD_RETRY_MS: AtomicU64 = AtomicU64::new(0);
+const REC_CMD_RETRY_MS: u64 = 500;
+
+fn now_millis() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
 
 const API_PROFILE_PATH: &str = "/data/adb/.config/AZenith/API/current_profile";
 const API_MODES_PATH: &str = "/data/adb/.config/AZenith/API/current_modes";
@@ -247,13 +264,17 @@ fn retry_api_file_watches(inotify_fd: i32, ctx: &mut DaemonContext, rec: &mut Re
         WD_API_MODES.store(wd, Ordering::Relaxed);
     }
     if WD_REC_CMD.load(Ordering::Relaxed) < 0 {
-        let wd = add_file_watch(inotify_fd, RECORD_CMD_PATH);
-        WD_REC_CMD.store(wd, Ordering::Relaxed);
-        if wd >= 0 {
-            // The file was created while we had no watch (e.g. the very first
-            // command): process its content now.
-            if let Ok(s) = std::fs::read_to_string(RECORD_CMD_PATH) {
-                rec.handle_cmd(ctx, s.trim());
+        let now = now_millis();
+        if now.saturating_sub(LAST_REC_CMD_RETRY_MS.load(Ordering::Relaxed)) >= REC_CMD_RETRY_MS {
+            LAST_REC_CMD_RETRY_MS.store(now, Ordering::Relaxed);
+            let wd = add_file_watch(inotify_fd, RECORD_CMD_PATH);
+            WD_REC_CMD.store(wd, Ordering::Relaxed);
+            if wd >= 0 {
+                // The file was created while we had no watch (e.g. the very first
+                // command): process its content now.
+                if let Ok(s) = std::fs::read_to_string(RECORD_CMD_PATH) {
+                    rec.handle_cmd(ctx, s.trim());
+                }
             }
         }
     }
@@ -347,11 +368,16 @@ fn process_event(
     const MOVED_TO: u32 = 0x00000080;
     const CREATE: u32 = 0x00000100;
 
-    // Check for IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE on azenithApplist.json
-    if (mask & (CLOSE_WRITE | MOVED_TO | CREATE)) != 0 && name.contains("azenithApplist.json") {
-        thread::sleep(Duration::from_millis(50));
-        reload_gamelist_cache(ctx);
-        ctx.need_profile_checkup = true;
+    // Check for IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE on the final applist
+    // name. Exact match (not `contains`) avoids temp files such as
+    // `azenithApplist.json.tmp` triggering a parse before the rename.
+    if (mask & (CLOSE_WRITE | MOVED_TO | CREATE)) != 0 && name == "azenithApplist.json" {
+        let now = now_millis();
+        if now.saturating_sub(LAST_APPLIST_RELOAD_MS.load(Ordering::Relaxed)) >= APPLIST_RELOAD_DEBOUNCE_MS {
+            LAST_APPLIST_RELOAD_MS.store(now, Ordering::Relaxed);
+            reload_gamelist_cache(ctx);
+            ctx.need_profile_checkup = true;
+        }
     }
 
     match name {
