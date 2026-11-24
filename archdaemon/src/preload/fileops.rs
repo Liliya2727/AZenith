@@ -315,9 +315,7 @@ pub fn process_file(
         std::hint::black_box(junk);
     }
 
-    if cfg.verbose > 0 {
-        obs.on_file_done(path, &mincore_array);
-    } else if cfg.action == ActionMode::Touch {
+    if cfg.verbose > 0 || cfg.action == ActionMode::Touch {
         obs.on_file_done(path, &mincore_array);
     }
 

@@ -24,3 +24,7 @@ strip = true
 [[bin]]
 name = "azenith-service"
 path = "src/main.rs"
+
+[[bin]]
+name = "preload"
+path = "src/preload_bin.rs"

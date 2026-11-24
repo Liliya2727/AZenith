@@ -1,5 +1,6 @@
 //! Native game preload engine and daemon integration.
 
+pub mod cli;
 pub mod dedup;
 pub mod fileops;
 pub mod filters;

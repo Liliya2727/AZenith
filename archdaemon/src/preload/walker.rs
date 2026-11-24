@@ -232,9 +232,9 @@ fn os_err_str(err: &io::Error) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::pages::system_page_size;
+    use super::super::stats::{ActionMode, NullObserver, TouchStrategy};
     use super::*;
-    use crate::preload::pages::system_page_size;
-    use crate::preload::stats::{ActionMode, NullObserver, TouchStrategy};
     use std::fs;
     use std::os::unix::fs::symlink;
 
@@ -266,10 +266,11 @@ mod tests {
 
         assert_eq!(crawler.stats.total_files, 2);
         assert_eq!(crawler.stats.total_dirs, 2);
-        assert!(obs
-            .warnings
-            .iter()
-            .any(|w| w.contains("symbolic link loop detected")));
+        assert!(
+            obs.warnings
+                .iter()
+                .any(|w| w.contains("symbolic link loop detected"))
+        );
 
         let _ = fs::remove_dir_all(&root);
     }

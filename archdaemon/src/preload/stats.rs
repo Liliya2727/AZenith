@@ -81,11 +81,13 @@ pub trait PreloadObserver {
 }
 
 /// No-op observer for silent/unit-test runs.
+#[cfg(test)]
 #[derive(Debug, Default)]
 pub struct NullObserver {
     pub warnings: Vec<String>,
 }
 
+#[cfg(test)]
 impl PreloadObserver for NullObserver {
     fn warning(&mut self, msg: &str) {
         self.warnings.push(msg.to_string());

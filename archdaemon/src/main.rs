@@ -51,7 +51,33 @@ macro_rules! is_cmd {
 }
 
 fn real_main() -> c_int {
-    let args: Vec<String> = env::args().collect();
+    let os_args: Vec<std::ffi::OsString> = env::args_os().collect();
+    let prog = os_args
+        .first()
+        .and_then(|s| std::path::Path::new(s).file_name())
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+
+    // Multicall compatibility shim for `sys.azenith-preloadbin` / `preloadbin` / `vmtouch`.
+    if matches!(prog, "sys.azenith-preloadbin" | "preloadbin" | "vmtouch") {
+        return crate::preload::cli::run_cli(
+            &os_args[1..],
+            crate::preload::cli::CliMode::StrictCompat,
+        );
+    }
+
+    // Native `preload` subcommand (does not require root or daemon running).
+    if os_args.get(1).and_then(|s| s.to_str()) == Some("preload") {
+        return crate::preload::cli::run_cli(
+            &os_args[2..],
+            crate::preload::cli::CliMode::Subcommand,
+        );
+    }
+
+    let args: Vec<String> = os_args
+        .iter()
+        .map(|s| s.to_string_lossy().into_owned())
+        .collect();
 
     if unsafe { libc::getuid() } != 0 {
         eprintln!("\u{1b}[31mERROR:\u{1b}[0m Please run this program as root");

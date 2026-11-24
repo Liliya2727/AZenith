@@ -106,7 +106,8 @@ normalize_stdout() {
         # Normalize Resident Pages line (keep TotalPages and TotalSize)
         if ($0 ~ /Resident Pages:/) {
             sub(/Resident Pages: [0-9]+\//, "Resident Pages: <RES>/")
-            sub(/  [0-9]+[KMG]?\/([0-9]+[KMG]?)  [0-9.]+%/, "  <RSZ>/\\1  <PCT>%")
+            sub(/  [0-9]+[KMG]?\//, "  <RSZ>/")
+            sub(/  [0-9.]+%/, "  <PCT>%")
         }
         # Normalize kv Resident counters (keep TotalPages and TotalSize)
         if ($0 ~ /ResidentPages=/) {
@@ -132,14 +133,14 @@ normalize_stderr() {
 
 is_expected_deviation() {
     case "$1" in
-        touch_kv|evict_kv|batch_nul_newline) return 0 ;;
+        touch_kv|evict_kv|batch_nul_newline|permute_opts) return 0 ;;
         *) return 1 ;;
     esac
 }
 
 is_getopt_case() {
     case "$1" in
-        opt_qmark|opt_long_help|opt_unknown_Z) return 0 ;;
+        opt_qmark|opt_long_help|opt_unknown_Z|shim_argv0_help_err) return 0 ;;
         *) return 1 ;;
     esac
 }

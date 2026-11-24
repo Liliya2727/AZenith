@@ -3,11 +3,7 @@
 /// Query the OS page size via `sysconf(_SC_PAGESIZE)`, falling back to 4096.
 pub fn system_page_size() -> i64 {
     let ps = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
-    if ps > 0 {
-        ps as i64
-    } else {
-        4096
-    }
+    if ps > 0 { ps as i64 } else { 4096 }
 }
 
 /// Checked `ceil(bytes / page_size)`.
