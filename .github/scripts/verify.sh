@@ -21,7 +21,6 @@ readonly CARGO_TOMLS=(
 	"sysdaemon/Cargo.toml"
 	"binprofiles/Cargo.toml"
 	"binutils/Cargo.toml"
-	"binpreferenced/Cargo.toml"
 )
 
 [ -f "version" ] || { echo "❌ Error: 'version' file not found!"; exit 1; }

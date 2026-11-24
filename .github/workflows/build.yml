@@ -15,7 +15,6 @@ on:
       - "archdaemon/**"
       - "binprofiles/**"
       - "binutils/**"
-      - "binpreferenced/**"
       - "binder_resolver/**"
       - "sysdaemon/**"
       - "mainfiles/**"
@@ -131,9 +130,6 @@ jobs:
           - name: AZenith Utility
             dir: binutils
             bin: azenith-utilityconf
-          - name: AZenith Preferenced
-            dir: binpreferenced
-            bin: azenith-preferencedtweaks
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
@@ -463,12 +459,6 @@ jobs:
           name: rust-binutils
           path: binutils/target
 
-      - name: Download Preferenced
-        uses: actions/download-artifact@v4
-        with:
-          name: rust-binpreferenced
-          path: binpreferenced/target
-
       - name: Download Binder Monitor
         uses: actions/download-artifact@v4
         with:
@@ -483,7 +473,7 @@ jobs:
 
       - name: Restore Executable Permissions
         run: |
-          find archdaemon/target thermalcore/target binprofiles/target binutils/target binpreferenced/target sysdaemon/target -type f -exec chmod +x {} +
+          find archdaemon/target thermalcore/target binprofiles/target binutils/target sysdaemon/target -type f -exec chmod +x {} +
 
       - name: Compile Flashable Zip
         id: compileZip
