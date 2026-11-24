@@ -358,6 +358,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var isViewAttached = false
     private var monitorJob: Job? = null
     private var telemetryJob: Job? = null
+    /** stopServiceIfIdle forks `pidof` through root; the monitor tick is 550 ms. */
+    private var lastIdleCheckMs = 0L
     private var windowTransitionJob: Job? = null
     private var fpsTrackingActive = false
     private var fpsSamplerJob: Job? = null
@@ -1804,10 +1806,13 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 // background, but only gameinfo can end the service. Keep the
                                 // launch grace intact until it expires so stopServiceIfIdle()
                                 // cannot tear down a service that is still within that window.
-                                if (!stopServiceIfIdle(rootGranted)) {
-                                    if (nowMs >= pendingLaunchGraceUntilMs) {
-                                        pendingLaunchPkg = null
-                                        pendingLaunchGraceUntilMs = 0L
+                                if (nowMs - lastIdleCheckMs >= 5_000L) {
+                                    lastIdleCheckMs = nowMs
+                                    if (!stopServiceIfIdle(rootGranted)) {
+                                        if (nowMs >= pendingLaunchGraceUntilMs) {
+                                            pendingLaunchPkg = null
+                                            pendingLaunchGraceUntilMs = 0L
+                                        }
                                     }
                                 }
                             }
@@ -2113,7 +2118,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun startRealTelemetryMonitor() {
         telemetryJob?.cancel()
         telemetryJob = serviceScope.launch(Dispatchers.IO) {
-            var tick = 0
+            var lastPingAtMs = 0L
             var lastObservedProfileCode = ""
             var lastParsedStartTimeStr = ""
 
@@ -2231,9 +2236,13 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val secs = totalSec % 60L
                     val durationFormatted = String.format(Locale.US, "%02d:%02d:%02d", hours, mins, secs)
 
-                    // 4. Periodically measure network latency & sync external brightness/volume changes
+                    // 4. Periodically measure network latency & sync external brightness/volume changes.
+                    // Time-based, not tick-based: at 400 ms HUD cadence the old `tick % 3`
+                    // opened a socket roughly every 1.2 s and kept the radio awake.
                     var measuredPing = panelState.pingMs
-                    if (tick % 3 == 0) {
+                    val nowPingMs = System.currentTimeMillis()
+                    if (nowPingMs - lastPingAtMs >= 30_000L) {
+                        lastPingAtMs = nowPingMs
                         telemetryCollector.measureTcpPingMs()?.let { measuredPing = it }
                     }
 
@@ -2261,7 +2270,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         panelState.profileDurationText = durationFormatted
                         panelState.pingMs = measuredPing
                     }
-                    tick++
                 }
                 delay(if (panelState.floatingHudVisible) 400L else 1000L)
             }
@@ -2768,7 +2776,8 @@ fun SidePanelRoot(
     LaunchedEffect(Unit) {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         while (isActive) {
-            clockTime = formatter.format(Date())
+            val next = formatter.format(Date())
+            if (next != clockTime) clockTime = next
             delay(1000L)
         }
     }
