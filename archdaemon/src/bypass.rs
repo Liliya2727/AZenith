@@ -1519,7 +1519,7 @@ pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
             if current_battery >= 0 && bypass_charging_allowed && is_device_charging {
                 if current_battery >= threshold {
                     if read_current_ma() > 50 {
-                        if enable_bypass() == 0 && !ctx.bypass.bypass_applied {
+                        if !ctx.bypass.bypass_applied && enable_bypass() == 0 {
                             log_info!("bypass", "bypass enabled battery={} threshold={}", current_battery, threshold);
                             ctx.bypass.bypass_applied = true;
                         }
