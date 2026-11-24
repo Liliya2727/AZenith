@@ -72,16 +72,31 @@ fn clean(s: &str) -> Option<String> {
 // ---------------- package -> base.apk ----------------
 
 static APK_PATHS: LazyLock<Mutex<HashMap<String, PathBuf>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+const MAX_APK_PATHS: usize = 512;
 
 /// base.apk of a package. The index is (re)scanned when a package is not in it,
-/// so apps installed while the daemon runs are found too.
+/// so apps installed while the daemon runs are found too. The scan happens
+/// outside the lock: holding the mutex across the whole `/data/app` walk used
+/// to block every concurrent label lookup.
 fn apk_path(pkg: &str) -> Option<PathBuf> {
-    let mut map = APK_PATHS.lock().unwrap_or_else(|e| e.into_inner());
-    if map.is_empty() || !map.contains_key(pkg) {
-        scan_app_root(Path::new("/data/app"), &mut map);
-        debug!("apk index: {} packages", map.len());
+    {
+        let map = APK_PATHS.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(path) = map.get(pkg) {
+            return Some(path.clone());
+        }
     }
-    map.get(pkg).cloned()
+
+    let mut fresh = HashMap::new();
+    scan_app_root(Path::new("/data/app"), &mut fresh);
+    debug!("apk index: {} packages", fresh.len());
+    let found = fresh.get(pkg).cloned();
+
+    let mut map = APK_PATHS.lock().unwrap_or_else(|e| e.into_inner());
+    if map.len() + fresh.len() > MAX_APK_PATHS {
+        map.clear();
+    }
+    map.extend(fresh);
+    found
 }
 
 /// /data/app/~~<hash>==/<pkg>-<hash>==/base.apk (and the flat legacy layout).

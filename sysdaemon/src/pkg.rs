@@ -31,6 +31,9 @@ static LABEL_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
 /// Keep the label cache small, it only grows with the number of apps the user
 /// ever opened.
 const MAX_LABEL_CACHE: usize = 128;
+/// uid -> package is a small mapping of apps currently seen by the process
+/// observer; bound it so a long-running daemon cannot grow it without limit.
+const MAX_UID_CACHE: usize = 512;
 
 pub(crate) fn set_pm(b: P) { let _ = PM.set(b as usize); }
 
@@ -52,7 +55,9 @@ pub(crate) fn pkg_of_uid(uid: i32) -> Option<String> {
     let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
     let name = String::from_utf8_lossy(&buf[..end]).into_owned();
     if name.is_empty() { return None; }
-    UID_CACHE.lock().unwrap_or_else(|e| e.into_inner()).insert(uid, name.clone());
+    let mut g = UID_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    if g.len() >= MAX_UID_CACHE { g.clear(); }
+    g.insert(uid, name.clone());
     Some(name)
 }
 
