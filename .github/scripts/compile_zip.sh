@@ -66,7 +66,7 @@ cp binpreferenced/target/armv7-linux-androideabi/$RUST_PROFILE/azenith-preferenc
 cp sysdaemon/target/armv7-linux-androideabi/$RUST_PROFILE/azenith-appmonitoring mainfiles/libs/armeabi-v7a/sys.azenith-appmonitoring 2>/dev/null || true
 
 # Other Files
-# Modified by: mymod fork - stage ramd shell daemon (Phase 1)
+# Modified by: Rensykaa (fork) - stage ramd shell daemon (Phase 1)
 mkdir -p mainfiles/ramd
 cp -r src/ramd/* mainfiles/ramd/
 cp azenithApplist.json mainfiles/
