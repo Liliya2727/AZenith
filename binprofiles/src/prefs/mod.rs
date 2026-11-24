@@ -14,9 +14,44 @@
 // limitations under the License.
 //
 
-use crate::utils::*;
-use std::process::Command;
+use crate::utils::{getprop, log_debug, log_info as bp_log_info, write_unlock_core};
+use std::process::{Command, Stdio};
 use std::thread;
+
+/// Keep the preference helpers' original log component inside the merged binary.
+const LOG_COMPONENT: &str = "AZenith_Prefs";
+
+fn log_verbose(message: &str) { log_debug(LOG_COMPONENT, message); }
+fn log_info(message: &str) { bp_log_info(LOG_COMPONENT, message); }
+
+/// Preserve the old `resetprop -n` behaviour (do not create missing props).
+fn resetprop(key: &str, val: &str) {
+    let _ = Command::new("resetprop").arg("-n").arg(key).arg(val).status();
+}
+
+/// Thin adapter over the profiler's sysfs writer.
+fn write_val(value: &str, path: &str, lock: bool) {
+    write_unlock_core(value, path, lock);
+}
+
+fn chmod_glob(pattern: &str, mode: u32) {
+    if let Ok(paths) = glob::glob(pattern) {
+        for path in paths.flatten() {
+            if let Some(p) = path.to_str() {
+                crate::utils::chmod(p, mode);
+            }
+        }
+    }
+}
+
+fn cmd_split(parts: &[&str]) {
+    if parts.is_empty() { return; }
+    let _ = Command::new(parts[0])
+        .args(&parts[1..])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+}
 
 const LIST_LOGGER: [&str; 8] = [
     "logd",

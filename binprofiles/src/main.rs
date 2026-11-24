@@ -18,6 +18,7 @@ mod android_ffi;
 mod utils;
 mod chipsets;
 mod profiles;
+mod prefs;
 
 use std::env;
 use std::path::Path;
@@ -67,6 +68,11 @@ fn main() {
             "3" | "eco_mode" => eco_mode(),
             "applyfreqbalance" => applyfreqbalance(),
             "applyfreqgame" => applyfreqgame(),
+            // Merged from binpreferenced. Same caller verification applies.
+            "apply" | "prefs" | "preferenced" => {
+                prefs::prefsettings();
+                let _ = Command::new("sync").status();
+            }
             _ => {
                 if Path::new(&args[1]).exists() || args[1].contains('.') {
                     let _ = Command::new(&args[1])

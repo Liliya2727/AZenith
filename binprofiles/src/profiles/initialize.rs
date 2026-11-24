@@ -110,7 +110,9 @@ pub fn initialize() {
     write_lock("255", "/proc/sys/kernel/sched_lib_mask_force");
 
     systemv("sys.azenith-utilityconf FSTrim");
-    let _ = Command::new("sys.azenith-preferencedtweaks").status();
+    // binpreferenced is merged into this binary; call the preference dispatcher
+    // directly instead of relying on the compatibility symlink.
+    let _ = Command::new("sys.azenith-profilesettings").arg("prefs").status();
     
     // Final Sync & Logs
     let _ = Command::new("sync").status();
