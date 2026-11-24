@@ -319,7 +319,12 @@ pub fn process_file(
         obs.on_file_done(path, &mincore_array);
     }
 
-    if unsafe { libc::munmap(mem, map_len) } != 0 {
+    if cfg.lock && unsafe { libc::mlock(mem, map_len) } != 0 {
+        let err = io::Error::last_os_error();
+        return Err(format!("mlock: {path_disp} ({})", os_err_str(&err)));
+    }
+
+    if !cfg.lock && !cfg.lockall && unsafe { libc::munmap(mem, map_len) } != 0 {
         let err = io::Error::last_os_error();
         obs.warning(&format!(
             "unable to munmap file {path_disp} ({})",

@@ -314,6 +314,93 @@ if [ "$HAS_NL_FILE" -eq 1 ]; then
     run_case "batch_nul_newline" "" -t -b "$FIX/nul_nl.list" -0
 fi
 
+# --- Section 9 Item 5: Stage 3 locking & daemon tests (small 4 KiB file within RLIMIT_MEMLOCK) ---
+run_lock_fg_case() {
+    bin="$1"
+    pidf="$2"
+    outf="$3"
+    errf="$4"
+    "$bin" -l -P "$pidf" "$FIX/nested/a.so" > "$outf" 2> "$errf" &
+    bg_pid=$!
+    # Wait up to 2s for pidfile to appear
+    i=0
+    while [ "$i" -lt 40 ] && [ ! -s "$pidf" ]; do
+        sleep 0.05
+        i=$((i + 1))
+    done
+    pid_created=0
+    [ -s "$pidf" ] && pid_created=1
+    kill -TERM "$bg_pid" 2>/dev/null || true
+    wait "$bg_pid" 2>/dev/null
+    rc=$?
+    pid_removed=0
+    [ ! -e "$pidf" ] && pid_removed=1
+    printf '%d %d %d\n' "$rc" "$pid_created" "$pid_removed"
+}
+
+run_lock_daemon_case() {
+    bin="$1"
+    pidf="$2"
+    outf="$3"
+    errf="$4"
+    "$bin" -d -l -w -P "$pidf" "$FIX/nested/a.so" > "$outf" 2> "$errf"
+    rc=$?
+    pid_created=0
+    alive=0
+    pid_removed=0
+    if [ -s "$pidf" ]; then
+        pid_created=1
+        dpid=$(cat "$pidf")
+        if kill -0 "$dpid" 2>/dev/null; then
+            alive=1
+        fi
+        kill -TERM "$dpid" 2>/dev/null || true
+        i=0
+        while [ "$i" -lt 40 ] && [ -e "$pidf" ]; do
+            sleep 0.05
+            i=$((i + 1))
+        done
+        [ ! -e "$pidf" ] && pid_removed=1
+    fi
+    printf '%d %d %d %d\n' "$rc" "$pid_created" "$alive" "$pid_removed"
+}
+
+# Probe whether mlock(4K) is permitted under current RLIMIT_MEMLOCK
+PROBE_OUT="$WORK_DIR/mlock_probe.out"
+PROBE_ERR="$WORK_DIR/mlock_probe.err"
+PROBE_RES=$(run_lock_fg_case "$C_BIN" "$WORK_DIR/probe.pid" "$PROBE_OUT" "$PROBE_ERR")
+if grep -q "^LOCKED 1 pages" "$PROBE_OUT" 2>/dev/null; then
+    # 1. Foreground -l -P + SIGTERM
+    TOTAL=$((TOTAL + 1))
+    c_res=$(run_lock_fg_case "$C_BIN" "$WORK_DIR/c_fg.pid" "$WORK_DIR/c_lock_fg.out" "$WORK_DIR/c_lock_fg.err")
+    r_res=$(run_lock_fg_case "$RUST_BIN" "$WORK_DIR/r_fg.pid" "$WORK_DIR/r_lock_fg.out" "$WORK_DIR/r_lock_fg.err")
+    if [ "$c_res" = "$r_res" ] && cmp -s "$WORK_DIR/c_lock_fg.out" "$WORK_DIR/r_lock_fg.out" && cmp -s "$WORK_DIR/c_lock_fg.err" "$WORK_DIR/r_lock_fg.err"; then
+        PASS=$((PASS + 1))
+        printf 'PASS               lock_fg_pid (%s)\n' "$r_res"
+    else
+        FAIL=$((FAIL + 1))
+        printf 'REAL_MISMATCH      lock_fg_pid (c=[%s] r=[%s])\n' "$c_res" "$r_res"
+        diff -u "$WORK_DIR/c_lock_fg.out" "$WORK_DIR/r_lock_fg.out" | sed 's/^/    /' || true
+        diff -u "$WORK_DIR/c_lock_fg.err" "$WORK_DIR/r_lock_fg.err" | sed 's/^/    /' || true
+    fi
+
+    # 2. Daemon -d -l -w -P + SIGTERM
+    TOTAL=$((TOTAL + 1))
+    c_res=$(run_lock_daemon_case "$C_BIN" "$WORK_DIR/c_dm.pid" "$WORK_DIR/c_lock_dm.out" "$WORK_DIR/c_lock_dm.err")
+    r_res=$(run_lock_daemon_case "$RUST_BIN" "$WORK_DIR/r_dm.pid" "$WORK_DIR/r_lock_dm.out" "$WORK_DIR/r_lock_dm.err")
+    if [ "$c_res" = "$r_res" ] && cmp -s "$WORK_DIR/c_lock_dm.out" "$WORK_DIR/r_lock_dm.out" && cmp -s "$WORK_DIR/c_lock_dm.err" "$WORK_DIR/r_lock_dm.err"; then
+        PASS=$((PASS + 1))
+        printf 'PASS               lock_daemon_wait_pid (%s)\n' "$r_res"
+    else
+        FAIL=$((FAIL + 1))
+        printf 'REAL_MISMATCH      lock_daemon_wait_pid (c=[%s] r=[%s])\n' "$c_res" "$r_res"
+        diff -u "$WORK_DIR/c_lock_dm.out" "$WORK_DIR/r_lock_dm.out" | sed 's/^/    /' || true
+        diff -u "$WORK_DIR/c_lock_dm.err" "$WORK_DIR/r_lock_dm.err" | sed 's/^/    /' || true
+    fi
+else
+    echo "NOTE: mlock(4K) unavailable on this host (RLIMIT_MEMLOCK); skipping Stage 3 lock tests" >&2
+fi
+
 # --- Section 9 Item 6: argv[0] shim (only when RUST_BIN != C_BIN) ---
 if [ "$C_BIN" != "$RUST_BIN" ]; then
     OLD_RUST_BIN="$RUST_BIN"

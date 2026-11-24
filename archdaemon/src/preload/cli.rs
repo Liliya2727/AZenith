@@ -8,19 +8,291 @@
 //!   line changed to `Usage: sys.azenith-service preload [OPTIONS] ... FILES OR DIRECTORIES ...`.
 //!   `-h` is ALWAYS hardlink counting, never help.
 
-use std::ffi::{OsStr, OsString};
+use std::ffi::{CStr, CString, OsStr, OsString};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::time::Instant;
 
 use super::pages::system_page_size;
 use super::range::parse_range;
 use super::report::{format_human_summary, format_kv_summary, format_residency_chart};
-use super::size::parse_size;
+use super::size::{parse_size, pretty_print_size};
 use super::stats::{ActionMode, PreloadConfig, PreloadObserver, TouchStrategy};
 use super::walker::Crawler;
+
+static SIG_PIPE_WRITE: AtomicI32 = AtomicI32::new(-1);
+
+extern "C" fn handle_stop_signal(_sig: libc::c_int) {
+    let fd = SIG_PIPE_WRITE.load(Ordering::Relaxed);
+    if fd >= 0 {
+        let byte: u8 = 1;
+        // `write(2)` is async-signal-safe per POSIX.1-2008.
+        let _ = unsafe { libc::write(fd, &byte as *const u8 as *const libc::c_void, 1) };
+    }
+}
+
+fn os_err_str(err: &io::Error) -> String {
+    match err.raw_os_error() {
+        Some(code) => {
+            let ptr = unsafe { libc::strerror(code) };
+            if ptr.is_null() {
+                err.to_string()
+            } else {
+                unsafe { CStr::from_ptr(ptr) }
+                    .to_string_lossy()
+                    .into_owned()
+            }
+        }
+        None => err.to_string(),
+    }
+}
+
+fn send_exit_signal(pipe_write: &mut Option<i32>, code: u8) {
+    if let Some(fd) = pipe_write.take() {
+        if unsafe { libc::write(fd, &code as *const u8 as *const libc::c_void, 1) } < 0 {
+            let err = io::Error::last_os_error();
+            let mut stderr = io::stderr().lock();
+            let _ = writeln!(stderr, "vmtouch: FATAL: write: {}", os_err_str(&err));
+        }
+        unsafe {
+            libc::close(fd);
+        }
+    }
+}
+
+fn reopen_all() -> Result<(), String> {
+    let devnull = c"/dev/null";
+    let fd_in = unsafe { libc::open(devnull.as_ptr(), libc::O_RDONLY) };
+    if fd_in < 0 {
+        return Err(format!(
+            "freopen: {}",
+            os_err_str(&io::Error::last_os_error())
+        ));
+    }
+    let fd_out = unsafe { libc::open(devnull.as_ptr(), libc::O_WRONLY) };
+    if fd_out < 0 {
+        let err = io::Error::last_os_error();
+        unsafe {
+            libc::close(fd_in);
+        }
+        return Err(format!("freopen: {}", os_err_str(&err)));
+    }
+    let ok = unsafe {
+        libc::dup2(fd_in, libc::STDIN_FILENO) >= 0
+            && libc::dup2(fd_out, libc::STDOUT_FILENO) >= 0
+            && libc::dup2(fd_out, libc::STDERR_FILENO) >= 0
+    };
+    let err = io::Error::last_os_error();
+    unsafe {
+        if fd_in > libc::STDERR_FILENO {
+            libc::close(fd_in);
+        }
+        if fd_out > libc::STDERR_FILENO {
+            libc::close(fd_out);
+        }
+    }
+    if !ok {
+        return Err(format!("freopen: {}", os_err_str(&err)));
+    }
+    Ok(())
+}
+
+fn wait_for_child(daemon_pid: libc::pid_t, pipe_read: i32) -> Result<i32, String> {
+    loop {
+        let mut tv = libc::timeval {
+            tv_sec: 1,
+            tv_usec: 0,
+        };
+        let mut rfds: libc::fd_set = unsafe { std::mem::zeroed() };
+        unsafe {
+            libc::FD_ZERO(&mut rfds);
+            libc::FD_SET(pipe_read, &mut rfds);
+        }
+
+        let rc = unsafe {
+            libc::select(
+                pipe_read + 1,
+                &mut rfds,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                &mut tv,
+            )
+        };
+        if rc < 0 {
+            let err = io::Error::last_os_error();
+            if err.raw_os_error() == Some(libc::EINTR) {
+                continue;
+            }
+            unsafe {
+                libc::close(pipe_read);
+            }
+            return Err(format!("select: {}", os_err_str(&err)));
+        }
+
+        let mut wait_status: libc::c_int = 0;
+        if unsafe { libc::waitpid(daemon_pid, &mut wait_status, libc::WNOHANG) } > 0 {
+            unsafe {
+                libc::close(pipe_read);
+            }
+            return Err("daemon shut down unexpectedly".to_string());
+        }
+
+        if unsafe { libc::FD_ISSET(pipe_read, &rfds) } {
+            break;
+        }
+    }
+
+    let mut exit_value: u8 = 0;
+    let n = unsafe {
+        libc::read(
+            pipe_read,
+            &mut exit_value as *mut u8 as *mut libc::c_void,
+            1,
+        )
+    };
+    let err = io::Error::last_os_error();
+    unsafe {
+        libc::close(pipe_read);
+    }
+    if n < 0 {
+        return Err(format!("read: {}", os_err_str(&err)));
+    }
+    Ok(i32::from(exit_value))
+}
+
+fn write_pidfile(path: &OsStr, quiet: bool) {
+    match File::create(Path::new(path)) {
+        Ok(mut f) => {
+            if let Err(err) = writeln!(f, "{}", std::process::id()) {
+                warn_msg(
+                    quiet,
+                    &format!(
+                        "unable to write to pidfile {} ({}), deleting it",
+                        path.to_string_lossy(),
+                        os_err_str(&err)
+                    ),
+                );
+                remove_pidfile(path, quiet);
+            }
+        }
+        Err(err) => {
+            warn_msg(
+                quiet,
+                &format!(
+                    "unable to open pidfile {} ({}), skipping",
+                    path.to_string_lossy(),
+                    os_err_str(&err)
+                ),
+            );
+        }
+    }
+}
+
+fn remove_pidfile(path: &OsStr, quiet: bool) {
+    let Ok(c_path) = CString::new(path.as_bytes()) else {
+        return;
+    };
+    if unsafe { libc::unlink(c_path.as_ptr()) } < 0 {
+        let err = io::Error::last_os_error();
+        if err.raw_os_error() != Some(libc::ENOENT) {
+            warn_msg(
+                quiet,
+                &format!(
+                    "unable to remove pidfile {} ({})",
+                    path.to_string_lossy(),
+                    os_err_str(&err)
+                ),
+            );
+        }
+    }
+}
+
+fn setup_stop_signals(quiet: bool) -> Option<i32> {
+    let mut fds = [-1_i32; 2];
+    if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+        warn_msg(
+            quiet,
+            &format!(
+                "unable to register signals for pidfile ({}), skipping",
+                os_err_str(&io::Error::last_os_error())
+            ),
+        );
+        return None;
+    }
+    unsafe {
+        let flags = libc::fcntl(fds[1], libc::F_GETFL);
+        if flags >= 0 {
+            libc::fcntl(fds[1], libc::F_SETFL, flags | libc::O_NONBLOCK);
+        }
+    }
+    SIG_PIPE_WRITE.store(fds[1], Ordering::SeqCst);
+
+    let mut sa: libc::sigaction = unsafe { std::mem::zeroed() };
+    sa.sa_sigaction = handle_stop_signal as *const () as usize;
+    unsafe {
+        libc::sigemptyset(&mut sa.sa_mask);
+    }
+    sa.sa_flags = 0;
+
+    let ok = unsafe {
+        libc::sigaction(libc::SIGINT, &sa, std::ptr::null_mut()) == 0
+            && libc::sigaction(libc::SIGTERM, &sa, std::ptr::null_mut()) == 0
+            && libc::sigaction(libc::SIGQUIT, &sa, std::ptr::null_mut()) == 0
+    };
+    if !ok {
+        warn_msg(
+            quiet,
+            &format!(
+                "unable to register signals for pidfile ({}), skipping",
+                os_err_str(&io::Error::last_os_error())
+            ),
+        );
+        SIG_PIPE_WRITE.store(-1, Ordering::SeqCst);
+        unsafe {
+            libc::close(fds[0]);
+            libc::close(fds[1]);
+        }
+        return None;
+    }
+
+    Some(fds[0])
+}
+
+fn wait_until_stop_signal(sig_pipe_read: Option<i32>) {
+    if let Some(rfd) = sig_pipe_read {
+        let mut buf = [0_u8; 1];
+        loop {
+            let n = unsafe { libc::read(rfd, buf.as_mut_ptr() as *mut libc::c_void, 1) };
+            if n > 0 {
+                break;
+            }
+            if n < 0 && io::Error::last_os_error().raw_os_error() == Some(libc::EINTR) {
+                continue;
+            }
+            break;
+        }
+        let wfd = SIG_PIPE_WRITE.swap(-1, Ordering::SeqCst);
+        unsafe {
+            libc::close(rfd);
+            if wfd >= 0 {
+                libc::close(wfd);
+            }
+        }
+    } else {
+        unsafe {
+            libc::select(
+                0,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            );
+        }
+    }
+}
 
 pub const VMTOUCH_VERSION: &str = "1.4.1";
 
@@ -416,9 +688,61 @@ pub fn run_cli(args: &[OsString], mode: CliMode) -> i32 {
         return 1;
     }
 
-    // Stage 2: locking / daemon modes are deferred to Stage 3.
-    if parsed.lock || parsed.lockall || parsed.daemon || parsed.wait || parsed.pidfile.is_some() {
-        return fatal_msg("locking/daemon options (-l/-L/-d/-w/-P) are not supported yet");
+    // Set up daemon mode (-d) and wait pipe (-w) before crawling.
+    let mut exit_pipe_write: Option<i32> = None;
+    if parsed.daemon {
+        let mut pipe_fds = [-1_i32; 2];
+        if parsed.wait && unsafe { libc::pipe(pipe_fds.as_mut_ptr()) } != 0 {
+            return fatal_msg(&format!(
+                "pipe: {}",
+                os_err_str(&io::Error::last_os_error())
+            ));
+        }
+
+        let pid = unsafe { libc::fork() };
+        if pid < 0 {
+            let err = io::Error::last_os_error();
+            if parsed.wait {
+                unsafe {
+                    libc::close(pipe_fds[0]);
+                    libc::close(pipe_fds[1]);
+                }
+            }
+            return fatal_msg(&format!("fork: {}", os_err_str(&err)));
+        }
+
+        if pid > 0 {
+            if parsed.wait {
+                unsafe {
+                    libc::close(pipe_fds[1]);
+                }
+                return match wait_for_child(pid, pipe_fds[0]) {
+                    Ok(code) => code,
+                    Err(msg) => fatal_msg(&msg),
+                };
+            }
+            return 0;
+        }
+
+        // Daemon child
+        if parsed.wait {
+            unsafe {
+                libc::close(pipe_fds[0]);
+            }
+            exit_pipe_write = Some(pipe_fds[1]);
+        }
+
+        if unsafe { libc::setsid() } == -1 {
+            let err = io::Error::last_os_error();
+            send_exit_signal(&mut exit_pipe_write, 1);
+            return fatal_msg(&format!("setsid: {}", os_err_str(&err)));
+        }
+
+        if !parsed.wait
+            && let Err(msg) = reopen_all()
+        {
+            return fatal_msg(&msg);
+        }
     }
 
     parsed.cfg.action = if parsed.evict {
@@ -429,6 +753,8 @@ pub fn run_cli(args: &[OsString], mode: CliMode) -> i32 {
         ActionMode::Query
     };
     parsed.cfg.touch_strategy = TouchStrategy::Mmap;
+    parsed.cfg.lock = parsed.lock;
+    parsed.cfg.lockall = parsed.lockall;
 
     let start = Instant::now();
     let mut crawler = Crawler::new();
@@ -446,16 +772,61 @@ pub fn run_cli(args: &[OsString], mode: CliMode) -> i32 {
             &mut obs,
         )
     {
+        send_exit_signal(&mut exit_pipe_write, 1);
         return fatal_msg(&e);
     }
 
     for pos in &parsed.positionals {
         if let Err(e) = crawler.crawl(Path::new(pos), &parsed.cfg, &mut obs) {
+            send_exit_signal(&mut exit_pipe_write, 1);
             return fatal_msg(&e);
         }
     }
 
     let elapsed = start.elapsed().as_secs_f64();
+
+    if parsed.lock || parsed.lockall {
+        if parsed.lockall && unsafe { libc::mlockall(libc::MCL_CURRENT) } != 0 {
+            let err = io::Error::last_os_error();
+            send_exit_signal(&mut exit_pipe_write, 1);
+            return fatal_msg(&format!("mlockall: {}", os_err_str(&err)));
+        }
+
+        let sig_pipe_read = setup_stop_signals(parsed.cfg.quiet);
+        if let Some(ref pidfile) = parsed.pidfile {
+            write_pidfile(pidfile, parsed.cfg.quiet);
+        }
+
+        let total_size = crawler.stats.total_pages.saturating_mul(page_size);
+        if !parsed.cfg.quiet {
+            let mut out = io::stdout().lock();
+            let _ = writeln!(
+                out,
+                "LOCKED {} pages ({})",
+                crawler.stats.total_pages,
+                pretty_print_size(total_size)
+            );
+            let _ = out.flush();
+        }
+
+        if parsed.wait
+            && let Err(msg) = reopen_all()
+        {
+            if let Some(ref pidfile) = parsed.pidfile {
+                remove_pidfile(pidfile, parsed.cfg.quiet);
+            }
+            send_exit_signal(&mut exit_pipe_write, 1);
+            return fatal_msg(&msg);
+        }
+
+        send_exit_signal(&mut exit_pipe_write, 0);
+        wait_until_stop_signal(sig_pipe_read);
+
+        if let Some(ref pidfile) = parsed.pidfile {
+            remove_pidfile(pidfile, parsed.cfg.quiet);
+        }
+        return 0;
+    }
 
     if !parsed.cfg.quiet {
         let mut out = io::stdout().lock();
