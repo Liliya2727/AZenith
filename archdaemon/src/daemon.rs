@@ -241,14 +241,31 @@ pub fn main_daemon() -> c_int {
 
         let real_screen_state = get_screenstate(&ctx.current_system_cache);
 
-        if ctx.config_freqoffset_str() == "Disabled" {
-            if ctx.last_freqoffset_str() != "Disabled" {
+        // Re-apply the frequency balance only when its inputs change, never on
+        // a steady-state tick. `systemv()` forks a shell (fork + execle +
+        // waitpid), so the old Balanced/Eco branch spawned one every loop
+        // iteration. Profile application already honours the current limiter,
+        // so a standalone re-balance is only needed on a transition.
+        let freqoffset = ctx.config_freqoffset_str();
+        let balance_sig = format!(
+            "{}|{}|{}",
+            freqoffset,
+            real_screen_state as u8,
+            ctx.profile.cur_mode as i32,
+        );
+        if balance_sig != ctx.last_balance_sig {
+            let should_apply = if freqoffset == "Disabled" {
+                // Preserve the original transition-only semantics here.
+                ctx.last_freqoffset_str() != "Disabled"
+            } else {
+                real_screen_state
+                    && (ctx.profile.cur_mode == ProfileMode::BalancedProfile
+                        || ctx.profile.cur_mode == ProfileMode::EcoMode)
+            };
+            if should_apply {
                 systemv("sys.azenith-profilesettings applyfreqbalance");
             }
-        } else if real_screen_state
-            && (ctx.profile.cur_mode == ProfileMode::BalancedProfile || ctx.profile.cur_mode == ProfileMode::EcoMode)
-        {
-            systemv("sys.azenith-profilesettings applyfreqbalance");
+            ctx.last_balance_sig = balance_sig;
         }
         // strcpy(ctx.last_freqoffset, ctx.config_freqoffset)
         let freq = ctx.config_freqoffset_str().to_string();

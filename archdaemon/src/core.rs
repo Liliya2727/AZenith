@@ -358,6 +358,10 @@ pub struct DaemonContext {
     pub java_lock_path: String,
     pub config_freqoffset: [u8; crate::android_ffi::PROP_VALUE_MAX],
     pub last_freqoffset: [u8; crate::android_ffi::PROP_VALUE_MAX],
+    /// Signature of the inputs that dictate whether `applyfreqbalance` must be
+    /// re-applied (freqoffset value, screen state, profile mode). Used to turn
+    /// the old per-tick fork into a transition-only one.
+    pub last_balance_sig: String,
     pub prev_ai_state: [u8; 16],
     pub opts: GameConfig,
     pub current_system_cache: SystemStateCache,
@@ -381,6 +385,7 @@ impl DaemonContext {
             java_lock_path: JAVA_LOCK_PATH.to_string(),
             config_freqoffset: [0; crate::android_ffi::PROP_VALUE_MAX],
             last_freqoffset: [0; crate::android_ffi::PROP_VALUE_MAX],
+            last_balance_sig: String::new(),
             prev_ai_state: [0; 16],
             opts: GameConfig::default(),
             current_system_cache: SystemStateCache::default(),

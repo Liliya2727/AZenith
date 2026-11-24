@@ -28,3 +28,6 @@ manager/app/src/main/assets/changelog.md
 *.cache
 local.properties
 manager/local.properties
+
+# Internal architecture
+DAEMONWORKFLOWS.md
