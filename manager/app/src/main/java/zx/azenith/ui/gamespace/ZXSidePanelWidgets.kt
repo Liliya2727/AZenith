@@ -3838,7 +3838,10 @@ fun NetworkClockWidget(
     LaunchedEffect(Unit) {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         while (isActive) {
-            clockText = formatter.format(Date())
+            val next = formatter.format(Date())
+            // HH:mm only changes once a minute; assigning every second forces
+            // 60 identical recompositions per minute.
+            if (next != clockText) clockText = next
             delay(1000L)
         }
     }

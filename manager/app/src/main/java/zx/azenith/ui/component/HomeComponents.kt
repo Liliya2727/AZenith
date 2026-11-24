@@ -30,6 +30,7 @@ import android.view.Surface
 import android.view.TextureView
 import android.view.ViewGroup
 import android.webkit.MimeTypeMap
+import kotlinx.coroutines.isActive
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -1146,7 +1147,7 @@ fun ElapsedTimeText(startTimeStr: String) {
         val startParsed = try { sdf.parse(startTimeStr) } catch(e: Exception) { null }
         
         if (startParsed != null) {
-            while (true) {
+            while (isActive) {
                 val now = java.util.Calendar.getInstance()
                 val start = java.util.Calendar.getInstance().apply {
                     time = startParsed
@@ -1162,7 +1163,8 @@ fun ElapsedTimeText(startTimeStr: String) {
                 val m = (diff / 60000) % 60
                 val s = (diff / 1000) % 60
                 
-                elapsedTime = String.format("%02d:%02d:%02d", h, m, s)
+                val next = String.format("%02d:%02d:%02d", h, m, s)
+                if (next != elapsedTime) elapsedTime = next
                 kotlinx.coroutines.delay(1000)
             }
         } else {
