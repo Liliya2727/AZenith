@@ -3,11 +3,17 @@
 
 use crate::utils::logging::{log_info, log_warn};
 use crate::utils::props::{getprop, resetprop, setprop, setprop_cmd};
-use crate::utils::sysfs::{chmod, write_lock};
+use crate::utils::sysfs::{chmod, hide_val, unhide_val, write_lock};
 use std::fs;
 use std::path::Path;
 
 pub fn setgov(gov: &str) {
+    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_governor") {
+        for path in paths.flatten() {
+            unhide_val(path.to_str().unwrap());
+        }
+    }
+
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor") {
         for path in paths.flatten() {
             let p_str = path.to_str().unwrap();
@@ -17,10 +23,19 @@ pub fn setgov(gov: &str) {
         }
     }
 
-    // Lock additional policy paths
+    // Write and lock policy paths directly so SELinux/owner checks on cpu* symlinks
+    // cannot leave a cluster on its old governor. When pinning to `performance`,
+    // bind-mount shield the node so competing userspace daemons cannot revert it.
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_governor") {
         for path in paths.flatten() {
-            chmod(path.to_str().unwrap(), 0o444);
+            let p_str = path.to_str().unwrap();
+            if gov == "performance" {
+                hide_val(gov, p_str);
+            } else {
+                chmod(p_str, 0o644);
+                let _ = fs::write(p_str, gov);
+                chmod(p_str, 0o444);
+            }
         }
     }
 }

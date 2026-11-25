@@ -21,8 +21,29 @@ use crate::utils::*;
 use std::fs;
 use std::path::Path;
 
-/// PPM policies that act as frequency limiters.
-const PPM_LIMIT_POLICIES: [&str; 2] = ["PWR_THRO", "THERMAL"];
+/// PPM policies that act as frequency limiters and must be disabled in Performance
+/// (adopted from Uperf's `disable_kernel_boost`: keep only `HARD_USER_LIMIT` active).
+const PPM_LIMIT_POLICIES: [&str; 9] = [
+    "PTPOD",
+    "UT",
+    "FORCE_LIMIT",
+    "PWR_THRO",
+    "THERMAL",
+    "DLPT",
+    "USER_LIMIT",
+    "LCM_OFF",
+    "SYS_BOOST",
+];
+
+/// PPM policies re-enabled when returning to Balanced / Powersave.
+const PPM_DEFAULT_POLICIES: [&str; 6] = [
+    "FORCE_LIMIT",
+    "PWR_THRO",
+    "THERMAL",
+    "DLPT",
+    "HARD_USER_LIMIT",
+    "USER_LIMIT",
+];
 
 /// Knobs that ignore GPU power/thermal limits.
 const GPU_POWER_LIMITED_KNOBS: [&str; 5] = [
@@ -46,21 +67,36 @@ fn apply_dram_freq(pin_max: bool) {
 
 /// `1` = limits enforced (balanced/eco), `0` = limits lifted (performance).
 fn apply_ppm_policy_status(limit: &str) {
+    unhide_val("/proc/ppm/policy_status");
     if !Path::new("/proc/ppm/policy_status").exists() {
         return;
     }
 
+    write_lock("1", "/proc/ppm/enabled");
     let content = fs::read_to_string("/proc/ppm/policy_status").unwrap_or_default();
-    for line in content.lines() {
-        if !PPM_LIMIT_POLICIES.iter().any(|policy| line.contains(policy)) {
-            continue;
+
+    if limit == "0" {
+        let mut cmds = Vec::new();
+        for line in content.lines() {
+            let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) else {
+                continue;
+            };
+            if line.contains("HARD_USER_LIMIT") {
+                cmds.push(format!("{} 1", idx_str));
+            } else if PPM_LIMIT_POLICIES.iter().any(|policy| line.contains(policy)) {
+                cmds.push(format!("{} 0", idx_str));
+            }
         }
-
-        let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) else {
-            continue;
-        };
-
-        write_lock(&format!("{} {}", idx_str, limit), "/proc/ppm/policy_status");
+        hide_write_multi(&cmds, "/proc/ppm/policy_status");
+    } else {
+        for line in content.lines() {
+            let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) else {
+                continue;
+            };
+            if PPM_DEFAULT_POLICIES.iter().any(|policy| line.contains(policy)) {
+                write_unlock(&format!("{} 1", idx_str), "/proc/ppm/policy_status");
+            }
+        }
     }
 }
 
@@ -135,6 +171,23 @@ pub fn mediatek_balance() {
     
     write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     write_lock("1", "/sys/kernel/eara_thermal/enable");
+    write_unlock("1", "/sys/kernel/fpsgo/fbt/thrm_enable");
+    write_unlock("65", "/sys/kernel/fpsgo/fbt/thrm_temp_th");
+    write_unlock("-1", "/sys/kernel/fpsgo/fbt/thrm_limit_cpu");
+    write_unlock("-1", "/sys/kernel/fpsgo/fbt/thrm_sub_cpu");
+    for path in glob::glob("/sys/class/thermal/thermal_zone*/mode").into_iter().flatten().flatten() {
+        if let Some(p_str) = path.to_str() {
+            write_unlock("enabled", p_str);
+        }
+    }
+    write_lock("1", "/sys/module/mtk_core_ctl/parameters/policy_enable");
+    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*/core_ctl/enable") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                write_unlock("1", p_str);
+            }
+        }
+    }
     apply_dvfsrc("255", "-1", "userspace");
     apply_dram_freq(false);
     apply_mali_power_policy("coarse_demand");
@@ -147,6 +200,13 @@ pub fn mediatek_performance() {
     if getprop("persist.sys.azenithconf.usefpsgo") == "0" {
         write_lock("0", "/sys/kernel/fpsgo/common/force_onoff");
     }
+    if let Ok(paths) = glob::glob("/sys/kernel/fpsgo/fbt/limit_*") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                write_lock("9999000", p_str);
+            }
+        }
+    }
 
     write_lock("0", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
     write_lock("1", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
@@ -158,9 +218,37 @@ pub fn mediatek_performance() {
     
     write_lock("stop 1", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     write_lock("0", "/sys/kernel/eara_thermal/enable");
+    write_lock("0", "/sys/kernel/fpsgo/fbt/thrm_enable");
+    write_lock("300000", "/sys/kernel/fpsgo/fbt/thrm_temp_th");
+    write_lock("-1", "/sys/kernel/fpsgo/fbt/thrm_limit_cpu");
+    write_lock("-1", "/sys/kernel/fpsgo/fbt/thrm_sub_cpu");
+    write_lock("0", "/proc/ppm/cobra_limit_to_budget");
+    write_lock("0", "/proc/ppm/cobra_budget_to_limit");
+    write_lock("disable", "/proc/gpufreqv2/aging_mode");
+    write_lock("0", "/sys/kernel/ged/hal/fastdvfs_mode");
+    for path in glob::glob("/sys/class/thermal/thermal_zone*/mode").into_iter().flatten().flatten() {
+        if let Some(p_str) = path.to_str() {
+            write_unlock("disabled", p_str);
+        }
+    }
+    write_lock("1", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
+    write_lock("0", "/sys/module/mtk_core_ctl/parameters/policy_enable");
+    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*/core_ctl/enable") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                write_lock("0", p_str);
+            }
+        }
+    }
     apply_dvfsrc("0", "0", "performance");
     apply_dram_freq(true);
     apply_mali_power_policy("always_on");
+
+    // Re-apply and lock PPM hard_userlimit + cpufreq scaling_min/max after
+    // PPM_POLICY_THERMAL/FORCE_LIMIT/USER_LIMIT are disabled so all clusters
+    // stay pinned at cpuinfo_max_freq.
+    setgamefreqppm();
+    setgov("performance");
 }
 
 pub fn mediatek_powersave() {
@@ -176,6 +264,23 @@ pub fn mediatek_powersave() {
     
     write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     write_lock("1", "/sys/kernel/eara_thermal/enable");
+    write_unlock("1", "/sys/kernel/fpsgo/fbt/thrm_enable");
+    write_unlock("65", "/sys/kernel/fpsgo/fbt/thrm_temp_th");
+    write_unlock("-1", "/sys/kernel/fpsgo/fbt/thrm_limit_cpu");
+    write_unlock("-1", "/sys/kernel/fpsgo/fbt/thrm_sub_cpu");
+    for path in glob::glob("/sys/class/thermal/thermal_zone*/mode").into_iter().flatten().flatten() {
+        if let Some(p_str) = path.to_str() {
+            write_unlock("enabled", p_str);
+        }
+    }
+    write_lock("1", "/sys/module/mtk_core_ctl/parameters/policy_enable");
+    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*/core_ctl/enable") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                write_unlock("1", p_str);
+            }
+        }
+    }
     apply_dvfsrc("255", "-1", "powersave");
     apply_dram_freq(false);
     apply_mali_power_policy("coarse_demand");
