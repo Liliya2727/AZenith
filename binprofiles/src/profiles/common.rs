@@ -12,7 +12,7 @@
 //! 3. [`apply_custom_governor_io`]
 //! 4. [`apply_cpu_freq`]
 //! 5. Log frequency mode
-//! 6. [`apply_common_tweaks`] — VM → workqueue → stune → battery saver →
+//! 6. [`apply_common_tweaks`] — VM → workqueue → stune → uclamp → battery saver →
 //!    split lock → sched features → block I/O, then [`apply_touchpanel`]
 //! 7. Clear background apps (optional, performance only)
 //! 8. Chipset-specific tweaks (EAS lives here, per SoC)
@@ -70,6 +70,14 @@ pub struct CommonTweaks {
     pub stune_boost_enabled: &'static str,
     /// `/dev/stune/top-app/schedtune.prefer_idle`
     pub stune_prefer_idle: &'static str,
+    /// `/dev/cpuctl/top-app/cpu.uclamp.min`
+    pub uclamp_top_min: &'static str,
+    /// `/dev/cpuctl/top-app/cpu.uclamp.latency_sensitive`
+    pub uclamp_top_latency_sensitive: &'static str,
+    /// `/dev/cpuctl/foreground/cpu.uclamp.min`
+    pub uclamp_fg_min: &'static str,
+    /// `/dev/cpuctl/{background,system-background}/cpu.uclamp.max`
+    pub uclamp_bg_max: &'static str,
     /// `/sys/module/battery_saver/parameters/enabled`, numeric form (`0`/`1`)
     pub battery_saver: &'static str,
     /// The same value in boolean form (`N`/`Y`) for non-numeric nodes.
@@ -98,6 +106,33 @@ pub fn apply_common_tweaks(tweaks: &CommonTweaks) {
         write_lock(tweaks.stune_boost, &format!("{}/schedtune.boost", top_app));
         write_lock(tweaks.stune_boost_enabled, &format!("{}/schedtune.sched_boost_enabled", top_app));
         write_lock(tweaks.stune_prefer_idle, &format!("{}/schedtune.prefer_idle", top_app));
+    }
+
+    // uclamp (modern GKI replacement for schedtune, adopted from Uperf unify_sched
+    // and adapted per-profile): top-app gets latency_sensitive and min boost in
+    // Performance, while background groups are capped in Eco/Performance.
+    let cpuctl_top = "/dev/cpuctl/top-app";
+    if Path::new(cpuctl_top).is_dir() {
+        write_lock(tweaks.uclamp_top_min, &format!("{}/cpu.uclamp.min", cpuctl_top));
+        write_lock("max", &format!("{}/cpu.uclamp.max", cpuctl_top));
+        write_lock(
+            tweaks.uclamp_top_latency_sensitive,
+            &format!("{}/cpu.uclamp.latency_sensitive", cpuctl_top),
+        );
+    }
+    let cpuctl_fg = "/dev/cpuctl/foreground";
+    if Path::new(cpuctl_fg).is_dir() {
+        write_lock(tweaks.uclamp_fg_min, &format!("{}/cpu.uclamp.min", cpuctl_fg));
+        write_lock("max", &format!("{}/cpu.uclamp.max", cpuctl_fg));
+        write_lock("0", &format!("{}/cpu.uclamp.latency_sensitive", cpuctl_fg));
+    }
+    for group in &["background", "system-background"] {
+        let dir = format!("/dev/cpuctl/{}", group);
+        if Path::new(&dir).is_dir() {
+            write_lock("0", &format!("{}/cpu.uclamp.min", dir));
+            write_lock(tweaks.uclamp_bg_max, &format!("{}/cpu.uclamp.max", dir));
+            write_lock("0", &format!("{}/cpu.uclamp.latency_sensitive", dir));
+        }
     }
 
     // Battery saver module (legacy nodes use Y/N, newer nodes use 1/0)
