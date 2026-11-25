@@ -634,6 +634,14 @@ object SearchIndex {
             requires = listOf(SearchRequirement.FullMode)
         ),
         SearchEntry(
+            id = "prefs.ramd",
+            titleRes = R.string.prefs_ramd_title,
+            summaryRes = R.string.prefs_ramd_desc,
+            icon = Icons.Rounded.Memory,
+            group = SearchGroup.Prefs,
+            target = SearchTarget.Route("preferenced")
+        ),
+        SearchEntry(
             id = "prefs.logd",
             titleRes = R.string.disable_logging,
             summaryRes = R.string.disable_logging_desc,

@@ -95,6 +95,7 @@ private val PREFS_ROW_ITEMS: Map<String, Int> = mapOf(
     "prefs.gpu_mali" to 2,
     "prefs.jit" to 2,
     "prefs.logd" to 2,
+    "prefs.ramd" to 2,
     "prefs.sched_tunes" to 2,
     "prefs.section" to 1,
     "prefs.sfl" to 2,
@@ -135,6 +136,7 @@ fun PreferenceTweakScreen(navController: NavController) {
     var DTraces by remember { mutableStateOf<Boolean?>(null) }
     var dlogcat by remember { mutableStateOf<Boolean?>(null) }
     var distherm by remember { mutableStateOf<Boolean?>(null) }
+    var ramdstate by remember { mutableStateOf<Boolean?>(null) }
 
     // Load all properties asynchronously - skeleton shows immediately while loading
     LaunchedEffect(Unit) {
@@ -148,10 +150,12 @@ fun PreferenceTweakScreen(navController: NavController) {
         DTraces = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.disabletrace") == "1" }
         dlogcat = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.logd") == "1" }
         distherm = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.DThermal") == "1" }
+        ramdstate = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.ramd") == "1" }
 
         // Capture baselines after all values are loaded
         if (socType != null && schedTunes != null && sflstate != null && jitstate != null && 
-            malischedstate != null && waltTunes != null && DTraces != null && dlogcat != null && distherm != null) {
+            malischedstate != null && waltTunes != null && DTraces != null && dlogcat != null && distherm != null &&
+            ramdstate != null) {
             RebootManager.captureBaselineOnce("pref_schedtunes", schedTunes!!)
             RebootManager.captureBaselineOnce("pref_SFL", sflstate!!)
             RebootManager.captureBaselineOnce("pref_justintime", jitstate!!)
@@ -160,6 +164,7 @@ fun PreferenceTweakScreen(navController: NavController) {
             RebootManager.captureBaselineOnce("pref_disabletrace", DTraces!!)
             RebootManager.captureBaselineOnce("pref_logd", dlogcat!!)
             RebootManager.captureBaselineOnce("pref_DThermal", distherm!!)
+            RebootManager.captureBaselineOnce("pref_ramd", ramdstate!!)
         }
     }
 
@@ -230,7 +235,8 @@ fun PreferenceTweakScreen(navController: NavController) {
             item { JumpRow(activeId = jumpPulse, entryId = "prefs.section", highlightShape = azShape(14.dp)) { PrefSectionTitle(stringResource(R.string.section_prefstweaks)) } }
                         item {
                             if (socType != null && schedTunes != null && sflstate != null && jitstate != null && 
-                                malischedstate != null && waltTunes != null && DTraces != null && dlogcat != null && distherm != null) {
+                                malischedstate != null && waltTunes != null && DTraces != null && dlogcat != null && distherm != null &&
+                                ramdstate != null) {
 
                                 val isMediaTek   = socType == "mediatek"
                                 val isSnapdragon = socType == "qualcomm"
@@ -352,6 +358,25 @@ fun PreferenceTweakScreen(navController: NavController) {
                                                                                         dlogcat = isChecked
                                                                                         PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
                                                                                         RebootManager.checkAgainstBaseline("pref_logd", isChecked)
+                                                                                    }
+                                                                                }
+                                                                            )
+                                    }
+                                }
+                            }
+
+                            add {
+                                JumpRow(activeId = jumpPulse, entryId = "prefs.ramd") {
+                                    ExpressiveSwitchItem(
+                                                                                icon = Icons.Rounded.Memory,
+                                                                                title = stringResource(R.string.prefs_ramd_title),
+                                                                                summary = stringResource(R.string.prefs_ramd_desc),
+                                                                                checked = ramdstate!!,
+                                                                                onCheckedChange = { isChecked ->
+                                                                                    toggleWithRebootCheck("pref_ramd", isChecked) {
+                                                                                        ramdstate = isChecked
+                                                                                        PropertyUtils.set("persist.sys.azenithconf.ramd", if (isChecked) "1" else "0")
+                                                                                        RebootManager.checkAgainstBaseline("pref_ramd", isChecked)
                                                                                     }
                                                                                 }
                                                                             )

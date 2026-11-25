@@ -315,6 +315,8 @@
     <string name="preferred_settings">Preferred Settings</string>
     <string name="prefs">Preferences</string>
     <string name="prefsdesc">Additional configurations applied automatically on boot</string>
+    <string name="prefs_ramd_title">RAM Manager</string>
+    <string name="prefs_ramd_desc">Run the RAM manager daemon to keep memory under control while gaming</string>
     <string name="prev">Previous</string>
     <string name="profile_perflite">Lite Performance</string>
     <string name="profile_timeout">Performance Profile Timeout</string>
