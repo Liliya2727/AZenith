@@ -407,6 +407,11 @@ fi
 echo "- Disable Debugmode"
 setprop persist.sys.azenith.debugmode "false"
 
+# RAM Manager default (ON)
+if [ -z "$(getprop persist.sys.azenithconf.ramd)" ]; then
+	setprop persist.sys.azenithconf.ramd 1 || resetprop -p persist.sys.azenithconf.ramd 1
+fi
+
 # Set config properties to use
 echo "- Setting config properties..."
 props="

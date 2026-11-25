@@ -60,7 +60,7 @@ STATE=$(getprop persist.sys.azenith.state)
 "$BIN_SVC" --get_rr_modes
 
 # Start RAM daemon (shell) before the exec'd daemons replace this shell
-[ -f "$MODDIR/ramd/ram_daemon.sh" ] && sh "$MODDIR/ramd/ram_daemon.sh" >/dev/null 2>&1 &
+[ -f "$MODDIR/ramd/ram_daemon.sh" ] && [ "$(getprop persist.sys.azenithconf.ramd)" = "1" ] && sh "$MODDIR/ramd/ram_daemon.sh" >/dev/null 2>&1 &
 
 # Exec Binder Companion Daemon
 "$BIN_MON"
