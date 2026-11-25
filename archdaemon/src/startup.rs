@@ -24,7 +24,7 @@ use std::time::Duration;
 
 const AZENITH_PROPERTIES: &str = "persist.sys.azenith";
 
-const VALID_AZENITH_PROPS: [&str; 48] = [
+const VALID_AZENITH_PROPS: [&str; 49] = [
     "persist.sys.azenith.custom_default_balanced_IO",
     "persist.sys.azenith.custom_default_cpu_gov",
     "persist.sys.azenith.custom_default_maligpu_gov",
@@ -66,6 +66,7 @@ const VALID_AZENITH_PROPS: [&str; 48] = [
     "persist.sys.azenithconf.logd",
     "persist.sys.azenithconf.malisched",
     "persist.sys.azenithconf.preloadbudget",
+    "persist.sys.azenithconf.ramd",
     "persist.sys.azenithconf.schedtunes",
     "persist.sys.azenithconf.schemeconfig",
     "persist.sys.azenithconf.showtoast",
