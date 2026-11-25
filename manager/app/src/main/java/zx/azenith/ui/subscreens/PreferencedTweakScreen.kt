@@ -382,7 +382,6 @@ fun PreferenceTweakScreen(navController: NavController) {
                                                                             )
                                     }
                                 }
-                            }
 
                             add {
                                 Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
