@@ -27,6 +27,7 @@ const TWEAKS: CommonTweaks = CommonTweaks {
     uclamp_top_latency_sensitive: "1",
     uclamp_fg_min: "0",
     uclamp_bg_max: "50",
+    restrict_bg_cpuset: true,
     battery_saver: "0",
     battery_saver_bool: "N",
     split_lock_mitigate: "0",
