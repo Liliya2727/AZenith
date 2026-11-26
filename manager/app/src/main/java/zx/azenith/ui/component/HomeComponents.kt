@@ -322,13 +322,13 @@ fun BannerCard(
     val bannerShape = currentPersonalization().bannerCorner()
 
     val statusBgColor = when (tone) {
-        BannerTone.Good -> colorScheme.secondaryContainer
+        BannerTone.Good -> colorScheme.primaryContainer
         BannerTone.Bad -> colorScheme.errorContainer
         BannerTone.Neutral -> colorScheme.surfaceContainerHighest
     }
 
     val statusTextColor = when (tone) {
-        BannerTone.Good -> colorScheme.onSecondaryContainer
+        BannerTone.Good -> colorScheme.onPrimaryContainer
         BannerTone.Bad -> colorScheme.onErrorContainer
         BannerTone.Neutral -> colorScheme.onSurfaceVariant
     }
@@ -401,14 +401,14 @@ fun BannerCard(
                     if (pid.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Surface(
-                            color = if (isBlurEnabled) Color.Transparent else colorScheme.secondaryContainer, 
+                            color = if (isBlurEnabled) Color.Transparent else colorScheme.primaryContainer, 
                             shape = CircleShape,
                             modifier = Modifier
                                 .clip(CircleShape)
                                 .then(if (isBlurEnabled) Modifier.hazeBlur(
                                 input = HazeInput.Sources(bannerHazeState),
                                 style = HazeBlurStyle.Material3(
-                                    containerColor = colorScheme.secondaryContainer
+                                    containerColor = colorScheme.primaryContainer
                                         .accentTint(ACCENT_TINT_BLUR)
                                 ) { blurRadius(14.dp) }
                             ) else Modifier)
@@ -425,7 +425,7 @@ fun BannerCard(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold, 
-                                    color = colorScheme.onSecondaryContainer
+                                    color = colorScheme.onPrimaryContainer
                                 )
                             }
                         }

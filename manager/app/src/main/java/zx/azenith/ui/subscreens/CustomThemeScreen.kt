@@ -1588,6 +1588,7 @@ private fun MockScreen(
             // its banner corner proportional to that width so the preview's
             // visible radius matches the 26dp Home corner after the mock scale.
             BannerGradientPreview(
+                scheme = scheme,
                 gradientAlpha = gradientAlpha,
                 customBannerUri = customBannerUri,
                 isBannerEnabled = isBannerEnabled,
@@ -1601,7 +1602,7 @@ private fun MockScreen(
             ) {
                 Surface(
                     modifier = Modifier.weight(1f).height(55.dp),
-                    color = scheme.secondaryContainer,
+                    color = scheme.primaryContainer,
                     shape = homeCardShape
                 ) {}
 
@@ -1634,20 +1635,21 @@ private fun MockScreen(
 
 @Composable
 private fun BannerGradientPreview(
+    scheme: ColorScheme,
     gradientAlpha: Float,
     customBannerUri: String?,
     isBannerEnabled: Boolean = true,
     bannerShape: Shape,
     modifier: Modifier = Modifier
 ) {
-    val colorScheme = MaterialTheme.colorScheme
+    val colorScheme = scheme
 
     if (!isBannerEnabled) {
-        // Mirrors BannerCard's image-off branch: a solid secondaryContainer row with a
+        // Mirrors BannerCard's image-off branch: a solid primaryContainer row with a
         // leading glyph, so the mock shows what Home actually renders with the banner off.
         Surface(
             modifier = modifier.fillMaxWidth(),
-            color = colorScheme.secondaryContainer,
+            color = colorScheme.primaryContainer,
             shape = bannerShape
         ) {
             Row(
@@ -1658,20 +1660,20 @@ private fun BannerGradientPreview(
                 Icon(
                     imageVector = Icons.Outlined.CheckCircle,
                     contentDescription = null,
-                    tint = colorScheme.onSecondaryContainer,
+                    tint = colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(20.dp)
                 )
                 Box(
                     modifier = Modifier
                         .height(20.dp)
                         .width(1.dp)
-                        .background(colorScheme.onSecondaryContainer.copy(alpha = 0.3f))
+                        .background(colorScheme.onPrimaryContainer.copy(alpha = 0.3f))
                 )
                 Text(
                     text = stringResource(R.string.status_alive),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = colorScheme.onSecondaryContainer
+                    color = colorScheme.onPrimaryContainer
                 )
             }
         }
@@ -1713,7 +1715,7 @@ private fun BannerGradientPreview(
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Surface(
-                    color = colorScheme.secondaryContainer,
+                    color = colorScheme.primaryContainer,
                     shape = CircleShape
                 ) {
                     Text(
@@ -1724,11 +1726,11 @@ private fun BannerGradientPreview(
                             fontSize = 8.sp,
                             lineHeight = 10.sp
                         ),
-                        color = colorScheme.onSecondaryContainer
+                        color = colorScheme.onPrimaryContainer
                     )
                 }
                 Surface(
-                    color = colorScheme.secondaryContainer,
+                    color = colorScheme.primaryContainer,
                     shape = CircleShape
                 ) {
                     Text(
@@ -1739,7 +1741,7 @@ private fun BannerGradientPreview(
                             fontSize = 8.sp,
                             lineHeight = 10.sp
                         ),
-                        color = colorScheme.onSecondaryContainer
+                        color = colorScheme.onPrimaryContainer
                     )
                 }
             }
