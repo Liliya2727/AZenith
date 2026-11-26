@@ -324,7 +324,7 @@ fun BannerCard(
     val statusBgColor = when (tone) {
         BannerTone.Good -> colorScheme.primaryContainer
         BannerTone.Bad -> colorScheme.errorContainer
-        BannerTone.Neutral -> colorScheme.surfaceContainerHighest
+        BannerTone.Neutral -> if (isBannerEnabled) colorScheme.surfaceContainerHighest else colorScheme.surfaceContainerLow
     }
 
     val statusTextColor = when (tone) {
