@@ -597,7 +597,7 @@ fun ColorPaletteScreen(navController: NavController) {
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxWidth()
-                                .hazePageSource()
+                                .hazePageSource(MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
                                 .gamepadScreenEntry(scopeKey = "subscreen:color_palette"),
                             state = lazyListState,
                             contentPadding = PaddingValues(

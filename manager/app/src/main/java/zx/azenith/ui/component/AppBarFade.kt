@@ -57,10 +57,14 @@ fun ScaffoldContentColor(): Color = MaterialTheme.colorScheme.onSurface
  * input and samples itself instead of the content behind it.
  */
 @Composable
-fun Modifier.hazePageSource(): Modifier {
+fun Modifier.hazePageSource(
+    backgroundColor: Color = MaterialTheme.colorScheme.surface
+): Modifier {
     val hazeState = LocalAppHazeState.current
     return if (LocalAppBlurEnabled.current && hazeState != null) {
-        hazeSource(hazeState)
+        this
+            .background(backgroundColor)
+            .hazeSource(hazeState)
     } else this
 }
 
