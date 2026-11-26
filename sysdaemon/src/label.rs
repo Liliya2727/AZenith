@@ -742,12 +742,6 @@ fn prop(name: &std::ffi::CStr) -> String {
     String::from_utf8_lossy(&buf[..n as usize]).into_owned()
 }
 
-/// Value of a system property ("" when it is not set).
-pub(crate) fn prop_str(name: &str) -> String {
-    let Ok(c) = std::ffi::CString::new(name) else { return String::new() };
-    prop(&c)
-}
-
 // ---------------- little endian helpers ----------------
 
 fn u16at(b: &[u8], o: usize) -> Option<u16> {
