@@ -190,7 +190,7 @@ fun PreferenceTweakScreen(navController: NavController) {
 
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { PreferenceTweakTopAppBar(
             onBack = { navController.safePopBackStack() },
             scrollBehavior = scrollBehavior
@@ -456,7 +456,7 @@ fun PreferenceTweakTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

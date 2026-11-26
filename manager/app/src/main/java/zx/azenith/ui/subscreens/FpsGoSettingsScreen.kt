@@ -130,7 +130,7 @@ fun FpsGoSettings(navController: NavController) {
 
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { FpsGoTopAppBar(
             onBack = { navController.safePopBackStack() },
             scrollBehavior = scrollBehavior
@@ -261,7 +261,7 @@ fun FpsGoTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

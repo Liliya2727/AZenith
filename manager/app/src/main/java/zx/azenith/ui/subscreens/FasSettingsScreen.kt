@@ -98,7 +98,7 @@ fun FasScreen(navController: NavController) {
     
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { FasTopAppBar(
             onBack = { navController.safePopBackStack() },
             scrollBehavior = scrollBehavior
@@ -189,7 +189,7 @@ fun FasTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

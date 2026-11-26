@@ -64,6 +64,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -495,7 +496,7 @@ fun AppSettingsScreen(
     }
 
     Scaffold(
-            modifier = Modifier,
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = { 
                 AppSettingsTopAppBar(
                     onLaunchApp = {
@@ -808,6 +809,7 @@ fun AppSettingsTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

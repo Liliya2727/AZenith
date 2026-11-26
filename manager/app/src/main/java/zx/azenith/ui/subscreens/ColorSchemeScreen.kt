@@ -231,7 +231,7 @@ fun ColorSchemeSettings(navController: NavController) {
     }
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             ColorSchemeTopAppBar(
                 onBack = { navController.safePopBackStack() },
@@ -704,7 +704,7 @@ fun ColorSchemeTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

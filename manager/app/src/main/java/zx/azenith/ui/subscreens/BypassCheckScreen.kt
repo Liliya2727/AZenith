@@ -404,7 +404,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
     }
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { 
             BypassChgCheckTopAppBar(
                 onBack = { navController.safePopBackStack() },
@@ -873,7 +873,7 @@ fun BypassChgCheckTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

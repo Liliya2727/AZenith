@@ -60,6 +60,7 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -90,6 +91,7 @@ fun LicensesScreen(navController: NavController) {
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             AboutTopAppBar(
                 title = stringResource(R.string.str_licenses),
@@ -105,10 +107,10 @@ fun LicensesScreen(navController: NavController) {
                 .fillMaxSize()
                 .hazePageSource()
                 .gamepadScreenEntry(scopeKey = "subscreen:licenses")
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
                 .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp)
                 .padding(
+                    top = innerPadding.calculateTopPadding(),
                     bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 ),
             verticalArrangement = Arrangement.spacedBy(16.dp)

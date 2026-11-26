@@ -208,7 +208,7 @@ fun BypassChargeScreen(navController: NavController) {
     }
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { BypassChgTopAppBar(onBack = { navController.safePopBackStack() },
             scrollBehavior = scrollBehavior) },
         contentColor = ScaffoldContentColor(),
@@ -253,6 +253,7 @@ fun BypassChargeScreen(navController: NavController) {
                     modifier = Modifier
                         .weight(0.58f)
                         .fillMaxHeight()
+                        .hazePageSource()
                         .gamepadScreenEntry(scopeKey = "subscreen:bypass_charge"),
                     contentPadding = PaddingValues(
                         top = topPad,
@@ -575,7 +576,7 @@ fun BypassChgTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

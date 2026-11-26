@@ -17,6 +17,7 @@ import zx.azenith.ui.theme.currentPersonalization
 import zx.azenith.ui.theme.scaledShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import dev.chrisbanes.haze.HazeState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.Modifier
@@ -205,7 +207,13 @@ fun ScreenWrapper(
             .blur(radius = if (shouldRunDepthEffects) animatedBlurRadius else 0.dp)
             .background(MaterialTheme.colorScheme.background)
     ) {
-        content()
+        val rootHazeState = LocalAppHazeState.current
+        val subscreenHazeState = remember { HazeState() }
+        CompositionLocalProvider(
+            LocalAppHazeState provides if (isMainRootScreen) (rootHazeState ?: subscreenHazeState) else subscreenHazeState
+        ) {
+            content()
+        }
 
         // Dim Layer Overlay
         val amoled = MaterialTheme.colorScheme.surfaceContainerLowest == Color.Black

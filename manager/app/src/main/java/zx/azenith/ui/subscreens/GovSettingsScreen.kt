@@ -146,7 +146,7 @@ fun GovSettings(
 
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { GovSettingsTopAppBar(
             onBack = { navController.safePopBackStack() },
             scrollBehavior = scrollBehavior
@@ -393,7 +393,7 @@ fun GovSettingsTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }
