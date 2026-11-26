@@ -929,7 +929,7 @@ fun ExpressiveTile(
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
-    val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
+    val cardBgColor = colorScheme.surfaceContainerLow
     val tileShape = azShape(26.dp)
 
     val iconBoxBgColor by animateColorAsState(

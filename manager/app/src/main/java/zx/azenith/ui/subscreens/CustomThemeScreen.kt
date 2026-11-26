@@ -745,7 +745,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         onSelect = onColorSpecChange,
                         // Kept on the older elevation-derived surface rather than the
                         // shared default: this row sits in its own group.
-                        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         focusKeyPrefix = "pers.color_spec"
                     )
                 },
@@ -821,7 +821,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                                 },
                                 colors = ToggleButtonDefaults.toggleButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                                 )
                             ) {
                                 Icon(
@@ -1107,7 +1107,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(middleShape(m))
-                                            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
                                             .padding(16.dp),
                                         verticalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
@@ -1607,14 +1607,14 @@ private fun MockScreen(
 
                 Surface(
                     modifier = Modifier.weight(1f).height(55.dp),
-                    color = scheme.surfaceColorAtElevation(1.dp),
+                    color = scheme.surfaceContainerLow,
                     shape = homeCardShape
                 ) {}
             }
 
             Surface(
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                color = scheme.surfaceColorAtElevation(1.dp),
+                color = scheme.surfaceContainerLow,
                 shape = homeCardShape
             ) {}
 
@@ -1786,8 +1786,26 @@ private fun mockColorScheme(
             specVersion = colorSpec.librarySpec
         )
     }
+    val adjustedTarget = if (isAmoled) {
+        target.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceDim = Color.Black,
+            surfaceContainerLowest = Color.Black,
+            surfaceContainerLow = Color(0xFF0A0A0A)
+        )
+    } else if (!isDark) {
+        target.copy(
+            background = target.surfaceVariant,
+            surface = target.surfaceVariant
+        )
+    } else {
+        target.copy(
+            background = target.surface
+        )
+    }
     return animateColorSchemeAsState(
-        target
+        adjustedTarget
             .withAccentIntensity(personalization.accentIntensity)
     )
 }

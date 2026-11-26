@@ -565,7 +565,7 @@ private fun LazyListScope.bypassDiagnosticsItems(
 
             Surface(
                 shape = azShape(26.dp),
-                color = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {

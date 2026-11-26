@@ -156,7 +156,7 @@ fun ExpressiveList(
                 Column(
                     modifier = Modifier
                         .clip(shape)
-                        .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow, shape)
                 ) {
                     ProvideRowShape(shape) { itemContent() }
                 }
@@ -214,7 +214,7 @@ fun <T> ExpressiveLazyList(
                             )
                         )
                         .clip(shape)
-                        .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
                     CompositionLocalProvider(
                         LocalContentColor provides MaterialTheme.colorScheme.onSurface
@@ -795,7 +795,7 @@ fun ExpressiveColumn(
                 Column(
                     modifier = Modifier
                         .clip(shape)
-                        .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow, shape)
                 ) {
                     ProvideRowShape(shape) { itemContent() }
                 }

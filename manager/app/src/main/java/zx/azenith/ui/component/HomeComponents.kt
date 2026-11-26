@@ -547,7 +547,7 @@ fun InfoTile(
     val colorScheme = MaterialTheme.colorScheme
     val granted = grantedPalette()
 
-    val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
+    val cardBgColor = colorScheme.surfaceContainerLow
 
     // One spring drives every colour, so the container, icon and value label
     // cross-fade as a single change instead of three staggered tweens.
@@ -715,7 +715,7 @@ fun DeviceInfoCard() {
     val shape = currentPersonalization().widgetCorner(26.dp)
     Surface(
         shape = shape,
-        color = colorScheme.surfaceColorAtElevation(1.dp),
+        color = colorScheme.surfaceContainerLow,
         modifier = Modifier.gamepadFocusOutline(shape = shape, onActivate = { isExpanded = !isExpanded }, register = true),
         onClick = { isExpanded = !isExpanded }
     ) {
@@ -892,7 +892,7 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
     
     Surface(
         shape = shape, 
-        color = colorScheme.surfaceColorAtElevation(1.dp),
+        color = colorScheme.surfaceContainerLow,
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)

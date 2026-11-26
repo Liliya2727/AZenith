@@ -251,12 +251,17 @@ fun AZenithTheme(
             surfaceContainerLowest = Color.Black,
             surfaceContainerLow = Color(0xFF0A0A0A)
         )
+    } else if (!darkTheme) {
+        rawColorScheme.copy(
+            background = rawColorScheme.surfaceVariant,
+            surface = rawColorScheme.surfaceVariant
+        )
     } else {
         // Enforce true Material 3 tonal dark surfaces: NEVER pitch black unless AMOLED mode is explicitly enabled
-        if (darkTheme && (rawColorScheme.surfaceContainerLowest == Color.Black || rawColorScheme.surface == Color.Black || rawColorScheme.background == Color.Black)) {
+        if (rawColorScheme.surfaceContainerLowest == Color.Black || rawColorScheme.surface == Color.Black || rawColorScheme.background == Color.Black) {
             val safeSurface = if (rawColorScheme.surface == Color.Black) Color(0xFF141218) else rawColorScheme.surface
             val safeLowest = if (rawColorScheme.surfaceContainerLowest == Color.Black) Color(0xFF0F0D13) else rawColorScheme.surfaceContainerLowest
-            val safeBackground = if (rawColorScheme.background == Color.Black) safeSurface else rawColorScheme.background
+            val safeBackground = safeSurface
             val safeDim = if (rawColorScheme.surfaceDim == Color.Black) safeSurface else rawColorScheme.surfaceDim
             rawColorScheme.copy(
                 background = safeBackground,
@@ -265,7 +270,9 @@ fun AZenithTheme(
                 surfaceContainerLowest = safeLowest
             )
         } else {
-            rawColorScheme
+            rawColorScheme.copy(
+                background = rawColorScheme.surface
+            )
         }
     }
 

@@ -422,7 +422,7 @@ private fun LazyListScope.bypassOptionItems(
                             .fillMaxWidth()
                             .graphicsLayer(alpha = cardAlpha),
                         shape = azShape(26.dp),
-                        color = colorScheme.surfaceColorAtElevation(1.dp),
+                        color = colorScheme.surfaceContainerLow,
                         border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.5f))
                     ) {
                         Column(

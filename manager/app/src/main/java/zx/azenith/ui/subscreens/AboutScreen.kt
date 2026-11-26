@@ -431,7 +431,7 @@ private fun OpenSourceRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow, shape)
             .gamepadFocusOutline(shape = shape, register = true, onActivate = onClick)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),

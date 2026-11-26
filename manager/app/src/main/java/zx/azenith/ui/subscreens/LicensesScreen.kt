@@ -119,7 +119,7 @@ fun LicensesScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 shape = azShape(26.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 )
             ) {
                 Column(
