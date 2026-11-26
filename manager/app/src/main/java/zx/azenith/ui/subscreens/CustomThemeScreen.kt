@@ -584,11 +584,7 @@ fun ColorPaletteScreen(navController: NavController) {
                         .fillMaxWidth()
                         .padding(top = 8.dp),
                     shape = azShapeCorners(topStart = 28.dp, topEnd = 28.dp),
-                    color = if (isDark) {
-                        MaterialTheme.colorScheme.surfaceContainerLowest
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer
-                    }
+                    color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         SheetHandle(
@@ -1027,79 +1023,95 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     }
     
                     add {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            JumpRow(activeId = jumpPulse, entryId = "pers.banner") {
-                                ExpressiveSwitchItem(
-                                    icon = Icons.Outlined.Image,
-                                    title = stringResource(R.string.str_enable_banner),
-                                    checked = isBannerEnabled,
-                                    onCheckedChange = onBannerEnabledChange
-                                )
-                            }
+                        val m = currentPersonalization().cornerMultiplier
+                        val gapColor = if (isLandscape) {
+                            MaterialTheme.colorScheme.surface
+                        } else {
+                            MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+                        }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(gapColor)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(middleShape(m))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                            ) {
+                                JumpRow(activeId = jumpPulse, entryId = "pers.banner") {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Outlined.Image,
+                                        title = stringResource(R.string.str_enable_banner),
+                                        checked = isBannerEnabled,
+                                        onCheckedChange = onBannerEnabledChange
+                                    )
+                                }
 
-                            AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
-                                ) {
-                                    OutlinedButton(
-                                        onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                                AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
+                                    Row(
                                         modifier = Modifier
-                                            .weight(1f)
-                                            .gamepadFocusOutline(
-                                                shape = azShape(14.dp),
-                                                focusKey = "pers.banner.pick_media",
-                                                onActivate = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
-                                            ),
-                                        shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.onSurface
-                                        )
+                                            .fillMaxWidth()
+                                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                                     ) {
-                                        Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    }
+                                        OutlinedButton(
+                                            onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .gamepadFocusOutline(
+                                                    shape = azShape(14.dp),
+                                                    focusKey = "pers.banner.pick_media",
+                                                    onActivate = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
+                                                ),
+                                            shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        ) {
+                                            Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
 
-                                    OutlinedButton(
-                                        onClick = {
-                                            context.clearHeaderImage()
-                                            onBannerUpdated(null)
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
-                                            }
-                                        },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .gamepadFocusOutline(
-                                                shape = azShape(14.dp),
-                                                focusKey = "pers.banner.default",
-                                                onActivate = {
-                                                    context.clearHeaderImage()
-                                                    onBannerUpdated(null)
-                                                    coroutineScope.launch {
-                                                        snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
-                                                    }
+                                        OutlinedButton(
+                                            onClick = {
+                                                context.clearHeaderImage()
+                                                onBannerUpdated(null)
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
                                                 }
-                                            ),
-                                        shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 50.dp, bottomEnd = 50.dp),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    ) {
-                                        Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(stringResource(R.string.default_label), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .gamepadFocusOutline(
+                                                    shape = azShape(14.dp),
+                                                    focusKey = "pers.banner.default",
+                                                    onActivate = {
+                                                        context.clearHeaderImage()
+                                                        onBannerUpdated(null)
+                                                        coroutineScope.launch {
+                                                            snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
+                                                        }
+                                                    }
+                                                ),
+                                            shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 50.dp, bottomEnd = 50.dp),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        ) {
+                                            Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(stringResource(R.string.default_label), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
                                     }
                                 }
                             }
 
                             AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
-                                val m = currentPersonalization().cornerMultiplier
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
