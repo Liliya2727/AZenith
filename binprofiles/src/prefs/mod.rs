@@ -600,11 +600,34 @@ fn apply_disable_thermal() {
     log_info("Disabling Thermal Engine");
 
     let _ = Command::new("pkill")
-        .args(["-9", "-f", "thermald|thermal-engine|mtk_thermal"])
+        .args(["-9", "-f", "thermald|thermal-engine|mtk_thermal|mi_thermald"])
+        .status();
+
+    let _ = Command::new("stop")
+        .arg("vendor.thermal-hal-2-0.mtk")
         .status();
 
     for svc in find_thermal_init_services() {
         let _ = Command::new("stop").arg(&svc).status();
+    }
+
+    // Prohibit Xiaomi mi_thermald from capping CPU frequencies via thermal_message
+    let cpu_limits = "/sys/devices/virtual/thermal/thermal_message/cpu_limits";
+    if std::path::Path::new(cpu_limits).exists() {
+        if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu[0-9]*") {
+            for path in paths.flatten() {
+                if let Some(cpu_name) = path.file_name().and_then(|n| n.to_str()) {
+                    let max_path = path.join("cpufreq/cpuinfo_max_freq");
+                    if let Ok(raw) = std::fs::read_to_string(&max_path) {
+                        if let Ok(freq) = raw.trim().parse::<u64>() {
+                            if freq > 0 {
+                                write_val(&format!("{} {}", cpu_name, freq), cpu_limits, true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if let Ok(output) = Command::new("getprop").output() {
@@ -637,6 +660,12 @@ fn apply_disable_thermal() {
     chmod_glob("/sys/devices/virtual/thermal/thermal_zone*/temp", 0o000);
     chmod_glob("/sys/devices/virtual/thermal/thermal_zone*/trip_point_*", 0o000);
 
+    // Qualcomm / Snapdragon msm_thermal & KGSL thermal throttling
+    write_val("0", "/sys/module/msm_thermal/core_control/enabled", true);
+    write_val("N", "/sys/module/msm_thermal/parameters/enabled", true);
+    write_val("0", "/sys/class/kgsl/kgsl-3d0/thermal_pwrlevel", true);
+    write_val("0", "/sys/class/kgsl/kgsl-3d0/throttling", true);
+
     if let Ok(content) = std::fs::read_to_string("/proc/ppm/policy_status") {
         for line in content.lines() {
             if line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") {
@@ -645,6 +674,24 @@ fn apply_disable_thermal() {
                 }
             }
         }
+    }
+
+    // MediaTek GPU thermal limit tables (gpufreqv2 & legacy gpufreq)
+    let gpufreqv2_limit = "/proc/gpufreqv2/limit_table";
+    if std::path::Path::new(gpufreqv2_limit).exists() {
+        for i in 0..=10 {
+            write_val(&format!("{} 0 0", i), gpufreqv2_limit, true);
+        }
+        write_val("1 1 1", gpufreqv2_limit, true);
+        write_val("3 1 1", gpufreqv2_limit, true);
+    }
+
+    let gpufreq_limit_table = "/proc/gpufreq/gpufreq_limit_table";
+    if std::path::Path::new(gpufreq_limit_table).exists() {
+        for i in 0..=8 {
+            write_val(&format!("{} 0 0", i), gpufreq_limit_table, true);
+        }
+        write_val("1 1 1", gpufreq_limit_table, true);
     }
 
     let gpu_limit = "/proc/gpufreq/gpufreq_power_limited";
@@ -659,6 +706,15 @@ fn apply_disable_thermal() {
             write_val(&format!("{} 1", key), gpu_limit, true);
         }
     }
+
+    // MediaTek FPSGO thermal, EARA thermal & WMT TX throttling
+    write_val("0", "/sys/kernel/fpsgo/fbt/thrm_enable", true);
+    write_val("300000", "/sys/kernel/fpsgo/fbt/thrm_temp_th", true);
+    write_val("-1", "/sys/kernel/fpsgo/fbt/thrm_limit_cpu", true);
+    write_val("-1", "/sys/kernel/fpsgo/fbt/thrm_sub_cpu", true);
+    write_val("0", "/sys/kernel/eara_thermal/enable", true);
+    write_val("0", "/proc/wmt_tm/tx_thro", true);
+    write_val("-1", "/proc/wmt_tm/tx_thro_limit", true);
 
     let _ = Command::new("cmd")
         .args(["thermalservice", "override-status", "0"])
