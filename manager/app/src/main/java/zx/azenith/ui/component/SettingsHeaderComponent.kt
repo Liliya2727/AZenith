@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -130,6 +131,12 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             )
             
 
+            val clockColor = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) {
+                MaterialTheme.colorScheme.inverseSurface
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            }
+
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -137,14 +144,14 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = hourFormat.format(time.time),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    color = clockColor,
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.displayMedium
                 )
                 Text(
                     text = minuteFormat.format(time.time),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    color = clockColor,
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.displayMedium,
