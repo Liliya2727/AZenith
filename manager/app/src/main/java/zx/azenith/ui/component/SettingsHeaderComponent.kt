@@ -110,9 +110,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .heightIn(max = 280.dp)
                 .aspectRatio(0.48f)
-                .background(MaterialTheme.colorScheme.primary, azShape(18.dp))
-                .padding(2.dp)
-                .clip(azShape(15.dp))
+                .clip(azShape(18.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
 
@@ -124,6 +122,12 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxSize()
                 )
             }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.2f))
+            )
             
 
             Column(
@@ -133,14 +137,14 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = hourFormat.format(time.time),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.displayMedium
                 )
                 Text(
                     text = minuteFormat.format(time.time),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.displayMedium,
