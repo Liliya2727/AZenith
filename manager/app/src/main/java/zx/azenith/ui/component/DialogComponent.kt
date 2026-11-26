@@ -85,10 +85,16 @@ fun RootDialogsProvider(content: @Composable () -> Unit) {
 @Composable
 fun RootAppDialog(content: @Composable () -> Unit) {
     val dialogs = LocalRootDialogs.current
+    val currentHazeState by rememberUpdatedState(LocalAppHazeState.current)
+    val currentContent by rememberUpdatedState(content)
     val key = remember { java.util.UUID.randomUUID().toString() }
     
     DisposableEffect(key) {
-        dialogs[key] = content
+        dialogs[key] = @Composable {
+            CompositionLocalProvider(LocalAppHazeState provides currentHazeState) {
+                currentContent()
+            }
+        }
         onDispose {
             dialogs.remove(key)
         }
@@ -277,11 +283,14 @@ fun rememberConfirmDialog(onConfirm: NullableCallback = null, onDismiss: Nullabl
 @Composable
 fun LoadingDialogHost(handle: LoadingDialogHandle) {
     val dialogs = LocalRootDialogs.current
+    val currentHazeState by rememberUpdatedState(LocalAppHazeState.current)
     val key = remember { java.util.UUID.randomUUID().toString() }
     
     DisposableEffect(key, handle) {
         dialogs[key] = @Composable {
-            LoadingDialog(visible = handle.isShown)
+            CompositionLocalProvider(LocalAppHazeState provides currentHazeState) {
+                LoadingDialog(visible = handle.isShown)
+            }
         }
         onDispose {
             dialogs.remove(key)
@@ -292,16 +301,19 @@ fun LoadingDialogHost(handle: LoadingDialogHandle) {
 @Composable
 fun ConfirmDialogHost(handle: ConfirmDialogHandle) {
     val dialogs = LocalRootDialogs.current
+    val currentHazeState by rememberUpdatedState(LocalAppHazeState.current)
     val key = remember { java.util.UUID.randomUUID().toString() }
     
     DisposableEffect(key, handle) {
         dialogs[key] = @Composable {
-            ConfirmDialog(
-                visible = handle.isShown,
-                visuals = handle.visuals,
-                confirm = { handle.accept() },
-                dismiss = { handle.cancel() }
-            )
+            CompositionLocalProvider(LocalAppHazeState provides currentHazeState) {
+                ConfirmDialog(
+                    visible = handle.isShown,
+                    visuals = handle.visuals,
+                    confirm = { handle.accept() },
+                    dismiss = { handle.cancel() }
+                )
+            }
         }
         onDispose {
             dialogs.remove(key)
@@ -461,11 +473,14 @@ fun rememberInstallingDialog(): InstallingDialogHandle {
 @Composable
 fun InstallingDialogHost(handle: InstallingDialogHandle) {
     val dialogs = LocalRootDialogs.current
+    val currentHazeState by rememberUpdatedState(LocalAppHazeState.current)
     val key = remember { java.util.UUID.randomUUID().toString() }
     
     DisposableEffect(key, handle) {
         dialogs[key] = @Composable {
-            InstallingDialog(visible = handle.isShown)
+            CompositionLocalProvider(LocalAppHazeState provides currentHazeState) {
+                InstallingDialog(visible = handle.isShown)
+            }
         }
         onDispose {
             dialogs.remove(key)
