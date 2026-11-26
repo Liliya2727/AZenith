@@ -584,8 +584,11 @@ fun ColorPaletteScreen(navController: NavController) {
                         .fillMaxWidth()
                         .padding(top = 8.dp),
                     shape = azShapeCorners(topStart = 28.dp, topEnd = 28.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    tonalElevation = 1.dp
+                    color = if (isDark) {
+                        MaterialTheme.colorScheme.surfaceContainerLowest
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    }
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         SheetHandle(
@@ -1100,7 +1103,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
                                         .padding(top = 2.dp)
                                 ) {
                                     Column(
