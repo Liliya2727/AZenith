@@ -53,7 +53,7 @@ import zx.azenith.ui.navigation.safePopBackStack
 fun LibrariesScreen(navController: NavController) {
     val libraries by produceLibraries(R.raw.aboutlibraries)
     val listState = rememberLazyListState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
     RegisterGamepadActions(
         enabled = true,

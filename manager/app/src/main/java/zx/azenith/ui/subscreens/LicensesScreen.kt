@@ -74,7 +74,7 @@ import zx.azenith.ui.navigation.safePopBackStack
 @Composable
 fun LicensesScreen(navController: NavController) {
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val scrollState = rememberScrollState()
 
     RegisterGamepadActions(

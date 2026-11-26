@@ -81,7 +81,7 @@ import zx.azenith.ui.util.PropertyUtils
 
 @Composable
 fun FasScreen(navController: NavController) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme

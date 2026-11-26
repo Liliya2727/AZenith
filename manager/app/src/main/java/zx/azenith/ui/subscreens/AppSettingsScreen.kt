@@ -131,7 +131,7 @@ fun AppSettingsScreen(
             path != "UNSUPPORTED" && path != "NEED_SETUP"
         }
     }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val coroutineScope = rememberCoroutineScope()
 
     var localMasterOn by remember(config != null) { mutableStateOf(config != null) }

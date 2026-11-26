@@ -104,7 +104,7 @@ private val PREFS_ROW_ITEMS: Map<String, Int> = mapOf(
 
 @Composable
 fun PreferenceTweakScreen(navController: NavController) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
     RegisterGamepadActions(

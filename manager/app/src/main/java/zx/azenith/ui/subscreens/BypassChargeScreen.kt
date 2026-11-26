@@ -151,7 +151,7 @@ fun BypassChargeScreen(navController: NavController) {
         owns = { id -> isLandscape && id in BYPASS_RIGHT_ITEMS },
         indexOf = { id -> BYPASS_RIGHT_ITEMS[id] }
     )
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()

@@ -93,7 +93,7 @@ private val FPSGO_ROW_ITEMS: Map<String, Int> = mapOf(
 
 @Composable
 fun FpsGoSettings(navController: NavController) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
     RegisterGamepadActions(

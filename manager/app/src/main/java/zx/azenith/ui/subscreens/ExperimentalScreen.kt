@@ -72,7 +72,7 @@ import zx.azenith.ui.navigation.safePopBackStack
 @Composable
 fun ExperimentalScreen(navController: NavController) {
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val listState = rememberLazyListState()
     var launcherOn by remember { mutableStateOf(isGameSpaceLauncherEnabled(context)) }
     var sidepanelOn by remember {

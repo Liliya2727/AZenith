@@ -113,7 +113,7 @@ fun GovSettings(
     navController: NavController,
     viewModel: TweakViewModel = viewModel(viewModelStoreOwner = rememberScopedStoreOwner(navController, "main"))
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
     RegisterGamepadActions(
