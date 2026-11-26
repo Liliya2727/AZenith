@@ -308,10 +308,10 @@ fn process_api_file_event(ctx: &mut DaemonContext, wd: i32, mask: u32, rec: &mut
                 if let Ok(s) = line {
                     let trimmed = s.trim().to_string();
                     let ai_state = trimmed;
-                    if let Some(b) = azenith_config::parse_bool_flexible(&ai_state) {
+                    if let Some(b) = archconfig::parse_bool_flexible(&ai_state) {
                         if ctx.config.auto_mode != b {
                             ctx.config.auto_mode = b;
-                            let _ = azenith_config::update(|c| c.auto_mode = b);
+                            let _ = archconfig::update(|c| c.auto_mode = b);
                         }
                     }
                     if ctx.is_initialize_complete && ctx.prev_ai_state_str() != ai_state {
@@ -431,10 +431,10 @@ fn process_event(
                     if let Ok(s) = line {
                         let trimmed = s.trim().to_string();
                         let ai_state = trimmed;
-                        if let Some(b) = azenith_config::parse_bool_flexible(&ai_state) {
+                        if let Some(b) = archconfig::parse_bool_flexible(&ai_state) {
                             if ctx.config.auto_mode != b {
                                 ctx.config.auto_mode = b;
-                                let _ = azenith_config::update(|c| c.auto_mode = b);
+                                let _ = archconfig::update(|c| c.auto_mode = b);
                             }
                         }
                         if ctx.is_initialize_complete && ctx.prev_ai_state_str() != ai_state {
@@ -490,7 +490,7 @@ fn process_event(
                 let trimmed = s.trim().to_string();
                 if !trimmed.is_empty() && ctx.config.freq_offset != trimmed {
                     ctx.config.freq_offset = trimmed.clone();
-                    let _ = azenith_config::update(|c| c.freq_offset = trimmed);
+                    let _ = archconfig::update(|c| c.freq_offset = trimmed);
                     log_info!("inotify", "freqoffset updated value={}", ctx.config_freqoffset_str());
                 }
             }
@@ -501,17 +501,17 @@ fn process_event(
                 let trimmed = s.trim().to_string();
                 if !trimmed.is_empty() && ctx.config.bypass_path != trimmed {
                     ctx.config.bypass_path = trimmed.clone();
-                    let _ = azenith_config::update(|c| c.bypass_path = trimmed);
+                    let _ = archconfig::update(|c| c.bypass_path = trimmed);
                 }
             }
         }
         "bypasschg" => {
             let path = "/data/adb/.config/AZenith/bypasschgconfig/bypasschg";
             if let Ok(s) = fileops::read_string_result(path) {
-                if let Some(val) = azenith_config::parse_bool_flexible(s.trim()) {
+                if let Some(val) = archconfig::parse_bool_flexible(s.trim()) {
                     if ctx.config.bypass_chg != val {
                         ctx.config.bypass_chg = val;
-                        let _ = azenith_config::update(|c| c.bypass_chg = val);
+                        let _ = archconfig::update(|c| c.bypass_chg = val);
                     }
                 }
             }
@@ -522,7 +522,7 @@ fn process_event(
                 let val: i32 = s.trim().parse().unwrap_or(20);
                 if ctx.config.bypass_chg_threshold != val {
                     ctx.config.bypass_chg_threshold = val;
-                    let _ = azenith_config::update(|c| c.bypass_chg_threshold = val);
+                    let _ = archconfig::update(|c| c.bypass_chg_threshold = val);
                 }
             }
         }
@@ -531,7 +531,7 @@ fn process_event(
 }
 
 fn handle_config_json_event(ctx: &mut DaemonContext) {
-    let Ok(new_cfg) = azenith_config::try_load_from(std::path::Path::new(azenith_config::CONFIG_PATH)) else {
+    let Ok(new_cfg) = archconfig::try_load_from(std::path::Path::new(archconfig::CONFIG_PATH)) else {
         return;
     };
 

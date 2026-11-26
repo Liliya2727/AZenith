@@ -1271,7 +1271,7 @@ pub fn check_bypass_compatibility() -> i32 {
         );
     }
 
-    let current_path = azenith_config::load().bypass_path;
+    let current_path = archconfig::load().bypass_path;
     if current_path.is_empty() || current_path == "UNSUPPORTED" {
         println!("\u{1b}[33m[INFO]\u{1b}[0m Configuration left unchanged (no bypass path configured).");
     } else {

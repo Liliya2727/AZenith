@@ -23,7 +23,7 @@ pub fn handle_config_get(argc: i32, argv: &[&str]) -> c_int {
         return 1;
     }
     let key = argv[2];
-    let cfg = azenith_config::load();
+    let cfg = archconfig::load();
     match cfg.get_key(key) {
         Ok(val) => {
             println!("{val}");
@@ -45,7 +45,7 @@ pub fn handle_config_set(argc: i32, argv: &[&str]) -> c_int {
     let val = argv[3];
 
     let mut set_err: Option<String> = None;
-    let res = azenith_config::update(|cfg| {
+    let res = archconfig::update(|cfg| {
         if let Err(e) = cfg.set_key(key, val) {
             set_err = Some(e);
         }
@@ -71,7 +71,7 @@ pub fn handle_profile(argc: i32, argv: &[&str]) -> c_int {
         return 1;
     }
 
-    let cfg = azenith_config::load();
+    let cfg = archconfig::load();
 
     if cfg.auto_mode {
         eprintln!("ERROR: Auto Mode is enabled.\n       Manual profile selection is blocked.");
@@ -364,7 +364,7 @@ pub fn expose_telemetry_access() {
 
     fileops::create_dir_all_best_effort("/data/data/zx.azenith/API");
     fileops::create_dir_all_best_effort("/data/adb/.config/AZenith/API");
-    azenith_config::sync_mirror();
+    archconfig::sync_mirror();
     chmod("/data/data/zx.azenith/API", 0o777);
     chmodg("/data/data/zx.azenith/API/*", 0o644);
     chmodg("/data/adb/.config/AZenith/API/*", 0o644);

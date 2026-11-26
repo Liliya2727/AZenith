@@ -13,7 +13,7 @@ use crate::sysprop::{get, set};
 use crate::fileops;
 use crate::util::notify;
 
-use azenith_config::{AZenithConfig, CONFIG_PATH, parse_bool_flexible};
+use archconfig::{AZenithConfig, CONFIG_PATH, parse_bool_flexible};
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::path::Path;
@@ -202,7 +202,7 @@ pub fn migrate_props_to_json_once() {
             }
         }
 
-        match azenith_config::save(&cfg) {
+        match archconfig::save(&cfg) {
             Ok(_) => {
                 log_info!(
                     "config",
@@ -351,7 +351,7 @@ pub fn init_daemon_context(ctx: &mut DaemonContext) {
 // load_initial_config_files
 // ---------------------------------------------------------------------------
 pub fn load_initial_config_files(ctx: &mut DaemonContext) {
-    ctx.config = azenith_config::load();
+    ctx.config = archconfig::load();
     crate::log::set_cached_debug_mode(ctx.config.debug_mode);
 
     log_info!(

@@ -148,12 +148,12 @@ pub fn restore_saved_renderer(ctx: &mut DaemonContext) {
         if ctx.saved_renderer_str() == "default" {
             systemv("sys.azenith-utilityconf setrender default");
             ctx.config.renderer = "default".to_string();
-            let _ = azenith_config::update(|c| c.renderer = "default".to_string());
+            let _ = archconfig::update(|c| c.renderer = "default".to_string());
         } else {
             systemv(&format!("sys.azenith-utilityconf setrender {}", ctx.saved_renderer_str()));
             let restored = ctx.saved_sys_renderer_str().to_string();
             ctx.config.renderer = restored.clone();
-            let _ = azenith_config::update(|c| c.renderer = restored);
+            let _ = archconfig::update(|c| c.renderer = restored);
         }
     }
     ctx.profile.saved_renderer = [0; 92];

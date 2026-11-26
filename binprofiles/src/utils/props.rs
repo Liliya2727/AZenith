@@ -79,7 +79,7 @@ pub fn get_clearapps() -> bool {
 }
 
 pub fn get_litemode() -> bool {
-    getprop("persist.sys.azenithconf.litemode") == "1"
+    getprop("sys.azenith.litemode") == "1"
 }
 
 pub fn get_curprofile() -> String {

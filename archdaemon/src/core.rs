@@ -1,6 +1,6 @@
 //! Core types shared across the daemon.
 
-use azenith_config::AZenithConfig;
+use archconfig::AZenithConfig;
 use std::os::raw::c_int;
 
 pub const MAX_DATA_LENGTH: usize = 2048;

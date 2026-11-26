@@ -249,7 +249,7 @@ pub fn restartservice() {
     let _ = systemv("pkill -9 -f sys.azenith-appmonitoring");
     let _ = systemv("pkill -9 -f sys.azenith-fpsclient");
     
-    setprop("persist.sys.azenith.state", "stopped");
+    setprop("sys.azenith.state", "stopped");
     
     if systemv("sh /data/adb/modules/AZenith/service.sh &") != 0 {
         log_error("daemon", "service restart failed");

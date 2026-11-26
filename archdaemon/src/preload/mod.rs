@@ -82,7 +82,7 @@ pub fn GamePreload(package: &str) {
         })
         .unwrap_or(false);
 
-    let mut budget = azenith_config::load().preload_budget;
+    let mut budget = archconfig::load().preload_budget;
     if budget.trim().is_empty() {
         budget = "500M".to_string();
     }

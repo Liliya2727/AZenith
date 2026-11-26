@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "azenith-config"
+name = "archconfig"
 version = "1.0.0"
 dependencies = [
  "libc",
@@ -15,7 +15,7 @@ dependencies = [
 name = "azenith-service"
 version = "1.0.0"
 dependencies = [
- "azenith-config",
+ "archconfig",
  "glob",
  "libc",
  "nix",

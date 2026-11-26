@@ -163,7 +163,7 @@ fn debug_enabled() -> bool {
     let now_ms = origin.elapsed().as_millis() as u64;
     let last = DEBUG_CHECKED_MS.load(Ordering::Relaxed);
     if last == 0 || now_ms.saturating_sub(last) >= 5_000 {
-        let enabled = azenith_config::load().debug_mode;
+        let enabled = archconfig::load().debug_mode;
         flag.store(enabled, Ordering::Relaxed);
         DEBUG_CHECKED_MS.store(now_ms.max(1), Ordering::Relaxed);
     }
