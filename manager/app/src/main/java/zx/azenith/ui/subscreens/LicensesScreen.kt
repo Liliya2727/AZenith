@@ -41,9 +41,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Gavel
-import androidx.compose.material.icons.rounded.LibraryBooks
-import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -170,7 +170,7 @@ fun LicensesScreen(navController: NavController) {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.OpenInNew,
+                                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -200,7 +200,7 @@ fun LicensesScreen(navController: NavController) {
                         onClick = { navController.navigate("librariesscreen") },
                         headlineContent = { Text(stringResource(R.string.str_libraries_used)) },
                         supportingContent = { Text(stringResource(R.string.str_libraries_hint)) },
-                        leadingContent = { LeadingIcon(icon = Icons.Rounded.LibraryBooks) },
+                        leadingContent = { LeadingIcon(icon = Icons.AutoMirrored.Rounded.LibraryBooks) },
                         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                     )
                 }
