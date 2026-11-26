@@ -79,7 +79,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 
 
 /**
@@ -123,8 +123,9 @@ fun FpsGoSettings(navController: NavController) {
     // after the screen is torn down and rebuilt.
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            fpsgostate.value = PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "1"
-            fpsgogedstate.value = PropertyUtils.get("persist.sys.azenithconf.fpsged") == "1"
+            val cfg = ConfigUtils.load()
+            fpsgostate.value = cfg.useFpsgo
+            fpsgogedstate.value = cfg.fpsged
         }
     }
 
@@ -186,7 +187,7 @@ fun FpsGoSettings(navController: NavController) {
                                                                          checked = fpsgostate.value == true,
                                                                          onCheckedChange = { isChecked ->
                                                                              fpsgostate.value = isChecked
-                                                                             PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
+                                                                             ConfigUtils.setBool("use_fpsgo", isChecked)
                                                                          }
                                                                      )
                                  }
@@ -213,7 +214,7 @@ fun FpsGoSettings(navController: NavController) {
                                                                         checked = fpsgogedstate.value == true,
                                                                         onCheckedChange = { isChecked ->
                                                                             fpsgogedstate.value = isChecked
-                                                                            PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
+                                                                            ConfigUtils.setBool("fpsged", isChecked)
                                                                         }
                                                                     )
                                 }

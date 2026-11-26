@@ -96,7 +96,7 @@ import zx.azenith.ui.util.getSupportedRefreshRates
 import zx.azenith.ui.util.getSupportedDownscaleFactors
 import zx.azenith.ui.util.getSupportedFpsTargets
 import zx.azenith.ui.util.DebugUtils
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.component.ExpressiveSliderItem
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -127,7 +127,7 @@ fun AppSettingsScreen(
     var bypassSupported by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         bypassSupported = withContext(Dispatchers.IO) {
-            val path = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
+            val path = ConfigUtils.load().bypassPath
             path != "UNSUPPORTED" && path != "NEED_SETUP"
         }
     }

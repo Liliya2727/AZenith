@@ -89,7 +89,6 @@ import kotlinx.coroutines.launch
 import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.component.*
-import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.component.GamepadStickScrollEffect
 
 

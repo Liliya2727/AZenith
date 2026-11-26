@@ -103,7 +103,7 @@ import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.component.hazePageSource
 import zx.azenith.ui.navigation.safePopBackStack
 import zx.azenith.ui.util.DebugUtils
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.getChipsetVendor
 import zx.azenith.ui.viewmodel.SearchCapabilities
 import zx.azenith.ui.viewmodel.SearchEntry
@@ -142,7 +142,7 @@ fun SearchScreen(
     var capabilities by remember { mutableStateOf(SearchCapabilities()) }
     LaunchedEffect(Unit) {
         capabilities = withContext(Dispatchers.IO) {
-            val bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
+            val bypassPath = ConfigUtils.load().bypassPath
             val maliCheck = Shell.cmd(
                 "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf checkmalipath"
             ).exec().out.joinToString("").trim()

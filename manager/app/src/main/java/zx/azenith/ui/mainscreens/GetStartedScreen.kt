@@ -78,7 +78,7 @@ import zx.azenith.ui.component.ExpressiveSwitchItem
 import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.component.SkeletonSettingsList
 import zx.azenith.ui.util.RootUtils
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 
 /**
  * Background dinamis yang posisinya pindah dengan mulus antar halaman.
@@ -240,12 +240,11 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
     var prefsLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val (toastOut, aiOut) = withContext(Dispatchers.IO) {
-            PropertyUtils.get("persist.sys.azenithconf.showtoast") to
-                PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+        val cfg = withContext(Dispatchers.IO) {
+            ConfigUtils.load()
         }
-        if (toastOut == "0") stateToast = false
-        if (aiOut == "0") autoMode = true
+        stateToast = cfg.showToast
+        autoMode = !cfg.autoMode
         prefsLoaded = true
     }
 
@@ -622,7 +621,7 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
                                                     onCheckedChange = { isChecked ->
                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                         stateToast = isChecked
-                                                        Shell.cmd("su -c setprop persist.sys.azenithconf.showtoast ${if (isChecked) "1" else "0"}").submit()
+                                                        ConfigUtils.setBool("show_toast", isChecked)
                                                     }
                                                 )
                                             }
@@ -639,8 +638,8 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                         autoMode = isChecked
                                                         val state = if (isChecked) "0" else "1"
+                                                        ConfigUtils.setBool("auto_mode", !isChecked)
                                                         Shell.cmd(
-                                                            "su -c setprop persist.sys.azenithconf.AIenabled $state",
                                                             "su -c \"echo $state > /data/adb/.config/AZenith/API/current_modes\""
                                                         ).submit()
                                                     }

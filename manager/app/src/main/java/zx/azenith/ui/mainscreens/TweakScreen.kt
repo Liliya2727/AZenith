@@ -91,7 +91,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.SearchTab
 import zx.azenith.ui.viewmodel.TweakViewModel
@@ -254,7 +254,7 @@ fun TweakScreen(
     // hop, and a bare `remember` block is not a suspend context.
     val currentSocType by produceState("") {
         value = withContext(Dispatchers.IO) {
-            PropertyUtils.get("persist.sys.azenith.soctype")
+            ConfigUtils.load().socType?.toString().orEmpty()
         }
     }
 

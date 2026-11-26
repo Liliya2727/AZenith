@@ -28,7 +28,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.RootUtils
 
 class ProfileTileService : TileService() {
@@ -36,7 +36,6 @@ class ProfileTileService : TileService() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     companion object {
-        private const val AI_PROP = "persist.sys.azenithconf.AIenabled"
         private const val DAEMON_BIN = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
     }
 
@@ -62,11 +61,11 @@ class ProfileTileService : TileService() {
         val tile = qsTile ?: return
 
         serviceScope.launch {
-            val aiEnabled = PropertyUtils.get(AI_PROP, "0")
+            val aiEnabled = ConfigUtils.load().autoMode
             val isRooted = RootUtils.isRootGranted()
 
             withContext(Dispatchers.Main) {
-                if (aiEnabled != "0" || tile.state == Tile.STATE_UNAVAILABLE || !isRooted) {
+                if (aiEnabled || tile.state == Tile.STATE_UNAVAILABLE || !isRooted) {
                     return@withContext
                 }
                 showProfileDialog()
@@ -127,9 +126,9 @@ class ProfileTileService : TileService() {
     private fun updateTileState() {
         val tile = qsTile ?: return
         serviceScope.launch {
-            val aiEnabled = PropertyUtils.get(AI_PROP, "0")
+            val aiEnabled = ConfigUtils.load().autoMode
 
-            if (aiEnabled != "0") {
+            if (aiEnabled) {
                 withContext(Dispatchers.Main) {
                     tile.state = Tile.STATE_UNAVAILABLE
                     updateSubtitle(tile, getString(R.string.str_auto_mode))

@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.TapHapticState
 import zx.azenith.ui.util.fireConfirmHaptic
@@ -55,13 +55,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private fun loadProps() {
         viewModelScope.launch(Dispatchers.IO) {
-            val disableTweak = PropertyUtils.get("persist.sys.azenith.disabletweak") == "1"
-            val stateToast = PropertyUtils.get("persist.sys.azenithconf.showtoast") == "1"
+            val cfg = ConfigUtils.load()
+            val disableTweak = cfg.disableTweak
+            val stateToast = cfg.showToast
             val tapHaptic = isTapHapticEnabled(getApplication())
-            val autoMode = PropertyUtils.get("persist.sys.azenithconf.AIenabled") == "0"
-            val debugMode = PropertyUtils.get("persist.sys.azenith.debugmode") == "true"
-            val profileTimeout = PropertyUtils.get("persist.sys.azenith.dropforeground") == "1"
-            val profileNotifications = PropertyUtils.get("persist.sys.azenith.profilenotifications") == "1"
+            val autoMode = !cfg.autoMode
+            val debugMode = cfg.debugMode
+            val profileTimeout = cfg.dropForeground
+            val profileNotifications = cfg.profileNotifications
             val soundEffects = zx.azenith.ui.util.isSoundEffectsEnabled(getApplication())
     
             TapHapticState.enabled.value = tapHaptic
@@ -107,7 +108,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(profileNotifications = enabled)
         viewModelScope.launch(Dispatchers.IO) {
             val flag = if (enabled) "-sn" else "-hn"
-            PropertyUtils.set("persist.sys.azenith.profilenotifications", if (enabled) "1" else "0")
+            ConfigUtils.setBool("profile_notifications", enabled)
             Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service $flag").submit()            
         }
     }
@@ -115,7 +116,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setShowToast(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(stateToast = enabled)
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.showtoast", if (enabled) "1" else "0")
+            ConfigUtils.setBool("show_toast", enabled)
         }
     }
 
@@ -126,7 +127,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         // screen cannot see this state change on its own. Broadcast it.
         AutoModeBus.notify(state)
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.AIenabled", state)
+            ConfigUtils.setBool("auto_mode", !enabled)
             RootUtils.writeRootFile("/data/adb/.config/AZenith/API/current_modes", "$state\n")
         }
     }
@@ -134,21 +135,21 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setDebugMode(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(debugMode = enabled)
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.debugmode", if (enabled) "true" else "false")
+            ConfigUtils.setBool("debug_mode", enabled)
         }
     }
 
     fun setDisableTweak(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(disableTweak = enabled)
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.disabletweak", if (enabled) "1" else "0")
+            ConfigUtils.setBool("disable_tweak", enabled)
         }
     }
 
     fun setProfileTimeout(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(profileTimeout = enabled)
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.dropforeground", if (enabled) "1" else "0")
+            ConfigUtils.setBool("drop_foreground", enabled)
         }
     }
 }

@@ -178,7 +178,7 @@ import zx.azenith.ui.subscreens.ColorPreset
 import zx.azenith.ui.subscreens.ColorSliderItem
 import zx.azenith.ui.util.AudioUtil
 import zx.azenith.ui.util.DebugUtils
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.RebootManager
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.getChipsetVendor
@@ -473,14 +473,14 @@ private fun TweaksMainSubPane(
 
     val bypassEnabled by produceState(false) {
         value = withContext(Dispatchers.IO) {
-            PropertyUtils.get("persist.sys.azenithconf.bypasschg", "0") == "1"
+            ConfigUtils.load().bypassChg
         }
     }
 
     var autoMode by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            autoMode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+            autoMode = if (ConfigUtils.load().autoMode) "1" else "0"
         }
     }
     LaunchedEffect(Unit) {
@@ -1038,10 +1038,10 @@ private fun BypassChargingSubPane(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
-            bypassState = PropertyUtils.get("persist.sys.azenithconf.bypasschg", "0") == "1"
-            val rawThreshold = PropertyUtils.get("persist.sys.azenithconf.bypasschgthreshold", "20")
-            thresholdValue = rawThreshold.toFloatOrNull()?.coerceIn(20f, 50f) ?: 20f
+            val cfg = ConfigUtils.load()
+            bypassPath = cfg.bypassPath
+            bypassState = cfg.bypassChg
+            thresholdValue = cfg.bypassChgThreshold.toFloat().coerceIn(20f, 50f)
         }
         refreshNodes()
     }
@@ -1293,11 +1293,7 @@ private fun BypassChargingSubPane(
                     onPositioned = if (isConfigured) onFirstPositioned else null,
                     onCheckedChange = { isChecked ->
                         bypassState = isChecked
-                        val strVal = if (isChecked) "1" else "0"
-                        PropertyUtils.set("persist.sys.azenithconf.bypasschg", strVal)
-                        scope.launch(Dispatchers.IO) {
-                            RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschg", "$strVal\n")
-                        }
+                        ConfigUtils.setBool("bypass_chg", isChecked)
                     },
                     shape = masterSwitchShape
                 )
@@ -1313,10 +1309,7 @@ private fun BypassChargingSubPane(
                         onThresholdChange = { thresholdValue = it },
                         onThresholdChangeFinished = { finalVal ->
                             val roundVal = finalVal.roundToInt()
-                            PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", roundVal.toString())
-                            scope.launch(Dispatchers.IO) {
-                                RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold", "$roundVal\n")
-                            }
+                            ConfigUtils.setInt("bypass_chg_threshold", roundVal)
                         },
                         shape = blockBottomShape
                     )
@@ -1466,10 +1459,7 @@ private fun BypassChargingSubPane(
             selectedOption = availableNodes.firstOrNull { it.first == bypassPath },
             onOptionSelected = { (nodeName, _) ->
                 bypassPath = nodeName
-                PropertyUtils.set("persist.sys.azenithconf.bypasspath", nodeName)
-                scope.launch(Dispatchers.IO) {
-                    RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$nodeName\n")
-                }
+                ConfigUtils.set("bypass_path", nodeName)
             },
             optionLabel = { it.first },
             optionSupporting = { it.second },
@@ -1499,10 +1489,7 @@ private fun BypassChargingSubPane(
             }
             val applyNodeAction = {
                 bypassPath = node
-                PropertyUtils.set("persist.sys.azenithconf.bypasspath", node)
-                scope.launch(Dispatchers.IO) {
-                    RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$node\n")
-                }
+                ConfigUtils.set("bypass_path", node)
                 foundWorkingNode = null
             }
             CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
@@ -1851,14 +1838,15 @@ private fun PreferencedTweaksSubPane(
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             isFullModeEnabled = DebugUtils.isFullModeEnabled()
-            schedTunes = PropertyUtils.get("persist.sys.azenithconf.schedtunes", "0") == "1"
-            waltTunes = PropertyUtils.get("persist.sys.azenithconf.walttunes", "0") == "1"
-            sflState = PropertyUtils.get("persist.sys.azenithconf.SFL", "0") == "1"
-            jitState = PropertyUtils.get("persist.sys.azenithconf.justintime", "0") == "1"
-            disableTrace = PropertyUtils.get("persist.sys.azenithconf.disabletrace", "0") == "1"
-            disableLogd = PropertyUtils.get("persist.sys.azenithconf.logd", "0") == "1"
-            maliSched = PropertyUtils.get("persist.sys.azenithconf.malisched", "0") == "1"
-            disableThermal = PropertyUtils.get("persist.sys.azenithconf.DThermal", "0") == "1"
+            val cfg = ConfigUtils.load()
+            schedTunes = cfg.schedtunes
+            waltTunes = cfg.walttunes
+            sflState = cfg.sfl
+            jitState = cfg.justintime
+            disableTrace = cfg.disableTrace
+            disableLogd = cfg.killLogd
+            maliSched = cfg.maliSched
+            disableThermal = cfg.disableThermal
 
             RebootManager.captureBaselineOnce("pref_schedtunes", schedTunes)
             RebootManager.captureBaselineOnce("pref_walttunes", waltTunes)
@@ -1883,11 +1871,11 @@ private fun PreferencedTweaksSubPane(
             onPositioned = onFirstPositioned,
             onCheckedChange = { isChecked ->
                 schedTunes = isChecked
-                PropertyUtils.set("persist.sys.azenithconf.schedtunes", if (isChecked) "1" else "0")
+                ConfigUtils.setBool("schedtunes", isChecked)
                 RebootManager.checkAgainstBaseline("pref_schedtunes", isChecked)
                 if (isChecked && waltTunes) {
                     waltTunes = false
-                    PropertyUtils.set("persist.sys.azenithconf.walttunes", "0")
+                    ConfigUtils.setBool("walttunes", false)
                     RebootManager.checkAgainstBaseline("pref_walttunes", false)
                 }
             },
@@ -1904,11 +1892,11 @@ private fun PreferencedTweaksSubPane(
             enabled = isSnapdragon,
             onCheckedChange = { isChecked ->
                 waltTunes = isChecked
-                PropertyUtils.set("persist.sys.azenithconf.walttunes", if (isChecked) "1" else "0")
+                ConfigUtils.setBool("walttunes", isChecked)
                 RebootManager.checkAgainstBaseline("pref_walttunes", isChecked)
                 if (isChecked && schedTunes) {
                     schedTunes = false
-                    PropertyUtils.set("persist.sys.azenithconf.schedtunes", "0")
+                    ConfigUtils.setBool("schedtunes", false)
                     RebootManager.checkAgainstBaseline("pref_schedtunes", false)
                 }
             },
@@ -1924,7 +1912,7 @@ private fun PreferencedTweaksSubPane(
             checked = sflState,
             onCheckedChange = { isChecked ->
                 sflState = isChecked
-                PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
+                ConfigUtils.setBool("sfl", isChecked)
                 RebootManager.checkAgainstBaseline("pref_SFL", isChecked)
             },
             shape = shape
@@ -1940,7 +1928,7 @@ private fun PreferencedTweaksSubPane(
                 checked = jitState,
                 onCheckedChange = { isChecked ->
                     jitState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("justintime", isChecked)
                     RebootManager.checkAgainstBaseline("pref_justintime", isChecked)
                 },
                 shape = shape
@@ -1955,7 +1943,7 @@ private fun PreferencedTweaksSubPane(
                 checked = disableTrace,
                 onCheckedChange = { isChecked ->
                     disableTrace = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("disable_trace", isChecked)
                     RebootManager.checkAgainstBaseline("pref_disabletrace", isChecked)
                 },
                 shape = shape
@@ -1970,7 +1958,7 @@ private fun PreferencedTweaksSubPane(
                 checked = disableLogd,
                 onCheckedChange = { isChecked ->
                     disableLogd = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("kill_logd", isChecked)
                     RebootManager.checkAgainstBaseline("pref_logd", isChecked)
                 },
                 shape = shape
@@ -1987,7 +1975,7 @@ private fun PreferencedTweaksSubPane(
             enabled = isMediaTek,
             onCheckedChange = { isChecked ->
                 maliSched = isChecked
-                PropertyUtils.set("persist.sys.azenithconf.malisched", if (isChecked) "1" else "0")
+                ConfigUtils.setBool("mali_sched", isChecked)
                 RebootManager.checkAgainstBaseline("pref_malisched", isChecked)
             },
             shape = shape
@@ -2002,7 +1990,7 @@ private fun PreferencedTweaksSubPane(
             checked = disableThermal,
             onCheckedChange = { isChecked ->
                 disableThermal = isChecked
-                PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
+                ConfigUtils.setBool("disable_thermal", isChecked)
                 RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
             },
             shape = shape
@@ -2061,9 +2049,10 @@ private fun FpsGoSubPane(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            fpsgoState = PropertyUtils.get("persist.sys.azenithconf.usefpsgo", "0") == "1"
-            fpsgedState = PropertyUtils.get("persist.sys.azenithconf.fpsged", "0") == "1"
-            sflState = PropertyUtils.get("persist.sys.azenithconf.SFL", "0") == "1"
+            val cfg = ConfigUtils.load()
+            fpsgoState = cfg.useFpsgo
+            fpsgedState = cfg.fpsged
+            sflState = cfg.sfl
         }
     }
 
@@ -2097,7 +2086,7 @@ private fun FpsGoSubPane(
                 onPositioned = onFirstPositioned,
                 onCheckedChange = { isChecked ->
                     fpsgoState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("use_fpsgo", isChecked)
                 },
                 shape = blockTopShape
             )
@@ -2109,7 +2098,7 @@ private fun FpsGoSubPane(
                 checked = fpsgedState,
                 onCheckedChange = { isChecked ->
                     fpsgedState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("fpsged", isChecked)
                 },
                 shape = blockMiddleShape
             )
@@ -2121,7 +2110,7 @@ private fun FpsGoSubPane(
                 checked = sflState,
                 onCheckedChange = { isChecked ->
                     sflState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("sfl", isChecked)
                     RebootManager.checkAgainstBaseline("pref_SFL", isChecked)
                 },
                 shape = blockBottomShape
@@ -2183,12 +2172,12 @@ private fun DisplayColorSubPane(
 
     val saveToProp = {
         val config = "${redVal.toInt()} ${greenVal.toInt()} ${blueVal.toInt()} ${satVal.toInt()}"
-        PropertyUtils.set("persist.sys.azenithconf.schemeconfig", config)
+        ConfigUtils.set("scheme_config", config)
     }
 
     LaunchedEffect(Unit) {
         val raw = withContext(Dispatchers.IO) {
-            PropertyUtils.get("persist.sys.azenithconf.schemeconfig", "")
+            ConfigUtils.load().schemeConfig
         }
         if (raw.isNotEmpty()) {
             val parts = raw.split(" ").mapNotNull { it.toFloatOrNull() }

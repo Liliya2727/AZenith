@@ -34,7 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.MainActivity
 import zx.azenith.R
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 
 
 class ZenithReceiver : BroadcastReceiver() {
@@ -139,7 +139,7 @@ class ZenithReceiver : BroadcastReceiver() {
             it.contains("profile") || it.contains("mode") || it.contains("initializing...")
         }
     
-        if (isProfile && PropertyUtils.get("persist.sys.azenith.profilenotifications") == "0") {
+        if (isProfile && !ConfigUtils.load().profileNotifications) {
             return
         }
     

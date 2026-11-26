@@ -191,6 +191,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.component.ResetConfirmDialog
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -236,13 +237,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         private const val DAEMON_RECORD_CMD_PATH = "/data/adb/.config/AZenith/API/record_cmd"
         private const val DAEMON_RECORD_STATE_PATH = "/data/adb/.config/AZenith/API/record_state"
         private const val FRAMERATEDATA_DIR = "/data/adb/.config/AZenith/frameratedata"
-        private const val AI_PROP = "persist.sys.azenithconf.AIenabled"
-        private const val LITE_PROP = "persist.sys.azenithconf.litemode"
-        private const val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
+        private const val LITE_PROP = "sys.azenith.litemode"
         private const val PREF_QUICK_APPS = "gamespace_sidepanel_quick_apps"
         const val PREF_SIDEPANEL_ENABLED = "gamespace_sidepanel_enabled"
 
-        const val PROP_FORCE_SIDEPANEL = "persist.sys.azenith.force_sidepanel"
         const val PROP_FORCE_SIDEPANEL_DEBUG = "debug.azenith.force_sidepanel"
 
         val appsOpenedFromAzenith: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf<String>())
@@ -255,8 +253,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
 
         fun isForceSidepanelEnabled(): Boolean {
-            val p1 = PropertyUtils.get(PROP_FORCE_SIDEPANEL, "0").trim()
-            if (p1 == "1" || p1.equals("true", ignoreCase = true)) return true
+            if (ConfigUtils.load().forceSidepanel) return true
             val p2 = PropertyUtils.get(PROP_FORCE_SIDEPANEL_DEBUG, "0").trim()
             return p2 == "1" || p2.equals("true", ignoreCase = true)
         }
@@ -1735,7 +1732,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     var screenAwake = pm?.isInteractive ?: true
                     var focusedPkg: String? = null
 
-                    val daemonRunning = PropertyUtils.get("persist.sys.azenith.state", "") == "running"
+                    val daemonRunning = PropertyUtils.get("sys.azenith.state", "") == "running"
                     if (daemonRunning) {
                         val statusText = telemetryCollector.readFileTextDirectOrSu(APP_STATUS_PATH, rootGranted)
                         if (!statusText.isNullOrBlank()) {
@@ -2059,7 +2056,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun applyAutoModeToggle(enableAuto: Boolean) {
         serviceScope.launch(Dispatchers.IO) {
             val stateStr = if (enableAuto) "1" else "0"
-            PropertyUtils.set(AI_PROP, stateStr)
+            ConfigUtils.setBool("auto_mode", enableAuto)
             AutoModeBus.notify(stateStr)
             if (checkRootGranted()) {
                 RootUtils.writeRootFile(DAEMON_MODES_PATH, "$stateStr\n")
@@ -2145,16 +2142,15 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val batteryInfo = readBatteryAndThermal(rootGranted)
 
                     // 3. Read AZenith Auto Mode, Running Profile, and Profile Duration
-                    val daemonRunning = PropertyUtils.get("persist.sys.azenith.state", "") == "running"
-                    val aiPropVal = PropertyUtils.get(AI_PROP, "")
+                    val cfg = ConfigUtils.load()
+                    val daemonRunning = PropertyUtils.get("sys.azenith.state", "") == "running"
                     val modesFileVal = telemetryCollector.readFileTextDirectOrSu(DAEMON_MODES_PATH, rootGranted)?.trim()
                     val resolvedAuto = when {
                         !modesFileVal.isNullOrEmpty() -> modesFileVal == "1"
-                        aiPropVal.isNotEmpty() -> aiPropVal == "1"
-                        else -> panelState.isAutoMode
+                        else -> cfg.autoMode
                     }
                     val liteEnabled = PropertyUtils.get(LITE_PROP, "0") == "1"
-                    val bypassActive = PropertyUtils.get(BYPASS_PROP, "0") == "1"
+                    val bypassActive = cfg.bypassChg
 
                     // FPS Recorder status (daemon-owned state file, for the overlay).
                     val recordStateText = telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted)?.trim()

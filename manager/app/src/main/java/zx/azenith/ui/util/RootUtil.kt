@@ -264,7 +264,7 @@ object RootUtils {
 
     private fun getAutoModeValue(): String =
         readRootFile(DAEMON_MODES_PATH)?.trim()
-            ?: PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+            ?: if (ConfigUtils.load().autoMode) "1" else "0"
 
     fun getCurrentProfileValue(): String {
         // The mirror is the app's own file; a plain read costs nothing, a SuFile read
@@ -301,7 +301,7 @@ object RootUtils {
         return when (content) {
             "0" -> R.string.status_initializing
             "1" -> {
-                val isLite = PropertyUtils.get("persist.sys.azenithconf.litemode", "0") == "1"
+                val isLite = PropertyUtils.get("sys.azenith.litemode", "0") == "1"
                 if (isLite) R.string.profile_perflite else R.string.Profile_Performance
             }
             "2" -> R.string.Profile_Balanced

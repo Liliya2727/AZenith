@@ -94,7 +94,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.saveHeaderImage
@@ -168,20 +168,18 @@ fun BypassChargeScreen(navController: NavController) {
     // tap handler block on a root round trip.
     val writeScope = rememberCoroutineScope()   
 
-    // Load properties asynchronously - skeleton shows immediately while loading
+    // Load configuration asynchronously - skeleton shows immediately while loading
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
-
-            val thresholdProp = PropertyUtils.get("persist.sys.azenithconf.bypasschgthreshold", "20")
-            thresholdValue = thresholdProp.toFloatOrNull()?.coerceIn(20f, 50f) ?: 20f
-
-            bypassChgState = PropertyUtils.get("persist.sys.azenithconf.bypasschg", "0") == "1"
+            val cfg = ConfigUtils.load()
+            bypassPath = cfg.bypassPath
+            thresholdValue = cfg.bypassChgThreshold.toFloat().coerceIn(20f, 50f)
+            bypassChgState = cfg.bypassChg
         }
     }
 
 
-    // Only the local state moves during the drag. The property write and the su
+    // Only the local state moves during the drag. The config write and the su
     // round-trip run on finish, so dragging does not fork a shell on every value
     // change.
     val onThresholdChange: (Float) -> Unit = { newValue ->
@@ -193,17 +191,14 @@ fun BypassChargeScreen(navController: NavController) {
         // thresholdValue is the value the drag left behind; currentVal is only a
         // fallback for the (unlikely) case it has not been set yet.
         val finalValue = thresholdValue ?: currentVal
-        PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", finalValue.toInt().toString())
         writeScope.launch(Dispatchers.IO) {
-            RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold", "${finalValue.toInt()}\n")
+            ConfigUtils.setInt("bypass_chg_threshold", finalValue.toInt())
         }
     }
     val onToggleBypass: (Boolean) -> Unit = { isChecked ->
-        val value = if (isChecked) "1" else "0"
         bypassChgState = isChecked
-        PropertyUtils.set("persist.sys.azenithconf.bypasschg", value)
         writeScope.launch(Dispatchers.IO) {
-            RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschg", "$value\n")
+            ConfigUtils.setBool("bypass_chg", isChecked)
         }
     }
 

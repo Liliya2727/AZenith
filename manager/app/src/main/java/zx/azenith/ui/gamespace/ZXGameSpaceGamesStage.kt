@@ -207,7 +207,7 @@ import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.component.ZXDropDownMenu
 import zx.azenith.ui.component.rememberZXDropDownState
 import zx.azenith.ui.component.zxDropDownAnchor
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.viewmodel.AutoModeBus
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -865,7 +865,7 @@ internal fun WelcomeHubStage(
     var autoMode by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            autoMode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+            autoMode = if (ConfigUtils.load().autoMode) "1" else "0"
         }
     }
     LaunchedEffect(Unit) {

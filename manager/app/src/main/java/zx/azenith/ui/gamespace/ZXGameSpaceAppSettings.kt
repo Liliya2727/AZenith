@@ -167,7 +167,7 @@ import zx.azenith.ui.subscreens.getAppDetails
 import zx.azenith.ui.subscreens.isGameCategory
 import zx.azenith.ui.util.AppConfig
 import zx.azenith.ui.util.DebugUtils
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.getGameWallpaperBlur
 import zx.azenith.ui.util.getGameWallpaperDim
@@ -305,7 +305,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
         var bypassSupported by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
             bypassSupported = withContext(Dispatchers.IO) {
-                val path = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
+                val path = ConfigUtils.load().bypassPath
                 path != "UNSUPPORTED" && path != "NEED_SETUP"
             }
         }
