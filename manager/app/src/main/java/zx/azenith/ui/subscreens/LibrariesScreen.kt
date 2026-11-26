@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -64,6 +65,7 @@ fun LibrariesScreen(navController: NavController) {
     )
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             AboutTopAppBar(
                 title = stringResource(R.string.str_libraries_used),
@@ -79,7 +81,6 @@ fun LibrariesScreen(navController: NavController) {
                 .fillMaxSize()
                 .hazePageSource()
                 .gamepadScreenEntry(scopeKey = "subscreen:libraries")
-                .padding(top = innerPadding.calculateTopPadding())
         ) {
             if (libraries == null) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -95,8 +96,10 @@ fun LibrariesScreen(navController: NavController) {
                         rowExpandedBackground = MaterialTheme.colorScheme.surfaceContainerLow
                     ),
                     contentPadding = PaddingValues(
-                        horizontal = 8.dp,
-                        vertical = 8.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        start = 8.dp,
+                        end = 8.dp,
+                        top = innerPadding.calculateTopPadding() + 8.dp,
+                        bottom = 8.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     ),
                     modifier = Modifier.fillMaxSize()
                 )

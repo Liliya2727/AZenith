@@ -138,7 +138,7 @@ fun AboutScreen(navController: NavController) {
 
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { 
             AboutTopAppBar(
                 title = stringResource(R.string.section_about),
@@ -526,7 +526,7 @@ fun AboutTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }
