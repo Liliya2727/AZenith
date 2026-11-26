@@ -1,6 +1,5 @@
 //! Logging.
 
-use crate::sysprop::get_or_default;
 use crate::android_ffi::{ANDROID_LOG_DEBUG, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL, ANDROID_LOG_INFO, ANDROID_LOG_WARN, logcat};
 use crate::core::{
     LogLevel, LOG_FILE, LOG_FILE_PRELOAD, LOG_MAX_BYTES, LOG_KEEP_FILES, LOG_TAG, LOG_TAG_PROFILE, LOG_VFILE,
@@ -145,23 +144,28 @@ pub fn external_vlog(_level: i32, tag: &str, message: &str, _args: std::fmt::Arg
     logcat(ANDROID_LOG_INFO, LOG_TAG_PROFILE, &format!("[{comp}] {body}"));
 }
 
-/// Debug mode is a system property that never changes during a gaming session.
-/// Reading it on every `log_debug!` call meant a bionic property lookup plus a
-/// String allocation even when debug logging was off. Cache it and refresh at
-/// most once every 5 s so a runtime `setprop` is still picked up eventually.
-fn debug_enabled() -> bool {
-    static FLAG: OnceLock<AtomicBool> = OnceLock::new();
-    static CHECKED_MS: AtomicU64 = AtomicU64::new(0);
-    static ORIGIN: OnceLock<Instant> = OnceLock::new();
+static DEBUG_FLAG: OnceLock<AtomicBool> = OnceLock::new();
+static DEBUG_CHECKED_MS: AtomicU64 = AtomicU64::new(0);
+static DEBUG_ORIGIN: OnceLock<Instant> = OnceLock::new();
 
-    let flag = FLAG.get_or_init(|| AtomicBool::new(false));
-    let origin = ORIGIN.get_or_init(Instant::now);
+pub fn set_cached_debug_mode(enabled: bool) {
+    let flag = DEBUG_FLAG.get_or_init(|| AtomicBool::new(false));
+    let origin = DEBUG_ORIGIN.get_or_init(Instant::now);
+    flag.store(enabled, Ordering::Relaxed);
+    DEBUG_CHECKED_MS.store(origin.elapsed().as_millis() as u64, Ordering::Relaxed);
+}
+
+/// Debug mode is read from `config.json` and cached for 5 s (or updated
+/// immediately on inotify `config.json` reload via `set_cached_debug_mode`).
+fn debug_enabled() -> bool {
+    let flag = DEBUG_FLAG.get_or_init(|| AtomicBool::new(false));
+    let origin = DEBUG_ORIGIN.get_or_init(Instant::now);
     let now_ms = origin.elapsed().as_millis() as u64;
-    let last = CHECKED_MS.load(Ordering::Relaxed);
-    if now_ms.saturating_sub(last) >= 5_000 {
-        let enabled = get_or_default("persist.sys.azenith.debugmode", "false").as_str() == "true";
+    let last = DEBUG_CHECKED_MS.load(Ordering::Relaxed);
+    if last == 0 || now_ms.saturating_sub(last) >= 5_000 {
+        let enabled = azenith_config::load().debug_mode;
         flag.store(enabled, Ordering::Relaxed);
-        CHECKED_MS.store(now_ms, Ordering::Relaxed);
+        DEBUG_CHECKED_MS.store(now_ms.max(1), Ordering::Relaxed);
     }
     flag.load(Ordering::Relaxed)
 }

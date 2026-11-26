@@ -6,6 +6,7 @@ description = "AZenith Core Daemon"
 authors = ["Zexshia"]
 
 [dependencies]
+azenith-config = { path = "../azenith-config" }
 libc = "0.2"
 nix = { version = "0.28", features = ["poll", "fs", "time"] }
 glob = "0.3.1"

@@ -1,6 +1,6 @@
 //! Main daemon loop.
 
-use crate::sysprop::{get_into, set};
+use crate::sysprop::set;
 use crate::fileops;use crate::bypass::handle_dynamic_bypass;
 use crate::config::resolution::{
     apply_resolution_target, probe_game_capability, restore_resolution_target,
@@ -43,8 +43,8 @@ pub fn main_daemon() -> c_int {
     unsafe {
         if libc::daemon(0, 0) != 0 {
             log_fatal!("daemon", "daemonize failed errno={}", std::io::Error::last_os_error());
-            set("persist.sys.azenith.service", "");
-            set("persist.sys.azenith.state", "stopped");
+            set("sys.azenith.service", "");
+            set("sys.azenith.state", "stopped");
             return 1;
         }
     }
@@ -101,12 +101,17 @@ pub fn main_daemon() -> c_int {
     log_info!("daemon", "daemon started pid={}", std::process::id());
     set("persist.sys.rynx.learning_enabled", "true");
     set("persist.sys.rynx.thermalcore-bigdata.path", "/data/adb/.config/AZenith/debug");
-    set("persist.sys.azenith.state", "running");
+    set("sys.azenith.state", "running");
     notify("Initializing...", "Starting AZenith service...", false, 0, None);
     setspid();
 
-    // Read AI state (fall back to the AIenabled prop when the modes file is
-    // missing or empty, mirroring the C daemon's live property read).
+    // Migrate legacy persist.sys.azenith* props and files to config.json once,
+    // then load initial config into ctx.config.
+    validateprop();
+    load_initial_config_files(&mut ctx);
+
+    // Read AI state (fall back to ctx.config.auto_mode when the modes file is
+    // missing or empty).
     let mut ai_state_loaded = false;
     if let Ok(fp) = std::fs::File::open(DAEMON_MODES) {
         use std::io::BufRead;
@@ -124,24 +129,19 @@ pub fn main_daemon() -> c_int {
         }
     }
     if !ai_state_loaded {
-        let prop = crate::sysprop::get_or_default("persist.sys.azenithconf.AIenabled", "");
-        let prop = prop.trim();
-        if !prop.is_empty() {
-            let bytes = prop.as_bytes();
-            let n = bytes.len().min(ctx.prev_ai_state.len() - 1);
-            ctx.prev_ai_state[..n].copy_from_slice(&bytes[..n]);
-            ctx.prev_ai_state[n] = 0;
-        }
+        let ai_str = if ctx.config.auto_mode { "1" } else { "0" };
+        let bytes = ai_str.as_bytes();
+        let n = bytes.len().min(ctx.prev_ai_state.len() - 1);
+        ctx.prev_ai_state[..n].copy_from_slice(&bytes[..n]);
+        ctx.prev_ai_state[n] = 0;
     }
 
     // Setup inotify watchers
     let inotify_fd = setup_inotify_watchers();
-    load_initial_config_files(&mut ctx);
 
     checkstate();
     is_kanged();
     check_module_version();
-    validateprop();
     log_debug!("integrity", "module integrity passed");
 
     log_info!("daemon", "daemon ready pid={} mode={} profile={}", std::process::id(),
@@ -218,8 +218,8 @@ pub fn main_daemon() -> c_int {
             log_fatal!("daemon", "java companion lock released, stopping daemon");
             recorder.finalize(&mut ctx, crate::recorder::StopReason::DaemonStop);
             notify("Daemon Error", "Java companion daemon crashed. Stopping AZenith.", false, 0, None);
-            set("persist.sys.azenith.service", "");
-            set("persist.sys.azenith.state", "stopped");
+            set("sys.azenith.service", "");
+            set("sys.azenith.state", "stopped");
             break;
         }
 
@@ -368,12 +368,7 @@ pub fn main_daemon() -> c_int {
         let gs_clone = ctx.game.gamestart.clone();
         if let Some(gs) = gs_clone.as_deref() {
             if ctx.profile.cur_mode == ProfileMode::PerformanceProfile {
-                let mut dropfg_val = [0u8; 92];
-                let _ = get_into("persist.sys.azenith.dropforeground", &mut dropfg_val);
-                let dropfg = unsafe {
-                    std::ffi::CStr::from_ptr(dropfg_val.as_ptr() ).to_string_lossy()
-                };
-                let dropforeground_enabled = dropfg.len() > 0 && dropfg == "1";
+                let dropforeground_enabled = ctx.config.drop_foreground;
 
                 if dropforeground_enabled {
                     let is_focused = ctx.current_system_cache.focused_app_str() == gs;
@@ -454,6 +449,9 @@ pub fn main_daemon() -> c_int {
                         &mut ctx.profile.saved_renderer,
                         &mut ctx.profile.saved_sys_renderer,
                     );
+                    if renderer_changed {
+                        ctx.config.renderer = renderer;
+                    }
                 }
 
                 let mut reso_changed = false;
@@ -509,15 +507,8 @@ pub fn main_daemon() -> c_int {
                 for i in 0..ctx.game.game_pid_count {
                     if IS_TRUE!(ctx.opts_app_priority()) {
                         set_priority(ctx.game.game_pids[i as usize]);
-                    } else if !IS_FALSE!(ctx.opts_app_priority()) {
-                        let mut val = [0u8; 92];
-                        let _ = get_into("persist.sys.azenithconf.iosched", &mut val);
-                        let val = unsafe {
-                            std::ffi::CStr::from_ptr(val.as_ptr() ).to_string_lossy()
-                        };
-                        if val == "1" {
-                            set_priority(ctx.game.game_pids[i as usize]);
-                        }
+                    } else if !IS_FALSE!(ctx.opts_app_priority()) && ctx.config.app_priority {
+                        set_priority(ctx.game.game_pids[i as usize]);
                     }
                 }
             }

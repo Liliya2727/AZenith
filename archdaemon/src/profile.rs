@@ -1,6 +1,6 @@
 //! Profile application.
 
-use crate::sysprop::{get_or_default, get_into, set};
+use crate::sysprop::{get_into, set};
 use crate::fileops;
 use crate::config::refresh_rate::{apply_dynamic_refresh_rate, get_current_refresh_rate};
 use crate::core::{
@@ -147,10 +147,13 @@ pub fn restore_saved_renderer(ctx: &mut DaemonContext) {
         log_info!("render", "renderer restored value={}", ctx.saved_renderer_str());
         if ctx.saved_renderer_str() == "default" {
             systemv("sys.azenith-utilityconf setrender default");
-            set("persist.sys.azenithconf.renderer", "default");
+            ctx.config.renderer = "default".to_string();
+            let _ = azenith_config::update(|c| c.renderer = "default".to_string());
         } else {
             systemv(&format!("sys.azenith-utilityconf setrender {}", ctx.saved_renderer_str()));
-            set("persist.sys.azenithconf.renderer", ctx.saved_sys_renderer_str());
+            let restored = ctx.saved_sys_renderer_str().to_string();
+            ctx.config.renderer = restored.clone();
+            let _ = azenith_config::update(|c| c.renderer = restored);
         }
     }
     ctx.profile.saved_renderer = [0; 92];
@@ -169,12 +172,11 @@ pub fn apply_per_app_overrides(ctx: &mut DaemonContext) {
     // lite mode - must be set before run_profiler() because the profile
     // settings binary reads this prop while applying a profile.
     if IS_TRUE!(ctx.opts_perf_lite_mode()) {
-        set("persist.sys.azenithconf.litemode", "1");
+        set("sys.azenith.litemode", "1");
     } else if IS_FALSE!(ctx.opts_perf_lite_mode()) {
-        set("persist.sys.azenithconf.litemode", "0");
+        set("sys.azenith.litemode", "0");
     } else {
-        let lite_prop = get_or_default("persist.sys.azenithconf.cpulimit", "");
-        set("persist.sys.azenithconf.litemode", if lite_prop == "1" { "1" } else { "0" });
+        set("sys.azenith.litemode", if ctx.config.cpu_limit { "1" } else { "0" });
     }
 
     // DND on gaming
@@ -188,8 +190,7 @@ pub fn apply_per_app_overrides(ctx: &mut DaemonContext) {
         }
         ctx.dnd_enabled = true;
     } else if !IS_FALSE!(ctx.opts_dnd_on_gaming()) {
-        let dnd_state = get_or_default("persist.sys.azenithconf.dnd", "");
-        if dnd_state == "1" {
+        if ctx.config.dnd {
             if ctx.display.saved_zen_mode == 0 {
                 systemv("sys.azenith-utilityconf enableDND");
             }
@@ -208,8 +209,7 @@ pub fn apply_per_app_overrides(ctx: &mut DaemonContext) {
 
     // game preload
     let is_preload_active = if !IS_FALSE!(ctx.opts_game_preload()) {
-        let preload_active = get_or_default("persist.sys.azenithconf.APreload", "");
-        preload_active == "1"
+        ctx.config.app_preload
     } else {
         false
     };

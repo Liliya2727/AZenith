@@ -1,11 +1,9 @@
 //! Bypass charging logic.
 
-use crate::android_ffi::PROP_VALUE_MAX;
 use crate::config::resolution::restore_resolution_target;
 use crate::core::{BypassNode, ProfileMode, DaemonContext};
 use crate::proc::{get_pids_of_at, set_priority};
 use crate::profile::{is_manual_mode, restore_per_app_overrides, update_game_info};
-use crate::sysprop::{get_or_default, get_into};
 use crate::fileops;
 use crate::{IS_FALSE, IS_TRUE, log_error, log_info, log_warn};
 use std::os::raw::c_int;
@@ -1009,15 +1007,14 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
 // ---------------------------------------------------------------------------
 // disable_bypass
 // ---------------------------------------------------------------------------
-pub fn disable_bypass(_ctx: &mut DaemonContext) {
+pub fn disable_bypass(ctx: &mut DaemonContext) {
     // The write-ahead record is authoritative even when no path is configured:
     // it exists precisely because a node may still be ON.
     if fileops::exists(PENDING_RESTORE_FILE) {
         let _ = replay_pending_at(PENDING_RESTORE_FILE);
     }
 
-    // bypass path is stored in prop "persist.sys.azenithconf.bypasspath"
-    let path_key = get_or_default("persist.sys.azenithconf.bypasspath", "");
+    let path_key = ctx.config_bypasspath_str();
 
     if path_key.is_empty() || path_key == "UNSUPPORTED" {
         return;
@@ -1036,7 +1033,7 @@ pub fn disable_bypass(_ctx: &mut DaemonContext) {
 // ---------------------------------------------------------------------------
 // enable_bypass
 // ---------------------------------------------------------------------------
-pub fn enable_bypass() -> i32 {
+pub fn enable_bypass(ctx: &DaemonContext) -> i32 {
     if fileops::exists(PENDING_RESTORE_FILE) {
         log_warn!(
             "bypass",
@@ -1046,7 +1043,7 @@ pub fn enable_bypass() -> i32 {
         return -3;
     }
 
-    let path_key = get_or_default("persist.sys.azenithconf.bypasspath", "");
+    let path_key = ctx.config_bypasspath_str();
 
     if path_key.is_empty() || path_key == "UNSUPPORTED" {
         return -1;
@@ -1274,7 +1271,7 @@ pub fn check_bypass_compatibility() -> i32 {
         );
     }
 
-    let current_path = get_or_default("persist.sys.azenithconf.bypasspath", "");
+    let current_path = azenith_config::load().bypass_path;
     if current_path.is_empty() || current_path == "UNSUPPORTED" {
         println!("\u{1b}[33m[INFO]\u{1b}[0m Configuration left unchanged (no bypass path configured).");
     } else {
@@ -1458,13 +1455,8 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
             ctx.game.game_pids[i] = new_pids[i];
             if IS_TRUE!(ctx.opts_app_priority()) {
                 set_priority(ctx.game.game_pids[i]);
-            } else if !IS_FALSE!(ctx.opts_app_priority()) {
-                let mut val = [0u8; PROP_VALUE_MAX];
-                let _ = get_into("persist.sys.azenithconf.iosched", &mut val);
-                let val = unsafe { std::ffi::CStr::from_ptr(val.as_ptr() ) }.to_string_lossy();
-                if val == "1" {
-                    set_priority(ctx.game.game_pids[i]);
-                }
+            } else if !IS_FALSE!(ctx.opts_app_priority()) && ctx.config.app_priority {
+                set_priority(ctx.game.game_pids[i]);
             }
         }
 
@@ -1504,7 +1496,7 @@ pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
 
     if ctx.config_bypasspath_str() != "UNSUPPORTED" && !ctx.config_bypasspath_str().is_empty() {
         if ctx.profile.cur_mode == ProfileMode::PerformanceProfile {
-            let threshold = ctx.bypass.config_bypasschgthreshold;
+            let threshold = ctx.config.bypass_chg_threshold;
             let current_battery = ctx.current_system_cache.battery_level;
             let is_device_charging = ctx.current_system_cache.is_charging != 0;
 
@@ -1513,13 +1505,13 @@ pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
             } else if IS_TRUE!(ctx.opts_bypass_charging()) {
                 true
             } else {
-                ctx.bypass.config_bypasschg == 1
+                ctx.config.bypass_chg
             };
 
             if current_battery >= 0 && bypass_charging_allowed && is_device_charging {
                 if current_battery >= threshold {
                     if read_current_ma() > 50 {
-                        if !ctx.bypass.bypass_applied && enable_bypass() == 0 {
+                        if !ctx.bypass.bypass_applied && enable_bypass(ctx) == 0 {
                             log_info!("bypass", "bypass enabled battery={} threshold={}", current_battery, threshold);
                             ctx.bypass.bypass_applied = true;
                         }

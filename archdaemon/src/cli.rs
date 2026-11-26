@@ -8,11 +8,59 @@ use crate::io::check_running_state;
 use crate::log::{external_log, external_vlog};
 use crate::{log_error, log_fatal, log_info, log_warn};
 use crate::shell::systemv;
-use crate::sysprop::{get_or_default, set};
+use crate::sysprop::set;
 use crate::fileops;
 use crate::util::notify;
 
 use std::os::raw::c_int;
+
+// ---------------------------------------------------------------------------
+// handle_config_get / handle_config_set
+// ---------------------------------------------------------------------------
+pub fn handle_config_get(argc: i32, argv: &[&str]) -> c_int {
+    if argc < 3 || argv[2].is_empty() {
+        eprintln!("Usage: --config-get <KEY>");
+        return 1;
+    }
+    let key = argv[2];
+    let cfg = azenith_config::load();
+    match cfg.get_key(key) {
+        Ok(val) => {
+            println!("{val}");
+            0
+        }
+        Err(err) => {
+            eprintln!("ERROR: {err}");
+            1
+        }
+    }
+}
+
+pub fn handle_config_set(argc: i32, argv: &[&str]) -> c_int {
+    if argc < 4 || argv[2].is_empty() {
+        eprintln!("Usage: --config-set <KEY> <VALUE>");
+        return 1;
+    }
+    let key = argv[2];
+    let val = argv[3];
+
+    let mut set_err: Option<String> = None;
+    let res = azenith_config::update(|cfg| {
+        if let Err(e) = cfg.set_key(key, val) {
+            set_err = Some(e);
+        }
+    });
+
+    if let Some(err) = set_err {
+        eprintln!("ERROR: {err}");
+        return 1;
+    }
+    if let Err(err) = res {
+        eprintln!("ERROR: failed to write config.json: {err}");
+        return 1;
+    }
+    0
+}
 
 // ---------------------------------------------------------------------------
 // handle_profile
@@ -23,9 +71,9 @@ pub fn handle_profile(argc: i32, argv: &[&str]) -> c_int {
         return 1;
     }
 
-    let ai_state = get_or_default("persist.sys.azenithconf.AIenabled", "");
+    let cfg = azenith_config::load();
 
-    if ai_state == "1" {
+    if cfg.auto_mode {
         eprintln!("ERROR: Auto Mode is enabled.\n       Manual profile selection is blocked.");
         return 1;
     }
@@ -39,15 +87,15 @@ pub fn handle_profile(argc: i32, argv: &[&str]) -> c_int {
         }
         "1" => {
             log_info!("cli", "profile apply requested profile=performance source=cli");
-            let lite_prop = get_or_default("persist.sys.azenithconf.cpulimit", "");
-            if lite_prop == "1" {
-                set("persist.sys.azenithconf.litemode", "1");
+            if cfg.cpu_limit {
+                set("sys.azenith.litemode", "1");
             } else {
-                set("persist.sys.azenithconf.litemode", "0");
+                set("sys.azenith.litemode", "0");
             }
             // Need DaemonContext for run_profiler - but this is CLI-only
             // For CLI, we call run_profiler with a temporary context
             let mut ctx = crate::core::DaemonContext::new();
+            ctx.config = cfg;
             crate::profile::run_profiler(ProfileMode::PerformanceProfile as i32, &mut ctx);
             notify("Performance Profile", "System is now at Powerful state", false, 0, None);
             println!("Applying Performance Profile");
@@ -55,6 +103,7 @@ pub fn handle_profile(argc: i32, argv: &[&str]) -> c_int {
         "2" => {
             log_info!("cli", "profile apply requested profile=balanced source=cli");
             let mut ctx = crate::core::DaemonContext::new();
+            ctx.config = cfg;
             crate::profile::run_profiler(ProfileMode::BalancedProfile as i32, &mut ctx);
             notify("Balanced Profile", "System is now at Optimal state", false, 0, None);
             println!("Applying Balanced Profile");
@@ -62,6 +111,7 @@ pub fn handle_profile(argc: i32, argv: &[&str]) -> c_int {
         "3" => {
             log_info!("cli", "profile apply requested profile=eco source=cli");
             let mut ctx = crate::core::DaemonContext::new();
+            ctx.config = cfg;
             crate::profile::run_profiler(ProfileMode::EcoMode as i32, &mut ctx);
             notify("ECO Mode", "System is now at Endurance state", false, 0, None);
             println!("Applying Eco Mode");
@@ -175,6 +225,10 @@ pub fn print_help() {
     println!();
     println!("     -bpl,  --bypasspathlist   Show all embedded bypass charging paths");
     println!("     -rp,   --restorepending   Undo a bypass node left ON by an interrupted test");
+    println!();
+    println!("            --config-get <KEY> Read a configuration field from config.json");
+    println!("            --config-set <KEY> <VAL>");
+    println!("                               Update a configuration field in config.json");
     println!();
     println!("     preload [OPTIONS] <PATHS> Run vmtouch-compatible page-cache preloader");
     println!("                               Use 'sys.azenith-service preload --help' for options");
@@ -310,6 +364,7 @@ pub fn expose_telemetry_access() {
 
     fileops::create_dir_all_best_effort("/data/data/zx.azenith/API");
     fileops::create_dir_all_best_effort("/data/adb/.config/AZenith/API");
+    azenith_config::sync_mirror();
     chmod("/data/data/zx.azenith/API", 0o777);
     chmodg("/data/data/zx.azenith/API/*", 0o644);
     chmodg("/data/adb/.config/AZenith/API/*", 0o644);

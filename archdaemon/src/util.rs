@@ -92,12 +92,12 @@ pub extern "C" fn sighandler(_signal: c_int) {
 // checkstate
 // ---------------------------------------------------------------------------
 pub fn checkstate() {
-    let state = get_or_default("persist.sys.azenith.state", "");
+    let state = get_or_default("sys.azenith.state", "");
 
     if state.is_empty() || state == "stopped" {
         log_fatal!("daemon", "service killed reason=state_empty_or_stopped");
-        set("persist.sys.azenith.service", "");
-        set("persist.sys.azenith.state", "stopped");
+        set("sys.azenith.service", "");
+        set("sys.azenith.state", "stopped");
         std::process::exit(1);
     }
 }
@@ -141,8 +141,7 @@ pub fn notify(title: &str, fmt: &str, chrono: bool, timeout_ms: i32, args: Optio
 // toast
 // ---------------------------------------------------------------------------
 pub fn toast(message: &str) {
-    let val = get_or_default("persist.sys.azenithconf.showtoast", "");
-    if val == "1" {
+    if azenith_config::load().show_toast {
         let safe_message = escape_shell_string(message);
         let exit = systemv(&format!(
             "su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n zx.azenith/.receiver.ZenithReceiver --es toasttext '{safe_message}' >/dev/null 2>&1\""
@@ -226,8 +225,7 @@ pub fn update_module_description(pid: i32) {
 // runthermalcore
 // ---------------------------------------------------------------------------
 pub fn runthermalcore() {
-    let thermalcore = get_or_default("persist.sys.azenithconf.thermalcore", "");
-    if thermalcore == "1" {
+    if azenith_config::load().thermalcore {
         systemv("sys.azenith-rianixiathermalcore &");
         let output = crate::shell::execute_command("pidof sys.azenith-rianixiathermalcore");
 

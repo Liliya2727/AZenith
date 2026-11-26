@@ -2,8 +2,7 @@
 
 use crate::{log_debug, log_info};
 use crate::shell::systemv;
-
-use crate::sysprop::{get_or_default, set};
+use crate::sysprop::get_or_default;
 
 // ---------------------------------------------------------------------------
 // apply_smart_renderer
@@ -14,7 +13,7 @@ pub fn apply_smart_renderer(target_type: &str, saved_ref: &mut [u8], saved_sys: 
     }
 
     let current_renderer = get_or_default("debug.hwui.renderer", "");
-    let current_sys_renderer = get_or_default("persist.sys.azenithconf.renderer", "");
+    let current_sys_renderer = azenith_config::load().renderer;
 
     let current_renderer = if current_renderer.is_empty() { "default".to_string() } else { current_renderer };
     let current_sys_renderer = if current_sys_renderer.is_empty() { "default".to_string() } else { current_sys_renderer };
@@ -38,7 +37,7 @@ pub fn apply_smart_renderer(target_type: &str, saved_ref: &mut [u8], saved_sys: 
     if current_renderer != target_type {
         log_info!("render", "renderer changed from={} to={}", current_renderer, target_type);
         systemv(&format!("sys.azenith-utilityconf setrender {target_type}"));
-        set("persist.sys.azenithconf.renderer", target_type);
+        let _ = azenith_config::update(|c| c.renderer = target_type.to_string());
         return true;
     }
 

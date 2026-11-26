@@ -1,5 +1,6 @@
 //! Core types shared across the daemon.
 
+use azenith_config::AZenithConfig;
 use std::os::raw::c_int;
 
 pub const MAX_DATA_LENGTH: usize = 2048;
@@ -278,23 +279,9 @@ impl Default for ProfileState {
 }
 
 /// Bypass charging state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct BypassState {
     pub bypass_applied: bool,
-    pub config_bypasspath: [u8; crate::android_ffi::PROP_VALUE_MAX],
-    pub config_bypasschg: i32,
-    pub config_bypasschgthreshold: i32,
-}
-
-impl Default for BypassState {
-    fn default() -> Self {
-        Self {
-            bypass_applied: false,
-            config_bypasspath: [0; crate::android_ffi::PROP_VALUE_MAX],
-            config_bypasschg: 0,
-            config_bypasschgthreshold: 0,
-        }
-    }
 }
 
 /// Game-related state (detected game, PIDs)
@@ -356,7 +343,7 @@ pub struct DaemonContext {
     pub need_profile_checkup: bool,
     pub pid_retries: i32,
     pub java_lock_path: String,
-    pub config_freqoffset: [u8; crate::android_ffi::PROP_VALUE_MAX],
+    pub config: AZenithConfig,
     pub last_freqoffset: [u8; crate::android_ffi::PROP_VALUE_MAX],
     /// Signature of the inputs that dictate whether `applyfreqbalance` must be
     /// re-applied (freqoffset value, screen state, profile mode). Used to turn
@@ -383,7 +370,7 @@ impl DaemonContext {
             need_profile_checkup: false,
             pid_retries: 0,
             java_lock_path: JAVA_LOCK_PATH.to_string(),
-            config_freqoffset: [0; crate::android_ffi::PROP_VALUE_MAX],
+            config: AZenithConfig::default(),
             last_freqoffset: [0; crate::android_ffi::PROP_VALUE_MAX],
             last_balance_sig: String::new(),
             prev_ai_state: [0; 16],
@@ -407,13 +394,11 @@ impl DaemonContext {
     }
 
     pub fn config_freqoffset_str(&self) -> &str {
-        let len = self.config_freqoffset.iter().position(|&b| b == 0).unwrap_or(self.config_freqoffset.len());
-        unsafe { std::str::from_utf8_unchecked(&self.config_freqoffset[..len]) }
+        &self.config.freq_offset
     }
 
     pub fn config_bypasspath_str(&self) -> &str {
-        let len = self.bypass.config_bypasspath.iter().position(|&b| b == 0).unwrap_or(self.bypass.config_bypasspath.len());
-        unsafe { std::str::from_utf8_unchecked(&self.bypass.config_bypasspath[..len]) }
+        &self.config.bypass_path
     }
 
     pub fn saved_renderer_str(&self) -> &str {

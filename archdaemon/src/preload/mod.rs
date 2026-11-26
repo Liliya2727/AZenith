@@ -12,7 +12,6 @@ pub mod stats;
 pub mod walker;
 
 use crate::shell::execute_command;
-use crate::sysprop::get_or_default;
 use crate::{log_debug, log_preload, log_warn};
 
 use std::fs;
@@ -83,7 +82,10 @@ pub fn GamePreload(package: &str) {
         })
         .unwrap_or(false);
 
-    let budget = get_or_default("persist.sys.azenithconf.preloadbudget", "500M");
+    let mut budget = azenith_config::load().preload_budget;
+    if budget.trim().is_empty() {
+        budget = "500M".to_string();
+    }
     let budget_bytes = match parse_size(&budget) {
         Ok(v) if v >= 0 => v as u64,
         _ => {

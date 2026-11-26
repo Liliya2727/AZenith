@@ -34,8 +34,8 @@ pub fn is_kanged() {
 fn doorprize() -> ! {
     log_fatal!("integrity", "module modified by 3rd party path={}", MODULE_PROP);
     notify("Daemon Error", "Trying to rename me?", true, 0, None);
-    set("persist.sys.azenith.service", "");
-    set("persist.sys.azenith.state", "stopped");
+    set("sys.azenith.service", "");
+    set("sys.azenith.state", "stopped");
     std::process::exit(1);
 }
 
@@ -60,8 +60,8 @@ pub fn check_module_version() {
     if !line_starts_with(&lines, &expected) {
         log_fatal!("integrity", "version mismatch expected={} path={}", daemon_version, MODULE_PROP);
         notify("Daemon Error", "AZenith version mismatch, please reinstall!", true, 0, None);
-        set("persist.sys.azenith.service", "");
-        set("persist.sys.azenith.state", "stopped");
+        set("sys.azenith.service", "");
+        set("sys.azenith.state", "stopped");
         std::process::exit(1);
     }
 }

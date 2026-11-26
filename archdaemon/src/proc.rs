@@ -80,7 +80,7 @@ pub fn uidof(pid: i32) -> i32 {
 // ---------------------------------------------------------------------------
 pub fn setspid() {
     let pid = std::process::id();
-    let _ = set("persist.sys.azenith.service", &pid.to_string());
+    let _ = set("sys.azenith.service", &pid.to_string());
 }
 
 // ---------------------------------------------------------------------------

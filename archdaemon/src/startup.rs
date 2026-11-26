@@ -11,15 +11,17 @@ use crate::profile::init_screenstate_fn;
 use crate::shell::systemv;
 use crate::sysprop::{get, set};
 use crate::fileops;
-use crate::util::{notify, trim_newline};
+use crate::util::notify;
 
-use std::ffi::{CStr, CString};
+use azenith_config::{AZenithConfig, CONFIG_PATH, parse_bool_flexible};
+use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
+use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
 // ---------------------------------------------------------------------------
-// validateprop — stale system property cleanup (mirrors prop.c)
+// validateprop & migrate_props_to_json_once
 // ---------------------------------------------------------------------------
 
 const AZENITH_PROPERTIES: &str = "persist.sys.azenith";
@@ -80,11 +82,166 @@ const LEGACY_STALE_PROPS: [&str; 2] = [
     "persist.sys.rianixia.thermalcore-bigdata.path",
 ];
 
+extern "C" fn collect_all_azenith_props_read_cb(
+    cookie: *mut c_void,
+    name: *const c_char,
+    value: *const c_char,
+    _serial: u32,
+) {
+    if cookie.is_null() || name.is_null() {
+        return;
+    }
+    let pending: &mut Vec<(String, String)> = unsafe { &mut *(cookie as *mut Vec<(String, String)>) };
+    let name_str = unsafe { CStr::from_ptr(name) }.to_string_lossy();
+    if !name_str.starts_with(AZENITH_PROPERTIES) {
+        return;
+    }
+    let val_str = if value.is_null() {
+        String::new()
+    } else {
+        unsafe { CStr::from_ptr(value) }.to_string_lossy().into_owned()
+    };
+    pending.push((name_str.into_owned(), val_str));
+}
+
+extern "C" fn collect_all_azenith_props_foreach_cb(pi: *const c_void, cookie: *mut c_void) {
+    if pi.is_null() || cookie.is_null() {
+        return;
+    }
+    unsafe {
+        system_property_read_callback(pi, collect_all_azenith_props_read_cb as *mut c_void, cookie);
+    }
+}
+
+/// Migrate all `persist.sys.azenith*` properties and legacy config files
+/// (`freqoffset`, `bypasschgconfig/*`) into `/data/adb/.config/AZenith/config.json`
+/// if `config.json` does not exist yet.
+/// Also moves runtime props (`state`, `service`, `litemode`) to `sys.azenith.*`
+/// and deletes every `persist.sys.azenith*` property via `resetprop -p --delete`.
+pub fn migrate_props_to_json_once() {
+    let config_exists = Path::new(CONFIG_PATH).exists();
+
+    let mut collected: Vec<(String, String)> = Vec::new();
+    let status = unsafe {
+        __system_property_foreach(
+            collect_all_azenith_props_foreach_cb as *mut c_void,
+            &mut collected as *mut Vec<(String, String)> as *mut c_void,
+        )
+    };
+    if status != 0 {
+        log_warn!("prop", "prop foreach failed during migration status={}", status);
+    }
+
+    // Move runtime state/service/litemode from persist.sys.azenith* to sys.azenith.* if present
+    for (name, val) in &collected {
+        if val.is_empty() {
+            continue;
+        }
+        match name.as_str() {
+            "persist.sys.azenith.state" => {
+                if get("sys.azenith.state").unwrap_or_default().is_empty() {
+                    set("sys.azenith.state", val);
+                }
+            }
+            "persist.sys.azenith.service" => {
+                if get("sys.azenith.service").unwrap_or_default().is_empty() {
+                    set("sys.azenith.service", val);
+                }
+            }
+            "persist.sys.azenithconf.litemode" => {
+                if get("sys.azenith.litemode").unwrap_or_default().is_empty() {
+                    set("sys.azenith.litemode", val);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if !config_exists {
+        let mut cfg = AZenithConfig::default();
+        let mut imported_props = 0usize;
+
+        for (name, val) in &collected {
+            if cfg.apply_legacy_prop(name, val) {
+                imported_props += 1;
+            }
+        }
+
+        // Also check direct get() for VALID_AZENITH_PROPS in case foreach missed any
+        for &prop in VALID_AZENITH_PROPS.iter() {
+            if let Some(val) = get(prop) {
+                if !collected.iter().any(|(n, _)| n == prop) && cfg.apply_legacy_prop(prop, &val) {
+                    imported_props += 1;
+                }
+            }
+        }
+
+        // Import legacy file configs (authoritative if non-empty)
+        if let Ok(s) = fileops::read_string_result("/data/adb/.config/AZenith/freqoffset") {
+            let trimmed = s.trim();
+            if !trimmed.is_empty() {
+                cfg.freq_offset = trimmed.to_string();
+            }
+        }
+        if let Ok(s) = fileops::read_string_result("/data/adb/.config/AZenith/bypasschgconfig/bypasspath") {
+            let trimmed = s.trim();
+            if !trimmed.is_empty() {
+                cfg.bypass_path = trimmed.to_string();
+            }
+        }
+        if let Ok(s) = fileops::read_string_result("/data/adb/.config/AZenith/bypasschgconfig/bypasschg") {
+            let trimmed = s.trim();
+            if let Some(b) = parse_bool_flexible(trimmed) {
+                cfg.bypass_chg = b;
+            }
+        }
+        if let Ok(s) = fileops::read_string_result("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold") {
+            let trimmed = s.trim();
+            if let Ok(v) = trimmed.parse::<i32>() {
+                cfg.bypass_chg_threshold = v;
+            }
+        }
+
+        match azenith_config::save(&cfg) {
+            Ok(_) => {
+                log_info!(
+                    "config",
+                    "migrated props and legacy files to config.json imported_props={}",
+                    imported_props
+                );
+            }
+            Err(e) => {
+                log_error!("config", "failed to write config.json during migration err={}", e);
+                return;
+            }
+        }
+    }
+
+    // Delete all persist.sys.azenith* properties once config.json is in place
+    let mut to_delete: Vec<String> = collected.into_iter().map(|(n, _)| n).collect();
+    for &legacy in LEGACY_STALE_PROPS.iter() {
+        if get(legacy).is_some() && !to_delete.iter().any(|n| n == legacy) {
+            to_delete.push(legacy.to_string());
+        }
+    }
+
+    if !to_delete.is_empty() {
+        log_info!("prop", "deleting legacy persist.sys.azenith* props count={}", to_delete.len());
+        for name in to_delete {
+            let cmd = format!("resetprop -p --delete {}", name);
+            let status = systemv(&cmd);
+            if status != 0 {
+                log_error!("prop", "failed to delete legacy prop name={} status={}", name, status);
+            } else {
+                log_info!("prop", "deleted legacy prop name={}", name);
+            }
+        }
+    }
+}
+
 // Bionic's `__system_property_foreach` callback is
 // `(const prop_info*, void* cookie)`; the name/value pair must be read with
-// `__system_property_read_callback`. A previous 6-arg callback treated
-// whatever was left in x2 as the name pointer, so the same garbage string was
-// checked for every prop and no stale prop was ever flagged.
+// `__system_property_read_callback`.
 extern "C" fn validateprop_read_cb(
     cookie: *mut c_void,
     name: *const c_char,
@@ -114,43 +271,7 @@ extern "C" fn validateprop_foreach_cb(pi: *const c_void, cookie: *mut c_void) {
 }
 
 pub fn validateprop() {
-    let mut pending: Vec<String> = Vec::new();
-
-    // Collect legacy stale props
-    for &name in LEGACY_STALE_PROPS.iter() {
-        if get(name).is_some() {
-            pending.push(name.to_string());
-        }
-    }
-
-    let status = unsafe {
-        __system_property_foreach(
-            validateprop_foreach_cb as *mut c_void,
-            &mut pending as *mut Vec<String> as *mut c_void,
-        )
-    };
-    if status != 0 {
-        log_warn!("prop", "prop foreach failed status={}", status);
-    }
-
-    if pending.is_empty() {
-        log_info!("prop", "no stale props found");
-        return;
-    }
-
-    for name in &pending {
-        log_warn!("prop", "stale prop flagged name={}", name);
-    }
-    log_info!("prop", "cleaning stale props count={}", pending.len());
-
-    for name in pending {
-        let cmd = CString::new(format!("resetprop -p --delete {}", name)).unwrap();
-        let status = systemv(cmd.to_str().unwrap());
-        if status != 0 {
-            log_error!("prop", "failed to delete stale prop name={} status={}", name, status);
-        }
-        log_warn!("prop", "deleting stale prop name={}", name);
-    }
+    migrate_props_to_json_once();
 }
 
 // ---------------------------------------------------------------------------
@@ -206,8 +327,8 @@ pub fn wait_for_java_companion(ctx: &mut DaemonContext) {
         if java_check_retries > MAX_JAVA_RETRIES {
             log_fatal!("startup", "java companion absent retries={}", MAX_JAVA_RETRIES);
             notify("Daemon Error", "Java companion daemon crashed or failed to start.", false, 0, None);
-            set("persist.sys.azenith.service", "");
-            set("persist.sys.azenith.state", "stopped");
+            set("sys.azenith.service", "");
+            set("sys.azenith.state", "stopped");
             std::process::exit(1);
         }
         if java_check_retries <= 1 {
@@ -230,46 +351,17 @@ pub fn init_daemon_context(ctx: &mut DaemonContext) {
 // load_initial_config_files
 // ---------------------------------------------------------------------------
 pub fn load_initial_config_files(ctx: &mut DaemonContext) {
-    let freq_path = "/data/adb/.config/AZenith/freqoffset";
-    if let Ok(mut s) = fileops::read_string_result(freq_path) {
-        trim_newline(&mut s);
-        ctx.config_freqoffset = [0; 92];
-        let bytes = s.as_bytes();
-        let n = bytes.len().min(ctx.config_freqoffset.len() - 1);
-        ctx.config_freqoffset[..n].copy_from_slice(&bytes[..n]);
-        ctx.config_freqoffset[n] = 0;
-    } else {
-        let def = "Disabled";
-        ctx.config_freqoffset = [0; 92];
-        ctx.config_freqoffset[..def.len()].copy_from_slice(def.as_bytes());
-    }
+    ctx.config = azenith_config::load();
+    crate::log::set_cached_debug_mode(ctx.config.debug_mode);
 
-    let _bypass_path = format!("{}/bypasschgconfig/bypasspath", crate::core::BYPASSCHG_CONFIG.trim_end_matches("/bypasschgconfig"));
-    // Actually BYPASSCHG_CONFIG is "/data/adb/.config/AZenith/bypasschgconfig"
-    let bypass_path = "/data/adb/.config/AZenith/bypasschgconfig/bypasspath";
-    if let Ok(mut s) = fileops::read_string_result(bypass_path) {
-        trim_newline(&mut s);
-        ctx.bypass.config_bypasspath = [0; 92];
-        let bytes = s.as_bytes();
-        let n = bytes.len().min(ctx.bypass.config_bypasspath.len() - 1);
-        ctx.bypass.config_bypasspath[..n].copy_from_slice(&bytes[..n]);
-        ctx.bypass.config_bypasspath[n] = 0;
-    }
-
-    let bypasschg = "/data/adb/.config/AZenith/bypasschgconfig/bypasschg";
-    if let Ok(s) = fileops::read_string_result(bypasschg) {
-        let v: i32 = s.trim().parse().unwrap_or(0);
-        ctx.bypass.config_bypasschg = v;
-    }
-
-    let bypasschgthreshold = "/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold";
-    if let Ok(s) = fileops::read_string_result(bypasschgthreshold) {
-        let v: i32 = s.trim().parse().unwrap_or(0);
-        ctx.bypass.config_bypasschgthreshold = v;
-    }
-
-    log_info!("config", "initial configs loaded freqoffset={} bypasspath={}",
-        ctx.config_freqoffset_str(), ctx.config_bypasspath_str());
+    log_info!(
+        "config",
+        "initial config.json loaded freq_offset={} bypass_path={} bypass_chg={} threshold={}",
+        ctx.config.freq_offset,
+        ctx.config.bypass_path,
+        ctx.config.bypass_chg,
+        ctx.config.bypass_chg_threshold
+    );
 }
 
 fn is_stale_azenith_prop(name: &str) -> bool {
@@ -280,6 +372,7 @@ fn is_stale_azenith_prop(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::CString;
 
     #[test]
     fn stale_detection_catches_old_and_new_names() {
