@@ -379,26 +379,21 @@ fun PreferenceTweakScreen(navController: NavController) {
                                     }
                                 }
                             }
-                            if (isFullModeEnabled) {
-                                add {
-                                    Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
-                                        JumpRow(activeId = jumpPulse, entryId = "prefs.thermals") {
-                                            ExpressiveSwitchItem(
-                                                                                        icon = Icons.Rounded.Thermostat,
-                                                                                        title = stringResource(R.string.disable_thermals),
-                                                                                        summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else stringResource(R.string.str_unavailable_mediatek),
-                                                                                        checked = distherm!!,
-                                                                                        enabled = isMediaTek,
-                                                                                        onCheckedChange = { isChecked ->
-                                                                                            toggleWithRebootCheck("pref_DThermal", isChecked) {
-                                                                                                distherm = isChecked
-                                                                                                PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
-                                                                                                RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
-                                                                                            }
-                                                                                        }
-                                                                                    )
+                            add {
+                                JumpRow(activeId = jumpPulse, entryId = "prefs.thermals") {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Rounded.Thermostat,
+                                        title = stringResource(R.string.disable_thermals),
+                                        summary = stringResource(R.string.disable_thermals_desc),
+                                        checked = distherm!!,
+                                        onCheckedChange = { isChecked ->
+                                            toggleWithRebootCheck("pref_DThermal", isChecked) {
+                                                distherm = isChecked
+                                                PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
+                                                RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
+                                            }
                                         }
-                                    }
+                                    )
                                 }
                             }
                         }

@@ -658,9 +658,7 @@ object SearchIndex {
             summaryRes = R.string.disable_thermals_desc,
             icon = Icons.Rounded.Thermostat,
             group = SearchGroup.Prefs,
-            target = SearchTarget.Route("preferenced"),
-            keywordsRes = listOf(R.string.str_unavailable_mediatek),
-            requires = listOf(SearchRequirement.MediaTek, SearchRequirement.FullMode)
+            target = SearchTarget.Route("preferenced")
         ),
 
         // --- Color scheme -------------------------------------------------
