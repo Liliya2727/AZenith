@@ -205,7 +205,11 @@ fun AboutScreen(navController: NavController) {
                     ) {
                         FilledTonalButton(
                             onClick = { openLink("https://t.me/ArchHavenDisc") },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_telegram),
@@ -237,48 +241,43 @@ fun AboutScreen(navController: NavController) {
                 AboutSectionTitle(stringResource(R.string.str_open_source))
             }
             item {
-                Column(
-                    modifier = Modifier.clip(azShape(26.dp)),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    JumpRow(activeId = jumpPulse, entryId = "about.licenses") {
-                        OpenSourceRow(
-                                                shape = azShapeCorners(
-                                                    topStart = 26.dp,
-                                                    topEnd = 26.dp,
-                                                    bottomStart = 4.dp,
-                                                    bottomEnd = 4.dp
-                                                ),
-                                                icon = Icons.Rounded.Gavel,
-                                                title = stringResource(R.string.str_licenses),
-                                                supporting = stringResource(R.string.str_apache_license_2),
-                                                onClick = { navController.navigate("licensescreen") }
-                                            )
-                    }
-                    JumpRow(activeId = jumpPulse, entryId = "about.libraries") {
-                        OpenSourceRow(
-                                                shape = azShape(4.dp),
-                                                icon = Icons.Rounded.LibraryBooks,
-                                                title = stringResource(R.string.str_libraries_used),
-                                                supporting = stringResource(R.string.str_libraries_hint),
-                                                onClick = { navController.navigate("librariesscreen") }
-                                            )
-                    }
-                    JumpRow(activeId = jumpPulse, entryId = "about.source") {
-                        OpenSourceRow(
-                                                shape = azShapeCorners(
-                                                    topStart = 4.dp,
-                                                    topEnd = 4.dp,
-                                                    bottomStart = 26.dp,
-                                                    bottomEnd = 26.dp
-                                                ),
-                                                icon = Icons.Rounded.Code,
-                                                title = stringResource(R.string.str_source_code),
-                                                supporting = stringResource(R.string.str_view_the_source_code_on_github),
-                                                onClick = { openLink("https://github.com/Liliya2727/AZenith") }
-                                            )
-                    }
-                }
+                ExpressiveList(
+                    content = listOf(
+                        {
+                            JumpRow(activeId = jumpPulse, entryId = "about.licenses") {
+                                ExpressiveListItem(
+                                    onClick = { navController.navigate("licensescreen") },
+                                    headlineContent = { Text(stringResource(R.string.str_licenses)) },
+                                    supportingContent = { Text(stringResource(R.string.str_apache_license_2)) },
+                                    leadingContent = { LeadingIcon(icon = Icons.Rounded.Gavel) },
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                )
+                            }
+                        },
+                        {
+                            JumpRow(activeId = jumpPulse, entryId = "about.libraries") {
+                                ExpressiveListItem(
+                                    onClick = { navController.navigate("librariesscreen") },
+                                    headlineContent = { Text(stringResource(R.string.str_libraries_used)) },
+                                    supportingContent = { Text(stringResource(R.string.str_libraries_hint)) },
+                                    leadingContent = { LeadingIcon(icon = Icons.AutoMirrored.Rounded.LibraryBooks) },
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                )
+                            }
+                        },
+                        {
+                            JumpRow(activeId = jumpPulse, entryId = "about.source") {
+                                ExpressiveListItem(
+                                    onClick = { openLink("https://github.com/Liliya2727/AZenith") },
+                                    headlineContent = { Text(stringResource(R.string.str_source_code)) },
+                                    supportingContent = { Text(stringResource(R.string.str_view_the_source_code_on_github)) },
+                                    leadingContent = { LeadingIcon(icon = Icons.Rounded.Code) },
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                )
+                            }
+                        }
+                    )
+                )
             }
 
             item {

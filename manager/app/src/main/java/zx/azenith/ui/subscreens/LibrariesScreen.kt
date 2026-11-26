@@ -39,8 +39,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
+import com.mikepenz.aboutlibraries.ui.compose.m3.libraryColors
+import com.mikepenz.aboutlibraries.ui.compose.m3.style.m3VariantColors
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.navigation.safePopBackStack
@@ -84,6 +87,13 @@ fun LibrariesScreen(navController: NavController) {
                 LibrariesContainer(
                     libraries = libraries,
                     lazyListState = listState,
+                    colors = LibraryDefaults.libraryColors(
+                        libraryBackgroundColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    ),
+                    variantColors = LibraryDefaults.m3VariantColors(
+                        rowBackground = MaterialTheme.colorScheme.surfaceContainerLow,
+                        rowExpandedBackground = MaterialTheme.colorScheme.surfaceContainerLow
+                    ),
                     contentPadding = PaddingValues(
                         horizontal = 8.dp,
                         vertical = 8.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
