@@ -254,13 +254,18 @@ pub fn main_daemon() -> c_int {
             ctx.profile.cur_mode as i32,
         );
         if balance_sig != ctx.last_balance_sig {
+            let in_balance_or_eco = real_screen_state
+                && (ctx.profile.cur_mode == ProfileMode::BalancedProfile
+                    || ctx.profile.cur_mode == ProfileMode::EcoMode);
             let should_apply = if freqoffset == "Disabled" {
-                // Preserve the original transition-only semantics here.
-                ctx.last_freqoffset_str() != "Disabled"
+                // Preserve the original transition-only semantics here, gated
+                // to Balanced/Eco so toggling freqoffset to Disabled mid-game
+                // or on initial startup never clobbers Performance freq locks.
+                in_balance_or_eco
+                    && ctx.last_freqoffset_str() != "Disabled"
+                    && ctx.last_freqoffset_str() != "Initial"
             } else {
-                real_screen_state
-                    && (ctx.profile.cur_mode == ProfileMode::BalancedProfile
-                        || ctx.profile.cur_mode == ProfileMode::EcoMode)
+                in_balance_or_eco
             };
             if should_apply {
                 systemv("sys.azenith-profilesettings applyfreqbalance");
