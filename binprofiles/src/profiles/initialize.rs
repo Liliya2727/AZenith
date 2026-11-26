@@ -12,7 +12,7 @@ pub fn initialize() {
     let _ = Command::new("sync").status();
     
     // Display / SurfaceFlinger config
-    let scheme = getprop("persist.sys.azenithconf.schemeconfig");
+    let scheme = &cfg().scheme_config;
     if scheme != "1000 1000 1000 1000" && !scheme.is_empty() {
         let parts: Vec<&str> = scheme.split_whitespace().collect();
         if parts.len() >= 4 {

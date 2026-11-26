@@ -44,19 +44,20 @@ pub fn performance_profile() {
     let lite_mode = get_litemode();
 
     // 2. Resolve governor CPU / I/O scheduler / Mali GPU
-    let cpu_gov = prop_or(&["persist.sys.azenith.custom_performance_cpu_gov"], "powersave");
-    let io_scheduler = prop_or(
+    let c = cfg();
+    let cpu_gov = first_or(&[&c.custom_performance_cpu_gov], "powersave");
+    let io_scheduler = first_or(
         &[
-            "persist.sys.azenith.custom_performance_IO",
-            "persist.sys.azenith.custom_default_balanced_IO",
-            "persist.sys.azenith.default_balanced_IO",
+            &c.custom_performance_io,
+            &c.custom_default_io,
+            &c.default_io,
         ],
         "none",
     );
-    let mali_gov = prop_first(&[
-        "persist.sys.azenith.custom_performance_maligpu_gov",
-        "persist.sys.azenith.custom_default_maligpu_gov",
-        "persist.sys.azenith.default_maligpu_gov",
+    let mali_gov = first_non_empty(&[
+        &c.custom_performance_mali_gov,
+        &c.custom_default_mali_gov,
+        &c.default_mali_gov,
     ]);
 
     // 3. Apply governor

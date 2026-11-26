@@ -42,23 +42,18 @@ pub fn balanced_profile() {
     }
 
     // 2. Resolve governor CPU / I/O scheduler / Mali GPU
-    let cpu_gov = prop_or(
-        &[
-            "persist.sys.azenith.custom_default_cpu_gov",
-            "persist.sys.azenith.default_cpu_gov",
-        ],
+    let c = cfg();
+    let cpu_gov = first_or(
+        &[&c.custom_default_cpu_gov, &c.default_cpu_gov],
         "schedutil",
     );
-    let io_scheduler = prop_or(
-        &[
-            "persist.sys.azenith.custom_default_balanced_IO",
-            "persist.sys.azenith.default_balanced_IO",
-        ],
+    let io_scheduler = first_or(
+        &[&c.custom_default_io, &c.default_io],
         "none",
     );
-    let mali_gov = prop_first(&[
-        "persist.sys.azenith.custom_default_maligpu_gov",
-        "persist.sys.azenith.default_maligpu_gov",
+    let mali_gov = first_non_empty(&[
+        &c.custom_default_mali_gov,
+        &c.default_mali_gov,
     ]);
 
     // 3. Apply governor
@@ -68,7 +63,7 @@ pub fn balanced_profile() {
     apply_cpu_freq(CpuFreqMode::Normal);
 
     // 5. Log frequency mode
-    if getprop("persist.sys.azenithconf.freqoffset") == "Disabled" {
+    if c.freq_offset == "Disabled" || c.freq_offset.is_empty() {
         log_info("cpu", "set freq mode=normal");
     } else {
         log_info("cpu", "set freq mode=normal_selected");

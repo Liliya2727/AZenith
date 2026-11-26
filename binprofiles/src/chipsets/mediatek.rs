@@ -196,8 +196,8 @@ pub fn mediatek_balance() {
 pub fn mediatek_performance() {
     apply_ppm_policy_status("0");
 
-    // FPSGO is only turned off when the user disables it via `usefpsgo`.
-    if getprop("persist.sys.azenithconf.usefpsgo") == "0" {
+    // FPSGO is only turned off when the user disables it via `use_fpsgo`.
+    if !cfg().use_fpsgo {
         write_lock("0", "/sys/kernel/fpsgo/common/force_onoff");
     }
     if let Ok(paths) = glob::glob("/sys/kernel/fpsgo/fbt/limit_*") {

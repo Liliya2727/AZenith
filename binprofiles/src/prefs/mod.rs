@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::utils::{getprop, log_debug, log_info as bp_log_info, write_unlock_core};
+use crate::utils::{cfg, log_debug, log_info as bp_log_info, write_unlock_core};
 use std::process::{Command, Stdio};
 use std::thread;
 
@@ -63,19 +63,6 @@ const LIST_LOGGER: [&str; 8] = [
     "charge_logger",
     "wlan_logging",
 ];
-
-fn get_state(key: &str) -> String {
-    let val = getprop(key);
-    if val.is_empty() {
-        "0".to_string()
-    } else {
-        val
-    }
-}
-
-fn state_enabled(state: &str) -> bool {
-    state == "1"
-}
 
 fn top_freqs(available: &str, max: usize) -> Vec<u64> {
     let mut freqs: Vec<u64> = available
@@ -770,8 +757,8 @@ fn apply_disable_trace() {
     }
 }
 
-fn apply_logd() {
-    if state_enabled(&get_state("persist.sys.azenithconf.logd")) {
+fn apply_logd(kill_logd: bool) {
+    if kill_logd {
         log_info("Applying Kill Logd");
         for logger in &LIST_LOGGER {
             let _ = Command::new("stop").arg(logger).status();
@@ -784,48 +771,41 @@ fn apply_logd() {
 }
 
 pub fn prefsettings() -> bool {
-    let walt_state = get_state("persist.sys.azenithconf.walttunes");
-    let dthermal_state = get_state("persist.sys.azenithconf.DThermal");
-    let sfl_state = get_state("persist.sys.azenithconf.SFL");
-    let malisched_state = get_state("persist.sys.azenithconf.malisched");
-    let fpsged_state = get_state("persist.sys.azenithconf.fpsged");
-    let schedtunes_state = get_state("persist.sys.azenithconf.schedtunes");
-    let justintime_state = get_state("persist.sys.azenithconf.justintime");
-    let disabletrace_state = get_state("persist.sys.azenithconf.disabletrace");
+    let c = cfg();
 
-    if state_enabled(&justintime_state) {
+    if c.justintime {
         apply_jit();
     }
 
-    if state_enabled(&schedtunes_state) {
+    if c.schedtunes {
         apply_schedtunes();
     }
 
-    if state_enabled(&walt_state) {
+    if c.walttunes {
         apply_walt();
     }
 
-    if state_enabled(&fpsged_state) {
+    if c.fpsged {
         apply_fpsged();
     }
 
-    if state_enabled(&malisched_state) {
+    if c.mali_sched {
         apply_mali_sched();
     }
 
-    if state_enabled(&sfl_state) {
+    if c.sfl {
         apply_surfaceflinger();
     }
 
-    if state_enabled(&dthermal_state) {
+    if c.disable_thermal {
         apply_disable_thermal();
     }
 
-    if state_enabled(&disabletrace_state) {
+    if c.disable_trace {
         apply_disable_trace();
     }
 
-    apply_logd();
+    apply_logd(c.kill_logd);
 
     true
 }

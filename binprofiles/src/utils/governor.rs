@@ -2,7 +2,7 @@
 //! plus the HWUI renderer. All of it runs during `initialize`.
 
 use crate::utils::logging::{log_info, log_warn};
-use crate::utils::props::{getprop, resetprop, setprop, setprop_cmd};
+use crate::utils::props::{cfg, resetprop, setprop};
 use crate::utils::sysfs::{chmod, hide_val, unhide_val, write_lock};
 use std::fs;
 use std::path::Path;
@@ -91,11 +91,11 @@ pub fn init_cpu_governor() {
     let performance_gov = "performance";
     let powersave_gov = "powersave";
 
-    setprop_cmd("persist.sys.azenith.default_cpu_gov", &default_gov);
+    let current_cfg = archconfig::load();
     log_info("cpu", &format!("default governor detected gov={}", default_gov));
 
     // Handle fallback if default is 'performance'
-    if default_gov == "performance" && getprop("persist.sys.azenith.custom_default_cpu_gov").is_empty() {
+    if default_gov == "performance" && current_cfg.custom_default_cpu_gov.is_empty() {
         log_info("cpu", "default governor is performance, searching fallback");
         let avail_govs = fs::read_to_string(format!("{}/scaling_available_governors", cpu_path)).unwrap_or_default();
         let fallbacks = [
@@ -106,7 +106,6 @@ pub fn init_cpu_governor() {
 
         for gov in &fallbacks {
             if avail_govs.contains(gov) {
-                setprop_cmd("persist.sys.azenith.default_cpu_gov", gov);
                 default_gov = gov.to_string();
                 log_info("cpu", &format!("fallback governor gov={}", gov));
                 break;
@@ -114,23 +113,26 @@ pub fn init_cpu_governor() {
         }
     }
 
+    let detected_default_gov = default_gov.clone();
+
     // Apply custom governor if set
-    let custom_gov = getprop("persist.sys.azenith.custom_default_cpu_gov");
-    if !custom_gov.is_empty() {
-        default_gov = custom_gov;
+    if !current_cfg.custom_default_cpu_gov.is_empty() {
+        default_gov = current_cfg.custom_default_cpu_gov.clone();
     }
-    
+
     log_info("cpu", &format!("using governor gov={}", default_gov));
     setgov(&default_gov);
 
-    // Set fallback props
-    if getprop("persist.sys.azenith.custom_powersave_cpu_gov").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_powersave_cpu_gov", &powersave_gov);
-    }
-    if getprop("persist.sys.azenith.custom_performance_cpu_gov").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_performance_cpu_gov", &performance_gov);
-    }
-    
+    let _ = archconfig::update(|c| {
+        c.default_cpu_gov = detected_default_gov;
+        if c.custom_powersave_cpu_gov.is_empty() {
+            c.custom_powersave_cpu_gov = powersave_gov.to_string();
+        }
+        if c.custom_performance_cpu_gov.is_empty() {
+            c.custom_performance_cpu_gov = performance_gov.to_string();
+        }
+    });
+
     log_info("cpu", "governor init complete");
 }
 
@@ -162,32 +164,34 @@ pub fn init_io_scheduler() {
         }
     }
 
-    setprop_cmd("persist.sys.azenith.default_balanced_IO", &default_io);
     log_info("io", &format!("default scheduler detected sched={}", default_io));
+    let detected_default_io = default_io.clone();
+    let current_cfg = archconfig::load();
 
     // Apply custom IO if set
-    let custom_io = getprop("persist.sys.azenith.custom_default_balanced_IO");
-    if !custom_io.is_empty() {
-        default_io = custom_io;
+    if !current_cfg.custom_default_io.is_empty() {
+        default_io = current_cfg.custom_default_io.clone();
     }
-    
+
     log_info("io", &format!("using scheduler sched={}", default_io));
     sets_io(&default_io);
 
-    // Set fallback props
-    if getprop("persist.sys.azenith.custom_powersave_IO").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_powersave_IO", &default_io);
-    }
-    if getprop("persist.sys.azenith.custom_performance_IO").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_performance_IO", &default_io);
-    }
-    
+    let _ = archconfig::update(|c| {
+        c.default_io = detected_default_io.clone();
+        if c.custom_powersave_io.is_empty() {
+            c.custom_powersave_io = detected_default_io.clone();
+        }
+        if c.custom_performance_io.is_empty() {
+            c.custom_performance_io = detected_default_io;
+        }
+    });
+
     log_info("io", "io scheduler init complete");
 }
 
 pub fn init_maligpu_governor() {
     let mut gpu_path = String::new();
-    
+
     if let Ok(paths) = glob::glob("/sys/class/devfreq/*.mali") {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
@@ -210,23 +214,26 @@ pub fn init_maligpu_governor() {
         .trim()
         .to_string();
 
-    setprop_cmd("persist.sys.azenith.default_maligpu_gov", &default_maligpu_gov);
     log_info("gpu", &format!("default governor detected gov={}", default_maligpu_gov));
+    let detected_default_mali = default_maligpu_gov.clone();
+    let current_cfg = archconfig::load();
 
-    let custom_maligpu_gov = getprop("persist.sys.azenith.custom_default_maligpu_gov");
-    if !custom_maligpu_gov.is_empty() {
-        default_maligpu_gov = custom_maligpu_gov;
+    if !current_cfg.custom_default_mali_gov.is_empty() {
+        default_maligpu_gov = current_cfg.custom_default_mali_gov.clone();
     }
 
     log_info("gpu", &format!("using governor gov={}", default_maligpu_gov));
     write_lock(&default_maligpu_gov, &gov_file);
 
-    if getprop("persist.sys.azenith.custom_powersave_maligpu_gov").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_powersave_maligpu_gov", &default_maligpu_gov);
-    }
-    if getprop("persist.sys.azenith.custom_performance_maligpu_gov").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_performance_maligpu_gov", &default_maligpu_gov);
-    }
+    let _ = archconfig::update(|c| {
+        c.default_mali_gov = detected_default_mali.clone();
+        if c.custom_powersave_mali_gov.is_empty() {
+            c.custom_powersave_mali_gov = detected_default_mali.clone();
+        }
+        if c.custom_performance_mali_gov.is_empty() {
+            c.custom_performance_mali_gov = detected_default_mali;
+        }
+    });
 
     log_info("gpu", "mali governor init complete");
 }
@@ -286,13 +293,13 @@ pub fn setrender(renderer: &str) {
 }
 
 pub fn init_renderer() {
-    let renderer = getprop("persist.sys.azenithconf.renderer");
-    
+    let renderer = &cfg().renderer;
+
     if renderer.is_empty() || renderer.eq_ignore_ascii_case("default") {
         log_info("renderer", "renderer is default, skipping setup");
         return;
     }
-    
+
     log_info("renderer", &format!("applying renderer renderer={}", renderer));
-    setrender(&renderer);
+    setrender(renderer);
 }
