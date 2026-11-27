@@ -865,9 +865,8 @@ private fun TweaksMainSubPane(
                     title = stringResource(R.string.refreshrates),
                     summary = stringResource(R.string.refreshrates_desc),
                     trailingBadge = "${tweakViewModel.currentRefreshRate ?: refreshHz} Hz",
-                    onClick = { if (isFullModeEnabled) refreshRateDropDown.show() },
+                    onClick = { refreshRateDropDown.show() },
                     modifier = Modifier.zxDropDownAnchor(refreshRateDropDown),
-                    enabled = isFullModeEnabled,
                     shape = blockTopShape
                 )
 

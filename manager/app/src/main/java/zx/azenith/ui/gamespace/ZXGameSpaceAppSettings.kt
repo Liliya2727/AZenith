@@ -1010,27 +1010,25 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                         )
                                         ExpressiveList(
                                             content = buildList {
-                                                if (isFullModeEnabled) {
-                                                    add {
-                                                        ExpressiveDropdownItem(
-                                                            icon = Icons.Rounded.WebStories,
-                                                            title = stringResource(R.string.refreshrates),
-                                                            summary = stringResource(R.string.refreshrates_desc),
-                                                            items = dynamicRefreshDisplayModes,
-                                                            selectedIndex = rawRefreshModes.indexOfFirst {
-                                                                it.equals(displayConfig.refresh_rate, ignoreCase = true)
-                                                            }.coerceAtLeast(0),
-                                                            onItemSelected = { index ->
-                                                                val value = rawRefreshModes[index]
-                                                                viewModel.updateSetting(pkg, "refresh_rate", value)
-                                                                },
-                                                                modifier = Modifier.zxDropDownAnchor(refreshMenu),
-                                                                externalMenuState = refreshMenu,
-                                                                focusKey = "appsettings:refresh_rate"
-                                                            )
-                                                        }
-                                                    }
-                                                    add {
+                                                add {
+                                                    ExpressiveDropdownItem(
+                                                        icon = Icons.Rounded.WebStories,
+                                                        title = stringResource(R.string.refreshrates),
+                                                        summary = stringResource(R.string.refreshrates_desc),
+                                                        items = dynamicRefreshDisplayModes,
+                                                        selectedIndex = rawRefreshModes.indexOfFirst {
+                                                            it.equals(displayConfig.refresh_rate, ignoreCase = true)
+                                                        }.coerceAtLeast(0),
+                                                        onItemSelected = { index ->
+                                                            val value = rawRefreshModes[index]
+                                                            viewModel.updateSetting(pkg, "refresh_rate", value)
+                                                        },
+                                                        modifier = Modifier.zxDropDownAnchor(refreshMenu),
+                                                        externalMenuState = refreshMenu,
+                                                        focusKey = "appsettings:refresh_rate"
+                                                    )
+                                                }
+                                                add {
                                                         ExpressiveDropdownItem(
                                                             icon = Icons.Rounded.Layers,
                                                             title = stringResource(R.string.renderengine),
@@ -1112,24 +1110,22 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                 }
                                             )
                                         }
-                                        if (isFullModeEnabled) {
-                                            ExpressiveList(
-                                                content = listOf {
-                                                    ExpressiveInfoCard(
-                                                        supportingContent = {
-                                                            Text(
-                                                                text = stringResource(R.string.str_by_using_per_app_refresh_rate)
-                                                            )
-                                                        },
-                                                        leadingContent = {
-                                                            LeadingIcon(icon = Icons.Rounded.Info)
-                                                        },
-                                                        containerColor = scheme.surfaceContainerLow,
-                                                        onClick = {}
-                                                    )
-                                                }
-                                            )
-                                        }
+                                        ExpressiveList(
+                                            content = listOf {
+                                                ExpressiveInfoCard(
+                                                    supportingContent = {
+                                                        Text(
+                                                            text = stringResource(R.string.str_by_using_per_app_refresh_rate)
+                                                        )
+                                                    },
+                                                    leadingContent = {
+                                                        LeadingIcon(icon = Icons.Rounded.Info)
+                                                    },
+                                                    containerColor = scheme.surfaceContainerLow,
+                                                    onClick = {}
+                                                )
+                                            }
+                                        )
                                     }
                                 // Hoisted out of the LazyColumn: an in-window overlay inside a
                                 // lazy item is clipped to the list viewport.
@@ -1159,24 +1155,22 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                 }
                                 boolMenu(dndMenu, "dnd_on_gaming", displayConfig.dnd_on_gaming)
 
-                                if (isFullModeEnabled) {
-                                    ZXDropDownMenu(
-                                        state = refreshMenu,
-                                        options = dynamicRefreshDisplayModes,
-                                        selectedOption = dynamicRefreshDisplayModes.getOrNull(
-                                            rawRefreshModes.indexOfFirst {
-                                                it.equals(displayConfig.refresh_rate, ignoreCase = true)
-                                            }.coerceAtLeast(0)
-                                        ),
-                                        onOptionSelected = { label ->
-                                            val index = dynamicRefreshDisplayModes.indexOf(label)
-                                            if (index >= 0) {
-                                                viewModel.updateSetting(pkg, "refresh_rate", rawRefreshModes[index])
-                                            }
-                                        },
-                                        minWidth = 260.dp
-                                    )
-                                }
+                                ZXDropDownMenu(
+                                    state = refreshMenu,
+                                    options = dynamicRefreshDisplayModes,
+                                    selectedOption = dynamicRefreshDisplayModes.getOrNull(
+                                        rawRefreshModes.indexOfFirst {
+                                            it.equals(displayConfig.refresh_rate, ignoreCase = true)
+                                        }.coerceAtLeast(0)
+                                    ),
+                                    onOptionSelected = { label ->
+                                        val index = dynamicRefreshDisplayModes.indexOf(label)
+                                        if (index >= 0) {
+                                            viewModel.updateSetting(pkg, "refresh_rate", rawRefreshModes[index])
+                                        }
+                                    },
+                                    minWidth = 260.dp
+                                )
 
                                 ZXDropDownMenu(
                                     state = rendererMenu,
