@@ -107,7 +107,10 @@
         <activity
             android:name=".ui.gamespace.ZXGameSpaceActivity"
             android:exported="true"
+            android:icon="@mipmap/ic_launcher_gamespace"
+            android:label="@string/zx_gamespace_name"
             android:launchMode="singleTask"
+            android:taskAffinity="zx.azenith.gamespace"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
             android:theme="@style/Theme.AZenith" />
