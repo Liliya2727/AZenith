@@ -60,8 +60,8 @@ pub(crate) fn pkg_of(pid: i32) -> Option<String> {
 
 /// Whether the process still alive in /proc/<pid> is the app's main process.
 /// Used when onProcessStarted did not carry a usable process name.
-pub(crate) fn is_main_process(pid: i32) -> bool {
-    process_name(pid).is_some_and(|name| !name.contains(':'))
+pub(crate) fn is_main_process(pid: i32, pkg: &str) -> bool {
+    !pkg.is_empty() && process_name(pid).is_some_and(|name| name.trim() == pkg)
 }
 
 fn adj_of(pid: i32) -> i32 {
@@ -82,7 +82,8 @@ pub(crate) fn scan_apps() -> Vec<AppProc> {
         if !is_app(uid) { continue; }
         let Some(name) = process_name(pid) else { continue };
         let Some(pkg) = base_pkg(&name) else { continue };
-        out.push(AppProc { pid, pkg, uid, adj: adj_of(pid), main: !name.contains(':') });
+        let main = name.trim() == pkg;
+        out.push(AppProc { pid, pkg, uid, adj: adj_of(pid), main });
     }
     out
 }

@@ -82,7 +82,7 @@ pub(crate) fn start() {
                     };
                     // Without a usable name the /proc cmdline still tells a main
                     // process from a ":service" one.
-                    let main = main || crate::procs::is_main_process(pid);
+                    let main = main || crate::procs::is_main_process(pid, &pkg);
                     debug!("process started: pid={pid} uid={uid} pkg={pkg} main={main}");
                     state::add_proc(pid, &pkg, uid, main);
                 }
@@ -136,7 +136,10 @@ pub(crate) unsafe extern "C" fn on_observer(_b: P, code: u32, inp: P, _o: P) -> 
             let name_ok = (n.AParcel_readString)(inp, &mut name_buf as *mut Vec<u8> as P, str_alloc);
             let (pkg, main) = if pkg_ok == 0 && name_ok == 0 {
                 let name = parcel_string(&name_buf);
-                (crate::procs::base_pkg(&name).unwrap_or_default(), !name.contains(':'))
+                let name = name.trim();
+                let pkg = crate::procs::base_pkg(name).unwrap_or_default();
+                let main = !pkg.is_empty() && name == pkg;
+                (pkg, main)
             } else {
                 warn!("readString onProcessStarted failed, status={pkg_ok}/{name_ok}");
                 // The worker resolves the package from the uid and the name from

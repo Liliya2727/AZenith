@@ -527,6 +527,16 @@ pub(crate) fn set_focused(pkg: &str, pid: i32, uid: i32, why: &str) {
         // The focused app must always be known in the process table, even when
         // its onProcessStarted event was missed.
         note_proc(&mut s, pid, &pkg, uid);
+        // Demote any other pid of the same package in main_pids that is not
+        // actually the package's main process in /proc.
+        {
+            let St { procs, main_pids, .. } = &mut *s;
+            main_pids.retain(|&other_pid| {
+                other_pid == pid
+                    || procs.get(&other_pid).is_none_or(|(other_pkg, _)| other_pkg != &pkg)
+                    || crate::procs::is_main_process(other_pid, &pkg)
+            });
+        }
         // A process that hosts an activity is the app's main process.
         s.main_pids.insert(pid);
         s.pending_close.remove(&pkg);
@@ -545,7 +555,14 @@ pub(crate) fn add_proc(pid: i32, pkg: &str, uid: i32, main: bool) {
         s.proc_seen.entry(pid).or_insert_with(Instant::now);
         note_app(&mut s, &pkg, pid, uid);
         if main {
-            s.main_pids.insert(pid);
+            // A package only has one main process at a time; drop any stale or
+            // misclassified main_pids entry for the same package.
+            let St { procs, main_pids, .. } = &mut *s;
+            main_pids.retain(|&other_pid| {
+                other_pid == pid
+                    || procs.get(&other_pid).is_none_or(|(other_pkg, _)| other_pkg != &pkg)
+            });
+            main_pids.insert(pid);
             // A new main process means the app restarted: cancel the close.
             s.pending_close.remove(&pkg);
         } else {
