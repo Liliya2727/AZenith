@@ -69,6 +69,37 @@ pub fn handle_config_set(argc: i32, argv: &[&str]) -> c_int {
 }
 
 // ---------------------------------------------------------------------------
+// handle_prelaunch
+// ---------------------------------------------------------------------------
+pub fn handle_prelaunch(argc: i32, argv: &[&str]) -> c_int {
+    if argc < 3 || argv[2].trim().is_empty() {
+        eprintln!("Usage: --prelaunch <PACKAGE_NAME>");
+        return 1;
+    }
+    let pkg = argv[2].trim();
+    let target = crate::core::PRELAUNCH_FILE;
+    let tmp = format!("{target}.tmp");
+    if let Err(e) = std::fs::write(&tmp, format!("{pkg}\n")).and_then(|_| std::fs::rename(&tmp, target)) {
+        let _ = std::fs::remove_file(&tmp);
+        eprintln!("ERROR: failed to trigger prelaunch for {pkg}: {e}");
+        return 1;
+    }
+
+    // Wait for archdaemon's inotify handler to apply renderer/downscale/per-app overrides
+    // and unlink PRELAUNCH_FILE as acknowledgement before `am start` runs.
+    let start = std::time::Instant::now();
+    let timeout = std::time::Duration::from_millis(2500);
+    while std::path::Path::new(target).exists() {
+        if start.elapsed() >= timeout {
+            let _ = std::fs::remove_file(target);
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    0
+}
+
+// ---------------------------------------------------------------------------
 // handle_profile
 // ---------------------------------------------------------------------------
 pub fn handle_profile(argc: i32, argv: &[&str]) -> c_int {
@@ -235,6 +266,7 @@ pub fn print_help() {
     println!("            --config-get <KEY> Read a configuration field from config.json");
     println!("            --config-set <KEY> <VAL>");
     println!("                               Update a configuration field in config.json");
+    println!("     -pl,   --prelaunch <PKG>  Apply per-app config before launching a game");
     println!();
     println!("     preload [OPTIONS] <PATHS> Run vmtouch-compatible page-cache preloader");
     println!("                               Use 'sys.azenith-service preload --help' for options");

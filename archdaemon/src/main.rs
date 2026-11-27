@@ -35,7 +35,7 @@ use crate::bypass::{
 use crate::cli::{
     clearlogs, dump_refresh_rate_modes, expose_telemetry_access,
     grant_app_permissions, handle_config_get, handle_config_set, handle_log,
-    handle_verboselog, handle_profile, hidenotifications, print_help,
+    handle_prelaunch, handle_verboselog, handle_profile, hidenotifications, print_help,
     printversion, require_daemon_running, restart_service, shownotifications,
 };
 use crate::daemon::main_daemon;
@@ -155,6 +155,9 @@ fn real_main() -> c_int {
 
     if is_cmd!(cmd, "--profile", "-p") {
         return handle_profile(args.len() as i32, args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().as_slice());
+    }
+    if is_cmd!(cmd, "--prelaunch", "-pl") {
+        return handle_prelaunch(args.len() as i32, args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().as_slice());
     }
     if is_cmd!(cmd, "--log", "-l") {
         return handle_log(args.len() as i32, args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().as_slice());

@@ -402,6 +402,17 @@ fn process_event(
     }
 
     match name {
+        "prelaunch" => {
+            if (mask & (CLOSE_WRITE | MOVED_TO)) != 0 {
+                if let Ok(raw) = std::fs::read_to_string(crate::core::PRELAUNCH_FILE) {
+                    let pkg = raw.trim();
+                    if !pkg.is_empty() {
+                        crate::profile::apply_prelaunch_game(ctx, pkg);
+                    }
+                }
+                fileops::remove_file_best_effort(crate::core::PRELAUNCH_FILE);
+            }
+        }
         "app_status" => {
             crate::log_debug!("inotify", "app_status event received mask=0x{:x}, re-reading", mask);
             read_app_status(&mut ctx.current_system_cache);
@@ -456,6 +467,8 @@ fn process_event(
                             if ai_state == "1" {
                                 ctx.game.gamestart = None;
                                 ctx.game.active_app_name = None;
+                                ctx.game.prelaunched_pkg = None;
+                                ctx.game.prelaunch_until_ms = 0;
                                 ctx.game.game_pids = [0; super::core::MAX_GAME_PIDS];
                                 ctx.game.game_pid_count = 0;
                                 update_game_info(ctx);
@@ -588,6 +601,8 @@ fn handle_config_json_event(ctx: &mut DaemonContext) {
             if ai_state == "1" {
                 ctx.game.gamestart = None;
                 ctx.game.active_app_name = None;
+                ctx.game.prelaunched_pkg = None;
+                ctx.game.prelaunch_until_ms = 0;
                 ctx.game.game_pids = [0; super::core::MAX_GAME_PIDS];
                 ctx.game.game_pid_count = 0;
                 update_game_info(ctx);

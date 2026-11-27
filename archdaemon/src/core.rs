@@ -39,6 +39,7 @@ pub const APP_MONITOR_FILE: &str = "/data/adb/.config/AZenith/app_status";
 pub const DAEMON_STATE_FILE: &str = "/data/adb/.config/AZenith/daemon_state";
 pub const JAVA_LOCK_PATH: &str = "/data/adb/.config/AZenith/java.lock";
 pub const RR_MODES_PATH: &str = "/data/adb/.config/AZenith/rr_modes.json";
+pub const PRELAUNCH_FILE: &str = "/data/adb/.config/AZenith/prelaunch";
 
 pub const AZENITH_PROPERTIES: &str = "persist.sys.azenith";
 
@@ -293,6 +294,8 @@ pub struct GameState {
     pub active_app_name: Option<String>,
     pub game_pids: [i32; MAX_GAME_PIDS],
     pub game_pid_count: i32,
+    pub prelaunch_until_ms: u64,
+    pub prelaunched_pkg: Option<String>,
 }
 
 /// Power-related state (grace period, foreground away)

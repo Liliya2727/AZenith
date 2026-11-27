@@ -287,10 +287,23 @@ pub fn main_daemon() -> c_int {
         let is_manual_mode = ctx.prev_ai_state_str() == "0";
 
         if ctx.need_profile_checkup {
+            let now_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+            let in_prelaunch_grace = now_ms < ctx.game.prelaunch_until_ms;
+            let prelaunched_pkg = ctx.game.prelaunched_pkg.clone();
             let opts = &mut ctx.opts;
             let cache = &ctx.current_system_cache;
-            if let Some(current_focused_game) = get_gamestart(opts, cache) {
+            if let Some(current_focused_game) = crate::profile::get_gamestart_with_prelaunch(
+                opts,
+                cache,
+                prelaunched_pkg.as_deref(),
+            ) {
                 if ctx.game.gamestart.as_deref() == Some(&current_focused_game) {
+                    if !ctx.current_system_cache.app_name_str().is_empty() {
+                        ctx.game.active_app_name = Some(ctx.current_system_cache.app_name_str().to_string());
+                    }
                     ctx.need_profile_checkup = false;
                 } else {
                     let old_gs = ctx.game.gamestart.clone();
@@ -301,6 +314,7 @@ pub fn main_daemon() -> c_int {
                     }
                     ctx.game.gamestart = Some(current_focused_game.clone());
                     ctx.game.active_app_name = Some(ctx.current_system_cache.app_name_str().to_string());
+                    ctx.game.prelaunch_until_ms = 0;
                     log_info!("profile", "game detected pkg={} name={}",
                         ctx.game.gamestart.as_deref().unwrap_or(""),
                         ctx.game.active_app_name.as_deref().unwrap_or("unknown")
@@ -314,6 +328,10 @@ pub fn main_daemon() -> c_int {
                     handle_dynamic_bypass(&mut ctx);
                     update_game_info(&ctx);
                 }
+            } else if in_prelaunch_grace {
+                // GameSpace prelaunch is still transitioning into `am start`; keep
+                // the pre-applied game state intact until the game window focuses.
+                ctx.need_profile_checkup = false;
             } else if is_manual_mode || (ctx.profile.cur_mode != ProfileMode::BalancedProfile && ctx.profile.cur_mode != ProfileMode::EcoMode) {
                 ctx.need_profile_checkup = false;
             }
@@ -395,6 +413,8 @@ pub fn main_daemon() -> c_int {
                                 restore_resolution_target(&mut ctx, gs);
                                 ctx.game.gamestart = None;
                                 ctx.game.active_app_name = None;
+                                ctx.game.prelaunched_pkg = None;
+                                ctx.game.prelaunch_until_ms = 0;
                                 ctx.need_profile_checkup = true;
                                 update_game_info(&ctx);
                             }
@@ -479,8 +499,20 @@ pub fn main_daemon() -> c_int {
             }
 
             if ctx.game.game_pid_count == 0 {
+                let now_ms = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis() as u64)
+                    .unwrap_or(0);
                 if ctx.current_system_cache.focused_app_str() == &gs {
+                    ctx.game.prelaunch_until_ms = 0;
+                    if !ctx.current_system_cache.app_name_str().is_empty() {
+                        ctx.game.active_app_name = Some(ctx.current_system_cache.app_name_str().to_string());
+                    }
                     ctx.game.game_pid_count = get_pids_of(&gs, &mut ctx.game.game_pids, crate::core::MAX_GAME_PIDS as i32);
+                } else if now_ms < ctx.game.prelaunch_until_ms {
+                    // Still waiting for GameSpace `am start` to bring the prelaunched
+                    // game into focus; do not consume pid_retries yet.
+                    continue;
                 }
                 if ctx.game.game_pid_count == 0 {
                     if ctx.pid_retries < 5 {
@@ -495,6 +527,8 @@ pub fn main_daemon() -> c_int {
                             ctx.game.active_app_name.as_deref().unwrap_or(&gs));
                         ctx.game.gamestart = None;
                         ctx.game.active_app_name = None;
+                        ctx.game.prelaunched_pkg = None;
+                        ctx.game.prelaunch_until_ms = 0;
                         ctx.pid_retries = 0;
                         ctx.render.manual_sidepanel_shown = false;
                         ctx.need_profile_checkup = true;

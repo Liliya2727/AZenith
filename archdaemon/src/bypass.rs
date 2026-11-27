@@ -1462,9 +1462,14 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
 
         if new_count == 0 {
             let focused = ctx.current_system_cache.focused_app_str();
-            if focused == gamestart.as_str() || ctx.render.is_restarting_renderer {
+            let now_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+            let in_prelaunch = now_ms < ctx.game.prelaunch_until_ms;
+            if focused == gamestart.as_str() || ctx.render.is_restarting_renderer || in_prelaunch {
                 log_info!("inotify", "game pids dropped reason={} game={}",
-                    if ctx.render.is_restarting_renderer { "renderer_restart" } else { "still_focused" }, gamestart);
+                    if ctx.render.is_restarting_renderer { "renderer_restart" } else if in_prelaunch { "prelaunch_grace" } else { "still_focused" }, gamestart);
             } else {
                 let manual = is_manual_mode(ctx);
                 log_info!("inotify", "game closed action={} game={}",
@@ -1478,6 +1483,8 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
                 }
                 ctx.game.gamestart = None;
                 ctx.game.active_app_name = None;
+                ctx.game.prelaunched_pkg = None;
+                ctx.game.prelaunch_until_ms = 0;
                 ctx.power.fg_away_active = false;
                 ctx.render.manual_sidepanel_shown = false;
                 ctx.power.fg_away_timer = 0;
@@ -1495,7 +1502,9 @@ pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
     let bypass_before = ctx.bypass.bypass_applied;
 
     if ctx.config_bypasspath_str() != "UNSUPPORTED" && !ctx.config_bypasspath_str().is_empty() {
-        if ctx.profile.cur_mode == ProfileMode::PerformanceProfile {
+        let bypass_active_session = ctx.profile.cur_mode == ProfileMode::PerformanceProfile
+            || (ctx.game.gamestart.is_some() && IS_TRUE!(ctx.opts_bypass_charging()));
+        if bypass_active_session {
             let threshold = ctx.config.bypass_chg_threshold;
             let current_battery = ctx.current_system_cache.battery_level;
             let is_device_charging = ctx.current_system_cache.is_charging != 0;
