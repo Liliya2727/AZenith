@@ -141,6 +141,7 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
         
         rm -rf az_logs_tmp
         rm -f "$fileName"
+        [ -s "$targetPath" ] || exit 1
     """.trimIndent()
 
 
@@ -148,7 +149,7 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
 
     val finalFileForApp = File(targetPath)
 
-    if (result.isSuccess && finalFileForApp.exists()) {
+    if (result.isSuccess && (saveToDownloads || finalFileForApp.exists())) {
         if (saveToDownloads) {
             MediaScannerConnection.scanFile(context, arrayOf(finalFileForApp.absolutePath), null, null)
         }
