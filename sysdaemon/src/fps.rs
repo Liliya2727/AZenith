@@ -293,7 +293,9 @@ fn sync_always_on() {
 /// nothing can overwrite it behind our back.
 fn mark_idle() {
     let _ = fs::create_dir_all(FPS_DIR);
-    let _ = crate::state::write_atomic(FPS_FILE, &format!("{NO_GAME_MARKER}\n"));
+    let line = format!("{NO_GAME_MARKER}\n");
+    let _ = crate::state::write_atomic(FPS_FILE, &line);
+    crate::state::mirror_to_app_api("current_fps", &line);
 }
 
 /// Replace current_frametime with the same no-game marker (archdaemon parses it as
@@ -957,6 +959,11 @@ fn run_windmanager(forced: Option<Method>, frametime: &FrameTime) -> bool {
             last_ft_publish = Instant::now();
             if active() {
                 frametime.publish_source("none");
+                if let Ok(raw) = fs::read_to_string(FPS_FILE) {
+                    if !raw.is_empty() {
+                        crate::state::mirror_to_app_api("current_fps", &raw);
+                    }
+                }
             }
         }
 
@@ -1569,7 +1576,12 @@ fn read_sf_timestats() -> Option<SfTimestats> {
 
 /// Publish "<fps> <epoch_ms>", the format the manager parses.
 fn publish(fps: i64) -> bool {
-    crate::state::write_atomic(FPS_FILE, &format!("{fps} {}\n", now_ms()))
+    let line = format!("{fps} {}\n", now_ms());
+    let ok = crate::state::write_atomic(FPS_FILE, &line);
+    if ok {
+        crate::state::mirror_to_app_api("current_fps", &line);
+    }
+    ok
 }
 
 fn now_ms() -> u128 {

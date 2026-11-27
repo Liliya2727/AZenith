@@ -297,6 +297,31 @@ pub(crate) fn write_atomic(path: &str, data: &str) -> bool {
     true
 }
 
+/// Best-effort atomic mirror into `/data/data/zx.azenith/API/<filename>` so the
+/// manager app and GameSpace overlay can read status/FPS directly via `java.io.File`
+/// without spawning root `SuFileInputStream` shells.
+pub(crate) fn mirror_to_app_api(filename: &str, data: &str) {
+    const APP_DATA_DIR: &str = "/data/data/zx.azenith";
+    const APP_API_DIR: &str = "/data/data/zx.azenith/API";
+    if !std::path::Path::new(APP_DATA_DIR).exists() {
+        return;
+    }
+    if !std::path::Path::new(APP_API_DIR).exists() {
+        let _ = fs::create_dir_all(APP_API_DIR);
+        let _ = fs::set_permissions(APP_API_DIR, fs::Permissions::from_mode(0o777));
+    }
+    static MIRROR_SEQ: AtomicU32 = AtomicU32::new(0);
+    let target = format!("{APP_API_DIR}/{filename}");
+    let tmp = format!("{target}.{}.tmp", MIRROR_SEQ.fetch_add(1, Ordering::Relaxed));
+    if fs::write(&tmp, data)
+        .and_then(|_| fs::set_permissions(&tmp, fs::Permissions::from_mode(0o644)))
+        .and_then(|_| fs::rename(&tmp, &target))
+        .is_err()
+    {
+        let _ = fs::remove_file(&tmp);
+    }
+}
+
 /// A consistent snapshot of the state: the focused app, the recent list, the
 /// process table and the system state all belong to the same moment.
 ///
@@ -448,6 +473,7 @@ pub(crate) fn publish(why: &str) {
     let background = snap.background();
     if status != s.last_status {
         if write_atomic(STATUS_FILE, &status) {
+            mirror_to_app_api("app_status", &status);
             s.last_status = status;
             info!("app_status updated ({why})");
         }
