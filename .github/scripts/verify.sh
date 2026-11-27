@@ -17,6 +17,7 @@ readonly GRADLE_FILE="manager/app/build.gradle.kts"
 readonly VERSION_RS_FILE="archdaemon/src/version.rs"
 # All Rust binary projects except thermalcore (kept independent).
 readonly CARGO_TOMLS=(
+	"archconfig/Cargo.toml"
 	"archdaemon/Cargo.toml"
 	"sysdaemon/Cargo.toml"
 	"binprofiles/Cargo.toml"

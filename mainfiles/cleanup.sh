@@ -22,6 +22,10 @@ cleanup_modules() {
         resetprop -p --delete "$prop"
     done
 
+    for prop in sys.azenith.state sys.azenith.service sys.azenith.litemode; do
+        resetprop --delete "$prop" 2>/dev/null
+    done
+
     for prop in persist.sys.rianixia.learning_enabled persist.sys.rianixia.thermalcore-bigdata.path; do
         resetprop -p --delete "$prop"
     done

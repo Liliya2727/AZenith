@@ -12,6 +12,7 @@ on:
       - ".github/workflows/build.yml"
       - ".github/scripts/**"
       - "manager/**"
+      - "archconfig/**"
       - "archdaemon/**"
       - "binprofiles/**"
       - "binutils/**"
