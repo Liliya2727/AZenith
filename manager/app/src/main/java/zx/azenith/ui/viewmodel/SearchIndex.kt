@@ -536,21 +536,12 @@ object SearchIndex {
             requires = listOf(SearchRequirement.MaliGpu)
         ),
 
-        // --- Bypass charging ----------------------------------------------
+        // --- Standby Charge -----------------------------------------------
         SearchEntry(
             id = "bypass.enable",
             titleRes = R.string.enable_bypass_charge,
             summaryRes = R.string.enable_bypass_charge_desc,
             icon = Icons.Filled.Cable,
-            group = SearchGroup.Bypass,
-            target = SearchTarget.Route("bypasschg"),
-            requires = listOf(SearchRequirement.BypassSupported)
-        ),
-        SearchEntry(
-            id = "bypass.threshold",
-            titleRes = R.string.charging_threshold,
-            summaryRes = R.string.charging_threshold_desc,
-            icon = Icons.Rounded.BatteryChargingFull,
             group = SearchGroup.Bypass,
             target = SearchTarget.Route("bypasschg"),
             requires = listOf(SearchRequirement.BypassSupported)

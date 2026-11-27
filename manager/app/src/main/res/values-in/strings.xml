@@ -354,6 +354,7 @@
     <string name="str_open_source">Sumber terbuka</string>
     <string name="str_package_name">Nama paket</string>
     <string name="str_pause_battery_charging_when_pl">Pertahankan baterai pada level saat ini dengan menjeda dan melanjutkan pengisian daya secara cerdas selama sesi bermain game, mengurangi panas perangkat sekaligus menjaga daya baterai.</string>
+    <string name="standby_charge_floor_desc">Standby Charge mengunci persentase baterai saat game dimulai (menjeda pada target dan mengisi kembali jika turun 2%). Batas aman 20% memastikan pengisian daya tidak pernah dijeda saat baterai di bawah 20%.</string>
     <string name="str_per_app_applist_settings">Pengaturan aplikasi dan daftar aplikasi</string>
     <string name="str_performance_profile">Profil performa</string>
     <string name="str_pick_media">Pilih file media</string>

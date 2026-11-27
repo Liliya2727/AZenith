@@ -529,6 +529,7 @@
     <string name="str_open_source">Open Source</string>
     <string name="str_package_name">Package Name</string>
     <string name="str_pause_battery_charging_when_pl">Keep your battery at its current level by smartly pausing and resuming charging during your game session, reducing device heat while preserving your battery charge.</string>
+    <string name="standby_charge_floor_desc">Standby Charge locks onto your battery percentage when a game starts (pausing at target and resuming if it drops by 2%). A built-in 20% safety floor ensures charging never pauses below 20% battery.</string>
     <string name="str_per_app_applist_settings">Per-App &amp; App List Settings</string>
     <string name="str_performance_profile">Performance Profile</string>
     <string name="str_pick_media">Select Media File</string>

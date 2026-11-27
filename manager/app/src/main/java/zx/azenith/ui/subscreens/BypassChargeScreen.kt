@@ -106,24 +106,22 @@ import zx.azenith.ui.util.RootUtils
  * to it. Positional: the list is built inline inside the screen and the rows
  * carry no keys of their own.
  *
- * Portrait is one list: info(0) illustration(1) enable(2) threshold(3)
- * compatibility(4).
+ * Portrait is one list: info(0) illustration(1) enable(2) compatibility(3).
  */
 private val BYPASS_ROW_ITEMS: Map<String, Int> = mapOf(
-    "bypass.compat" to 4,
     "bypass.enable" to 2,
-    "bypass.threshold" to 3,)
+    "bypass.compat" to 3,
+)
 
 /**
  * Landscape splits the screen in two lists, so each has its own index space.
  * Left: illustration(0) -- no searchable rows.
- * Right: info(0) enable(1) threshold(2) compatibility(3).
+ * Right: info(0) enable(1) compatibility(2).
  */
 private val BYPASS_LEFT_ITEMS: Map<String, Int> = emptyMap()
 private val BYPASS_RIGHT_ITEMS: Map<String, Int> = mapOf(
     "bypass.enable" to 1,
-    "bypass.threshold" to 2,
-    "bypass.compat" to 3
+    "bypass.compat" to 2
 )
 
 @Composable
@@ -158,43 +156,24 @@ fun BypassChargeScreen(navController: NavController) {
 
     var bypassPath by remember { mutableStateOf("") }
     var bypassChgState by remember { mutableStateOf<Boolean?>(null) }
-    var thresholdValue by remember { mutableStateOf<Float?>(null) }
-    
+
     val isUnsupported = bypassPath == "UNSUPPORTED"
     val isNeedSetup = bypassPath == "NEED_SETUP"
 
-    // The switch and slider callbacks are plain lambdas, so they run on the main
-    // thread. Route the file writes through a scope on IO rather than making the
-    // tap handler block on a root round trip.
-    val writeScope = rememberCoroutineScope()   
+    // The switch callback is a plain lambda, so it runs on the main thread.
+    // Route the file writes through a scope on IO rather than making the tap
+    // handler block on a root round trip.
+    val writeScope = rememberCoroutineScope()
 
     // Load configuration asynchronously - skeleton shows immediately while loading
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val cfg = ConfigUtils.load()
             bypassPath = cfg.bypassPath
-            thresholdValue = cfg.bypassChgThreshold.toFloat().coerceIn(20f, 50f)
             bypassChgState = cfg.bypassChg
         }
     }
 
-
-    // Only the local state moves during the drag. The config write and the su
-    // round-trip run on finish, so dragging does not fork a shell on every value
-    // change.
-    val onThresholdChange: (Float) -> Unit = { newValue ->
-        val step = 5f
-        val snapped = (newValue / step).roundToInt() * step
-        thresholdValue = snapped.coerceIn(20f, 50f)
-    }
-    val onThresholdFinished: (Float) -> Unit = { currentVal ->
-        // thresholdValue is the value the drag left behind; currentVal is only a
-        // fallback for the (unlikely) case it has not been set yet.
-        val finalValue = thresholdValue ?: currentVal
-        writeScope.launch(Dispatchers.IO) {
-            ConfigUtils.setInt("bypass_chg_threshold", finalValue.toInt())
-        }
-    }
     val onToggleBypass: (Boolean) -> Unit = { isChecked ->
         bypassChgState = isChecked
         writeScope.launch(Dispatchers.IO) {
@@ -263,10 +242,7 @@ fun BypassChargeScreen(navController: NavController) {
                         isUnsupported = isUnsupported,
                         isNeedSetup = isNeedSetup,
                         bypassChgState = bypassChgState,
-                        thresholdValue = thresholdValue,
                         onToggle = onToggleBypass,
-                        onThresholdChange = onThresholdChange,
-                        onThresholdFinished = onThresholdFinished,
                         onOpenCheck = { navController.navigate("bypasschg_check") }
                     )
                 }
@@ -298,10 +274,7 @@ fun BypassChargeScreen(navController: NavController) {
                     isUnsupported = isUnsupported,
                     isNeedSetup = isNeedSetup,
                     bypassChgState = bypassChgState,
-                    thresholdValue = thresholdValue,
                     onToggle = onToggleBypass,
-                    onThresholdChange = onThresholdChange,
-                    onThresholdFinished = onThresholdFinished,
                     onOpenCheck = { navController.navigate("bypasschg_check") }
                 )
             }
@@ -348,16 +321,13 @@ private fun LazyListScope.bypassIllustrationItem(
     }
 }
 
-/** The switch, the threshold slider and the compatibility-check entry. */
+/** The switch, the compatibility-check entry, and the 20% safety floor info card. */
 private fun LazyListScope.bypassOptionItems(
     jumpPulse: String?,
     isUnsupported: Boolean,
     isNeedSetup: Boolean,
     bypassChgState: Boolean?,
-    thresholdValue: Float?,
     onToggle: (Boolean) -> Unit,
-    onThresholdChange: (Float) -> Unit,
-    onThresholdFinished: (Float) -> Unit,
     onOpenCheck: () -> Unit
 ) {
     item {
@@ -393,134 +363,6 @@ private fun LazyListScope.bypassOptionItems(
         }
     }
 
-    if (!isNeedSetup) {
-        thresholdValue?.let { currentVal ->
-            item {
-                val colorScheme = MaterialTheme.colorScheme
-                val animatedSliderValue by animateFloatAsState(
-                    targetValue = currentVal,
-                    animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow),
-                    label = "SliderAnimation"
-                )
-
-                val progress = (currentVal - 20f) / 30f
-                val animatedBarProgress by animateFloatAsState(
-                    targetValue = progress,
-                    animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
-                    label = "BarProgress"
-                )
-
-                val cardAlpha = if (isUnsupported) 0.5f else 1f
-
-                JumpRow(activeId = jumpPulse, entryId = "bypass.threshold") {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer(alpha = cardAlpha),
-                        shape = azShape(26.dp),
-                        color = colorScheme.surfaceContainerLow,
-                        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.Start
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    LeadingIcon(
-                                        icon = Icons.Rounded.DataThresholding,
-                                        contentDescription = null
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Text(
-                                        text = stringResource(R.string.charging_threshold),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = colorScheme.onSurface
-                                    )
-                                }
-
-                                Text(
-                                    text = stringResource(R.string.str_currentval_toint, currentVal.toInt()),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isUnsupported) colorScheme.outline else colorScheme.primary
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                text = stringResource(R.string.charging_threshold_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colorScheme.outline
-                            )
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.BottomCenter
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(8.dp)
-                                        .clip(azShape(4.dp))
-                                        .background(colorScheme.surfaceContainerHighest)
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(animatedBarProgress)
-                                        .height(8.dp)
-                                        .align(Alignment.CenterStart)
-                                        .clip(azShape(4.dp))
-                                        .background(
-                                            if (isUnsupported) {
-                                                SolidColor(colorScheme.outline)
-                                            } else {
-                                                Brush.horizontalGradient(
-                                                    listOf(colorScheme.primary.copy(alpha = 0.6f), colorScheme.primary)
-                                                )
-                                            }
-                                        )
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            ZenithSlider(
-                                value = animatedSliderValue,
-                                enabled = !isUnsupported,
-                                onValueChange = onThresholdChange,
-                                onValueChangeFinished = { onThresholdFinished(currentVal) },
-                                valueRange = 20f..50f,
-                                steps = 5,
-                                accent = if (isUnsupported) colorScheme.outline else colorScheme.primary,
-                                modifier = Modifier.fillMaxWidth().height(40.dp)
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(stringResource(R.string.str_20), style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                                Text(stringResource(R.string.str_50), style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     item {
         ExpressiveList(
             content = listOf {
@@ -533,6 +375,19 @@ private fun LazyListScope.bypassOptionItems(
                         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                     )
                 }
+            }
+        )
+    }
+
+    item {
+        ExpressiveList(
+            content = listOf {
+                ExpressiveInfoCard(
+                    supportingContent = { Text(text = stringResource(R.string.standby_charge_floor_desc)) },
+                    leadingContent = { LeadingIcon(icon = Icons.Rounded.Shield) },
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    onClick = {}
+                )
             }
         )
     }

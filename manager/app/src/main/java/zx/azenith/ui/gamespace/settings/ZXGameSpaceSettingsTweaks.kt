@@ -84,6 +84,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Power
 import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.SettingsSuggest
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapVerticalCircle
 import androidx.compose.material.icons.rounded.Thermostat
@@ -998,7 +999,6 @@ private fun BypassChargingSubPane(
 
     var bypassPath by remember { mutableStateOf("") }
     var bypassState by remember { mutableStateOf(false) }
-    var thresholdValue by remember { mutableFloatStateOf(20f) }
 
     var availableNodes by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var isLoadingNodes by remember { mutableStateOf(true) }
@@ -1041,7 +1041,6 @@ private fun BypassChargingSubPane(
             val cfg = ConfigUtils.load()
             bypassPath = cfg.bypassPath
             bypassState = cfg.bypassChg
-            thresholdValue = cfg.bypassChgThreshold.toFloat().coerceIn(20f, 50f)
         }
         refreshNodes()
     }
@@ -1303,16 +1302,40 @@ private fun BypassChargingSubPane(
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
-                    BypassThresholdSliderCard(
-                        threshold = thresholdValue,
-                        enabled = isConfigured,
-                        onThresholdChange = { thresholdValue = it },
-                        onThresholdChangeFinished = { finalVal ->
-                            val roundVal = finalVal.roundToInt()
-                            ConfigUtils.setInt("bypass_chg_threshold", roundVal)
-                        },
-                        shape = blockBottomShape
-                    )
+                    Surface(
+                        shape = blockBottomShape,
+                        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                        contentColor = scheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(blockBottomShape)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = scheme.primaryContainer,
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Shield,
+                                        contentDescription = null,
+                                        tint = scheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(R.string.standby_charge_floor_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
 
@@ -2515,106 +2538,6 @@ private fun FreqOffsetSliderCard(
                     .then(if (onSliderPositioned != null) Modifier.onGloballyPositioned { onSliderPositioned() } else Modifier)
                     .then(if (sliderFocusRequester != null) Modifier.focusRequester(sliderFocusRequester) else Modifier)
             )
-        }
-    }
-}
-
-@Composable
-private fun BypassThresholdSliderCard(
-    threshold: Float,
-    onThresholdChange: (Float) -> Unit,
-    onThresholdChangeFinished: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(20.dp),
-    enabled: Boolean = true
-) {
-    val scheme = MaterialTheme.colorScheme
-    var sliderValue by remember(threshold) { mutableFloatStateOf(threshold.coerceIn(20f, 50f)) }
-
-    Surface(
-        shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = if (enabled) 0.85f else 0.55f),
-        contentColor = if (enabled) scheme.onSurface else scheme.onSurface.copy(alpha = 0.6f),
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (enabled) scheme.primaryContainer else scheme.surfaceContainerHighest,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.BatteryChargingFull,
-                                contentDescription = null,
-                                tint = if (enabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    Column {
-                        Text(
-                            text = stringResource(R.string.charging_threshold),
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = scheme.onSurface
-                        )
-                        Text(
-                            text = stringResource(R.string.charging_threshold_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onSurfaceVariant.copy(alpha = 0.82f)
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (enabled) scheme.primaryContainer else scheme.surfaceContainerHighest
-                ) {
-                    Text(
-                        text = "${sliderValue.roundToInt()}%",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = if (enabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            ZenithSlider(
-                value = sliderValue,
-                enabled = enabled,
-                onValueChange = {
-                    val step = 5f
-                    val snapped = (it / step).roundToInt() * step
-                    val finalVal = snapped.coerceIn(20f, 50f)
-                    sliderValue = finalVal
-                    onThresholdChange(finalVal)
-                },
-                onValueChangeFinished = { onThresholdChangeFinished(sliderValue) },
-                valueRange = 20f..50f,
-                steps = 5
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("20%", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant.copy(alpha = 0.6f))
-                Text("50%", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant.copy(alpha = 0.6f))
-            }
         }
     }
 }
