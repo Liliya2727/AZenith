@@ -44,6 +44,7 @@ object RootUtils {
     private const val DAEMON_API_DIR_PATH = "/data/adb/.config/AZenith/API"
     private const val DAEMON_PROFILE_PATH = "$DAEMON_API_DIR_PATH/$PROFILE_FILE_NAME"
     private const val MODES_FILE_NAME = "current_modes"
+    private const val MODES_PATH = "$API_DIR_PATH/$MODES_FILE_NAME"
     private const val DAEMON_MODES_PATH = "$DAEMON_API_DIR_PATH/$MODES_FILE_NAME"
 
     /**
@@ -82,12 +83,17 @@ object RootUtils {
         var lastProfile: String? = null
         var lastModes: String? = null
         while (true) {
-            val profile = readRootFile(DAEMON_PROFILE_PATH)?.trim()
+            val profile = (readMirror()?.trim()?.takeIf { it.isNotEmpty() }
+                ?: readRootFile(DAEMON_PROFILE_PATH)?.trim())
             if (profile != null && profile != lastProfile) {
                 lastProfile = profile
                 emit(PROFILE_FILE_NAME)
             }
-            val modes = readRootFile(DAEMON_MODES_PATH)?.trim()
+            val modes = (try {
+                File(MODES_PATH).takeIf { it.exists() }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
+            } catch (_: Exception) {
+                null
+            } ?: readRootFile(DAEMON_MODES_PATH)?.trim())
             if (modes != null && modes != lastModes) {
                 lastModes = modes
                 emit(MODES_FILE_NAME)
@@ -263,7 +269,11 @@ object RootUtils {
     }.flowOn(Dispatchers.IO)
 
     private fun getAutoModeValue(): String =
-        readRootFile(DAEMON_MODES_PATH)?.trim()
+        try {
+            File(MODES_PATH).takeIf { it.exists() }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
+        } catch (_: Exception) {
+            null
+        } ?: readRootFile(DAEMON_MODES_PATH)?.trim()
             ?: if (ConfigUtils.load().autoMode) "1" else "0"
 
     fun getCurrentProfileValue(): String {

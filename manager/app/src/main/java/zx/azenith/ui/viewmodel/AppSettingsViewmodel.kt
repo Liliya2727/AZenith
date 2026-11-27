@@ -35,6 +35,7 @@ import zx.azenith.ui.util.RootUtils
 
 class AppSettingsViewModel : ViewModel() {
     private val configPath = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
+    private val mirrorPath = "/data/data/zx.azenith/API/azenithApplist.json"
     private val jsonHandler = Json { 
         prettyPrint = true
         ignoreUnknownKeys = true 
@@ -46,17 +47,22 @@ class AppSettingsViewModel : ViewModel() {
 
     fun loadConfig() {
         viewModelScope.launch(Dispatchers.IO) {
-            val file = SuFile(configPath)
-            if (file.exists()) {
-                try {
-                    val content = SuFileInputStream.open(file).bufferedReader().use { it.readText() }
-                    if (content.isNotEmpty()) {
-                        val decoded = jsonHandler.decodeFromString<Map<String, AppConfig>>(content)
-                        withContext(Dispatchers.Main) { fullConfig = decoded }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+            try {
+                val mirrorFile = java.io.File(mirrorPath)
+                val content = if (mirrorFile.exists()) {
+                    mirrorFile.readText()
+                } else {
+                    val file = SuFile(configPath)
+                    if (file.exists()) {
+                        SuFileInputStream.open(file).bufferedReader().use { it.readText() }
+                    } else ""
                 }
+                if (content.isNotEmpty()) {
+                    val decoded = jsonHandler.decodeFromString<Map<String, AppConfig>>(content)
+                    withContext(Dispatchers.Main) { fullConfig = decoded }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -65,6 +71,13 @@ class AppSettingsViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val jsonString = jsonHandler.encodeToString(newMap)
+                runCatching {
+                    val mirrorFile = java.io.File(mirrorPath)
+                    mirrorFile.parentFile?.mkdirs()
+                    val tmp = java.io.File(mirrorFile.parentFile, "azenithApplist.json.tmp")
+                    tmp.writeText(jsonString)
+                    tmp.renameTo(mirrorFile)
+                }
                 RootUtils.writeRootFile(configPath, jsonString)
 
                 withContext(Dispatchers.Main) { fullConfig = newMap }
