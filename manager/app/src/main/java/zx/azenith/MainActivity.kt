@@ -1436,8 +1436,7 @@ fun BottomNavBar(
                         // fills to the bottom edge instead of stopping above it.
                         .padding(bottom = navInset * pinnedProgress),
                     horizontalArrangement = Arrangement.spacedBy(
-                        if (navLabels == NavLabelMode.Never) 0.dp
-                        else NAV_PILL_GAP * navScale * navSpacing * floatingAmount,
+                        NAV_PILL_GAP * navScale * navSpacing * floatingAmount,
                         Alignment.CenterHorizontally
                     ),
                     verticalAlignment = Alignment.CenterVertically
