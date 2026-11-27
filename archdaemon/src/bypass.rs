@@ -1083,7 +1083,7 @@ fn write_check_report(lines: &[String], result: &str) -> String {
 }
 
 pub fn check_bypass_compatibility() -> i32 {
-    println!("\u{1b}[36m[Bypass Charge Compatibility Check]\u{1b}[0m Initializing...");
+    println!("\u{1b}[36m[Standby Charge Compatibility Check]\u{1b}[0m Initializing...");
 
     replay_pending_restore();
 
@@ -1256,7 +1256,7 @@ pub fn check_bypass_compatibility() -> i32 {
         return 0;
     }
 
-    println!("\n\u{1b}[1;31m[-]\u{1b}[0m Final Result: No compatible bypass node found.");
+    println!("\n\u{1b}[1;31m[-]\u{1b}[0m Final Result: No compatible standby charge node found.");
     println!("\u{1b}[33m[INFO]\u{1b}[0m Summary: {} Scanned, {} Tested, {} Skipped.\u{1b}[0m", total_nodes, available_count, skipped_count);
 
     // A scan is a diagnostic, not a decision: leave the stored configuration
@@ -1308,7 +1308,7 @@ pub fn test_bypass_node_by_name(name: &str) -> i32 {
 }
 
 fn test_single_node(node: &BypassNode) -> i32 {
-    println!("\n\u{1b}[36m[Bypass Charge Test - Single Node]\u{1b}[0m Initializing...");
+    println!("\n\u{1b}[36m[Standby Charge Test - Single Node]\u{1b}[0m Initializing...");
 
     std::thread::sleep(std::time::Duration::from_secs(2));
 
@@ -1369,7 +1369,7 @@ fn test_single_node(node: &BypassNode) -> i32 {
 // print_bypass_path_list
 // ---------------------------------------------------------------------------
 pub fn print_bypass_path_list() {
-    println!("\n\u{1b}[36m[AZenith Available Bypass Path List]\u{1b}[0m");
+    println!("\n\u{1b}[36m[AZenith Available Standby Charge Path List]\u{1b}[0m");
     println!("---------------------------------------------------------------------------------------");
     println!(" {:<30} | {:<10} | {}", "NODE NAME", "STATUS", "SYSFS/PROC PATH");
     println!("---------------------------------------------------------------------------------------");

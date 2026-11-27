@@ -256,12 +256,12 @@ pub fn print_help() {
     println!();
     println!("     -actv, --appactivity      Open AZenith App Main Activity");
     println!();
-    println!("     -cbc,  --checkbypasschg   Check bypass charge compatibility");
-    println!("     -tb,   --testbypass <NODE> Test specific bypass node for 10 seconds");
+    println!("     -cbc,  --checkbypasschg   Check standby charge compatibility");
+    println!("     -tb,   --testbypass <NODE> Test specific standby charge node for 10 seconds");
     println!("                                (or --testbypass --path=NODE_NAME)");
     println!();
-    println!("     -bpl,  --bypasspathlist   Show all embedded bypass charging paths");
-    println!("     -rp,   --restorepending   Undo a bypass node left ON by an interrupted test");
+    println!("     -bpl,  --bypasspathlist   Show all embedded standby charge paths");
+    println!("     -rp,   --restorepending   Undo a standby charge node left ON by an interrupted test");
     println!();
     println!("            --config-get <KEY> Read a configuration field from config.json");
     println!("            --config-set <KEY> <VAL>");
