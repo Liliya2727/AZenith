@@ -432,6 +432,12 @@ fn process_event(
                     if let Ok(s) = line {
                         let trimmed = s.trim().to_string();
                         let ai_state = trimmed;
+                        let _ = crate::io::write2file(
+                            super::core::DAEMON_MODES_APP,
+                            false,
+                            false,
+                            &format!("{ai_state}\n"),
+                        );
                         if let Some(b) = archconfig::parse_bool_flexible(&ai_state) {
                             if ctx.config.auto_mode != b {
                                 ctx.config.auto_mode = b;
@@ -569,6 +575,7 @@ fn handle_config_json_event(ctx: &mut DaemonContext) {
     if old_cfg.auto_mode != new_cfg.auto_mode {
         let ai_state = if new_cfg.auto_mode { "1" } else { "0" };
         let _ = crate::io::write2file(DAEMON_MODES, false, false, &format!("{ai_state}\n"));
+        let _ = crate::io::write2file(super::core::DAEMON_MODES_APP, false, false, &format!("{ai_state}\n"));
         if ctx.is_initialize_complete && ctx.prev_ai_state_str() != ai_state {
             log_info!("inotify", "config.json auto_mode toggled action=reapply_balanced");
             ctx.profile.cur_mode = ProfileMode::PerfCommon;

@@ -169,6 +169,19 @@ pub fn reload_gamelist_cache_at(ctx: &mut crate::core::DaemonContext, path: &str
     if !ctx.is_initialize_complete {
         log_info!("apploader", "gamelist cached games={}", cache.len());
     }
+    drop(cache);
+    drop(_mutex);
+
+    if path == GAMELIST && std::path::Path::new("/data/data/zx.azenith/API").exists() {
+        let tmp = format!("{}.tmp", crate::core::GAMELIST_APP);
+        if fs::write(&tmp, &content).is_ok() {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o644));
+            let _ = fs::rename(&tmp, crate::core::GAMELIST_APP);
+        } else {
+            let _ = fs::remove_file(&tmp);
+        }
+    }
     true
 }
 

@@ -559,7 +559,20 @@ fn unique_path(dir: &Path, base: &str, ext: &str) -> std::io::Result<(String, Pa
 }
 
 fn write_record_state(content: &str) {
+    let line = format!("{}\n", content);
     let tmp = format!("{}.tmp", RECORD_STATE_PATH);
-    let _ = std::fs::write(&tmp, format!("{}\n", content));
+    let _ = std::fs::write(&tmp, &line);
     let _ = std::fs::rename(&tmp, RECORD_STATE_PATH);
+
+    const RECORD_STATE_APP_PATH: &str = "/data/data/zx.azenith/API/record_state";
+    if std::path::Path::new("/data/data/zx.azenith/API").exists() {
+        let app_tmp = format!("{}.tmp", RECORD_STATE_APP_PATH);
+        if std::fs::write(&app_tmp, &line).is_ok() {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&app_tmp, std::fs::Permissions::from_mode(0o644));
+            let _ = std::fs::rename(&app_tmp, RECORD_STATE_APP_PATH);
+        } else {
+            let _ = std::fs::remove_file(&app_tmp);
+        }
+    }
 }

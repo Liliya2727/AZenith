@@ -371,6 +371,20 @@ pub fn expose_telemetry_access() {
     fileops::create_dir_all_best_effort("/data/data/zx.azenith/API");
     fileops::create_dir_all_best_effort("/data/adb/.config/AZenith/API");
     archconfig::sync_mirror();
+    let mirror_pairs = [
+        ("/data/adb/.config/AZenith/API/current_profile", "/data/data/zx.azenith/API/current_profile"),
+        ("/data/adb/.config/AZenith/API/gameinfo", "/data/data/zx.azenith/API/gameinfo"),
+        ("/data/adb/.config/AZenith/API/current_modes", "/data/data/zx.azenith/API/current_modes"),
+        ("/data/adb/.config/AZenith/API/record_state", "/data/data/zx.azenith/API/record_state"),
+        ("/data/adb/.config/AZenith/API/current_fps", "/data/data/zx.azenith/API/current_fps"),
+        ("/data/adb/.config/AZenith/app_status", "/data/data/zx.azenith/API/app_status"),
+        ("/data/adb/.config/AZenith/gamelist/azenithApplist.json", "/data/data/zx.azenith/API/azenithApplist.json"),
+    ];
+    for (src, dst) in &mirror_pairs {
+        if let Ok(content) = std::fs::read_to_string(src) {
+            let _ = crate::io::write2file(dst, false, false, &content);
+        }
+    }
     chmod("/data/data/zx.azenith/API", 0o777);
     chmodg("/data/data/zx.azenith/API/*", 0o644);
     chmodg("/data/adb/.config/AZenith/API/*", 0o644);
