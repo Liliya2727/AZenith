@@ -676,6 +676,7 @@ object GamepadFocusNav {
     }
 
     fun restoreFocus(): Boolean {
+        if (!GamepadInput.active) return false
         val scope = currentScope()
         if (scope != null && lastKeyByScope.containsKey(scope)) {
             val restoredByKey = restoreSavedFocus(scope)
@@ -888,7 +889,7 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
     LaunchedEffect(isActiveScreen) {
         if (!isActiveScreen) {
             entered = false
-        } else if (focusEnabled && (GamepadInput.dpadMode || GamepadInput.controllerConnected)) {
+        } else if (focusEnabled && GamepadInput.dpadMode) {
             // When this screen/page becomes active again (e.g. returning from a
             // subscreen) and its rows are already composed, explicitly restore the
             // saved focus for this scope before falling back to generic seeding.
@@ -900,15 +901,13 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
 
     LaunchedEffect(
         GamepadInput.dpadMode,
-        GamepadInput.controllerConnected,
         pagerActive,
         page,
         GamepadFocusNav.currentPage
     ) {
         GamepadFocusNav.publishLastEntry(requester)
         if (page < 0) GamepadFocusNav.lastEntryScope = scope
-        val canSeed = focusEnabled &&
-            (GamepadInput.dpadMode || GamepadInput.controllerConnected) && isActiveScreen
+        val canSeed = focusEnabled && GamepadInput.dpadMode && isActiveScreen
         if (!canSeed) return@LaunchedEffect
 
         val seedStart = SystemClock.uptimeMillis()

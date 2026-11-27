@@ -127,6 +127,7 @@ fun AZenithDialog(
         if (visible) {
             wasVisible = true
             Log.d("PAD", "dialog opened dismissible=${spec.dismissible}")
+            if (!GamepadInput.active) return@LaunchedEffect
             dialogRequester.requestFocus()
             // Focusing the root is not enough: Cross invokes the activation of
             // an outlined control, so step into the first button/checkbox and
@@ -154,11 +155,13 @@ fun AZenithDialog(
             // The dialog's focused node is disposed along with it and nothing re-seeds focus,
             // so without this the d-pad has nothing to move from once a dialog closes.
             wasVisible = false
+            if (!GamepadInput.active) return@LaunchedEffect
             // The card's exit transition is Motion.DurationShort4 (200ms). Restoring
             // before it finishes focuses a dialog row that is still composed but on
             // its way out; when that row is disposed focus vanishes with it and X
             // has nothing left to activate. Wait for the rows to be gone first.
             kotlinx.coroutines.delay(Motion.DurationShort4.toLong() + 80L)
+            if (!GamepadInput.active) return@LaunchedEffect
             val returned = GamepadFocusNav.restoreFocus()
             Log.d("PAD", "dialog closed focusReturn=$returned rowFocus=${GamepadShortcuts.hasRowFocus}")
         }
