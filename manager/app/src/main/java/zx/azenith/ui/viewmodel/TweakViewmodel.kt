@@ -28,7 +28,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.io.SuFile
-import com.topjohnwu.superuser.io.SuFileOutputStream
 import zx.azenith.ui.util.RootUtils
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -230,14 +229,7 @@ class TweakViewModel : ViewModel() {
 
             if (restoreApplist && backupData.containsKey(APPLIST_BACKUP_KEY)) {
                 val applistContent = backupData[APPLIST_BACKUP_KEY]!!
-                val file = SuFile(APPLIST_PATH)
-                val parent = file.parentFile
-                if (parent != null && !parent.exists()) {
-                    parent.mkdirs()
-                }
-                SuFileOutputStream.open(file).use { outputStream ->
-                    outputStream.write(applistContent.toByteArray())
-                }
+                RootUtils.writeRootFile(APPLIST_PATH, applistContent)
             }
             
             RootUtils.touchRootFile("/data/adb/modules/AZenith/reboot")
