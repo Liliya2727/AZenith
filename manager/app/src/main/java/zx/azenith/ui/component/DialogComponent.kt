@@ -67,17 +67,25 @@ private const val TAG = "DialogComponent"
 val LocalAppHazeState = compositionLocalOf<HazeState?> { null }
 val LocalRootDialogs = compositionLocalOf<MutableMap<String, @Composable () -> Unit>> { error("RootDialogsProvider not found") }
 val LocalActiveDialogCount = androidx.compose.runtime.compositionLocalOf { androidx.compose.runtime.mutableStateOf(0) }
+@OptIn(ExperimentalSharedTransitionApi::class)
+val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun RootDialogsProvider(content: @Composable () -> Unit) {
     val dialogs = remember { mutableStateMapOf<String, @Composable () -> Unit>() }
-    CompositionLocalProvider(LocalRootDialogs provides dialogs) {
-        // The whole main window, dialogs included, so one tap hook covers everything
-        // composed inline. The bottom sheet and Dialog hosts are separate windows and
-        // carry their own.
-        Box(modifier = Modifier.fillMaxSize().tapHaptic()) {
-            content()
-            dialogs.values.forEach { it() }
+    SharedTransitionLayout {
+        CompositionLocalProvider(
+            LocalRootDialogs provides dialogs,
+            LocalSharedTransitionScope provides this
+        ) {
+            // The whole main window, dialogs included, so one tap hook covers everything
+            // composed inline. The bottom sheet and Dialog hosts are separate windows and
+            // carry their own.
+            Box(modifier = Modifier.fillMaxSize().tapHaptic()) {
+                content()
+                dialogs.values.forEach { it() }
+            }
         }
     }
 }

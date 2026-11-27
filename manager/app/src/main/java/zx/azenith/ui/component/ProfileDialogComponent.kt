@@ -73,6 +73,7 @@ fun ProfileDialog(
     onDismiss: () -> Unit,
     onProfile: (String) -> Unit,
     origin: Offset = Offset(0.5f, 0.28f),
+    sharedKey: String? = null,
     currentProfile: String? = null
 ) {
     val options = getProfileOptions()
@@ -81,6 +82,7 @@ fun ProfileDialog(
         visible = show,
         onDismiss = onDismiss,
         origin = origin,
+        sharedKey = sharedKey,
         spec = DialogSpec.Choice
     ) {
         Text(

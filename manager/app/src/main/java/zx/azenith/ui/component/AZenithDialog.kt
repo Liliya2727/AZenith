@@ -23,6 +23,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -83,6 +87,7 @@ import zx.azenith.ui.theme.azShape
  *
  * [animate] false drops straight to a plain M3 popup with no motion.
  */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AZenithDialog(
     visible: Boolean,
@@ -91,6 +96,7 @@ fun AZenithDialog(
     spec: DialogSpec = DialogSpec(),
     origin: Offset = Offset(0.5f, 0.5f),
     animate: Boolean = true,
+    sharedKey: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val context = LocalContext.current
@@ -98,6 +104,8 @@ fun AZenithDialog(
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val dialogsAnimated = animate
     val hazeState = LocalAppHazeState.current
+    val sharedScope = LocalSharedTransitionScope.current
+    val useSharedBounds = sharedKey != null && sharedScope != null && dialogsAnimated
 
     val activeDialogCount = LocalActiveDialogCount.current
     DisposableEffect(visible, spec.registersActiveDialog) {
@@ -235,14 +243,37 @@ fun AZenithDialog(
         ) {
             AnimatedVisibility(
                 visible = visible,
-                enter = if (dialogsAnimated) Motion.cardEnterFrom(cardOrigin) else EnterTransition.None,
-                exit = if (dialogsAnimated) Motion.cardExitTo(cardOrigin) else ExitTransition.None
+                enter = when {
+                    !dialogsAnimated -> EnterTransition.None
+                    useSharedBounds -> fadeIn(animationSpec = tween(180))
+                    else -> Motion.cardEnterFrom(cardOrigin)
+                },
+                exit = when {
+                    !dialogsAnimated -> ExitTransition.None
+                    useSharedBounds -> fadeOut(animationSpec = tween(150))
+                    else -> Motion.cardExitTo(cardOrigin)
+                }
             ) {
+                val cardShape = azShape(spec.cornerRadius)
+                val sharedModifier = if (useSharedBounds && sharedScope != null && sharedKey != null) {
+                    with(sharedScope) {
+                        Modifier.sharedBounds(
+                            sharedContentState = rememberSharedContentState(key = sharedKey),
+                            animatedVisibilityScope = this@AnimatedVisibility,
+                            enter = fadeIn(animationSpec = tween(180)),
+                            exit = fadeOut(animationSpec = tween(150)),
+                            clipInOverlayDuringTransition = OverlayClip(cardShape)
+                        )
+                    }
+                } else {
+                    Modifier
+                }
                 Box(
                     modifier = Modifier
+                        .then(sharedModifier)
                         .widthIn(min = spec.minWidth, max = spec.maxWidth)
                         .onGloballyPositioned { cardSize = it.size }
-                        .clip(azShape(spec.cornerRadius))
+                        .clip(cardShape)
                         .then(
                             if (isBlurEnabled && hazeState != null) {
                                 Modifier.hazeBlur(
