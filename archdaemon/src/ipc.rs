@@ -374,16 +374,17 @@ fn process_event(
 
     const CLOSE_WRITE: u32 = 0x00000008;
     const MOVED_TO: u32 = 0x00000080;
-    const CREATE: u32 = 0x00000100;
 
-    // Check for IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE on the final applist
-    // name. Exact match (not `contains`) avoids temp files such as
-    // `azenithApplist.json.tmp` triggering a parse before the rename.
-    if (mask & (CLOSE_WRITE | MOVED_TO | CREATE)) != 0 && name == "azenithApplist.json" {
+    // Check for IN_CLOSE_WRITE | IN_MOVED_TO on the final applist name.
+    // Ignore IN_CREATE so an in-place open(O_CREAT|O_TRUNC) does not trigger a
+    // read while the file is still 0 bytes. Only arm the debounce when the
+    // reload succeeds so a transient empty read never swallows the real write.
+    if (mask & (CLOSE_WRITE | MOVED_TO)) != 0 && name == "azenithApplist.json" {
         let now = now_millis();
-        if now.saturating_sub(LAST_APPLIST_RELOAD_MS.load(Ordering::Relaxed)) >= APPLIST_RELOAD_DEBOUNCE_MS {
+        if now.saturating_sub(LAST_APPLIST_RELOAD_MS.load(Ordering::Relaxed)) >= APPLIST_RELOAD_DEBOUNCE_MS
+            && reload_gamelist_cache(ctx)
+        {
             LAST_APPLIST_RELOAD_MS.store(now, Ordering::Relaxed);
-            reload_gamelist_cache(ctx);
             ctx.need_profile_checkup = true;
         }
     }
@@ -391,7 +392,7 @@ fn process_event(
     // Watch "config.json" exact match (ignore .tmp files). Debounce and diff
     // old vs new config so only changed fields trigger actions and self-writes
     // (where ctx.config already equals the on-disk config) are no-ops.
-    if (mask & (CLOSE_WRITE | MOVED_TO | CREATE)) != 0 && name == "config.json" {
+    if (mask & (CLOSE_WRITE | MOVED_TO)) != 0 && name == "config.json" {
         let now = now_millis();
         if now.saturating_sub(LAST_CONFIG_RELOAD_MS.load(Ordering::Relaxed)) >= CONFIG_RELOAD_DEBOUNCE_MS {
             LAST_CONFIG_RELOAD_MS.store(now, Ordering::Relaxed);

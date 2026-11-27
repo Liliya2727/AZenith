@@ -102,11 +102,11 @@ pub fn free_gamelist_cache() {
 // ---------------------------------------------------------------------------
 // reload_gamelist_cache
 // ---------------------------------------------------------------------------
-pub fn reload_gamelist_cache(ctx: &mut crate::core::DaemonContext) {
+pub fn reload_gamelist_cache(ctx: &mut crate::core::DaemonContext) -> bool {
     reload_gamelist_cache_at(ctx, GAMELIST)
 }
 
-pub fn reload_gamelist_cache_at(ctx: &mut crate::core::DaemonContext, path: &str) {
+pub fn reload_gamelist_cache_at(ctx: &mut crate::core::DaemonContext, path: &str) -> bool {
     // Read and parse into a fresh vec FIRST. Holding CACHE_MUTEX plus the
     // write lock across read_to_string + serde_json::from_str used to block
     // every get_gamestart() caller for the whole parse, and a failed rewrite
@@ -115,52 +115,51 @@ pub fn reload_gamelist_cache_at(ctx: &mut crate::core::DaemonContext, path: &str
         Ok(c) => c,
         Err(e) => {
             log_error!("apploader", "gamelist open failed path={} errno={}", path, e.raw_os_error().unwrap_or(-1));
-            return;
+            return false;
         }
     };
 
-    let new_cache: Vec<GameConfig> = if content.trim().is_empty() {
+    if content.trim().is_empty() {
         log_warn!("apploader", "gamelist empty path={}", path);
-        Vec::new()
-    } else {
-        let root: serde_json::Value = match serde_json::from_str(&content) {
-            Ok(value) => value,
-            Err(error) => {
-                log_error!("apploader", "gamelist JSON parse failed path={} error={}", path, error);
-                return;
-            }
-        };
-        let Some(games) = root.as_object() else {
-            log_warn!("apploader", "gamelist root must be a JSON object path={}", path);
-            return;
-        };
-        let mut parsed = Vec::with_capacity(games.len());
-        for (package, value) in games {
-            let Some(fields) = value.as_object() else { continue };
-            if package.is_empty() { continue; }
-            let mut entry = GameConfig::default();
-            GameConfig::set_field(&mut entry.package, package);
-            macro_rules! set {
-                ($field:ident, $key:literal) => {
-                    GameConfig::set_field(
-                        &mut entry.$field,
-                        fields.get($key).and_then(serde_json::Value::as_str).unwrap_or("default"),
-                    );
-                };
-            }
-            set!(perf_lite_mode, "perf_lite_mode");
-            set!(dnd_on_gaming, "dnd_on_gaming");
-            set!(app_priority, "app_priority");
-            set!(game_preload, "game_preload");
-            set!(refresh_rate, "refresh_rate");
-            set!(renderer, "renderer");
-            set!(resolution_downscale, "resolution_downscale");
-            set!(resolution_fps, "resolution_fps");
-            set!(bypass_charging, "bypass_charging");
-            parsed.push(entry);
+        return false;
+    }
+
+    let root: serde_json::Value = match serde_json::from_str(&content) {
+        Ok(value) => value,
+        Err(error) => {
+            log_error!("apploader", "gamelist JSON parse failed path={} error={}", path, error);
+            return false;
         }
-        parsed
     };
+    let Some(games) = root.as_object() else {
+        log_warn!("apploader", "gamelist root must be a JSON object path={}", path);
+        return false;
+    };
+    let mut new_cache = Vec::with_capacity(games.len());
+    for (package, value) in games {
+        let Some(fields) = value.as_object() else { continue };
+        if package.is_empty() { continue; }
+        let mut entry = GameConfig::default();
+        GameConfig::set_field(&mut entry.package, package);
+        macro_rules! set {
+            ($field:ident, $key:literal) => {
+                GameConfig::set_field(
+                    &mut entry.$field,
+                    fields.get($key).and_then(serde_json::Value::as_str).unwrap_or("default"),
+                );
+            };
+        }
+        set!(perf_lite_mode, "perf_lite_mode");
+        set!(dnd_on_gaming, "dnd_on_gaming");
+        set!(app_priority, "app_priority");
+        set!(game_preload, "game_preload");
+        set!(refresh_rate, "refresh_rate");
+        set!(renderer, "renderer");
+        set!(resolution_downscale, "resolution_downscale");
+        set!(resolution_fps, "resolution_fps");
+        set!(bypass_charging, "bypass_charging");
+        new_cache.push(entry);
+    }
 
     let _mutex = crate::core::CACHE_MUTEX.get().unwrap().lock().unwrap();
     let cache_lock = crate::core::G_GAME_CACHE.get().expect("game cache initialized");
@@ -170,6 +169,7 @@ pub fn reload_gamelist_cache_at(ctx: &mut crate::core::DaemonContext, path: &str
     if !ctx.is_initialize_complete {
         log_info!("apploader", "gamelist cached games={}", cache.len());
     }
+    true
 }
 
 #[cfg(test)]
