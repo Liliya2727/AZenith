@@ -474,7 +474,7 @@ private fun TweaksMainSubPane(
 
     val bypassEnabled by produceState(false) {
         value = withContext(Dispatchers.IO) {
-            ConfigUtils.load().bypassChg
+            ConfigUtils.load().standbyChg
         }
     }
 
@@ -1039,8 +1039,8 @@ private fun BypassChargingSubPane(
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val cfg = ConfigUtils.load()
-            bypassPath = cfg.bypassPath
-            bypassState = cfg.bypassChg
+            bypassPath = cfg.standbyPath
+            bypassState = cfg.standbyChg
         }
         refreshNodes()
     }
@@ -1292,7 +1292,7 @@ private fun BypassChargingSubPane(
                     onPositioned = if (isConfigured) onFirstPositioned else null,
                     onCheckedChange = { isChecked ->
                         bypassState = isChecked
-                        ConfigUtils.setBool("bypass_chg", isChecked)
+                        ConfigUtils.setBool("standby_chg", isChecked)
                     },
                     shape = masterSwitchShape
                 )
@@ -1482,7 +1482,7 @@ private fun BypassChargingSubPane(
             selectedOption = availableNodes.firstOrNull { it.first == bypassPath },
             onOptionSelected = { (nodeName, _) ->
                 bypassPath = nodeName
-                ConfigUtils.set("bypass_path", nodeName)
+                ConfigUtils.set("standby_path", nodeName)
             },
             optionLabel = { it.first },
             optionSupporting = { it.second },
@@ -1512,7 +1512,7 @@ private fun BypassChargingSubPane(
             }
             val applyNodeAction = {
                 bypassPath = node
-                ConfigUtils.set("bypass_path", node)
+                ConfigUtils.set("standby_path", node)
                 foundWorkingNode = null
             }
             CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {

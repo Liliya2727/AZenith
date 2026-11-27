@@ -139,7 +139,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
 
     fun refreshBypassData(onComplete: ((List<Pair<String, String>>) -> Unit)? = null) {
-        activePath = ConfigUtils.load().bypassPath.ifEmpty { "UNSUPPORTED" }
+        activePath = ConfigUtils.load().standbyPath.ifEmpty { "UNSUPPORTED" }
         
         scope.launch(Dispatchers.IO) {
             val binaryPath = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
@@ -218,7 +218,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
 
     fun applyBypassNode(nodeName: String) {
-        ConfigUtils.set("bypass_path", nodeName)
+        ConfigUtils.set("standby_path", nodeName)
         activePath = nodeName
     }
 

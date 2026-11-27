@@ -2161,7 +2161,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         else -> cfg.autoMode
                     }
                     val liteEnabled = PropertyUtils.get(LITE_PROP, "0") == "1"
-                    val bypassActive = cfg.bypassChg
+                    val bypassActive = cfg.standbyChg
 
                     // FPS Recorder status (daemon-owned state file, for the overlay).
                     val recordStateText = (telemetryCollector.readFileTextDirectOrSu(APP_RECORD_STATE_PATH, false)

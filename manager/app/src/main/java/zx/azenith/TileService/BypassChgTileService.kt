@@ -48,19 +48,19 @@ class BypassChgTileService : TileService() {
     }
 
     private fun setBypassChg(enabled: Boolean) {
-        ConfigUtils.setBool("bypass_chg", enabled)
+        ConfigUtils.setBool("standby_chg", enabled)
     }
 
     private fun updateTileState() {
         val tile = qsTile ?: return
         val cfg = ConfigUtils.load()
-        val bypassPath = cfg.bypassPath
+        val bypassPath = cfg.standbyPath
 
         if (bypassPath == "UNSUPPORTED") {
             tile.state = Tile.STATE_UNAVAILABLE
             updateSubtitle(tile, getString(R.string.status_not_supported))
         } else {
-            val isEnabled = cfg.bypassChg
+            val isEnabled = cfg.standbyChg
             tile.state = if (isEnabled) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             updateSubtitle(tile, getString(if (isEnabled) R.string.status_active else R.string.status_inactive))
         }

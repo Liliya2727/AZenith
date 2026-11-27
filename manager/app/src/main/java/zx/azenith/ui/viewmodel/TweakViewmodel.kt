@@ -130,7 +130,7 @@ class TweakViewModel : ViewModel() {
         "scheme_config",
         "disable_thermal",
         "use_fpsgo",
-        "bypass_chg_threshold",
+        "standby_chg",
         "preload_budget",
         "custom_default_cpu_gov",
         "custom_powersave_cpu_gov",

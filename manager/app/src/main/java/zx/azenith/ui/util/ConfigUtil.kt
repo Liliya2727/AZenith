@@ -87,10 +87,9 @@ data class AZenithConfig(
     @SerialName("use_fpsgo") val useFpsgo: Boolean = false,
     val fpsged: Boolean = false,
 
-    // Bypass Charging
-    @SerialName("bypass_chg") val bypassChg: Boolean = false,
-    @SerialName("bypass_path") val bypassPath: String = "NEED_SETUP",
-    @SerialName("bypass_chg_threshold") val bypassChgThreshold: Int = 20
+    // Standby Charge
+    @SerialName("standby_chg") val standbyChg: Boolean = false,
+    @SerialName("standby_path") val standbyPath: String = "NEED_SETUP"
 )
 
 object ConfigUtils {
@@ -272,9 +271,8 @@ object ConfigUtils {
             "disable_thermal", "persist.sys.azenithconf.DThermal" -> "disable_thermal"
             "use_fpsgo", "persist.sys.azenithconf.usefpsgo" -> "use_fpsgo"
             "fpsged", "persist.sys.azenithconf.fpsged" -> "fpsged"
-            "bypass_chg", "persist.sys.azenithconf.bypasschg" -> "bypass_chg"
-            "bypass_path", "persist.sys.azenithconf.bypasspath" -> "bypass_path"
-            "bypass_chg_threshold", "persist.sys.azenithconf.bypasschgthreshold" -> "bypass_chg_threshold"
+            "standby_chg", "bypass_chg", "persist.sys.azenithconf.bypasschg" -> "standby_chg"
+            "standby_path", "bypass_path", "persist.sys.azenithconf.bypasspath" -> "standby_path"
             else -> null
         }
     }
@@ -322,9 +320,8 @@ object ConfigUtils {
             "disable_thermal" -> cfg.disableThermal.toString()
             "use_fpsgo" -> cfg.useFpsgo.toString()
             "fpsged" -> cfg.fpsged.toString()
-            "bypass_chg" -> cfg.bypassChg.toString()
-            "bypass_path" -> cfg.bypassPath
-            "bypass_chg_threshold" -> cfg.bypassChgThreshold.toString()
+            "standby_chg" -> cfg.standbyChg.toString()
+            "standby_path" -> cfg.standbyPath
             else -> ""
         }
     }
@@ -373,9 +370,8 @@ object ConfigUtils {
             "disable_thermal" -> cfg.copy(disableThermal = parseFlexibleBool(valStr))
             "use_fpsgo" -> cfg.copy(useFpsgo = parseFlexibleBool(valStr))
             "fpsged" -> cfg.copy(fpsged = parseFlexibleBool(valStr))
-            "bypass_chg" -> cfg.copy(bypassChg = parseFlexibleBool(valStr))
-            "bypass_path" -> cfg.copy(bypassPath = valStr)
-            "bypass_chg_threshold" -> cfg.copy(bypassChgThreshold = valStr.trim().toIntOrNull() ?: 20)
+            "standby_chg" -> cfg.copy(standbyChg = parseFlexibleBool(valStr))
+            "standby_path" -> cfg.copy(standbyPath = valStr)
             else -> cfg
         }
     }

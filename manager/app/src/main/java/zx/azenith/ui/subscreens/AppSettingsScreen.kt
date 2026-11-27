@@ -127,7 +127,7 @@ fun AppSettingsScreen(
     var bypassSupported by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         bypassSupported = withContext(Dispatchers.IO) {
-            val path = ConfigUtils.load().bypassPath
+            val path = ConfigUtils.load().standbyPath
             path != "UNSUPPORTED" && path != "NEED_SETUP"
         }
     }

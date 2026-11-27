@@ -300,7 +300,7 @@ class ZXSidePanelStateHolder {
     val quickTools = mutableStateListOf(
         SidePanelQuickTool(id = "screenshot", name = "Screenshot", icon = "screenshot_region", active = false),
         SidePanelQuickTool(id = "record", name = "Screen record", icon = "videocam", active = false),
-        SidePanelQuickTool(id = "bypass_charging", name = "Bypass charging", icon = "bolt", active = false),
+        SidePanelQuickTool(id = "bypass_charging", name = "Standby Charge", icon = "bolt", active = false),
         SidePanelQuickTool(id = "cleanup", name = "Memory cleanup", icon = "cleaning_services", active = false)
     )
 

@@ -142,7 +142,7 @@ fun SearchScreen(
     var capabilities by remember { mutableStateOf(SearchCapabilities()) }
     LaunchedEffect(Unit) {
         capabilities = withContext(Dispatchers.IO) {
-            val bypassPath = ConfigUtils.load().bypassPath
+            val bypassPath = ConfigUtils.load().standbyPath
             val maliCheck = Shell.cmd(
                 "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf checkmalipath"
             ).exec().out.joinToString("").trim()

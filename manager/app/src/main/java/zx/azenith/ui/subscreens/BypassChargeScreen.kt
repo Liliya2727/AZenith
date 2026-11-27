@@ -169,15 +169,15 @@ fun BypassChargeScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val cfg = ConfigUtils.load()
-            bypassPath = cfg.bypassPath
-            bypassChgState = cfg.bypassChg
+            bypassPath = cfg.standbyPath
+            bypassChgState = cfg.standbyChg
         }
     }
 
     val onToggleBypass: (Boolean) -> Unit = { isChecked ->
         bypassChgState = isChecked
         writeScope.launch(Dispatchers.IO) {
-            ConfigUtils.setBool("bypass_chg", isChecked)
+            ConfigUtils.setBool("standby_chg", isChecked)
         }
     }
 
