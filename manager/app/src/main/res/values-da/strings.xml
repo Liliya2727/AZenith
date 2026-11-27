@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Balanceret Mali GPU-regulator</string>
     <string name="balanced_mali_gov_desc">GPU-regulator brugt i balanceret profil</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass-strøm</string>
-    <string name="bcharging_desc">Konfigurer AZenith bypass-strømfunktion</string>
+    <string name="bcharging">Standby-strøm</string>
+    <string name="bcharging_desc">Konfigurer AZenith standby-strømfunktion</string>
     <string name="bypass_not_supported">Denne enhed understøtter ikke denne funktion</string>
     <string name="cd_app_icon">App-ikon</string>
     <string name="cd_back">Tilbage</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Nuværende profil</string>
     <string name="custom">Tilpasset</string>
     <string name="CompatibilityCheck">Kompatibilitetstjek</string>
-    <string name="CompatibilityCheck_desc">Udfør diagnostik for at kontrollere om enheden understøtter bypass-strøm</string>
+    <string name="CompatibilityCheck_desc">Udfør diagnostik for at kontrollere om enheden understøtter standby-strøm</string>
     <string name="default_cpu_gov">Standard CPU-regulator</string>
     <string name="default_cpu_gov_desc">Regulator brugt i balanceret profil</string>
     <string name="default_label">Standard</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Gendannelse mislykkedes</string>
     <string name="dialog_start_hw_test_content">AZenith vil udføre en strømspændingsfaldstest på den indbyggede batteriknude. Diagnostikken er sikker og varer et par sekunder</string>
     <string name="dialog_start_hw_test_title">Start hardwaretest?</string>
-    <string name="dialog_switch_node_content">Vil du tvinge skift af bypass-konfigurationsmål til [%1$s]?</string>
+    <string name="dialog_switch_node_content">Vil du tvinge skift af standby-konfigurationsmål til [%1$s]?</string>
     <string name="dialog_switch_node_title">Skift kontrolknude?</string>
     <string name="dialog_update_available_confirm">Opdater nu</string>
     <string name="dialog_update_available_content">App-managerversion (%1$d) er lavere end modulversion (%2$d). Vil du opdatere nu for at få de nyeste funktioner?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Forstyr ikke under spil</string>
     <string name="dnd_mode_gaming_desc">Aktiver automatisk Forstyr ikke under præstationsprofil</string>
     <string name="done">Færdig</string>
-    <string name="enable_bypass_charge">Aktiver bypass-strøm</string>
-    <string name="enable_bypass_charge_desc">Aktiver bypass-strøm under præstationsprofil</string>
+    <string name="enable_bypass_charge">Aktiver standby-strøm</string>
+    <string name="enable_bypass_charge_desc">Aktiver standby-strøm under præstationsprofil</string>
     <string name="err_failed_load_changelog">Kunne ikke indlæse ændringslog</string>
     <string name="err_invalid_backup">Sikkerhedskopifilen er ugyldig eller beskadiget (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -292,7 +292,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Nuværende bypass-strømknude</string>
+    <string name="str_active_bypass_node">Nuværende standby-strømknude</string>
     <string name="str_adjust_and_calibrate_your_scre">Juster skærmfarver og mætning via SurfaceFlinger-tjenesten uden behov for kernelunderstøttelse</string>
     <string name="str_adjust_gradient">Juster gradient</string>
     <string name="str_app_info">App-oplysninger</string>
@@ -350,7 +350,7 @@
     <string name="str_maintainer">Vedligeholder</string>
     <string name="str_max_video_size">Video størrelse maks. 50 MB</string>
     <string name="str_no_active_nodes">Ingen tilgængelige aktive knudepunkter</string>
-    <string name="str_no_active_nodes_desc">Ingen tilgængelige bypass-knudepunkter er kortlagt i systemegenskaber</string>
+    <string name="str_no_active_nodes_desc">Ingen tilgængelige standby-knudepunkter er kortlagt i systemegenskaber</string>
     <string name="str_no_compatible_nodes">Ingen kompatible knudepunkter</string>
     <string name="str_open_source">Open Source</string>
     <string name="str_package_name">Pakkenavn</string>
@@ -367,7 +367,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root-adgang nægtet. AZenith har brug for root-adgang for at køre</string>
     <string name="str_root_access_granted">Root-adgang opnået. Alt er klar!</string>
-    <string name="str_run_diagnostics_above_or_check">Kør diagnostikken ovenfor, eller kontroller om kernen indeholder bypass-strømknudepunkter</string>
+    <string name="str_run_diagnostics_above_or_check">Kør diagnostikken ovenfor, eller kontroller om kernen indeholder standby-strømknudepunkter</string>
     <string name="str_safely_test">Test enhedskompatibilitet sikkert</string>
     <string name="str_save_compressed_logs_to_a_fold">Gem komprimerede logfiler i en specificeret mappe</string>
     <string name="str_save_your_current_tweak_settin">Gem nuværende tweak-indstillinger</string>
@@ -428,7 +428,7 @@
     <string name="gov_settingsdesc">Konfigurer governor og planlæggere</string>
     <string name="gov_settingsdesc2">Konfigurer enhedens CPU-, GPU-governor og I/O-planlæggerværdier; hver værdi anvendes på hver AZenith-profil</string>
     <string name="presets">Forudindstillinger</string>
-    <string name="str_bypass_need_setup">Bypass-opladningssti er ikke konfigureret endnu. Gennemfør venligst opsætningen via kompatibilitetstjek først.</string>
+    <string name="str_bypass_need_setup">Standby-opladningssti er ikke konfigureret endnu. Gennemfør venligst opsætningen via kompatibilitetstjek først.</string>
     <string name="reboot_required_content">Denne indstilling kræver en genstart for at blive anvendt. Vil du fortsætte?</string>
     <string name="disable_auto_mode_desc">Stopper profiler i at skifte automatisk, når et spil registreres. Du indstiller derefter selv profilen fra feltet Current Profile på startsiden.</string>
     <string name="no_apps_found">Ingen apps matcher denne søgning</string>

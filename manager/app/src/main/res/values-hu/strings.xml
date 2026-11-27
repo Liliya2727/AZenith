@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Kiegyensúlyozott Mali GPU szabályzó</string>
     <string name="balanced_mali_gov_desc">A kiegyensúlyozott profil által használt GPU szabályzó</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass töltés</string>
-    <string name="bcharging_desc">AZenith bypass töltés funkciójának konfigurálása</string>
+    <string name="bcharging">Standby töltés</string>
+    <string name="bcharging_desc">AZenith standby töltés funkciójának konfigurálása</string>
     <string name="bypass_not_supported">A jelenlegi eszköz nem támogatja ezt a funkciót</string>
     <string name="cd_app_icon">Alkalmazásikon</string>
     <string name="cd_back">Vissza</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Jelenlegi profil</string>
     <string name="custom">Egyéni</string>
     <string name="CompatibilityCheck">Kompatibilitási ellenőrzés</string>
-    <string name="CompatibilityCheck_desc">Diagnosztika futtatása annak ellenőrzésére, hogy az eszköz támogatja-e a bypass töltést</string>
+    <string name="CompatibilityCheck_desc">Diagnosztika futtatása annak ellenőrzésére, hogy az eszköz támogatja-e a standby töltést</string>
     <string name="default_cpu_gov">Alapértelmezett CPU szabályzó</string>
     <string name="default_cpu_gov_desc">A kiegyensúlyozott profil által használt szabályzó</string>
     <string name="default_label">Alapértelmezett</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Visszaállítás sikertelen</string>
     <string name="dialog_start_hw_test_content">Az AZenith feszültségesés tesztet végez a beépített akkumulátor csomópontokon. A diagnosztika biztonságos, néhány másodpercig tart.</string>
     <string name="dialog_start_hw_test_title">Elindítsa a hardvertesztet?</string>
-    <string name="dialog_switch_node_content">Kényszeríti a bypass konfigurációs célpontjának váltását a(z) [%1$s] pontra?</string>
+    <string name="dialog_switch_node_content">Kényszeríti a standby konfigurációs célpontjának váltását a(z) [%1$s] pontra?</string>
     <string name="dialog_switch_node_title">Vezérlő csomópont váltása?</string>
     <string name="dialog_update_available_confirm">Azonnali frissítés</string>
     <string name="dialog_update_available_content">Az alkalmazáskezelő verzió (%1$d) alacsonyabb, mint a modul verzió (%2$d). Frissíti most a legújabb funkciók eléréséhez?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Játék közbeni ne zavarjanak</string>
     <string name="dnd_mode_gaming_desc">Teljesítményprofil esetén automatikus ne zavarjanak mód bekapcsolása</string>
     <string name="done">Kész</string>
-    <string name="enable_bypass_charge">Bypass töltés engedélyezése</string>
-    <string name="enable_bypass_charge_desc">Teljesítményprofil esetén bypass töltés engedélyezése</string>
+    <string name="enable_bypass_charge">Standby töltés engedélyezése</string>
+    <string name="enable_bypass_charge_desc">Teljesítményprofil esetén standby töltés engedélyezése</string>
     <string name="err_failed_load_changelog">A változásnapló betöltése sikertelen</string>
     <string name="err_invalid_backup">A biztonsági mentés fájl érvénytelen vagy sérült (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Aktív bypass csomópont</string>
+    <string name="str_active_bypass_node">Aktív standby csomópont</string>
     <string name="str_adjust_and_calibrate_your_scre">A képernyő színének és telítettségének beállítása a SurfaceFlinger szolgáltatáson keresztül, kernel-támogatás nélkül</string>
     <string name="str_adjust_gradient">Gradiens beállítása</string>
     <string name="str_app_info">Alkalmazás adatai</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Karbantartó</string>
     <string name="str_max_video_size">Videó maximális mérete 50 MB</string>
     <string name="str_no_active_nodes">Nincs aktív munkacsomópont</string>
-    <string name="str_no_active_nodes_desc">A rendszertulajdonságokban nincs elérhető bypass csomópont</string>
+    <string name="str_no_active_nodes_desc">A rendszertulajdonságokban nincs elérhető standby csomópont</string>
     <string name="str_no_compatible_nodes">Nincs kompatibilis csomópont</string>
     <string name="str_open_source">Nyílt forráskódú</string>
     <string name="str_package_name">Csomag név</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root hozzáférés megtagadva. Az AZenith-nek root hozzáférésre van szüksége a működéshez.</string>
     <string name="str_root_access_granted">Root hozzáférés biztosított, minden készen áll!</string>
-    <string name="str_run_diagnostics_above_or_check">Futtassa a fenti diagnosztikát, vagy ellenőrizze, hogy a kernel tartalmaz-e bypass töltési csomópontot</string>
+    <string name="str_run_diagnostics_above_or_check">Futtassa a fenti diagnosztikát, vagy ellenőrizze, hogy a kernel tartalmaz-e standby töltési csomópontot</string>
     <string name="str_safely_test">Biztonságos kompatibilitási teszt</string>
     <string name="str_save_compressed_logs_to_a_fold">Tömörített naplók mentése egy mappába</string>
     <string name="str_save_your_current_tweak_settin">A jelenlegi testreszabási beállítások mentése</string>

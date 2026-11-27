@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Bộ điều tốc Mali GPU cân bằng</string>
     <string name="balanced_mali_gov_desc">Bộ điều tốc GPU được sử dụng trong cấu hình cân bằng</string>
     <string name="banner">Biểu ngữ</string>
-    <string name="bcharging">Nguồn điện bypass</string>
-    <string name="bcharging_desc">Cấu hình chức năng nguồn điện bypass của AZenith</string>
+    <string name="bcharging">Nguồn điện standby</string>
+    <string name="bcharging_desc">Cấu hình chức năng nguồn điện standby của AZenith</string>
     <string name="bypass_not_supported">Thiết bị hiện tại không hỗ trợ chức năng này</string>
     <string name="cd_app_icon">Biểu tượng ứng dụng</string>
     <string name="cd_back">Quay lại</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Cấu hình hiện tại</string>
     <string name="custom">Tùy chỉnh</string>
     <string name="CompatibilityCheck">Kiểm tra tương thích</string>
-    <string name="CompatibilityCheck_desc">Thực hiện chẩn đoán để kiểm tra thiết bị có hỗ trợ nguồn điện bypass không</string>
+    <string name="CompatibilityCheck_desc">Thực hiện chẩn đoán để kiểm tra thiết bị có hỗ trợ nguồn điện standby không</string>
     <string name="default_cpu_gov">Bộ điều tốc CPU mặc định</string>
     <string name="default_cpu_gov_desc">Bộ điều tốc được sử dụng trong cấu hình cân bằng</string>
     <string name="default_label">Mặc định</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Khôi phục thất bại</string>
     <string name="dialog_start_hw_test_content">AZenith sẽ thực hiện kiểm tra sụt áp dòng điện trên nút pin tích hợp, quá trình chẩn đoán an toàn, kéo dài vài giây</string>
     <string name="dialog_start_hw_test_title">Bắt đầu kiểm tra phần cứng?</string>
-    <string name="dialog_switch_node_content">Có buộc chuyển mục tiêu cấu hình bypass sang [%1$s] không?</string>
+    <string name="dialog_switch_node_content">Có buộc chuyển mục tiêu cấu hình standby sang [%1$s] không?</string>
     <string name="dialog_switch_node_title">Chuyển đổi nút điều khiển?</string>
     <string name="dialog_update_available_confirm">Cập nhật ngay</string>
     <string name="dialog_update_available_content">Phiên bản trình quản lý ứng dụng (%1$d) thấp hơn phiên bản module (%2$d), có cập nhật ngay để có các tính năng mới nhất không?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Không làm phiền khi chơi game</string>
     <string name="dnd_mode_gaming_desc">Tự động bật không làm phiền trong cấu hình hiệu suất</string>
     <string name="done">Hoàn tất</string>
-    <string name="enable_bypass_charge">Bật nguồn điện bypass</string>
-    <string name="enable_bypass_charge_desc">Bật nguồn điện bypass trong cấu hình hiệu suất</string>
+    <string name="enable_bypass_charge">Bật nguồn điện standby</string>
+    <string name="enable_bypass_charge_desc">Bật nguồn điện standby trong cấu hình hiệu suất</string>
     <string name="err_failed_load_changelog">Tải nhật ký thay đổi thất bại</string>
     <string name="err_invalid_backup">Tệp sao lưu không hợp lệ hoặc bị hỏng (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Nút nguồn bypass hiện tại</string>
+    <string name="str_active_bypass_node">Nút nguồn standby hiện tại</string>
     <string name="str_adjust_and_calibrate_your_scre">Dựa vào dịch vụ SurfaceFlinger để điều chỉnh màu sắc và độ bão hòa màn hình, không cần hỗ trợ từ kernel</string>
     <string name="str_adjust_gradient">Điều chỉnh gradient</string>
     <string name="str_app_info">Thông tin ứng dụng</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Người bảo trì</string>
     <string name="str_max_video_size">Giới hạn kích thước video là 50MB</string>
     <string name="str_no_active_nodes">Không có nút làm việc khả dụng</string>
-    <string name="str_no_active_nodes_desc">Không có nút bypass khả dụng được ánh xạ trong thuộc tính hệ thống</string>
+    <string name="str_no_active_nodes_desc">Không có nút standby khả dụng được ánh xạ trong thuộc tính hệ thống</string>
     <string name="str_no_compatible_nodes">Không có nút tương thích</string>
     <string name="str_open_source">Mã nguồn mở</string>
     <string name="str_package_name">Tên gói</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Quyền Root bị từ chối, AZenith cần quyền Root để chạy</string>
     <string name="str_root_access_granted">Đã cấp quyền Root, mọi thứ đã sẵn sàng!</string>
-    <string name="str_run_diagnostics_above_or_check">Chạy chẩn đoán ở trên, hoặc kiểm tra kernel có chứa nút nguồn bypass không</string>
+    <string name="str_run_diagnostics_above_or_check">Chạy chẩn đoán ở trên, hoặc kiểm tra kernel có chứa nút nguồn standby không</string>
     <string name="str_safely_test">Kiểm tra tương thích thiết bị một cách an toàn</string>
     <string name="str_save_compressed_logs_to_a_fold">Lưu log nén vào thư mục chỉ định</string>
     <string name="str_save_your_current_tweak_settin">Lưu cài đặt cấu hình hiện tại</string>

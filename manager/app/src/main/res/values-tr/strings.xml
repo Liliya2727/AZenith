@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Yöneticiyi ve Zamanlayıcıları Yapılandırın</string>
     <string name="gov_settingsdesc2">Cihazınızın CPU, GPU yöneticisi ve G/Ç zamanlayıcı değerini yapılandırın, her değer her AZenith profiline uygulanır</string>
     <string name="presets">Ön Ayarlar</string>
-    <string name="str_bypass_need_setup">Bypass şarj yolu henüz ayarlanmadı. Lütfen önce Uyumluluk Denetimi aracılığıyla kurulumu tamamlayın.</string>
+    <string name="str_bypass_need_setup">Standby şarj yolu henüz ayarlanmadı. Lütfen önce Uyumluluk Denetimi aracılığıyla kurulumu tamamlayın.</string>
     <string name="reboot_required_content">Bu seçeneğin uygulanması için yeniden başlatma gerekir. Devam edilsin mi?</string>
     <string name="disable_auto_mode_desc">Bir oyun algılandığında profillerin otomatik olarak değişmesini durdurur. Daha sonra profili Ana sayfadaki Geçerli Profil kutucuğundan kendiniz ayarlarsınız.</string>
     <string name="no_apps_found">Bu aramayla eşleşen uygulama yok</string>

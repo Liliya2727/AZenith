@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Uravnoteženi Mali GPU guverner</string>
     <string name="balanced_mali_gov_desc">GPU guverner koji se koristi u uravnoteženom režimu</string>
     <string name="banner">Baner</string>
-    <string name="bcharging">Bypass punjenje</string>
-    <string name="bcharging_desc">Konfigurišite AZenith bypass punjenje</string>
+    <string name="bcharging">Standby punjenje</string>
+    <string name="bcharging_desc">Konfigurišite AZenith standby punjenje</string>
     <string name="bypass_not_supported">Ovaj uređaj ne podržava ovu funkciju</string>
     <string name="cd_app_icon">Ikona aplikacije</string>
     <string name="cd_back">Nazad</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Trenutni režim</string>
     <string name="custom">Prilagođeno</string>
     <string name="CompatibilityCheck">Provera kompatibilnosti</string>
-    <string name="CompatibilityCheck_desc">Izvršite dijagnostiku da biste proverili da li uređaj podržava bypass punjenje</string>
+    <string name="CompatibilityCheck_desc">Izvršite dijagnostiku da biste proverili da li uređaj podržava standby punjenje</string>
     <string name="default_cpu_gov">Podrazumevani CPU guverner</string>
     <string name="default_cpu_gov_desc">Guverner koji se koristi u uravnoteženom režimu</string>
     <string name="default_label">Podrazumevano</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Vraćanje nije uspelo</string>
     <string name="dialog_start_hw_test_content">AZenith će izvršiti test pada napona na čvoru interne baterije. Dijagnostički proces je bezbedan i traje nekoliko sekundi.</string>
     <string name="dialog_start_hw_test_title">Započeti hardverski test?</string>
-    <string name="dialog_switch_node_content">Želite li da forsirate prebacivanje cilja bypass konfiguracije na [%1$s]?</string>
+    <string name="dialog_switch_node_content">Želite li da forsirate prebacivanje cilja standby konfiguracije na [%1$s]?</string>
     <string name="dialog_switch_node_title">Promeniti kontrolni čvor?</string>
     <string name="dialog_update_available_confirm">Ažuriraj odmah</string>
     <string name="dialog_update_available_content">Verzija menadžera aplikacije (%1$d) je niža od verzije modula (%2$d). Želite li da odmah ažurirate da biste dobili najnovije funkcije?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Ne uznemiravaj tokom igranja</string>
     <string name="dnd_mode_gaming_desc">Automatski uključuje režim ne uznemiravaj u režimu performansi</string>
     <string name="done">Gotovo</string>
-    <string name="enable_bypass_charge">Omogući bypass punjenje</string>
-    <string name="enable_bypass_charge_desc">Omogućava bypass punjenje u režimu performansi</string>
+    <string name="enable_bypass_charge">Omogući standby punjenje</string>
+    <string name="enable_bypass_charge_desc">Omogućava standby punjenje u režimu performansi</string>
     <string name="err_failed_load_changelog">Učitavanje dnevnika promena nije uspelo</string>
     <string name="err_invalid_backup">Datoteka rezervne kopije je nevažeća ili oštećena (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Trenutni bypass čvor</string>
+    <string name="str_active_bypass_node">Trenutni standby čvor</string>
     <string name="str_adjust_and_calibrate_your_scre">Podesite boje i zasićenje ekrana pomoću SurfaceFlinger servisa, bez potrebe za podrškom na nivou jezgra</string>
     <string name="str_adjust_gradient">Podesi gradijent</string>
     <string name="str_app_info">Informacije o aplikaciji</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Održavalac</string>
     <string name="str_max_video_size">Maksimalna veličina videa je 50MB</string>
     <string name="str_no_active_nodes">Nema aktivnih čvorova</string>
-    <string name="str_no_active_nodes_desc">U sistemskim svojstvima nije mapiran nijedan dostupan bypass čvor.</string>
+    <string name="str_no_active_nodes_desc">U sistemskim svojstvima nije mapiran nijedan dostupan standby čvor.</string>
     <string name="str_no_compatible_nodes">Nema kompatibilnih čvorova</string>
     <string name="str_open_source">Otvoreni kod (Open source)</string>
     <string name="str_package_name">Naziv paketa</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root pristup je odbijen. AZenith zahteva root pristup da bi radio.</string>
     <string name="str_root_access_granted">Root pristup je dobijen, sve je spremno!</string>
-    <string name="str_run_diagnostics_above_or_check">Pokrenite gornju dijagnostiku ili proverite da li kernel sadrži bypass čvorove.</string>
+    <string name="str_run_diagnostics_above_or_check">Pokrenite gornju dijagnostiku ili proverite da li kernel sadrži standby čvorove.</string>
     <string name="str_safely_test">Bezbedno testiranje kompatibilnosti uređaja</string>
     <string name="str_save_compressed_logs_to_a_fold">Sačuvaj komprimirane dnevnike u odabranu fasciklu</string>
     <string name="str_save_your_current_tweak_settin">Sačuvaj trenutna podešavanja</string>

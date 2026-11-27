@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Ausgeglichener Mali GPU-Governor</string>
     <string name="balanced_mali_gov_desc">GPU-Governor für das ausgeglichene Profil</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass-Laden</string>
-    <string name="bcharging_desc">AZenith Bypass-Ladefunktion konfigurieren</string>
+    <string name="bcharging">Standby-Laden</string>
+    <string name="bcharging_desc">AZenith Standby-Ladefunktion konfigurieren</string>
     <string name="bypass_not_supported">Diese Funktion wird vom aktuellen Gerät nicht unterstützt</string>
     <string name="cd_app_icon">App-Symbol</string>
     <string name="cd_back">Zurück</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Aktuelles Profil</string>
     <string name="custom">Benutzerdefiniert</string>
     <string name="CompatibilityCheck">Kompatibilitätsprüfung</string>
-    <string name="CompatibilityCheck_desc">Führt eine Diagnose durch, um zu prüfen, ob das Gerät Bypass-Laden unterstützt</string>
+    <string name="CompatibilityCheck_desc">Führt eine Diagnose durch, um zu prüfen, ob das Gerät Standby-Laden unterstützt</string>
     <string name="default_cpu_gov">Standard-CPU-Governor</string>
     <string name="default_cpu_gov_desc">Governor für das ausgeglichene Profil</string>
     <string name="default_label">Standard</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Wiederherstellung fehlgeschlagen</string>
     <string name="dialog_start_hw_test_content">AZenith führt einen Stromabfalltest am Akku-Knoten durch. Der Vorgang ist sicher und dauert einige Sekunden.</string>
     <string name="dialog_start_hw_test_title">Hardwaretest starten?</string>
-    <string name="dialog_switch_node_content">Bypass-Konfiguration auf [%1$s] umschalten?</string>
+    <string name="dialog_switch_node_content">Standby-Konfiguration auf [%1$s] umschalten?</string>
     <string name="dialog_switch_node_title">Steuerknoten wechseln?</string>
     <string name="dialog_update_available_confirm">Jetzt aktualisieren</string>
     <string name="dialog_update_available_content">App-Manager-Version (%1$d) ist niedriger als Modul-Version (%2$d). Jetzt aktualisieren, um die neuesten Funktionen zu erhalten?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Nicht stören beim Spielen</string>
     <string name="dnd_mode_gaming_desc">Nicht stören im Performance-Profil automatisch aktivieren</string>
     <string name="done">Fertig</string>
-    <string name="enable_bypass_charge">Bypass-Laden aktivieren</string>
-    <string name="enable_bypass_charge_desc">Bypass-Laden im Performance-Profil aktivieren</string>
+    <string name="enable_bypass_charge">Standby-Laden aktivieren</string>
+    <string name="enable_bypass_charge_desc">Standby-Laden im Performance-Profil aktivieren</string>
     <string name="err_failed_load_changelog">Laden des Änderungsprotokolls fehlgeschlagen</string>
     <string name="err_invalid_backup">Sicherungsdatei ungültig oder beschädigt (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -292,7 +292,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Aktueller Bypass-Ladeknoten</string>
+    <string name="str_active_bypass_node">Aktueller Standby-Ladeknoten</string>
     <string name="str_adjust_and_calibrate_your_scre">Bildschirmfarben und -sättigung über den SurfaceFlinger-Dienst anpassen, ohne Kernel-Unterstützung</string>
     <string name="str_adjust_gradient">Verlauf anpassen</string>
     <string name="str_app_info">App-Informationen</string>
@@ -350,7 +350,7 @@
     <string name="str_maintainer">Betreuer</string>
     <string name="str_max_video_size">Video-Größe maximal 50 MB</string>
     <string name="str_no_active_nodes">Keine aktiven Knoten</string>
-    <string name="str_no_active_nodes_desc">Keine verfügbaren Bypass-Knoten in den Systemeigenschaften zugeordnet</string>
+    <string name="str_no_active_nodes_desc">Keine verfügbaren Standby-Knoten in den Systemeigenschaften zugeordnet</string>
     <string name="str_no_compatible_nodes">Keine kompatiblen Knoten</string>
     <string name="str_open_source">Open Source</string>
     <string name="str_package_name">Paketname</string>
@@ -367,7 +367,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root-Zugriff verweigert. AZenith benötigt Root-Zugriff, um zu funktionieren.</string>
     <string name="str_root_access_granted">Root-Zugriff erhalten, alles bereit!</string>
-    <string name="str_run_diagnostics_above_or_check">Führe die obige Diagnose aus oder prüfe, ob der Kernel Bypass-Ladeknoten enthält</string>
+    <string name="str_run_diagnostics_above_or_check">Führe die obige Diagnose aus oder prüfe, ob der Kernel Standby-Ladeknoten enthält</string>
     <string name="str_safely_test">Teste die Gerätekompatibilität sicher</string>
     <string name="str_save_compressed_logs_to_a_fold">Komprimierte Protokolle in einem Ordner speichern</string>
     <string name="str_save_your_current_tweak_settin">Aktuelle Konfigurationseinstellungen speichern</string>
@@ -428,7 +428,7 @@
     <string name="gov_settingsdesc">Governor und Scheduler konfigurieren</string>
     <string name="gov_settingsdesc2">Konfigurieren Sie CPU-, GPU-Governor und I/O-Scheduler-Werte für Ihr Gerät; jeder Wert wird auf das jeweilige AZenith-Profil angewendet</string>
     <string name="presets">Voreinstellungen</string>
-    <string name="str_bypass_need_setup">Bypass-Ladepfad wurde noch nicht eingerichtet. Bitte schließen Sie die Einrichtung zuerst über die Kompatibilitätsprüfung ab.</string>
+    <string name="str_bypass_need_setup">Standby-Ladepfad wurde noch nicht eingerichtet. Bitte schließen Sie die Einrichtung zuerst über die Kompatibilitätsprüfung ab.</string>
     <string name="reboot_required_content">Diese Option erfordert einen Neustart, um angewendet zu werden. Fortfahren?</string>
     <string name="disable_auto_mode_desc">Verhindert, dass Profile automatisch wechseln, wenn ein Spiel erkannt wird. Anschließend legen Sie das Profil selbst über die Kachel „Aktuelles Profil“ auf der Startseite fest.</string>
     <string name="no_apps_found">Zu dieser Suche passen keine Apps</string>

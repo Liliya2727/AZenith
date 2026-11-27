@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Gebalanceerde Mali GPU-gov</string>
     <string name="balanced_mali_gov_desc">GPU-gov gebruikt door gebalanceerd profiel</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass-laden</string>
-    <string name="bcharging_desc">Configureer AZenith bypass-laden functie</string>
+    <string name="bcharging">Standby-laden</string>
+    <string name="bcharging_desc">Configureer AZenith standby-laden functie</string>
     <string name="bypass_not_supported">Deze functie wordt niet ondersteund op dit apparaat</string>
     <string name="cd_app_icon">App-pictogram</string>
     <string name="cd_back">Terug</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Huidig profiel</string>
     <string name="custom">Aangepast</string>
     <string name="CompatibilityCheck">Compatibiliteitscontrole</string>
-    <string name="CompatibilityCheck_desc">Voer diagnose uit om te controleren of apparaat bypass-laden ondersteunt</string>
+    <string name="CompatibilityCheck_desc">Voer diagnose uit om te controleren of apparaat standby-laden ondersteunt</string>
     <string name="default_cpu_gov">Standaard CPU-gov</string>
     <string name="default_cpu_gov_desc">Gov gebruikt door gebalanceerd profiel</string>
     <string name="default_label">Standaard</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Herstellen mislukt</string>
     <string name="dialog_start_hw_test_content">AZenith zal een spanningsvaltest uitvoeren op ingebouwde batterijknooppunten. Diagnose is veilig en duurt enkele seconden.</string>
     <string name="dialog_start_hw_test_title">Hardwaretest starten?</string>
-    <string name="dialog_switch_node_content">Bypass-configuratiedoel geforceerd overschakelen naar [%1$s]?</string>
+    <string name="dialog_switch_node_content">Standby-configuratiedoel geforceerd overschakelen naar [%1$s]?</string>
     <string name="dialog_switch_node_title">Controleknooppunt wijzigen?</string>
     <string name="dialog_update_available_confirm">Nu updaten</string>
     <string name="dialog_update_available_content">App-beheerversie (%1$d) is lager dan moduleversie (%2$d), wilt u nu updaten voor nieuwste functies?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Niet storen tijdens gamen</string>
     <string name="dnd_mode_gaming_desc">Schakel automatisch niet storen in onder prestatieprofiel</string>
     <string name="done">Gereed</string>
-    <string name="enable_bypass_charge">Bypass-laden inschakelen</string>
-    <string name="enable_bypass_charge_desc">Schakel bypass-laden in onder prestatieprofiel</string>
+    <string name="enable_bypass_charge">Standby-laden inschakelen</string>
+    <string name="enable_bypass_charge_desc">Schakel standby-laden in onder prestatieprofiel</string>
     <string name="err_failed_load_changelog">Laden van wijzigingslog mislukt</string>
     <string name="err_invalid_backup">Back-upbestand is ongeldig of beschadigd (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Huidig bypass-laadknooppunt</string>
+    <string name="str_active_bypass_node">Huidig standby-laadknooppunt</string>
     <string name="str_adjust_and_calibrate_your_scre">Pas schermkleur en verzadiging aan via SurfaceFlinger-dienst, geen kernelondersteuning nodig</string>
     <string name="str_adjust_gradient">Verloop aanpassen</string>
     <string name="str_app_info">App-informatie</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Onderhouder</string>
     <string name="str_max_video_size">Maximale videogrootte is 50MB</string>
     <string name="str_no_active_nodes">Geen beschikbare werkende knooppunten</string>
-    <string name="str_no_active_nodes_desc">Geen beschikbare bypass-knooppunten gevonden in systeemeigenschappen</string>
+    <string name="str_no_active_nodes_desc">Geen beschikbare standby-knooppunten gevonden in systeemeigenschappen</string>
     <string name="str_no_compatible_nodes">Geen compatibele knooppunten</string>
     <string name="str_open_source">Open source</string>
     <string name="str_package_name">Pakketnaam</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root-toegang geweigerd, AZenith heeft root-toegang nodig om te werken</string>
     <string name="str_root_access_granted">Root-toegang verkregen, alles klaar!</string>
-    <string name="str_run_diagnostics_above_or_check">Voer bovenstaande diagnose uit of controleer of kernel bypass-laadknooppunten bevat</string>
+    <string name="str_run_diagnostics_above_or_check">Voer bovenstaande diagnose uit of controleer of kernel standby-laadknooppunten bevat</string>
     <string name="str_safely_test">Veilig testen van apparaatcompatibiliteit</string>
     <string name="str_save_compressed_logs_to_a_fold">Sla gecomprimeerde logboeken op in aangewezen map</string>
     <string name="str_save_your_current_tweak_settin">Huidige configuratie-instellingen opslaan</string>
@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Governor en schedulers configureren</string>
     <string name="gov_settingsdesc2">Configureer CPU-, GPU-governor en I/O-schedulers van uw apparaat; elke waarde wordt toegepast op elk AZenith-profiel</string>
     <string name="presets">Voorinstellingen</string>
-    <string name="str_bypass_need_setup">Bypass-oplaadpad is nog niet ingesteld. Voltooi eerst de installatie via Compatibiliteitscontrole.</string>
+    <string name="str_bypass_need_setup">Standby-oplaadpad is nog niet ingesteld. Voltooi eerst de installatie via Compatibiliteitscontrole.</string>
     <string name="reboot_required_content">Deze optie vereist een herstart om te worden toegepast. Doorgaan?</string>
     <string name="disable_auto_mode_desc">Voorkomt dat profielen automatisch wisselen wanneer een game wordt gedetecteerd. Vervolgens stelt u het profiel zelf in via de tegel Huidig ​​profiel op de startpagina.</string>
     <string name="no_apps_found">Er zijn geen apps die overeenkomen met deze zoekopdracht</string>

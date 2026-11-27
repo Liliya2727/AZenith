@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Balanserad Mali GPU-regulator</string>
     <string name="balanced_mali_gov_desc">GPU-regulator som används i balanserad profil</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass-strömförsörjning</string>
-    <string name="bcharging_desc">Konfigurera AZenith bypass-strömförsörjning</string>
+    <string name="bcharging">Standby-strömförsörjning</string>
+    <string name="bcharging_desc">Konfigurera AZenith standby-strömförsörjning</string>
     <string name="bypass_not_supported">Enheten stöder inte denna funktion</string>
     <string name="cd_app_icon">Appikon</string>
     <string name="cd_back">Tillbaka</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Aktuell profil</string>
     <string name="custom">Anpassad</string>
     <string name="CompatibilityCheck">Kompatibilitetskontroll</string>
-    <string name="CompatibilityCheck_desc">Utför diagnostik för att kontrollera om enheten stöder bypass-strömförsörjning</string>
+    <string name="CompatibilityCheck_desc">Utför diagnostik för att kontrollera om enheten stöder standby-strömförsörjning</string>
     <string name="default_cpu_gov">Standard CPU-regulator</string>
     <string name="default_cpu_gov_desc">Regulator som används i balanserad profil</string>
     <string name="default_label">Standard</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Återställning misslyckades</string>
     <string name="dialog_start_hw_test_content">AZenith kommer att utföra en spänningsfallstest på inbyggda batterinoder. Diagnosen är säker och varar i några sekunder.</string>
     <string name="dialog_start_hw_test_title">Starta hårdvarutest?</string>
-    <string name="dialog_switch_node_content">Vill du tvinga bypass-konfigurationsmålet att byta till [%1$s]?</string>
+    <string name="dialog_switch_node_content">Vill du tvinga standby-konfigurationsmålet att byta till [%1$s]?</string>
     <string name="dialog_switch_node_title">Byt kontrollnod?</string>
     <string name="dialog_update_available_confirm">Uppdatera nu</string>
     <string name="dialog_update_available_content">Apphanterarversionen (%1$d) är lägre än modulversionen (%2$d). Vill du uppdatera för att få de senaste funktionerna?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Stör ej under spel</string>
     <string name="dnd_mode_gaming_desc">Aktivera automatiskt Stör ej under prestandaprofil</string>
     <string name="done">Klar</string>
-    <string name="enable_bypass_charge">Aktivera bypass-strömförsörjning</string>
-    <string name="enable_bypass_charge_desc">Aktivera bypass-strömförsörjning under prestandaprofil</string>
+    <string name="enable_bypass_charge">Aktivera standby-strömförsörjning</string>
+    <string name="enable_bypass_charge_desc">Aktivera standby-strömförsörjning under prestandaprofil</string>
     <string name="err_failed_load_changelog">Misslyckades med att ladda ändringslogg</string>
     <string name="err_invalid_backup">Säkerhetskopian är ogiltig eller skadad (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Aktiv bypass-strömnod</string>
+    <string name="str_active_bypass_node">Aktiv standby-strömnod</string>
     <string name="str_adjust_and_calibrate_your_scre">Justera skärmfärg och mättnad via SurfaceFlinger-tjänsten utan kärnstöd</string>
     <string name="str_adjust_gradient">Justera gradient</string>
     <string name="str_app_info">Appinformation</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Underhållare</string>
     <string name="str_max_video_size">Maxvideostorlek är 50 MB</string>
     <string name="str_no_active_nodes">Inga aktiva noder</string>
-    <string name="str_no_active_nodes_desc">Inga bypass-noder är mappade i systemegenskaper</string>
+    <string name="str_no_active_nodes_desc">Inga standby-noder är mappade i systemegenskaper</string>
     <string name="str_no_compatible_nodes">Inga kompatibla noder</string>
     <string name="str_open_source">Öppen källkod</string>
     <string name="str_package_name">Paketnamn</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root-åtkomst nekad. AZenith kräver root-åtkomst för att köras.</string>
     <string name="str_root_access_granted">Root-åtkomst beviljad, allt är klart!</string>
-    <string name="str_run_diagnostics_above_or_check">Kör diagnostiken ovan eller kontrollera om kärnan innehåller bypass-strömnoder</string>
+    <string name="str_run_diagnostics_above_or_check">Kör diagnostiken ovan eller kontrollera om kärnan innehåller standby-strömnoder</string>
     <string name="str_safely_test">Testa enhetens kompatibilitet på ett säkert sätt</string>
     <string name="str_save_compressed_logs_to_a_fold">Spara komprimerade loggar i en angiven mapp</string>
     <string name="str_save_your_current_tweak_settin">Spara dina nuvarande konfigurationsinställningar</string>

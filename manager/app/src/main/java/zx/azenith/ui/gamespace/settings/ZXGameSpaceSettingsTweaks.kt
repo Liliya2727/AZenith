@@ -1144,7 +1144,7 @@ private fun BypassChargingSubPane(
         ) {
             TweaksSubTabHeader(
                 title = stringResource(R.string.bcharging),
-                subtitle = "Power device directly from adapter without battery degradation",
+                subtitle = stringResource(R.string.str_pause_battery_charging_when_pl),
                 onBackClick = onBackClick
             )
 
@@ -1271,7 +1271,7 @@ private fun BypassChargingSubPane(
             }
 
             // Controls Section
-            TweaksSectionHeader("Bypass Charging Controls")
+            TweaksSectionHeader("Standby Charge Controls")
 
             Column(
                 modifier = Modifier
@@ -1328,7 +1328,7 @@ private fun BypassChargingSubPane(
                 val nodePathDesc = availableNodes.find { it.first == bypassPath }?.second
                 SettingsActionCard(
                     icon = Icons.Rounded.Cable,
-                    title = "Hardware Bypass Node",
+                    title = "Hardware Standby Node",
                     summary = when {
                         isNeedSetup -> "Tap to bind from ${availableNodes.size} detected nodes or scan below"
                         isUnsupported -> "No supported charging switch nodes detected"
@@ -1535,7 +1535,7 @@ private fun BypassChargingSubPane(
                             )
                         }
                         Text(
-                            text = "Automated diagnostics confirmed cutoff control using node [$node]. Apply this node as the active hardware bypass target?",
+                            text = "Automated diagnostics confirmed cutoff control using node [$node]. Apply this node as the active hardware standby charge target?",
                             style = MaterialTheme.typography.bodyMedium,
                             color = scheme.onSurfaceVariant
                         )

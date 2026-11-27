@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Governor GPU Mali seimbang</string>
     <string name="balanced_mali_gov_desc">Governor GPU yang digunakan oleh profil seimbang</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass pengisian daya</string>
-    <string name="bcharging_desc">Konfigurasi fitur bypass pengisian daya AZenith</string>
+    <string name="bcharging">Standby Charge</string>
+    <string name="bcharging_desc">Konfigurasi fitur standby charge AZenith</string>
     <string name="bypass_not_supported">Perangkat saat ini tidak mendukung fitur ini</string>
     <string name="cd_app_icon">Ikon aplikasi</string>
     <string name="cd_back">Kembali</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Profil saat ini</string>
     <string name="custom">Kustom</string>
     <string name="CompatibilityCheck">Pemeriksaan kompatibilitas</string>
-    <string name="CompatibilityCheck_desc">Lakukan diagnostik untuk memeriksa apakah perangkat mendukung bypass pengisian daya</string>
+    <string name="CompatibilityCheck_desc">Lakukan diagnostik untuk memeriksa apakah perangkat mendukung standby charge</string>
     <string name="default_cpu_gov">Governor CPU default</string>
     <string name="default_cpu_gov_desc">Governor yang digunakan oleh profil seimbang</string>
     <string name="default_label">Default</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Gagal memulihkan</string>
     <string name="dialog_start_hw_test_content">AZenith akan melakukan tes penurunan arus pada node baterai internal, proses diagnostik aman, berlangsung beberapa detik</string>
     <string name="dialog_start_hw_test_title">Mulai tes perangkat keras?</string>
-    <string name="dialog_switch_node_content">Apakah akan memaksa mengalihkan target konfigurasi bypass ke [%1$s]?</string>
+    <string name="dialog_switch_node_content">Apakah akan memaksa mengalihkan target konfigurasi standby charge ke [%1$s]?</string>
     <string name="dialog_switch_node_title">Alihkan node kontrol?</string>
     <string name="dialog_update_available_confirm">Perbarui sekarang</string>
     <string name="dialog_update_available_content">Versi manajer aplikasi (%1$d) lebih rendah dari versi modul (%2$d), apakah akan memperbarui sekarang untuk mendapatkan fitur terbaru?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Jangan ganggu saat bermain game</string>
     <string name="dnd_mode_gaming_desc">Aktifkan jangan ganggu secara otomatis di bawah profil performa</string>
     <string name="done">Selesai</string>
-    <string name="enable_bypass_charge">Aktifkan bypass pengisian daya</string>
-    <string name="enable_bypass_charge_desc">Aktifkan bypass pengisian daya di bawah profil performa</string>
+    <string name="enable_bypass_charge">Aktifkan Standby Charge</string>
+    <string name="enable_bypass_charge_desc">Aktifkan standby charge di bawah profil performa</string>
     <string name="err_failed_load_changelog">Gagal memuat log perubahan</string>
     <string name="err_invalid_backup">File cadangan tidak valid atau rusak (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Node bypass pengisian daya saat ini</string>
+    <string name="str_active_bypass_node">Node standby charge saat ini</string>
     <string name="str_adjust_and_calibrate_your_scre">Sesuaikan warna dan saturasi layar melalui layanan SurfaceFlinger, tanpa dukungan tingkat kernel</string>
     <string name="str_adjust_gradient">Sesuaikan gradien</string>
     <string name="str_app_info">Info aplikasi</string>
@@ -349,11 +349,11 @@
     <string name="str_maintainer">Maintainer</string>
     <string name="str_max_video_size">Ukuran video maksimal 50MB</string>
     <string name="str_no_active_nodes">Tidak ada node kerja yang tersedia</string>
-    <string name="str_no_active_nodes_desc">Tidak ada node bypass yang tersedia dipetakan di properti sistem</string>
+    <string name="str_no_active_nodes_desc">Tidak ada node standby charge yang tersedia dipetakan di properti sistem</string>
     <string name="str_no_compatible_nodes">Tidak ada node yang kompatibel</string>
     <string name="str_open_source">Sumber terbuka</string>
     <string name="str_package_name">Nama paket</string>
-    <string name="str_pause_battery_charging_when_pl">Jeda pengisian baterai saat mengisi daya, daya langsung ke motherboard, secara signifikan mengurangi panas perangkat saat bermain game, memperpanjang umur baterai</string>
+    <string name="str_pause_battery_charging_when_pl">Pertahankan baterai pada level saat ini dengan menjeda dan melanjutkan pengisian daya secara cerdas selama sesi bermain game, mengurangi panas perangkat sekaligus menjaga daya baterai.</string>
     <string name="str_per_app_applist_settings">Pengaturan aplikasi dan daftar aplikasi</string>
     <string name="str_performance_profile">Profil performa</string>
     <string name="str_pick_media">Pilih file media</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Akses Root ditolak, AZenith memerlukan akses Root untuk berjalan</string>
     <string name="str_root_access_granted">Akses Root diperoleh, semuanya siap!</string>
-    <string name="str_run_diagnostics_above_or_check">Jalankan diagnostik di atas, atau periksa apakah kernel berisi node bypass pengisian daya</string>
+    <string name="str_run_diagnostics_above_or_check">Jalankan diagnostik di atas, atau periksa apakah kernel berisi node standby charge</string>
     <string name="str_safely_test">Uji kompatibilitas perangkat dengan aman</string>
     <string name="str_save_compressed_logs_to_a_fold">Simpan log terkompresi ke folder tertentu</string>
     <string name="str_save_your_current_tweak_settin">Simpan pengaturan konfigurasi saat ini</string>
@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Konfigurasi Governor dan Penjadwal</string>
     <string name="gov_settingsdesc2">Konfigurasi nilai Governor CPU, GPU, dan Penjadwal I/O perangkat Anda, setiap nilai diterapkan ke setiap profil AZenith</string>
     <string name="presets">Preset</string>
-    <string name="str_bypass_need_setup">Jalur bypass pengisian daya belum diatur. Harap selesaikan pengaturan melalui Pemeriksaan Kompatibilitas terlebih dahulu.</string>
+    <string name="str_bypass_need_setup">Jalur standby charge belum diatur. Harap selesaikan pengaturan melalui Pemeriksaan Kompatibilitas terlebih dahulu.</string>
     <string name="reboot_required_content">Opsi ini memerlukan mulai ulang perangkat untuk diterapkan. Lanjutkan?</string>
     <string name="disable_auto_mode_desc">Menghentikan peralihan profil secara otomatis saat permainan terdeteksi. Anda kemudian mengatur profil sendiri dari ubin Profil Saat Ini di halaman Beranda.</string>
     <string name="no_apps_found">Tidak ada aplikasi yang cocok dengan penelusuran ini</string>

@@ -107,6 +107,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import zx.azenith.R
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -2687,7 +2689,7 @@ private fun ThermalBatteryWidget(
                 }
                 Column {
                     Text(
-                        text = "Thermal & bypass",
+                        text = stringResource(R.string.section_power_thermal),
                         style = MaterialTheme.typography.titleSmall,
                         color = scheme.onSurface
                     )
