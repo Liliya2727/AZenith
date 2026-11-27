@@ -22,6 +22,9 @@ pub fn handle_config_get(argc: i32, argv: &[&str]) -> c_int {
         eprintln!("Usage: --config-get <KEY>");
         return 1;
     }
+    if !std::path::Path::new(archconfig::CONFIG_PATH).exists() {
+        crate::startup::migrate_props_to_json_once();
+    }
     let key = argv[2];
     let cfg = archconfig::load();
     match cfg.get_key(key) {
@@ -40,6 +43,9 @@ pub fn handle_config_set(argc: i32, argv: &[&str]) -> c_int {
     if argc < 4 || argv[2].is_empty() {
         eprintln!("Usage: --config-set <KEY> <VALUE>");
         return 1;
+    }
+    if !std::path::Path::new(archconfig::CONFIG_PATH).exists() {
+        crate::startup::migrate_props_to_json_once();
     }
     let key = argv[2];
     let val = argv[3];
