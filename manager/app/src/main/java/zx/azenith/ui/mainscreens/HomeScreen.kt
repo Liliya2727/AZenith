@@ -245,7 +245,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                         .fillMaxHeight()
                                         .then(profileTileModifier)
                                 ) {
-                                    AnimatedVisibility(
+                                    androidx.compose.animation.AnimatedVisibility(
                                         visible = !showProfileDialog,
                                         enter = fadeIn(animationSpec = tween(180)),
                                         exit = fadeOut(animationSpec = tween(120)),
@@ -362,7 +362,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     .fillMaxHeight()
                                     .then(profileTileModifier)
                             ) {
-                                AnimatedVisibility(
+                                androidx.compose.animation.AnimatedVisibility(
                                     visible = !showProfileDialog,
                                     enter = fadeIn(animationSpec = tween(180)),
                                     exit = fadeOut(animationSpec = tween(120)),
