@@ -232,8 +232,32 @@ object StatusBarGuard {
  */
 object GameLauncher {
 
+    private const val SERVICE_BIN = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
+
+    @Volatile
+    private var lastPrelaunchedPkg: String = ""
+
+    @Volatile
+    private var lastPrelaunchedAtMs: Long = 0L
+
     private fun shellSingleQuote(value: String): String =
         "'" + value.replace("'", "'\\''") + "'"
+
+    /**
+     * Triggers `sys.azenith-service --prelaunch <pkg>` so archdaemon applies per-app
+     * renderer, resolution downscale, refresh rate, DND, lite mode, preload, and bypass
+     * charging BEFORE `am start` spawns the game process (avoiding any app restart).
+     */
+    fun prelaunchViaRoot(packageName: String) {
+        if (packageName.isBlank() || !isRootShellAvailable()) return
+        runCatching {
+            Shell.cmd("$SERVICE_BIN --prelaunch ${shellSingleQuote(packageName)} >/dev/null 2>&1").exec()
+            lastPrelaunchedPkg = packageName
+            lastPrelaunchedAtMs = android.os.SystemClock.elapsedRealtime()
+        }.onFailure { t ->
+            Log.w(TAG, "Prelaunch command failed for $packageName", t)
+        }
+    }
 
     private tailrec fun Context.findActivity(): Activity? = when (this) {
         is Activity -> this
@@ -323,6 +347,11 @@ object GameLauncher {
             "-n ${shellSingleQuote(component)}"
 
         val script = buildString {
+            val nowElapsed = android.os.SystemClock.elapsedRealtime()
+            val alreadyPrelaunched = lastPrelaunchedPkg == packageName && (nowElapsed - lastPrelaunchedAtMs) < 4_000L
+            if (!alreadyPrelaunched) {
+                appendLine("$SERVICE_BIN --prelaunch ${shellSingleQuote(packageName)} >/dev/null 2>&1")
+            }
             if (hide) appendLine(StatusBarGuard.hideCommand())
             appendLine(amCmd)
             appendLine("RC=\$?")
@@ -586,9 +615,17 @@ class GameLaunchController {
                     }
                 }
 
-                // 8. Dark, empty screen.
+                // 8. Dark, empty screen: pre-apply per-app configuration (renderer, resolution
+                //    downscale, refresh rate, lite mode, DND, preload, bypass) in parallel with
+                //    the 1000 ms pre-launch dark screen so it adds zero extra delay and the game
+                //    starts with its target renderer/resolution on the first try without restarting.
                 state = GameLaunchState.Running(packageName, GameLaunchPhase.PreLaunch)
-                delay(PRE_LAUNCH_DELAY_MS)
+                coroutineScope {
+                    launch(Dispatchers.IO) {
+                        GameLauncher.prelaunchViaRoot(packageName)
+                    }
+                    delay(PRE_LAUNCH_DELAY_MS)
+                }
 
                 // 9. Hide status bar + launch (one root invocation inside GameLauncher).
                 state = GameLaunchState.Running(packageName, GameLaunchPhase.Launching)
