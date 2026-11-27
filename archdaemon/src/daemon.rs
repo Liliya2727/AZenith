@@ -17,7 +17,7 @@ use crate::monitor::{read_app_status, reload_gamelist_cache};
 use crate::config::state::{restore_daemon_state, save_daemon_state};
 use crate::profile::{
     apply_balanced_profile, apply_eco_profile, apply_performance_profile_inner,
-    apply_per_app_overrides, get_gamestart, get_low_power_state, get_screenstate,
+    apply_per_app_overrides, get_low_power_state, get_screenstate,
     profile_mode_name, restore_per_app_overrides, run_profiler, show_sidepanel,
     update_game_info,
 };
