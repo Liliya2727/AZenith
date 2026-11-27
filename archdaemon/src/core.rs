@@ -281,10 +281,21 @@ impl Default for ProfileState {
     }
 }
 
-/// Bypass charging state
-#[derive(Debug, Clone, Default)]
+/// Standby charging state
+#[derive(Debug, Clone)]
 pub struct BypassState {
     pub bypass_applied: bool,
+    /// Session target battery percentage locked at the start of a charging game session (-1 when inactive).
+    pub target_level: i32,
+}
+
+impl Default for BypassState {
+    fn default() -> Self {
+        Self {
+            bypass_applied: false,
+            target_level: -1,
+        }
+    }
 }
 
 /// Game-related state (detected game, PIDs)

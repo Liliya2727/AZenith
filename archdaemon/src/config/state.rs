@@ -25,6 +25,7 @@ pub fn save_daemon_state(ctx: &crate::core::DaemonContext) {
          dnd_enabled={}\n\
          cur_mode={}\n\
          bypass_applied={}\n\
+         bypass_target_level={}\n\
          bypass_charging={}\n",
         ctx.saved_renderer_str(),
         ctx.saved_sys_renderer_str(),
@@ -33,6 +34,7 @@ pub fn save_daemon_state(ctx: &crate::core::DaemonContext) {
         if ctx.dnd_enabled { 1 } else { 0 },
         ctx.profile.cur_mode as i32,
         if ctx.bypass.bypass_applied { 1 } else { 0 },
+        ctx.bypass.target_level,
         ctx.opts_bypass_charging()
     );
 
@@ -89,6 +91,9 @@ pub fn restore_daemon_state(ctx: &mut crate::core::DaemonContext) {
                 }
                 "bypass_applied" => {
                     ctx.bypass.bypass_applied = val == "1";
+                }
+                "bypass_target_level" => {
+                    ctx.bypass.target_level = val.parse().unwrap_or(-1);
                 }
                 "bypass_charging" => {
                     if !val.is_empty() {

@@ -1498,14 +1498,20 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
 // ---------------------------------------------------------------------------
 // handle_dynamic_bypass
 // ---------------------------------------------------------------------------
+/// Hardcoded minimum battery level below which Standby Charge never pauses charging.
+pub const STANDBY_CHARGE_FLOOR_PCT: i32 = 20;
+/// Hysteresis window (in battery percentage points) below the locked session target
+/// before charging resumes.
+pub const STANDBY_CHARGE_HYSTERESIS_PCT: i32 = 2;
+
 pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
     let bypass_before = ctx.bypass.bypass_applied;
+    let target_before = ctx.bypass.target_level;
 
     if ctx.config_bypasspath_str() != "UNSUPPORTED" && !ctx.config_bypasspath_str().is_empty() {
         let bypass_active_session = ctx.profile.cur_mode == ProfileMode::PerformanceProfile
             || (ctx.game.gamestart.is_some() && IS_TRUE!(ctx.opts_bypass_charging()));
         if bypass_active_session {
-            let threshold = ctx.config.bypass_chg_threshold;
             let current_battery = ctx.current_system_cache.battery_level;
             let is_device_charging = ctx.current_system_cache.is_charging != 0;
 
@@ -1518,29 +1524,71 @@ pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
             };
 
             if current_battery >= 0 && bypass_charging_allowed && is_device_charging {
-                if current_battery >= threshold {
-                    if read_current_ma() > 50 {
-                        if !ctx.bypass.bypass_applied && enable_bypass(ctx) == 0 {
-                            log_info!("bypass", "bypass enabled battery={} threshold={}", current_battery, threshold);
-                            ctx.bypass.bypass_applied = true;
-                        }
+                if ctx.bypass.target_level < 0 {
+                    ctx.bypass.target_level = current_battery.max(STANDBY_CHARGE_FLOOR_PCT);
+                    log_info!(
+                        "bypass",
+                        "standby charge target locked battery={} target={} floor={}",
+                        current_battery,
+                        ctx.bypass.target_level,
+                        STANDBY_CHARGE_FLOOR_PCT
+                    );
+                }
+                let target = ctx.bypass.target_level.max(STANDBY_CHARGE_FLOOR_PCT);
+
+                if current_battery < STANDBY_CHARGE_FLOOR_PCT {
+                    // Never pause charging below the hardcoded 20% safety floor.
+                    if ctx.bypass.bypass_applied {
+                        log_info!(
+                            "bypass",
+                            "standby charge resumed (below {}% floor) battery={} target={}",
+                            STANDBY_CHARGE_FLOOR_PCT,
+                            current_battery,
+                            target
+                        );
+                        disable_bypass(ctx);
+                        ctx.bypass.bypass_applied = false;
                     }
-                } else if ctx.bypass.bypass_applied {
-                    log_info!("bypass", "bypass disabled battery={} threshold={}", current_battery, threshold);
+                } else if !ctx.bypass.bypass_applied {
+                    if current_battery >= target && read_current_ma() > 50 && enable_bypass(ctx) == 0 {
+                        log_info!(
+                            "bypass",
+                            "standby charge paused charging battery={} target={}",
+                            current_battery,
+                            target
+                        );
+                        ctx.bypass.bypass_applied = true;
+                    }
+                } else if current_battery <= target - STANDBY_CHARGE_HYSTERESIS_PCT {
+                    log_info!(
+                        "bypass",
+                        "standby charge resumed charging battery={} target={} resume_at={}",
+                        current_battery,
+                        target,
+                        target - STANDBY_CHARGE_HYSTERESIS_PCT
+                    );
                     disable_bypass(ctx);
                     ctx.bypass.bypass_applied = false;
                 }
-            } else if ctx.bypass.bypass_applied {
+            } else {
+                if ctx.bypass.bypass_applied {
+                    disable_bypass(ctx);
+                    ctx.bypass.bypass_applied = false;
+                }
+                ctx.bypass.target_level = -1;
+            }
+        } else {
+            if ctx.bypass.bypass_applied {
                 disable_bypass(ctx);
                 ctx.bypass.bypass_applied = false;
             }
-        } else if ctx.bypass.bypass_applied {
-            disable_bypass(ctx);
-            ctx.bypass.bypass_applied = false;
+            ctx.bypass.target_level = -1;
         }
     }
 
-    if bypass_before != ctx.bypass.bypass_applied && ctx.profile.cur_mode == ProfileMode::PerformanceProfile {
+    if (bypass_before != ctx.bypass.bypass_applied || target_before != ctx.bypass.target_level)
+        && ctx.profile.cur_mode == ProfileMode::PerformanceProfile
+    {
         crate::config::state::save_daemon_state(ctx);
     }
 }
