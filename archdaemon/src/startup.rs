@@ -186,19 +186,13 @@ pub fn migrate_props_to_json_once() {
         if let Ok(s) = fileops::read_string_result("/data/adb/.config/AZenith/bypasschgconfig/bypasspath") {
             let trimmed = s.trim();
             if !trimmed.is_empty() {
-                cfg.bypass_path = trimmed.to_string();
+                cfg.standby_path = trimmed.to_string();
             }
         }
         if let Ok(s) = fileops::read_string_result("/data/adb/.config/AZenith/bypasschgconfig/bypasschg") {
             let trimmed = s.trim();
             if let Some(b) = parse_bool_flexible(trimmed) {
-                cfg.bypass_chg = b;
-            }
-        }
-        if let Ok(s) = fileops::read_string_result("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold") {
-            let trimmed = s.trim();
-            if let Ok(v) = trimmed.parse::<i32>() {
-                cfg.bypass_chg_threshold = v;
+                cfg.standby_chg = b;
             }
         }
 
@@ -356,11 +350,10 @@ pub fn load_initial_config_files(ctx: &mut DaemonContext) {
 
     log_info!(
         "config",
-        "initial config.json loaded freq_offset={} bypass_path={} bypass_chg={} threshold={}",
+        "initial config.json loaded freq_offset={} standby_path={} standby_chg={}",
         ctx.config.freq_offset,
-        ctx.config.bypass_path,
-        ctx.config.bypass_chg,
-        ctx.config.bypass_chg_threshold
+        ctx.config.standby_path,
+        ctx.config.standby_chg
     );
 }
 

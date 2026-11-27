@@ -82,10 +82,11 @@ pub struct AZenithConfig {
     pub use_fpsgo: bool,
     pub fpsged: bool,
 
-    // Bypass Charging
-    pub bypass_chg: bool,
-    pub bypass_path: String,
-    pub bypass_chg_threshold: i32,
+    // Standby Charge
+    #[serde(alias = "bypass_chg")]
+    pub standby_chg: bool,
+    #[serde(alias = "bypass_path")]
+    pub standby_path: String,
 }
 
 impl Default for AZenithConfig {
@@ -153,10 +154,9 @@ impl Default for AZenithConfig {
             use_fpsgo: false,
             fpsged: false,
 
-            // Bypass Charging
-            bypass_chg: false,
-            bypass_path: "NEED_SETUP".to_string(),
-            bypass_chg_threshold: 20,
+            // Standby Charge
+            standby_chg: false,
+            standby_path: "NEED_SETUP".to_string(),
         }
     }
 }
@@ -219,9 +219,8 @@ impl AZenithConfig {
             "disable_thermal" => Ok(self.disable_thermal.to_string()),
             "use_fpsgo" => Ok(self.use_fpsgo.to_string()),
             "fpsged" => Ok(self.fpsged.to_string()),
-            "bypass_chg" => Ok(self.bypass_chg.to_string()),
-            "bypass_path" => Ok(self.bypass_path.clone()),
-            "bypass_chg_threshold" => Ok(self.bypass_chg_threshold.to_string()),
+            "standby_chg" | "bypass_chg" => Ok(self.standby_chg.to_string()),
+            "standby_path" | "bypass_path" => Ok(self.standby_path.clone()),
             _ => Err(format!("unknown config key: {key}")),
         }
     }
@@ -291,14 +290,8 @@ impl AZenithConfig {
             "disable_thermal" => self.disable_thermal = parse_b(key, val)?,
             "use_fpsgo" => self.use_fpsgo = parse_b(key, val)?,
             "fpsged" => self.fpsged = parse_b(key, val)?,
-            "bypass_chg" => self.bypass_chg = parse_b(key, val)?,
-            "bypass_path" => self.bypass_path = val.to_string(),
-            "bypass_chg_threshold" => {
-                self.bypass_chg_threshold = val
-                    .trim()
-                    .parse::<i32>()
-                    .map_err(|_| format!("invalid i32 for bypass_chg_threshold: {val}"))?;
-            }
+            "standby_chg" | "bypass_chg" => self.standby_chg = parse_b(key, val)?,
+            "standby_path" | "bypass_path" => self.standby_path = val.to_string(),
             _ => return Err(format!("unknown config key: {key}")),
         }
         Ok(())
@@ -553,21 +546,14 @@ impl AZenithConfig {
             }
             "persist.sys.azenithconf.bypasschg" => {
                 if let Some(b) = parse_bool_flexible(val) {
-                    self.bypass_chg = b;
+                    self.standby_chg = b;
                     return true;
                 }
                 false
             }
             "persist.sys.azenithconf.bypasspath" => {
-                self.bypass_path = val.to_string();
+                self.standby_path = val.to_string();
                 true
-            }
-            "persist.sys.azenithconf.bypasschgthreshold" => {
-                if let Ok(v) = val.parse::<i32>() {
-                    self.bypass_chg_threshold = v;
-                    return true;
-                }
-                false
             }
             _ => false,
         }
@@ -821,8 +807,8 @@ mod tests {
         let idx_renderer = json.find("\"renderer\"").unwrap();
         let idx_preload = json.find("\"app_preload\"").unwrap();
         let idx_sched = json.find("\"schedtunes\"").unwrap();
-        let idx_bypass = json.find("\"bypass_chg\"").unwrap();
-        let idx_thresh = json.find("\"bypass_chg_threshold\"").unwrap();
+        let idx_standby = json.find("\"standby_chg\"").unwrap();
+        let idx_path = json.find("\"standby_path\"").unwrap();
 
         assert!(idx_version < idx_soc);
         assert!(idx_soc < idx_auto);
@@ -833,8 +819,8 @@ mod tests {
         assert!(idx_def_mali < idx_renderer);
         assert!(idx_renderer < idx_preload);
         assert!(idx_preload < idx_sched);
-        assert!(idx_sched < idx_bypass);
-        assert!(idx_bypass < idx_thresh);
+        assert!(idx_sched < idx_standby);
+        assert!(idx_standby < idx_path);
     }
 
     #[test]
@@ -851,13 +837,13 @@ mod tests {
         let updated = update_at(&cfg_path, &lock_path, Some(&mirror_path), |c| {
             c.soc_type = Some(2);
             c.freq_offset = "80".to_string();
-            c.bypass_chg_threshold = 35;
+            c.standby_chg = true;
         })
         .unwrap();
 
         assert_eq!(updated.soc_type, Some(2));
         assert_eq!(updated.freq_offset, "80");
-        assert_eq!(updated.bypass_chg_threshold, 35);
+        assert!(updated.standby_chg);
 
         let loaded = try_load_from(&cfg_path).unwrap();
         assert_eq!(loaded, updated);

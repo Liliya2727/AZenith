@@ -1271,7 +1271,7 @@ pub fn check_bypass_compatibility() -> i32 {
         );
     }
 
-    let current_path = archconfig::load().bypass_path;
+    let current_path = archconfig::load().standby_path;
     if current_path.is_empty() || current_path == "UNSUPPORTED" {
         println!("\u{1b}[33m[INFO]\u{1b}[0m Configuration left unchanged (no bypass path configured).");
     } else {
@@ -1520,7 +1520,7 @@ pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
             } else if IS_TRUE!(ctx.opts_bypass_charging()) {
                 true
             } else {
-                ctx.config.bypass_chg
+                ctx.config.standby_chg
             };
 
             if current_battery >= 0 && bypass_charging_allowed && is_device_charging {

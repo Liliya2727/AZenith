@@ -414,7 +414,7 @@ impl DaemonContext {
     }
 
     pub fn config_bypasspath_str(&self) -> &str {
-        &self.config.bypass_path
+        &self.config.standby_path
     }
 
     pub fn saved_renderer_str(&self) -> &str {

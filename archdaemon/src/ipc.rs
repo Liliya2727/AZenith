@@ -519,9 +519,9 @@ fn process_event(
             let path = "/data/adb/.config/AZenith/bypasschgconfig/bypasspath";
             if let Ok(s) = fileops::read_string_result(path) {
                 let trimmed = s.trim().to_string();
-                if !trimmed.is_empty() && ctx.config.bypass_path != trimmed {
-                    ctx.config.bypass_path = trimmed.clone();
-                    let _ = archconfig::update(|c| c.bypass_path = trimmed);
+                if !trimmed.is_empty() && ctx.config.standby_path != trimmed {
+                    ctx.config.standby_path = trimmed.clone();
+                    let _ = archconfig::update(|c| c.standby_path = trimmed);
                 }
             }
         }
@@ -529,20 +529,10 @@ fn process_event(
             let path = "/data/adb/.config/AZenith/bypasschgconfig/bypasschg";
             if let Ok(s) = fileops::read_string_result(path) {
                 if let Some(val) = archconfig::parse_bool_flexible(s.trim()) {
-                    if ctx.config.bypass_chg != val {
-                        ctx.config.bypass_chg = val;
-                        let _ = archconfig::update(|c| c.bypass_chg = val);
+                    if ctx.config.standby_chg != val {
+                        ctx.config.standby_chg = val;
+                        let _ = archconfig::update(|c| c.standby_chg = val);
                     }
-                }
-            }
-        }
-        "bypasschgthreshold" => {
-            let path = "/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold";
-            if let Ok(s) = fileops::read_string_result(path) {
-                let val: i32 = s.trim().parse().unwrap_or(20);
-                if ctx.config.bypass_chg_threshold != val {
-                    ctx.config.bypass_chg_threshold = val;
-                    let _ = archconfig::update(|c| c.bypass_chg_threshold = val);
                 }
             }
         }
@@ -571,16 +561,14 @@ fn handle_config_json_event(ctx: &mut DaemonContext) {
         log_info!("inotify", "config.json freq_offset updated value={}", new_cfg.freq_offset);
     }
 
-    if old_cfg.bypass_path != new_cfg.bypass_path
-        || old_cfg.bypass_chg != new_cfg.bypass_chg
-        || old_cfg.bypass_chg_threshold != new_cfg.bypass_chg_threshold
+    if old_cfg.standby_path != new_cfg.standby_path
+        || old_cfg.standby_chg != new_cfg.standby_chg
     {
         log_info!(
             "inotify",
-            "config.json bypass updated chg={} path={} threshold={}",
-            new_cfg.bypass_chg,
-            new_cfg.bypass_path,
-            new_cfg.bypass_chg_threshold
+            "config.json standby charge updated chg={} path={}",
+            new_cfg.standby_chg,
+            new_cfg.standby_path
         );
         crate::bypass::handle_dynamic_bypass(ctx);
     }
