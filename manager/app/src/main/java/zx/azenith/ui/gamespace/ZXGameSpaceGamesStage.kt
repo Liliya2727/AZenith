@@ -80,6 +80,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -278,6 +279,7 @@ internal fun ZXGameSpaceTileRibbon(
         modifier = Modifier
             .fillMaxWidth()
             .height(92.dp)
+            .clipToBounds()
             .pointerInput(entries.size) {
                 detectHorizontalDragGestures(
                     onDragStart = {
@@ -337,6 +339,11 @@ internal fun ZXGameSpaceTileRibbon(
         Row(
             modifier = Modifier
                 .fillMaxHeight()
+                // Unbounded width: a Row clamped to the screen hands the tiles past the
+                // right edge only the leftover width, which squashes or collapses them
+                // (worse at large UI scale). Measure every tile at full size and let the
+                // offset below decide which part is visible.
+                .wrapContentWidth(align = Alignment.Start, unbounded = true)
                 .offset { IntOffset(x = totalOffsetPx.roundToInt(), y = 0) }
                 .then(
                     if (focusRequester != null) {
