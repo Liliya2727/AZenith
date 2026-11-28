@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Balanced Mali GPU governor</string>
     <string name="balanced_mali_gov_desc">GPU governor used by balanced profile</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass charging</string>
-    <string name="bcharging_desc">Configure AZenith bypass charging</string>
+    <string name="bcharging">Standby Charge</string>
+    <string name="bcharging_desc">Configure AZenith standby charge feature</string>
     <string name="bypass_not_supported">This feature is not supported on your device</string>
     <string name="cd_app_icon">App icon</string>
     <string name="cd_back">Back</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Current profile</string>
     <string name="custom">Custom</string>
     <string name="CompatibilityCheck">Compatibility check</string>
-    <string name="CompatibilityCheck_desc">Run diagnostics to check if device supports bypass charging</string>
+    <string name="CompatibilityCheck_desc">Run diagnostics to check if the device supports standby charge</string>
     <string name="default_cpu_gov">Default CPU governor</string>
     <string name="default_cpu_gov_desc">Governor used by balanced profile</string>
     <string name="default_label">Default</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Restore failed</string>
     <string name="dialog_start_hw_test_content">AZenith will perform a current drop test on the built-in battery node. The diagnostic is safe and lasts a few seconds.</string>
     <string name="dialog_start_hw_test_title">Start hardware test?</string>
-    <string name="dialog_switch_node_content">Force switch bypass target to [%1$s]?</string>
+    <string name="dialog_switch_node_content">Force switch standby charge configuration target to [%1$s]?</string>
     <string name="dialog_switch_node_title">Switch control node?</string>
     <string name="dialog_update_available_confirm">Update now</string>
     <string name="dialog_update_available_content">App manager version (%1$d) is lower than module version (%2$d). Update now to get latest features?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Do not disturb while gaming</string>
     <string name="dnd_mode_gaming_desc">Automatically enable DND under performance profile</string>
     <string name="done">Done</string>
-    <string name="enable_bypass_charge">Enable bypass charging</string>
-    <string name="enable_bypass_charge_desc">Enable bypass charging under performance profile</string>
+    <string name="enable_bypass_charge">Enable Standby Charge</string>
+    <string name="enable_bypass_charge_desc">Enable standby charge under performance profile</string>
     <string name="err_failed_load_changelog">Failed to load changelog</string>
     <string name="err_invalid_backup">Backup file is invalid or corrupted (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Current bypass node</string>
+    <string name="str_active_bypass_node">Current Standby Charge Node</string>
     <string name="str_adjust_and_calibrate_your_scre">Adjust screen color and saturation via SurfaceFlinger service, no kernel support required</string>
     <string name="str_adjust_gradient">Adjust gradient</string>
     <string name="str_app_info">App info</string>
@@ -349,11 +349,11 @@
     <string name="str_maintainer">Maintainer</string>
     <string name="str_max_video_size">Video size limit is 50MB</string>
     <string name="str_no_active_nodes">No active nodes</string>
-    <string name="str_no_active_nodes_desc">No available bypass nodes mapped in system properties</string>
+    <string name="str_no_active_nodes_desc">No available standby charge nodes mapped in system properties</string>
     <string name="str_no_compatible_nodes">No compatible nodes</string>
     <string name="str_open_source">Open source</string>
     <string name="str_package_name">Package name</string>
-    <string name="str_pause_battery_charging_when_pl">Pause battery charging while plugged in, power is supplied directly to the motherboard, significantly reducing heat during gaming and extending battery lifespan.</string>
+    <string name="str_pause_battery_charging_when_pl">Keep your battery at its current level by smartly pausing and resuming charging during your game session, reducing device heat while preserving your battery charge.</string>
     <string name="str_per_app_applist_settings">Per-app and app list settings</string>
     <string name="str_performance_profile">Performance profile</string>
     <string name="str_pick_media">Select media file</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root access denied. AZenith requires root to run.</string>
     <string name="str_root_access_granted">Root access granted, all set!</string>
-    <string name="str_run_diagnostics_above_or_check">Run diagnostics above or check if kernel includes bypass charging nodes</string>
+    <string name="str_run_diagnostics_above_or_check">Run the diagnostics above, or check if the kernel includes standby charge nodes</string>
     <string name="str_safely_test">Safely test device compatibility</string>
     <string name="str_save_compressed_logs_to_a_fold">Save compressed logs to a folder</string>
     <string name="str_save_your_current_tweak_settin">Save your current tweak settings</string>
@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Configure Governor and Schedulers</string>
     <string name="gov_settingsdesc2">Configure your device CPU, GPU Governor and IO Schedulers value, each value applied to each AZenith profile</string>
     <string name="presets">Presets</string>
-    <string name="str_bypass_need_setup">Bypass charge path hasn\'t been set up yet. Please complete the setup via Compatibility Check first.</string>
+    <string name="str_bypass_need_setup">Standby charge path hasn\x27t been set up yet. Please complete the setup via Compatibility Check first.</string>
     <string name="reboot_required_content">This option requires a reboot to be applied. Continue?</string>
     <string name="disable_auto_mode_desc">Stops profiles from switching automatically when a game is detected. You then set the profile yourself from the Current Profile tile on the Home page.</string>
     <string name="no_apps_found">No apps match this search</string>

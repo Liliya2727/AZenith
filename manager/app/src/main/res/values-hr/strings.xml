@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Uravnoteženi Mali GPU upravljač</string>
     <string name="balanced_mali_gov_desc">GPU upravljač koji koristi uravnoteženi profil</string>
     <string name="banner">Transparent</string>
-    <string name="bcharging">Bypass napajanje</string>
-    <string name="bcharging_desc">Konfigurirajte AZenith bypass napajanje</string>
+    <string name="bcharging">Standby napajanje</string>
+    <string name="bcharging_desc">Konfigurirajte AZenith standby napajanje</string>
     <string name="bypass_not_supported">Trenutni uređaj ne podržava ovu funkciju</string>
     <string name="cd_app_icon">Ikona aplikacije</string>
     <string name="cd_back">Natrag</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Trenutni profil</string>
     <string name="custom">Prilagođeno</string>
     <string name="CompatibilityCheck">Provjera kompatibilnosti</string>
-    <string name="CompatibilityCheck_desc">Izvrši dijagnostiku kako bi otkrio podržava li uređaj bypass napajanje</string>
+    <string name="CompatibilityCheck_desc">Izvrši dijagnostiku kako bi otkrio podržava li uređaj standby napajanje</string>
     <string name="default_cpu_gov">Zadani CPU upravljač</string>
     <string name="default_cpu_gov_desc">Upravljač koji koristi uravnoteženi profil</string>
     <string name="default_label">Zadano</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Vraćanje nije uspjelo</string>
     <string name="dialog_start_hw_test_content">AZenith će izvršiti test pada napona na ugrađenom čvoru baterije, dijagnostika je sigurna i traje nekoliko sekundi</string>
     <string name="dialog_start_hw_test_title">Započeti hardverski test?</string>
-    <string name="dialog_switch_node_content">Želite li forsirano prebaciti cilj bypass konfiguracije na [%1$s]?</string>
+    <string name="dialog_switch_node_content">Želite li forsirano prebaciti cilj standby konfiguracije na [%1$s]?</string>
     <string name="dialog_switch_node_title">Promijeniti kontrolni čvor?</string>
     <string name="dialog_update_available_confirm">Odmah ažuriraj</string>
     <string name="dialog_update_available_content">Verzija upravitelja aplikacije (%1$d) je niža od verzije modula (%2$d), želite li odmah ažurirati kako biste dobili najnovije značajke?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Ne uznemiravaj tijekom igre</string>
     <string name="dnd_mode_gaming_desc">Automatski uključi način ne uznemiravaj pod profilom performansi</string>
     <string name="done">Gotovo</string>
-    <string name="enable_bypass_charge">Omogući bypass napajanje</string>
-    <string name="enable_bypass_charge_desc">Omogući bypass napajanje pod profilom performansi</string>
+    <string name="enable_bypass_charge">Omogući standby napajanje</string>
+    <string name="enable_bypass_charge_desc">Omogući standby napajanje pod profilom performansi</string>
     <string name="err_failed_load_changelog">Učitavanje dnevnika promjena nije uspjelo</string>
     <string name="err_invalid_backup">Datoteka sigurnosne kopije je nevažeća ili oštećena (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Trenutni bypass čvor napajanja</string>
+    <string name="str_active_bypass_node">Trenutni standby čvor napajanja</string>
     <string name="str_adjust_and_calibrate_your_scre">Pomoću SurfaceFlinger usluge podesite boje zaslona i zasićenje, bez potrebe za podrškom na razini jezgre</string>
     <string name="str_adjust_gradient">Podesi gradijent</string>
     <string name="str_app_info">Informacije o aplikaciji</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Održavatelj</string>
     <string name="str_max_video_size">Maksimalna veličina videa je 50 MB</string>
     <string name="str_no_active_nodes">Nema dostupnih radnih čvorova</string>
-    <string name="str_no_active_nodes_desc">U sistemskim svojstvima nije mapiran dostupan bypass čvor</string>
+    <string name="str_no_active_nodes_desc">U sistemskim svojstvima nije mapiran dostupan standby čvor</string>
     <string name="str_no_compatible_nodes">Nema kompatibilnih čvorova</string>
     <string name="str_open_source">Otvoreni kod</string>
     <string name="str_package_name">Naziv paketa</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root dozvole su odbijene, AZenith zahtijeva root dozvole za rad</string>
     <string name="str_root_access_granted">Root dozvole dobivene, sve je spremno!</string>
-    <string name="str_run_diagnostics_above_or_check">Pokrenite gornju dijagnostiku ili provjerite sadrži li jezgra bypass čvor napajanja</string>
+    <string name="str_run_diagnostics_above_or_check">Pokrenite gornju dijagnostiku ili provjerite sadrži li jezgra standby čvor napajanja</string>
     <string name="str_safely_test">Sigurno testiraj kompatibilnost uređaja</string>
     <string name="str_save_compressed_logs_to_a_fold">Spremi komprimirane zapise u određenu mapu</string>
     <string name="str_save_your_current_tweak_settin">Spremi trenutne postavke konfiguracije</string>
@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Konfigurirajte regulator i raspoređivače</string>
     <string name="gov_settingsdesc2">Konfigurirajte vrijednosti CPU, GPU regulatora i I/O raspoređivača uređaja, svaka vrijednost se primjenjuje na svaki AZenith profil</string>
     <string name="presets">Unaprijed definirane postavke</string>
-    <string name="str_bypass_need_setup">Putanja za bypass punjenje još nije postavljena. Prvo dovršite postavljanje putem Provjere kompatibilnosti.</string>
+    <string name="str_bypass_need_setup">Putanja za standby punjenje još nije postavljena. Prvo dovršite postavljanje putem Provjere kompatibilnosti.</string>
     <string name="reboot_required_content">Ova opcija zahtijeva ponovno pokretanje kako bi se primijenila. Nastaviti?</string>
     <string name="disable_auto_mode_desc">Zaustavlja automatsko prebacivanje profila kada se otkrije igra. Zatim sami postavljate profil s pločice Trenutni profil na početnoj stranici.</string>
     <string name="no_apps_found">Nijedna aplikacija ne odgovara ovoj pretrazi</string>

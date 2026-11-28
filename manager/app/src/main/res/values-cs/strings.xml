@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Vyvážený regulátor Mali GPU</string>
     <string name="balanced_mali_gov_desc">Regulátor GPU používaný ve vyváženém profilu</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass nabíjení</string>
-    <string name="bcharging_desc">Nastavení funkce bypass nabíjení v AZenith</string>
+    <string name="bcharging">Standby nabíjení</string>
+    <string name="bcharging_desc">Nastavení funkce standby nabíjení v AZenith</string>
     <string name="bypass_not_supported">Toto zařízení tuto funkci nepodporuje</string>
     <string name="cd_app_icon">Ikona aplikace</string>
     <string name="cd_back">Zpět</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Aktuální profil</string>
     <string name="custom">Vlastní</string>
     <string name="CompatibilityCheck">Kontrola kompatibility</string>
-    <string name="CompatibilityCheck_desc">Proveďte diagnostiku, zda zařízení podporuje bypass nabíjení</string>
+    <string name="CompatibilityCheck_desc">Proveďte diagnostiku, zda zařízení podporuje standby nabíjení</string>
     <string name="default_cpu_gov">Výchozí regulátor CPU</string>
     <string name="default_cpu_gov_desc">Regulátor používaný ve vyváženém profilu</string>
     <string name="default_label">Výchozí</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Obnovení selhalo</string>
     <string name="dialog_start_hw_test_content">AZenith provede test úbytku napětí na vestavěných uzlech baterie. Diagnostika je bezpečná a trvá několik sekund.</string>
     <string name="dialog_start_hw_test_title">Spustit hardwarový test?</string>
-    <string name="dialog_switch_node_content">Chcete vynutit přepnutí cíle bypass konfigurace na [%1$s]?</string>
+    <string name="dialog_switch_node_content">Chcete vynutit přepnutí cíle standby konfigurace na [%1$s]?</string>
     <string name="dialog_switch_node_title">Přepnout řídicí uzel?</string>
     <string name="dialog_update_available_confirm">Aktualizovat nyní</string>
     <string name="dialog_update_available_content">Verze správce aplikací (%1$d) je nižší než verze modulu (%2$d). Chcete aktualizovat pro získání nejnovějších funkcí?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Nerušit při hraní</string>
     <string name="dnd_mode_gaming_desc">Automaticky zapnout režim Nerušit v režimu výkonu</string>
     <string name="done">Hotovo</string>
-    <string name="enable_bypass_charge">Povolit bypass nabíjení</string>
-    <string name="enable_bypass_charge_desc">Povolit bypass nabíjení v režimu výkonu</string>
+    <string name="enable_bypass_charge">Povolit standby nabíjení</string>
+    <string name="enable_bypass_charge_desc">Povolit standby nabíjení v režimu výkonu</string>
     <string name="err_failed_load_changelog">Načtení protokolu změn selhalo</string>
     <string name="err_invalid_backup">Zálohovací soubor je neplatný nebo poškozený (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -292,7 +292,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Aktuální bypass uzel</string>
+    <string name="str_active_bypass_node">Aktuální standby uzel</string>
     <string name="str_adjust_and_calibrate_your_scre">Nastavte barvy a sytost obrazovky prostřednictvím služby SurfaceFlinger, bez nutnosti podpory jádra.</string>
     <string name="str_adjust_gradient">Nastavit přechod</string>
     <string name="str_app_info">Informace o aplikaci</string>
@@ -350,7 +350,7 @@
     <string name="str_maintainer">Správce</string>
     <string name="str_max_video_size">Maximální velikost videa je 50 MB.</string>
     <string name="str_no_active_nodes">Žádné funkční uzly</string>
-    <string name="str_no_active_nodes_desc">V systémových vlastnostech nejsou namapovány žádné dostupné bypass uzly.</string>
+    <string name="str_no_active_nodes_desc">V systémových vlastnostech nejsou namapovány žádné dostupné standby uzly.</string>
     <string name="str_no_compatible_nodes">Žádné kompatibilní uzly</string>
     <string name="str_open_source">Open source</string>
     <string name="str_package_name">Název balíčku</string>
@@ -367,7 +367,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Oprávnění root bylo zamítnuto. AZenith vyžaduje oprávnění root pro svůj běh.</string>
     <string name="str_root_access_granted">Oprávnění root získáno, vše připraveno!</string>
-    <string name="str_run_diagnostics_above_or_check">Spusťte diagnostiku výše nebo zkontrolujte, zda jádro obsahuje bypass nabíjecí uzly.</string>
+    <string name="str_run_diagnostics_above_or_check">Spusťte diagnostiku výše nebo zkontrolujte, zda jádro obsahuje standby nabíjecí uzly.</string>
     <string name="str_safely_test">Bezpečně otestovat kompatibilitu zařízení.</string>
     <string name="str_save_compressed_logs_to_a_fold">Uložit komprimované protokoly do zadané složky.</string>
     <string name="str_save_your_current_tweak_settin">Uložit aktuální nastavení.</string>

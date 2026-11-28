@@ -1,3 +1,17 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Retention: keep the last 30 sessions / 20 MB total, delete the oldest.
 
 use super::{FRAMERATEDATA_DIR, RETENTION_MAX_BYTES, RETENTION_MAX_SESSIONS};
@@ -12,33 +26,55 @@ fn mtime_secs(p: &Path) -> u64 {
 }
 
 /// Retention: keep the last 30 sessions / 20 MB total, delete the oldest.
-/// Runs during finalize.
+/// Called from finalize and from startup recovery.
 pub fn apply_retention() {
     let dir = Path::new(FRAMERATEDATA_DIR);
     let Ok(entries) = std::fs::read_dir(dir) else { return };
-    let mut pairs: Vec<(PathBuf, u64, u64)> = Vec::new(); // (csv path, mtime, csv bytes)
+    let mut pairs: Vec<(PathBuf, u64, u64)> = Vec::new(); // (csv, mtime, csv + json bytes)
+
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) == Some("csv") {
-            let bytes = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
-            pairs.push((path.clone(), mtime_secs(&path), bytes));
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+        if ext == "csv" {
+            let json_path = path.with_extension("json");
+            let bytes = file_len(&path) + file_len(&json_path);
+            let mtime = mtime_secs(&path);
+            pairs.push((path, mtime, bytes));
+        } else if ext == "json" || ext == "tmp" {
+            // A failed write_json_atomic leaves `<name>.json.tmp`, and a
+            // recovered/manually trimmed session can leave an orphan `.json`.
+            // Neither is ever counted or removed by the CSV-only sweep.
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let stem = name
+                .strip_suffix(".json.tmp")
+                .or_else(|| name.strip_suffix(".json"))
+                .unwrap_or(name);
+            let csv = path.with_file_name(format!("{}.csv", stem));
+            if !csv.exists() {
+                let _ = std::fs::remove_file(&path);
+                crate::log_info!("recorder", "retention removed orphan file={:?}", path);
+            }
         }
     }
+
     pairs.sort_by(|a, b| a.1.cmp(&b.1));
     let mut count = pairs.len();
     let mut bytes: u64 = pairs.iter().map(|p| p.2).sum();
-    for (csv_path, _, csv_bytes) in pairs {
+    for (csv_path, _, session_bytes) in pairs {
         if count <= RETENTION_MAX_SESSIONS && bytes <= RETENTION_MAX_BYTES {
             break;
         }
         let json_path = csv_path.with_extension("json");
-        let json_bytes = std::fs::metadata(&json_path).map(|m| m.len()).unwrap_or(0);
         let _ = std::fs::remove_file(&csv_path);
         let _ = std::fs::remove_file(&json_path);
         crate::log_info!("recorder", "retention delete file={:?}", csv_path);
-        bytes = bytes.saturating_sub(csv_bytes + json_bytes);
+        bytes = bytes.saturating_sub(session_bytes);
         count -= 1;
     }
+}
+
+fn file_len(p: &Path) -> u64 {
+    std::fs::metadata(p).map(|m| m.len()).unwrap_or(0)
 }
 
 #[cfg(test)]

@@ -536,21 +536,12 @@ object SearchIndex {
             requires = listOf(SearchRequirement.MaliGpu)
         ),
 
-        // --- Bypass charging ----------------------------------------------
+        // --- Standby Charge -----------------------------------------------
         SearchEntry(
             id = "bypass.enable",
             titleRes = R.string.enable_bypass_charge,
             summaryRes = R.string.enable_bypass_charge_desc,
             icon = Icons.Filled.Cable,
-            group = SearchGroup.Bypass,
-            target = SearchTarget.Route("bypasschg"),
-            requires = listOf(SearchRequirement.BypassSupported)
-        ),
-        SearchEntry(
-            id = "bypass.threshold",
-            titleRes = R.string.charging_threshold,
-            summaryRes = R.string.charging_threshold_desc,
-            icon = Icons.Rounded.BatteryChargingFull,
             group = SearchGroup.Bypass,
             target = SearchTarget.Route("bypasschg"),
             requires = listOf(SearchRequirement.BypassSupported)
@@ -658,9 +649,7 @@ object SearchIndex {
             summaryRes = R.string.disable_thermals_desc,
             icon = Icons.Rounded.Thermostat,
             group = SearchGroup.Prefs,
-            target = SearchTarget.Route("preferenced"),
-            keywordsRes = listOf(R.string.str_unavailable_mediatek),
-            requires = listOf(SearchRequirement.MediaTek, SearchRequirement.FullMode)
+            target = SearchTarget.Route("preferenced")
         ),
 
         // --- Color scheme -------------------------------------------------

@@ -76,12 +76,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
-import zx.azenith.ui.util.PropertyUtils
 
 
 @Composable
 fun FasScreen(navController: NavController) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme
@@ -98,7 +97,7 @@ fun FasScreen(navController: NavController) {
     
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { FasTopAppBar(
             onBack = { navController.safePopBackStack() },
             scrollBehavior = scrollBehavior
@@ -189,7 +188,7 @@ fun FasTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

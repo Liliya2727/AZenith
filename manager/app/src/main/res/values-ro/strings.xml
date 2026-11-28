@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Governor GPU Mali echilibrat</string>
     <string name="balanced_mali_gov_desc">Governorul GPU utilizat în configurația echilibrată</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Alimentare bypass</string>
-    <string name="bcharging_desc">Configurează funcția de alimentare bypass a AZenith</string>
+    <string name="bcharging">Alimentare standby</string>
+    <string name="bcharging_desc">Configurează funcția de alimentare standby a AZenith</string>
     <string name="bypass_not_supported">Dispozitivul curent nu suportă această funcție</string>
     <string name="cd_app_icon">Pictogramă aplicație</string>
     <string name="cd_back">Înapoi</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Configurația curentă</string>
     <string name="custom">Personalizat</string>
     <string name="CompatibilityCheck">Verificare compatibilitate</string>
-    <string name="CompatibilityCheck_desc">Efectuează o diagnoză pentru a verifica dacă dispozitivul suportă alimentarea bypass</string>
+    <string name="CompatibilityCheck_desc">Efectuează o diagnoză pentru a verifica dacă dispozitivul suportă alimentarea standby</string>
     <string name="default_cpu_gov">Governor CPU implicit</string>
     <string name="default_cpu_gov_desc">Governorul utilizat în configurația echilibrată</string>
     <string name="default_label">Implicit</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Restaurare eșuată</string>
     <string name="dialog_start_hw_test_content">AZenith va efectua un test de cădere de tensiune pe nodul bateriei interne. Procesul este sigur și durează câteva secunde.</string>
     <string name="dialog_start_hw_test_title">Începe testul hardware?</string>
-    <string name="dialog_switch_node_content">Forțezi comutarea țintei de configurare bypass la [%1$s]?</string>
+    <string name="dialog_switch_node_content">Forțezi comutarea țintei de configurare standby la [%1$s]?</string>
     <string name="dialog_switch_node_title">Schimbă nodul de control?</string>
     <string name="dialog_update_available_confirm">Actualizează acum</string>
     <string name="dialog_update_available_content">Versiunea managerului de aplicații (%1$d) este mai mică decât versiunea modulului (%2$d). Actualizezi acum pentru cele mai noi funcții?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Nu deranjați în jocuri</string>
     <string name="dnd_mode_gaming_desc">Activează automat modul Nu deranjați în configurația de performanță</string>
     <string name="done">Finalizat</string>
-    <string name="enable_bypass_charge">Activează alimentarea bypass</string>
-    <string name="enable_bypass_charge_desc">Activează alimentarea bypass în configurația de performanță</string>
+    <string name="enable_bypass_charge">Activează alimentarea standby</string>
+    <string name="enable_bypass_charge_desc">Activează alimentarea standby în configurația de performanță</string>
     <string name="err_failed_load_changelog">Încărcarea jurnalului de modificări a eșuat</string>
     <string name="err_invalid_backup">Fișierul de rezervă este invalid sau deteriorat (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Nodul curent de alimentare bypass</string>
+    <string name="str_active_bypass_node">Nodul curent de alimentare standby</string>
     <string name="str_adjust_and_calibrate_your_scre">Ajustează culorile și saturația ecranului prin serviciul SurfaceFlinger, fără suport la nivel de kernel</string>
     <string name="str_adjust_gradient">Ajustează gradientul</string>
     <string name="str_app_info">Informații aplicație</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Mentor</string>
     <string name="str_max_video_size">Dimensiunea maximă a videoclipului este de 50 MB</string>
     <string name="str_no_active_nodes">Niciun nod de lucru disponibil</string>
-    <string name="str_no_active_nodes_desc">Proprietățile de sistem nu au mapat niciun nod bypass disponibil</string>
+    <string name="str_no_active_nodes_desc">Proprietățile de sistem nu au mapat niciun nod standby disponibil</string>
     <string name="str_no_compatible_nodes">Niciun nod compatibil</string>
     <string name="str_open_source">Open source</string>
     <string name="str_package_name">Nume pachet</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Acces Root respins. AZenith necesită acces Root pentru a funcționa.</string>
     <string name="str_root_access_granted">Acces Root acordat, totul este pregătit!</string>
-    <string name="str_run_diagnostics_above_or_check">Rulați diagnosticarea de mai sus sau verificați dacă kernelul conține noduri de alimentare bypass.</string>
+    <string name="str_run_diagnostics_above_or_check">Rulați diagnosticarea de mai sus sau verificați dacă kernelul conține noduri de alimentare standby.</string>
     <string name="str_safely_test">Testați în siguranță compatibilitatea dispozitivului</string>
     <string name="str_save_compressed_logs_to_a_fold">Salvați jurnalele comprimate într-un folder specific</string>
     <string name="str_save_your_current_tweak_settin">Salvați setările curente de configurare</string>
@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Configurează regulatorul și planificatoarele</string>
     <string name="gov_settingsdesc2">Configurați valorile regulatorului CPU, GPU și ale planificatoarelor I/O ale dispozitivului, fiecare valoare aplicată fiecărui profil AZenith</string>
     <string name="presets">Presetări</string>
-    <string name="str_bypass_need_setup">Calea de încărcare bypass nu a fost încă configurată. Vă rugăm să finalizați mai întâi configurarea prin Verificarea compatibilității.</string>
+    <string name="str_bypass_need_setup">Calea de încărcare standby nu a fost încă configurată. Vă rugăm să finalizați mai întâi configurarea prin Verificarea compatibilității.</string>
     <string name="reboot_required_content">Această opțiune necesită o repornire pentru a fi aplicată. Continuați?</string>
     <string name="disable_auto_mode_desc">Oprește comutarea automată a profilurilor atunci când este detectat un joc. Apoi setați singur profilul din panoul Profil curent de pe pagina de pornire.</string>
     <string name="no_apps_found">Nicio aplicație nu corespunde acestei căutări</string>

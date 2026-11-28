@@ -64,6 +64,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -95,7 +96,7 @@ import zx.azenith.ui.util.getSupportedRefreshRates
 import zx.azenith.ui.util.getSupportedDownscaleFactors
 import zx.azenith.ui.util.getSupportedFpsTargets
 import zx.azenith.ui.util.DebugUtils
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.component.ExpressiveSliderItem
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -126,11 +127,11 @@ fun AppSettingsScreen(
     var bypassSupported by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         bypassSupported = withContext(Dispatchers.IO) {
-            val path = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
+            val path = ConfigUtils.load().standbyPath
             path != "UNSUPPORTED" && path != "NEED_SETUP"
         }
     }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val coroutineScope = rememberCoroutineScope()
 
     var localMasterOn by remember(config != null) { mutableStateOf(config != null) }
@@ -495,7 +496,7 @@ fun AppSettingsScreen(
     }
 
     Scaffold(
-            modifier = Modifier,
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = { 
                 AppSettingsTopAppBar(
                     onLaunchApp = {
@@ -723,8 +724,12 @@ fun isGameCategory(context: android.content.Context, packageName: String?): Bool
     return try {
         val pm = context.packageManager
         val appInfo = pm.getApplicationInfo(packageName, 0)
-        appInfo.category == ApplicationInfo.CATEGORY_GAME ||
-            (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            appInfo.category == ApplicationInfo.CATEGORY_GAME
+        } else {
+            appInfo.category == ApplicationInfo.CATEGORY_GAME ||
+                (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+        }
     } catch (e: Exception) {
         false
     }
@@ -804,6 +809,7 @@ fun AppSettingsTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

@@ -88,7 +88,10 @@ import zx.azenith.ui.util.getHeaderImage
  * and a rich game artwork stage with Material 3 tonal scrims.
  */
 @Composable
-internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
+internal fun ZXGameSpaceStageBackdrop(
+    entry: RibbonEntry,
+    launchShapesElapsedMs: () -> Float = { 0f }
+) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
@@ -118,11 +121,12 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
         onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
-    Crossfade(
-        targetState = entry,
-        animationSpec = tween(300),
-        label = "ZXGameSpaceBackdropCrossfade"
-    ) { current ->
+    Box(modifier = Modifier.fillMaxSize()) {
+        Crossfade(
+            targetState = entry,
+            animationSpec = tween(300),
+            label = "ZXGameSpaceBackdropCrossfade"
+        ) { current ->
         Box(modifier = Modifier.fillMaxSize().background(scheme.surfaceContainerLowest)) {
             val _trigger = gameWallpaperTrigger
             val isHomescreen = current == RibbonEntry.Welcome
@@ -260,10 +264,6 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                     }
                 }
 
-                if (isHomescreen && floatingShapesEnabled) {
-                    ZXGameSpaceFloatingShapes(modifier = Modifier.fillMaxSize())
-                }
-
                 val baseDimColor = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
                 val dimScale = (effectiveDim / 75f).coerceIn(0.15f, 1.45f)
 
@@ -305,11 +305,26 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                             )
                         )
                 )
-            } else {
-                if (isHomescreen && floatingShapesEnabled) {
-                    ZXGameSpaceFloatingShapes(modifier = Modifier.fillMaxSize())
-                }
             }
+        }
+        }
+
+        // Keep floating shapes outside Crossfade so scrolling across ribbon entries never
+        // duplicates or interrupts their idle drift.
+        val showFloatingShapes = floatingShapesEnabled &&
+            (entry == RibbonEntry.Welcome || entry is RibbonEntry.Game)
+        val shapesLayerAlpha by androidx.compose.animation.core.animateFloatAsState(
+            targetValue = if (showFloatingShapes) 1f else 0f,
+            animationSpec = tween(300),
+            label = "FloatingShapesLayerAlpha"
+        )
+        if (shapesLayerAlpha > 0.001f) {
+            ZXGameSpaceFloatingShapes(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = shapesLayerAlpha },
+                launchShapesElapsedMs = launchShapesElapsedMs
+            )
         }
     }
 }
@@ -359,7 +374,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Circle,
         relX = 0.70f,
         relY = 0.22f,
-        size = 36.dp,
+        size = 56.dp,
         colorProvider = { it.primary },
         floatDurationMs = 5200,
         floatDistDp = 14.dp,
@@ -370,7 +385,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Cookie4,
         relX = 0.85f,
         relY = 0.36f,
-        size = 28.dp,
+        size = 30.dp,
         colorProvider = { it.tertiary },
         floatDurationMs = 6100,
         floatDistDp = 12.dp,
@@ -381,7 +396,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Clover4,
         relX = 0.56f,
         relY = 0.26f,
-        size = 32.dp,
+        size = 44.dp,
         colorProvider = { it.secondary },
         floatDurationMs = 4800,
         floatDistDp = 16.dp,
@@ -392,7 +407,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Sunny,
         relX = 0.75f,
         relY = 0.65f,
-        size = 40.dp,
+        size = 76.dp,
         colorProvider = { it.primary },
         floatDurationMs = 6800,
         floatDistDp = 18.dp,
@@ -403,7 +418,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.SoftBurst,
         relX = 0.90f,
         relY = 0.18f,
-        size = 24.dp,
+        size = 22.dp,
         colorProvider = { it.outlineVariant },
         floatDurationMs = 4300,
         floatDistDp = 10.dp,
@@ -414,7 +429,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Puffy,
         relX = 0.44f,
         relY = 0.16f,
-        size = 30.dp,
+        size = 64.dp,
         colorProvider = { it.tertiary },
         floatDurationMs = 5600,
         floatDistDp = 13.dp,
@@ -425,7 +440,7 @@ private val FLOATING_SHAPE_CONFIGS = listOf(
         initialShape = BentoShapes.Gem,
         relX = 0.62f,
         relY = 0.78f,
-        size = 28.dp,
+        size = 36.dp,
         colorProvider = { it.secondary },
         floatDurationMs = 6400,
         floatDistDp = 15.dp,
@@ -459,19 +474,30 @@ private val FLOATING_MORPH_SHAPES: List<RoundedPolygon> by lazy {
  * The drift is ~5 dp/s, so 80 ms steps are invisible.
  */
 @Composable
-internal fun ZXGameSpaceFloatingShapes(modifier: Modifier = Modifier) {
+internal fun ZXGameSpaceFloatingShapes(
+    modifier: Modifier = Modifier,
+    launchShapesElapsedMs: () -> Float = { 0f }
+) {
     val scheme = MaterialTheme.colorScheme
     val clock = rememberGameSpaceClock()
     BoxWithConstraints(modifier = modifier) {
         val w = maxWidth
         val h = maxHeight
-        FLOATING_SHAPE_CONFIGS.forEach { config ->
+        val shapeCount = FLOATING_SHAPE_CONFIGS.size
+        FLOATING_SHAPE_CONFIGS.forEachIndexed { index, config ->
             val posX = w * config.relX
             val posY = h * config.relY
+            val staggerMs = if (shapeCount > 1) {
+                (SHAPES_MAX_STAGGER_MS * index) / (shapeCount - 1)
+            } else {
+                0
+            }
             FloatingShapeItem(
                 config = config,
                 color = config.colorProvider(scheme),
                 clock = clock,
+                launchStaggerMs = staggerMs.toFloat(),
+                launchShapesElapsedMs = launchShapesElapsedMs,
                 modifier = Modifier.offset(x = posX, y = posY)
             )
         }
@@ -505,10 +531,19 @@ private fun FloatingShapeItem(
     config: FloatingShapeConfig,
     color: Color,
     clock: FloatState,
+    launchStaggerMs: Float = 0f,
+    launchShapesElapsedMs: () -> Float = { 0f },
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
     val floatDistPx = with(density) { config.floatDistDp.toPx() }
+    val flyDistPx = with(density) { SHAPES_FLYOUT_DISTANCE_DP.toPx() }
+    // Radial outward direction from screen center (0.5, 0.5).
+    val dx = config.relX - 0.5f
+    val dy = config.relY - 0.5f
+    val dist = kotlin.math.hypot(dx.toDouble(), dy.toDouble()).toFloat().coerceAtLeast(0.001f)
+    val dirX = dx / dist
+    val dirY = dy / dist
     val path = remember { Path() }
     val matrix = remember { Matrix() }
     val morphs = remember { HashMap<Int, Morph>() }
@@ -517,10 +552,27 @@ private fun FloatingShapeItem(
         modifier = modifier
             .graphicsLayer {
                 val t = clock.floatValue
-                translationX =
+                val idleTx =
                     (reverseRamp(t, (config.floatDurationMs * 1.35f).roundToInt()) * 2f - 1f) * floatDistPx * 0.65f
-                translationY =
+                val idleTy =
                     (FastOutSlowInEasing.transform(reverseRamp(t, config.floatDurationMs)) * 2f - 1f) * floatDistPx
+                val elapsed = launchShapesElapsedMs()
+                if (elapsed > 0f) {
+                    val localT = ((elapsed - launchStaggerMs) / SHAPES_FLYOUT_DURATION_MS).coerceIn(0f, 1f)
+                    val eased = androidx.compose.animation.core.FastOutLinearInEasing.transform(localT)
+                    translationX = idleTx + dirX * flyDistPx * eased
+                    translationY = idleTy + dirY * flyDistPx * eased
+                    val s = 1f + (SHAPES_END_SCALE - 1f) * eased
+                    scaleX = s
+                    scaleY = s
+                    alpha = (1f - eased).coerceIn(0f, 1f)
+                } else {
+                    translationX = idleTx
+                    translationY = idleTy
+                    scaleX = 1f
+                    scaleY = 1f
+                    alpha = 1f
+                }
                 rotationZ = -14f + 38f * reverseRamp(t, config.rotDurationMs)
             }
             .size(config.size)
@@ -548,11 +600,11 @@ private fun FloatingShapeItem(
                 matrix.reset()
                 matrix.scale(this.size.width, this.size.height)
                 outline.transform(matrix)
-                drawPath(outline, color = color.copy(alpha = 0.12f))
+                drawPath(outline, color = color.copy(alpha = 0.22f))
                 drawPath(
                     outline,
-                    color = color.copy(alpha = 0.28f),
-                    style = Stroke(width = 2.4f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    color = color.copy(alpha = 0.50f),
+                    style = Stroke(width = 3.0f, cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
             }
     )

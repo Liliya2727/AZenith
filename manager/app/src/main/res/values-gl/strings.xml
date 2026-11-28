@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Gobernador Mali GPU equilibrado</string>
     <string name="balanced_mali_gov_desc">Gobernador GPU usado no perfil equilibrado</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Carga bypass</string>
-    <string name="bcharging_desc">Configura a función de carga bypass de AZenith</string>
+    <string name="bcharging">Carga standby</string>
+    <string name="bcharging_desc">Configura a función de carga standby de AZenith</string>
     <string name="bypass_not_supported">Este dispositivo non admite esta función</string>
     <string name="cd_app_icon">Icona da aplicación</string>
     <string name="cd_back">Volver</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Perfil actual</string>
     <string name="custom">Personalizado</string>
     <string name="CompatibilityCheck">Comprobación de compatibilidade</string>
-    <string name="CompatibilityCheck_desc">Executa un test para diagnosticar se o dispositivo admite carga bypass</string>
+    <string name="CompatibilityCheck_desc">Executa un test para diagnosticar se o dispositivo admite carga standby</string>
     <string name="default_cpu_gov">Gobernador CPU predeterminado</string>
     <string name="default_cpu_gov_desc">Gobernador usado no perfil equilibrado</string>
     <string name="default_label">Predeterminado</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Fallo na restauración</string>
     <string name="dialog_start_hw_test_content">AZenith realizará un test de caída de voltaxe nos nodos de batería. O diagnóstico é seguro e durará uns segundos.</string>
     <string name="dialog_start_hw_test_title">Iniciar test de hardware?</string>
-    <string name="dialog_switch_node_content">Queres forzar o cambio do obxectivo de configuración bypass a [%1$s]?</string>
+    <string name="dialog_switch_node_content">Queres forzar o cambio do obxectivo de configuración standby a [%1$s]?</string>
     <string name="dialog_switch_node_title">Cambiar nodo de control?</string>
     <string name="dialog_update_available_confirm">Actualizar agora</string>
     <string name="dialog_update_available_content">A versión da app (%1$d) é inferior á do módulo (%2$d). Queres actualizar agora para obter as últimas funcións?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Non molestar durante o xogo</string>
     <string name="dnd_mode_gaming_desc">Activar automaticamente o modo non molestar no perfil de rendemento</string>
     <string name="done">Feito</string>
-    <string name="enable_bypass_charge">Activar carga bypass</string>
-    <string name="enable_bypass_charge_desc">Activar carga bypass no perfil de rendemento</string>
+    <string name="enable_bypass_charge">Activar carga standby</string>
+    <string name="enable_bypass_charge_desc">Activar carga standby no perfil de rendemento</string>
     <string name="err_failed_load_changelog">Erro ao cargar o rexistro de cambios</string>
     <string name="err_invalid_backup">O ficheiro de copia de seguridade non é válido ou está danado (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Nodo de carga bypass actual</string>
+    <string name="str_active_bypass_node">Nodo de carga standby actual</string>
     <string name="str_adjust_and_calibrate_your_scre">Axustar a cor e saturación da pantalla a través do servizo SurfaceFlinger, sen necesidade de soporte do kernel.</string>
     <string name="str_adjust_gradient">Axustar gradiente</string>
     <string name="str_app_info">Información da app</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Mantenedor</string>
     <string name="str_max_video_size">O tamaño máximo do vídeo é 50MB</string>
     <string name="str_no_active_nodes">Non hai nodos activos dispoñibles</string>
-    <string name="str_no_active_nodes_desc">Non se mapearon nodos de bypass dispoñibles nas propiedades do sistema.</string>
+    <string name="str_no_active_nodes_desc">Non se mapearon nodos de standby dispoñibles nas propiedades do sistema.</string>
     <string name="str_no_compatible_nodes">Non hai nodos compatibles</string>
     <string name="str_open_source">Código aberto</string>
     <string name="str_package_name">Nome do paquete</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Acceso root denegado. AZenith necesita acceso root para funcionar.</string>
     <string name="str_root_access_granted">Acceso root concedido. Todo listo!</string>
-    <string name="str_run_diagnostics_above_or_check">Executa o diagnóstico superior ou comproba se o kernel contén nodos de carga bypass.</string>
+    <string name="str_run_diagnostics_above_or_check">Executa o diagnóstico superior ou comproba se o kernel contén nodos de carga standby.</string>
     <string name="str_safely_test">Probar compatibilidade do dispositivo de forma segura</string>
     <string name="str_save_compressed_logs_to_a_fold">Gardar rexistros comprimidos nun cartafol</string>
     <string name="str_save_your_current_tweak_settin">Gardar a configuración actual</string>
@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Configurar o gobernador e os planificadores</string>
     <string name="gov_settingsdesc2">Configura os valores do gobernador de CPU, GPU e planificadores de E/S do dispositivo, cada valor aplícase a cada perfil de AZenith</string>
     <string name="presets">Valores predeterminados</string>
-    <string name="str_bypass_need_setup">A ruta de carga bypass aínda non se configurou. Completa primeiro a configuración a través do Control de compatibilidade.</string>
+    <string name="str_bypass_need_setup">A ruta de carga standby aínda non se configurou. Completa primeiro a configuración a través do Control de compatibilidade.</string>
     <string name="reboot_required_content">Esta opción require reiniciar para aplicarse. Desexa continuar?</string>
     <string name="disable_auto_mode_desc">Evita que os perfís cambien automaticamente cando se detecta un xogo. Despois estableces o perfil desde o mosaico Perfil actual da páxina de inicio.</string>
     <string name="no_apps_found">Ningunha aplicación coincide con esta busca</string>

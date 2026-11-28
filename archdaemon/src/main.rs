@@ -1,3 +1,17 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! AZenith Service Daemon — Rust rewrite of archdaemon.
 //! CLI entry point.
 //!
@@ -34,9 +48,9 @@ use crate::bypass::{
 };
 use crate::cli::{
     clearlogs, dump_refresh_rate_modes, expose_telemetry_access,
-    grant_app_permissions, handle_log, handle_verboselog, handle_profile, hidenotifications,
-    print_help, printversion, require_daemon_running, restart_service,
-    shownotifications,
+    grant_app_permissions, handle_config_get, handle_config_set, handle_log,
+    handle_prelaunch, handle_verboselog, handle_profile, hidenotifications, print_help,
+    printversion, require_daemon_running, restart_service, shownotifications,
 };
 use crate::daemon::main_daemon;
 use crate::shell::systemv;
@@ -51,7 +65,33 @@ macro_rules! is_cmd {
 }
 
 fn real_main() -> c_int {
-    let args: Vec<String> = env::args().collect();
+    let os_args: Vec<std::ffi::OsString> = env::args_os().collect();
+    let prog = os_args
+        .first()
+        .and_then(|s| std::path::Path::new(s).file_name())
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+
+    // Multicall compatibility shim for `sys.azenith-preloadbin` / `preloadbin` / `vmtouch`.
+    if matches!(prog, "sys.azenith-preloadbin" | "preloadbin" | "vmtouch") {
+        return crate::preload::cli::run_cli(
+            &os_args[1..],
+            crate::preload::cli::CliMode::StrictCompat,
+        );
+    }
+
+    // Native `preload` subcommand (does not require root or daemon running).
+    if os_args.get(1).and_then(|s| s.to_str()) == Some("preload") {
+        return crate::preload::cli::run_cli(
+            &os_args[2..],
+            crate::preload::cli::CliMode::Subcommand,
+        );
+    }
+
+    let args: Vec<String> = os_args
+        .iter()
+        .map(|s| s.to_string_lossy().into_owned())
+        .collect();
 
     if unsafe { libc::getuid() } != 0 {
         eprintln!("\u{1b}[31mERROR:\u{1b}[0m Please run this program as root");
@@ -109,6 +149,18 @@ fn real_main() -> c_int {
     if is_cmd!(cmd, "--get_rr_modes", "-getrr") {
         return dump_refresh_rate_modes();
     }
+    if cmd == "--config-get" {
+        return handle_config_get(
+            args.len() as i32,
+            args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().as_slice(),
+        );
+    }
+    if cmd == "--config-set" {
+        return handle_config_set(
+            args.len() as i32,
+            args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().as_slice(),
+        );
+    }
 
     // Commands below require the daemon to be running
     if !require_daemon_running() {
@@ -117,6 +169,9 @@ fn real_main() -> c_int {
 
     if is_cmd!(cmd, "--profile", "-p") {
         return handle_profile(args.len() as i32, args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().as_slice());
+    }
+    if is_cmd!(cmd, "--prelaunch", "-pl") {
+        return handle_prelaunch(args.len() as i32, args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().as_slice());
     }
     if is_cmd!(cmd, "--log", "-l") {
         return handle_log(args.len() as i32, args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().as_slice());

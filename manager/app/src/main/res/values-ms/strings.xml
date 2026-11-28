@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Gov GPU Mali seimbang</string>
     <string name="balanced_mali_gov_desc">Gov GPU yang digunakan dalam profil seimbang</string>
     <string name="banner">Sepanduk</string>
-    <string name="bcharging">Bypass pengecasan</string>
-    <string name="bcharging_desc">Konfigurasi fungsi bypass pengecasan AZenith</string>
+    <string name="bcharging">Standby pengecasan</string>
+    <string name="bcharging_desc">Konfigurasi fungsi standby pengecasan AZenith</string>
     <string name="bypass_not_supported">Peranti semasa tidak menyokong fungsi ini</string>
     <string name="cd_app_icon">Ikon aplikasi</string>
     <string name="cd_back">Kembali</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Profil semasa</string>
     <string name="custom">Sesuai</string>
     <string name="CompatibilityCheck">Pemeriksaan keserasian</string>
-    <string name="CompatibilityCheck_desc">Jalankan diagnostik untuk menguji sama ada peranti menyokong bypass pengecasan</string>
+    <string name="CompatibilityCheck_desc">Jalankan diagnostik untuk menguji sama ada peranti menyokong standby pengecasan</string>
     <string name="default_cpu_gov">Gov CPU lalai</string>
     <string name="default_cpu_gov_desc">Gov yang digunakan dalam profil seimbang</string>
     <string name="default_label">Lalai</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Pemulihan gagal</string>
     <string name="dialog_start_hw_test_content">AZenith akan menjalankan ujian penurunan voltan pada node bateri dalaman. Proses diagnostik adalah selamat dan berlangsung beberapa saat.</string>
     <string name="dialog_start_hw_test_title">Mulakan ujian perkakasan?</string>
-    <string name="dialog_switch_node_content">Adakah anda mahu memaksa menukar sasaran konfigurasi bypass kepada [%1$s]?</string>
+    <string name="dialog_switch_node_content">Adakah anda mahu memaksa menukar sasaran konfigurasi standby kepada [%1$s]?</string>
     <string name="dialog_switch_node_title">Tukar node kawalan?</string>
     <string name="dialog_update_available_confirm">Kemas kini sekarang</string>
     <string name="dialog_update_available_content">Versi pengurus aplikasi (%1$d) lebih rendah daripada versi modul (%2$d). Adakah anda mahu mengemas kini sekarang untuk mendapatkan ciri terkini?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Jangan ganggu semasa bermain</string>
     <string name="dnd_mode_gaming_desc">Dayakan jangan ganggu secara automatik di bawah profil prestasi</string>
     <string name="done">Selesai</string>
-    <string name="enable_bypass_charge">Dayakan bypass pengecasan</string>
-    <string name="enable_bypass_charge_desc">Dayakan bypass pengecasan di bawah profil prestasi</string>
+    <string name="enable_bypass_charge">Dayakan standby pengecasan</string>
+    <string name="enable_bypass_charge_desc">Dayakan standby pengecasan di bawah profil prestasi</string>
     <string name="err_failed_load_changelog">Gagal memuatkan log perubahan</string>
     <string name="err_invalid_backup">Fail sandaran tidak sah atau rosak (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Node bypass pengecasan semasa</string>
+    <string name="str_active_bypass_node">Node standby pengecasan semasa</string>
     <string name="str_adjust_and_calibrate_your_scre">Laraskan warna skrin dan ketepuan melalui perkhidmatan SurfaceFlinger, tanpa memerlukan sokongan kernel</string>
     <string name="str_adjust_gradient">Laraskan kecerunan</string>
     <string name="str_app_info">Maklumat aplikasi</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Penyelenggara</string>
     <string name="str_max_video_size">Saiz video maksimum 50MB</string>
     <string name="str_no_active_nodes">Tiada node yang berfungsi</string>
-    <string name="str_no_active_nodes_desc">Tiada node bypass yang tersedia dalam sifat sistem</string>
+    <string name="str_no_active_nodes_desc">Tiada node standby yang tersedia dalam sifat sistem</string>
     <string name="str_no_compatible_nodes">Tiada node yang serasi</string>
     <string name="str_open_source">Sumber terbuka</string>
     <string name="str_package_name">Nama pakej</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Akses root ditolak, AZenith memerlukan akses root untuk berjalan</string>
     <string name="str_root_access_granted">Akses root diperoleh, semuanya sedia!</string>
-    <string name="str_run_diagnostics_above_or_check">Jalankan diagnostik di atas, atau periksa sama ada kernel mengandungi node bypass pengecasan</string>
+    <string name="str_run_diagnostics_above_or_check">Jalankan diagnostik di atas, atau periksa sama ada kernel mengandungi node standby pengecasan</string>
     <string name="str_safely_test">Uji keserasian peranti dengan selamat</string>
     <string name="str_save_compressed_logs_to_a_fold">Simpan log mampat ke folder yang ditentukan</string>
     <string name="str_save_your_current_tweak_settin">Simpan tetapan tweak semasa</string>

@@ -61,6 +61,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +78,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -96,11 +98,12 @@ import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
 import zx.azenith.ui.component.GamepadShortcuts
 import zx.azenith.ui.component.RegisterGamepadActions
+import zx.azenith.ui.component.appBarFade
 import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.component.hazePageSource
 import zx.azenith.ui.navigation.safePopBackStack
 import zx.azenith.ui.util.DebugUtils
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.getChipsetVendor
 import zx.azenith.ui.viewmodel.SearchCapabilities
 import zx.azenith.ui.viewmodel.SearchEntry
@@ -129,6 +132,7 @@ fun SearchScreen(
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val colorScheme = MaterialTheme.colorScheme
     val motionScheme = MaterialTheme.motionScheme
     var query by rememberSaveable { mutableStateOf("") }
@@ -138,7 +142,7 @@ fun SearchScreen(
     var capabilities by remember { mutableStateOf(SearchCapabilities()) }
     LaunchedEffect(Unit) {
         capabilities = withContext(Dispatchers.IO) {
-            val bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
+            val bypassPath = ConfigUtils.load().standbyPath
             val maliCheck = Shell.cmd(
                 "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf checkmalipath"
             ).exec().out.joinToString("").trim()
@@ -222,10 +226,12 @@ fun SearchScreen(
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
                     .statusBarsPadding()
             ) {
                 TopAppBar(
@@ -291,6 +297,7 @@ fun SearchScreen(
                         containerColor = Color.Transparent,
                         scrolledContainerColor = Color.Transparent
                     ),
+                    scrollBehavior = scrollBehavior,
                     windowInsets = WindowInsets(0, 0, 0, 0)
                 )
             }

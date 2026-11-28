@@ -1,6 +1,20 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Profile application.
 
-use crate::sysprop::{get_or_default, get_into, set};
+use crate::sysprop::{get_into, set};
 use crate::fileops;
 use crate::config::refresh_rate::{apply_dynamic_refresh_rate, get_current_refresh_rate};
 use crate::core::{
@@ -147,10 +161,13 @@ pub fn restore_saved_renderer(ctx: &mut DaemonContext) {
         log_info!("render", "renderer restored value={}", ctx.saved_renderer_str());
         if ctx.saved_renderer_str() == "default" {
             systemv("sys.azenith-utilityconf setrender default");
-            set("persist.sys.azenithconf.renderer", "default");
+            ctx.config.renderer = "default".to_string();
+            let _ = archconfig::update(|c| c.renderer = "default".to_string());
         } else {
             systemv(&format!("sys.azenith-utilityconf setrender {}", ctx.saved_renderer_str()));
-            set("persist.sys.azenithconf.renderer", ctx.saved_sys_renderer_str());
+            let restored = ctx.saved_sys_renderer_str().to_string();
+            ctx.config.renderer = restored.clone();
+            let _ = archconfig::update(|c| c.renderer = restored);
         }
     }
     ctx.profile.saved_renderer = [0; 92];
@@ -169,12 +186,11 @@ pub fn apply_per_app_overrides(ctx: &mut DaemonContext) {
     // lite mode - must be set before run_profiler() because the profile
     // settings binary reads this prop while applying a profile.
     if IS_TRUE!(ctx.opts_perf_lite_mode()) {
-        set("persist.sys.azenithconf.litemode", "1");
+        set("sys.azenith.litemode", "1");
     } else if IS_FALSE!(ctx.opts_perf_lite_mode()) {
-        set("persist.sys.azenithconf.litemode", "0");
+        set("sys.azenith.litemode", "0");
     } else {
-        let lite_prop = get_or_default("persist.sys.azenithconf.cpulimit", "");
-        set("persist.sys.azenithconf.litemode", if lite_prop == "1" { "1" } else { "0" });
+        set("sys.azenith.litemode", if ctx.config.cpu_limit { "1" } else { "0" });
     }
 
     // DND on gaming
@@ -188,8 +204,7 @@ pub fn apply_per_app_overrides(ctx: &mut DaemonContext) {
         }
         ctx.dnd_enabled = true;
     } else if !IS_FALSE!(ctx.opts_dnd_on_gaming()) {
-        let dnd_state = get_or_default("persist.sys.azenithconf.dnd", "");
-        if dnd_state == "1" {
+        if ctx.config.dnd {
             if ctx.display.saved_zen_mode == 0 {
                 systemv("sys.azenith-utilityconf enableDND");
             }
@@ -208,8 +223,7 @@ pub fn apply_per_app_overrides(ctx: &mut DaemonContext) {
 
     // game preload
     let is_preload_active = if !IS_FALSE!(ctx.opts_game_preload()) {
-        let preload_active = get_or_default("persist.sys.azenithconf.APreload", "");
-        preload_active == "1"
+        ctx.config.app_preload
     } else {
         false
     };
@@ -379,8 +393,143 @@ pub fn apply_balanced_profile(ctx: &mut DaemonContext) {
 }
 
 // ---------------------------------------------------------------------------
+// load_game_config_for_pkg
+// ---------------------------------------------------------------------------
+pub fn load_game_config_for_pkg(pkg: &str, options: &mut GameConfig) -> bool {
+    let _mutex = crate::core::CACHE_MUTEX.get().unwrap().lock().unwrap();
+    if let Some(cache_lock) = crate::core::G_GAME_CACHE.get() {
+        let cache_vec = cache_lock.read().unwrap();
+        for entry in cache_vec.iter() {
+            if entry.field_as_str(&entry.package) == pkg {
+                *options = entry.clone();
+                return true;
+            }
+        }
+    }
+
+    GameConfig::set_field(&mut options.package, pkg);
+    GameConfig::set_field(&mut options.perf_lite_mode, "default");
+    GameConfig::set_field(&mut options.dnd_on_gaming, "default");
+    GameConfig::set_field(&mut options.app_priority, "default");
+    GameConfig::set_field(&mut options.game_preload, "default");
+    GameConfig::set_field(&mut options.refresh_rate, "default");
+    GameConfig::set_field(&mut options.renderer, "default");
+    GameConfig::set_field(&mut options.resolution_downscale, "default");
+    GameConfig::set_field(&mut options.resolution_fps, "default");
+    GameConfig::set_field(&mut options.bypass_charging, "default");
+    false
+}
+
+// ---------------------------------------------------------------------------
+// apply_prelaunch_game
+// ---------------------------------------------------------------------------
+/// Pre-applies per-app configuration (renderer, resolution downscale, refresh
+/// rate, lite mode, DND, preload, bypass charging, and Performance Profile in
+/// Auto Mode) BEFORE GameSpace launches the game activity (`am start`).
+///
+/// Because renderer and resolution downscale are applied before the game process
+/// starts, `ctx.render.has_applied_renderer` is marked `true` immediately so the
+/// daemon skips killing/restarting the app on launch.
+pub fn apply_prelaunch_game(ctx: &mut DaemonContext, pkg: &str) {
+    let pkg = pkg.trim();
+    if pkg.is_empty() {
+        return;
+    }
+
+    if ctx.game.gamestart.as_deref() != Some(pkg) {
+        if let Some(old_gs) = ctx.game.gamestart.clone() {
+            if ctx.render.resolution_applied {
+                crate::config::resolution::restore_resolution_target(ctx, &old_gs);
+            }
+        }
+    }
+
+    let in_applist = load_game_config_for_pkg(pkg, &mut ctx.opts);
+    ctx.game.gamestart = Some(pkg.to_string());
+    ctx.game.prelaunched_pkg = Some(pkg.to_string());
+    ctx.game.active_app_name = Some(pkg.to_string());
+    ctx.game.game_pids = [0; crate::core::MAX_GAME_PIDS];
+    ctx.game.game_pid_count = 0;
+    ctx.pid_retries = 0;
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    ctx.game.prelaunch_until_ms = now_ms + 12_000;
+
+    // 1. Apply per-app renderer & resolution downscale BEFORE the process spawns
+    //    so Android starts the activity with the target HWUI backend and game mode
+    //    directly without needing `restart_target_app_inner`.
+    if !IS_DEFAULT!(ctx.opts_renderer()) {
+        let renderer = ctx.opts_renderer().to_string();
+        let changed = crate::config::rendering::apply_smart_renderer(
+            &renderer,
+            &mut ctx.profile.saved_renderer,
+            &mut ctx.profile.saved_sys_renderer,
+        );
+        if changed {
+            ctx.config.renderer = renderer;
+        }
+    }
+
+    if !IS_DEFAULT!(ctx.opts_resolution_downscale()) {
+        let downscale = ctx.opts_resolution_downscale().to_string();
+        let fps = ctx.opts_resolution_fps().to_string();
+        let _ = crate::config::resolution::apply_resolution_target(
+            ctx,
+            pkg,
+            &downscale,
+            &fps,
+        );
+    }
+    ctx.render.has_applied_renderer = true;
+
+    // 2. Apply per-app overrides in BOTH Auto Mode and Manual Mode.
+    let manual = is_manual_mode(ctx);
+    if !manual {
+        apply_performance_profile_inner(ctx);
+    } else {
+        apply_per_app_overrides(ctx);
+        save_daemon_state(ctx);
+        ctx.render.manual_sidepanel_shown = true;
+    }
+
+    // 3. Apply dynamic bypass charging & update gameinfo.
+    crate::bypass::handle_dynamic_bypass(ctx);
+    update_game_info(ctx);
+    ctx.need_profile_checkup = false;
+
+    log_info!(
+        "prelaunch",
+        "prelaunch applied pkg={} in_applist={} manual_mode={} skip_restart=true",
+        pkg,
+        in_applist,
+        manual
+    );
+}
+
+// ---------------------------------------------------------------------------
 // get_gamestart
 // ---------------------------------------------------------------------------
+pub fn get_gamestart_with_prelaunch(
+    options: &mut GameConfig,
+    cache: &SystemStateCache,
+    prelaunched_pkg: Option<&str>,
+) -> Option<String> {
+    if let Some(pkg) = get_gamestart(options, cache) {
+        return Some(pkg);
+    }
+    if let Some(pre_pkg) = prelaunched_pkg {
+        if let Some(vis_pkg) = get_visible_package(cache) {
+            if vis_pkg == pre_pkg {
+                load_game_config_for_pkg(pre_pkg, options);
+                return Some(vis_pkg);
+            }
+        }
+    }
+    None
+}
+
 pub fn get_gamestart(options: &mut GameConfig, cache: &SystemStateCache) -> Option<String> {
     let pkg = match get_visible_package(cache) {
         Some(p) => p,

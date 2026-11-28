@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@file:OptIn(
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalMaterial3Api::class,
+    ExperimentalSharedTransitionApi::class
+)
 
 package zx.azenith.ui.mainscreens
 
@@ -29,7 +33,9 @@ import androidx.compose.runtime.LaunchedEffect
 import zx.azenith.ui.util.RootUtils
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -54,6 +60,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
+import zx.azenith.ui.theme.currentPersonalization
 import zx.azenith.ui.viewmodel.HomeViewModel
 import zx.azenith.ui.viewmodel.RootStatusState
 import zx.azenith.ui.viewmodel.StartupStage
@@ -78,6 +85,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     var showProfileDialog by remember { mutableStateOf(false) }
     val profileDialogOrigin = rememberDialogOrigin()
     val profileTileModifier = profileDialogOrigin.trackedModifier()
+    val sharedScope = LocalSharedTransitionScope.current
+    val profileSharedKey = "home_profile_dialog"
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -230,16 +239,44 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                InfoTile(
-                                    modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
-                                    icon = Icons.Rounded.Token, 
-                                    label = stringResource(R.string.current_profile), 
-                                    value = stringResource(uiState.currentProfileRes), 
-                                    highlight = (uiState.currentProfileRes != R.string.status_initializing), 
-                                    showArrow = uiState.autoMode == "0",
-                                    isLoading = uiState.isProfileApplying,
-                                    horizontalNav = HorizontalNav.PASS_BOTH
-                                ) { if (uiState.autoMode == "0") showProfileDialog = true }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .then(profileTileModifier)
+                                ) {
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = !showProfileDialog,
+                                        enter = fadeIn(animationSpec = tween(180)),
+                                        exit = fadeOut(animationSpec = tween(120)),
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        val tileShape = currentPersonalization().widgetCorner(26.dp)
+                                        val sharedTileModifier = if (sharedScope != null) {
+                                            with(sharedScope) {
+                                                Modifier.sharedBounds(
+                                                    sharedContentState = rememberSharedContentState(key = profileSharedKey),
+                                                    animatedVisibilityScope = this@AnimatedVisibility,
+                                                    enter = fadeIn(animationSpec = tween(180)),
+                                                    exit = fadeOut(animationSpec = tween(120)),
+                                                    clipInOverlayDuringTransition = OverlayClip(tileShape)
+                                                )
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
+                                        InfoTile(
+                                            modifier = Modifier.fillMaxSize().then(sharedTileModifier),
+                                            icon = Icons.Rounded.Token,
+                                            label = stringResource(R.string.current_profile),
+                                            value = stringResource(uiState.currentProfileRes),
+                                            highlight = (uiState.currentProfileRes != R.string.status_initializing),
+                                            showArrow = uiState.autoMode == "0",
+                                            isLoading = uiState.isProfileApplying,
+                                            horizontalNav = HorizontalNav.PASS_BOTH
+                                        ) { if (uiState.autoMode == "0") showProfileDialog = true }
+                                    }
+                                }
 
                                 InfoTile(
                                     modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -319,16 +356,44 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 .height(IntrinsicSize.Max),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            InfoTile(
-                                modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
-                                icon = Icons.Rounded.Token, 
-                                label = stringResource(R.string.current_profile), 
-                                value = stringResource(uiState.currentProfileRes), 
-                                highlight = (uiState.currentProfileRes != R.string.status_initializing), 
-                                showArrow = uiState.autoMode == "0",
-                                isLoading = uiState.isProfileApplying,
-                                horizontalNav = HorizontalNav.BLOCK_LEFT
-                            ) { if (uiState.autoMode == "0") showProfileDialog = true }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .then(profileTileModifier)
+                            ) {
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = !showProfileDialog,
+                                    enter = fadeIn(animationSpec = tween(180)),
+                                    exit = fadeOut(animationSpec = tween(120)),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    val tileShape = currentPersonalization().widgetCorner(26.dp)
+                                    val sharedTileModifier = if (sharedScope != null) {
+                                        with(sharedScope) {
+                                            Modifier.sharedBounds(
+                                                sharedContentState = rememberSharedContentState(key = profileSharedKey),
+                                                animatedVisibilityScope = this@AnimatedVisibility,
+                                                enter = fadeIn(animationSpec = tween(180)),
+                                                exit = fadeOut(animationSpec = tween(120)),
+                                                clipInOverlayDuringTransition = OverlayClip(tileShape)
+                                            )
+                                        }
+                                    } else {
+                                        Modifier
+                                    }
+                                    InfoTile(
+                                        modifier = Modifier.fillMaxSize().then(sharedTileModifier),
+                                        icon = Icons.Rounded.Token,
+                                        label = stringResource(R.string.current_profile),
+                                        value = stringResource(uiState.currentProfileRes),
+                                        highlight = (uiState.currentProfileRes != R.string.status_initializing),
+                                        showArrow = uiState.autoMode == "0",
+                                        isLoading = uiState.isProfileApplying,
+                                        horizontalNav = HorizontalNav.BLOCK_LEFT
+                                    ) { if (uiState.autoMode == "0") showProfileDialog = true }
+                                }
+                            }
 
                             InfoTile(
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -381,6 +446,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             show = showProfileDialog,
             onDismiss = { showProfileDialog = false },
             origin = profileDialogOrigin.origin,
+            sharedKey = profileSharedKey,
             currentProfile = uiState.currentProfileValue,
             onProfile = { profileReason ->
                 viewModel.applyProfile(profileReason) {

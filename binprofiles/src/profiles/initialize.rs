@@ -12,7 +12,7 @@ pub fn initialize() {
     let _ = Command::new("sync").status();
     
     // Display / SurfaceFlinger config
-    let scheme = getprop("persist.sys.azenithconf.schemeconfig");
+    let scheme = &cfg().scheme_config;
     if scheme != "1000 1000 1000 1000" && !scheme.is_empty() {
         let parts: Vec<&str> = scheme.split_whitespace().collect();
         if parts.len() >= 4 {
@@ -110,7 +110,9 @@ pub fn initialize() {
     write_lock("255", "/proc/sys/kernel/sched_lib_mask_force");
 
     systemv("sys.azenith-utilityconf FSTrim");
-    let _ = Command::new("sys.azenith-preferencedtweaks").status();
+    // binpreferenced is merged into this binary; call the preference dispatcher
+    // directly instead of relying on the compatibility symlink.
+    let _ = Command::new("sys.azenith-profilesettings").arg("prefs").status();
     
     // Final Sync & Logs
     let _ = Command::new("sync").status();

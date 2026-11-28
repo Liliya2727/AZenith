@@ -51,7 +51,7 @@
         <service
             android:name=".TileService.BypassChgTileService"
             android:icon="@drawable/bypasschgicon"
-            android:label="Bypass Charge"
+            android:label="Standby Charge"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>
@@ -107,7 +107,10 @@
         <activity
             android:name=".ui.gamespace.ZXGameSpaceActivity"
             android:exported="true"
+            android:icon="@mipmap/ic_launcher_gamespace"
+            android:label="@string/zx_gamespace_name"
             android:launchMode="singleTask"
+            android:taskAffinity="zx.azenith.gamespace"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
             android:theme="@style/Theme.AZenith" />

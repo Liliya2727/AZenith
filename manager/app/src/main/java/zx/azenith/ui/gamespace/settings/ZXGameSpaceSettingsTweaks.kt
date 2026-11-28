@@ -84,6 +84,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Power
 import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.SettingsSuggest
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapVerticalCircle
 import androidx.compose.material.icons.rounded.Thermostat
@@ -150,6 +151,7 @@ import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -177,7 +179,7 @@ import zx.azenith.ui.subscreens.ColorPreset
 import zx.azenith.ui.subscreens.ColorSliderItem
 import zx.azenith.ui.util.AudioUtil
 import zx.azenith.ui.util.DebugUtils
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.RebootManager
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.getChipsetVendor
@@ -472,14 +474,14 @@ private fun TweaksMainSubPane(
 
     val bypassEnabled by produceState(false) {
         value = withContext(Dispatchers.IO) {
-            PropertyUtils.get("persist.sys.azenithconf.bypasschg", "0") == "1"
+            ConfigUtils.load().standbyChg
         }
     }
 
     var autoMode by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            autoMode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+            autoMode = if (ConfigUtils.load().autoMode) "1" else "0"
         }
     }
     LaunchedEffect(Unit) {
@@ -863,9 +865,8 @@ private fun TweaksMainSubPane(
                     title = stringResource(R.string.refreshrates),
                     summary = stringResource(R.string.refreshrates_desc),
                     trailingBadge = "${tweakViewModel.currentRefreshRate ?: refreshHz} Hz",
-                    onClick = { if (isFullModeEnabled) refreshRateDropDown.show() },
+                    onClick = { refreshRateDropDown.show() },
                     modifier = Modifier.zxDropDownAnchor(refreshRateDropDown),
-                    enabled = isFullModeEnabled,
                     shape = blockTopShape
                 )
 
@@ -997,7 +998,6 @@ private fun BypassChargingSubPane(
 
     var bypassPath by remember { mutableStateOf("") }
     var bypassState by remember { mutableStateOf(false) }
-    var thresholdValue by remember { mutableFloatStateOf(20f) }
 
     var availableNodes by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var isLoadingNodes by remember { mutableStateOf(true) }
@@ -1037,10 +1037,9 @@ private fun BypassChargingSubPane(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
-            bypassState = PropertyUtils.get("persist.sys.azenithconf.bypasschg", "0") == "1"
-            val rawThreshold = PropertyUtils.get("persist.sys.azenithconf.bypasschgthreshold", "20")
-            thresholdValue = rawThreshold.toFloatOrNull()?.coerceIn(20f, 50f) ?: 20f
+            val cfg = ConfigUtils.load()
+            bypassPath = cfg.standbyPath
+            bypassState = cfg.standbyChg
         }
         refreshNodes()
     }
@@ -1143,7 +1142,7 @@ private fun BypassChargingSubPane(
         ) {
             TweaksSubTabHeader(
                 title = stringResource(R.string.bcharging),
-                subtitle = "Power device directly from adapter without battery degradation",
+                subtitle = stringResource(R.string.str_pause_battery_charging_when_pl),
                 onBackClick = onBackClick
             )
 
@@ -1270,7 +1269,7 @@ private fun BypassChargingSubPane(
             }
 
             // Controls Section
-            TweaksSectionHeader("Bypass Charging Controls")
+            TweaksSectionHeader("Standby Charge Controls")
 
             Column(
                 modifier = Modifier
@@ -1292,11 +1291,7 @@ private fun BypassChargingSubPane(
                     onPositioned = if (isConfigured) onFirstPositioned else null,
                     onCheckedChange = { isChecked ->
                         bypassState = isChecked
-                        val strVal = if (isChecked) "1" else "0"
-                        PropertyUtils.set("persist.sys.azenithconf.bypasschg", strVal)
-                        scope.launch(Dispatchers.IO) {
-                            RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschg", "$strVal\n")
-                        }
+                        ConfigUtils.setBool("standby_chg", isChecked)
                     },
                     shape = masterSwitchShape
                 )
@@ -1306,19 +1301,40 @@ private fun BypassChargingSubPane(
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
-                    BypassThresholdSliderCard(
-                        threshold = thresholdValue,
-                        enabled = isConfigured,
-                        onThresholdChange = { thresholdValue = it },
-                        onThresholdChangeFinished = { finalVal ->
-                            val roundVal = finalVal.roundToInt()
-                            PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", roundVal.toString())
-                            scope.launch(Dispatchers.IO) {
-                                RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold", "$roundVal\n")
+                    Surface(
+                        shape = blockBottomShape,
+                        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                        contentColor = scheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(blockBottomShape)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = scheme.primaryContainer,
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Shield,
+                                        contentDescription = null,
+                                        tint = scheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
-                        },
-                        shape = blockBottomShape
-                    )
+                            Text(
+                                text = stringResource(R.string.standby_charge_floor_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
 
@@ -1334,7 +1350,7 @@ private fun BypassChargingSubPane(
                 val nodePathDesc = availableNodes.find { it.first == bypassPath }?.second
                 SettingsActionCard(
                     icon = Icons.Rounded.Cable,
-                    title = "Hardware Bypass Node",
+                    title = "Hardware Standby Node",
                     summary = when {
                         isNeedSetup -> "Tap to bind from ${availableNodes.size} detected nodes or scan below"
                         isUnsupported -> "No supported charging switch nodes detected"
@@ -1465,10 +1481,7 @@ private fun BypassChargingSubPane(
             selectedOption = availableNodes.firstOrNull { it.first == bypassPath },
             onOptionSelected = { (nodeName, _) ->
                 bypassPath = nodeName
-                PropertyUtils.set("persist.sys.azenithconf.bypasspath", nodeName)
-                scope.launch(Dispatchers.IO) {
-                    RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$nodeName\n")
-                }
+                ConfigUtils.set("standby_path", nodeName)
             },
             optionLabel = { it.first },
             optionSupporting = { it.second },
@@ -1498,10 +1511,7 @@ private fun BypassChargingSubPane(
             }
             val applyNodeAction = {
                 bypassPath = node
-                PropertyUtils.set("persist.sys.azenithconf.bypasspath", node)
-                scope.launch(Dispatchers.IO) {
-                    RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$node\n")
-                }
+                ConfigUtils.set("standby_path", node)
                 foundWorkingNode = null
             }
             CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
@@ -1547,7 +1557,7 @@ private fun BypassChargingSubPane(
                             )
                         }
                         Text(
-                            text = "Automated diagnostics confirmed cutoff control using node [$node]. Apply this node as the active hardware bypass target?",
+                            text = "Automated diagnostics confirmed cutoff control using node [$node]. Apply this node as the active hardware standby charge target?",
                             style = MaterialTheme.typography.bodyMedium,
                             color = scheme.onSurfaceVariant
                         )
@@ -1850,14 +1860,15 @@ private fun PreferencedTweaksSubPane(
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             isFullModeEnabled = DebugUtils.isFullModeEnabled()
-            schedTunes = PropertyUtils.get("persist.sys.azenithconf.schedtunes", "0") == "1"
-            waltTunes = PropertyUtils.get("persist.sys.azenithconf.walttunes", "0") == "1"
-            sflState = PropertyUtils.get("persist.sys.azenithconf.SFL", "0") == "1"
-            jitState = PropertyUtils.get("persist.sys.azenithconf.justintime", "0") == "1"
-            disableTrace = PropertyUtils.get("persist.sys.azenithconf.disabletrace", "0") == "1"
-            disableLogd = PropertyUtils.get("persist.sys.azenithconf.logd", "0") == "1"
-            maliSched = PropertyUtils.get("persist.sys.azenithconf.malisched", "0") == "1"
-            disableThermal = PropertyUtils.get("persist.sys.azenithconf.DThermal", "0") == "1"
+            val cfg = ConfigUtils.load()
+            schedTunes = cfg.schedtunes
+            waltTunes = cfg.walttunes
+            sflState = cfg.sfl
+            jitState = cfg.justintime
+            disableTrace = cfg.disableTrace
+            disableLogd = cfg.killLogd
+            maliSched = cfg.maliSched
+            disableThermal = cfg.disableThermal
 
             RebootManager.captureBaselineOnce("pref_schedtunes", schedTunes)
             RebootManager.captureBaselineOnce("pref_walttunes", waltTunes)
@@ -1882,11 +1893,11 @@ private fun PreferencedTweaksSubPane(
             onPositioned = onFirstPositioned,
             onCheckedChange = { isChecked ->
                 schedTunes = isChecked
-                PropertyUtils.set("persist.sys.azenithconf.schedtunes", if (isChecked) "1" else "0")
+                ConfigUtils.setBool("schedtunes", isChecked)
                 RebootManager.checkAgainstBaseline("pref_schedtunes", isChecked)
                 if (isChecked && waltTunes) {
                     waltTunes = false
-                    PropertyUtils.set("persist.sys.azenithconf.walttunes", "0")
+                    ConfigUtils.setBool("walttunes", false)
                     RebootManager.checkAgainstBaseline("pref_walttunes", false)
                 }
             },
@@ -1903,11 +1914,11 @@ private fun PreferencedTweaksSubPane(
             enabled = isSnapdragon,
             onCheckedChange = { isChecked ->
                 waltTunes = isChecked
-                PropertyUtils.set("persist.sys.azenithconf.walttunes", if (isChecked) "1" else "0")
+                ConfigUtils.setBool("walttunes", isChecked)
                 RebootManager.checkAgainstBaseline("pref_walttunes", isChecked)
                 if (isChecked && schedTunes) {
                     schedTunes = false
-                    PropertyUtils.set("persist.sys.azenithconf.schedtunes", "0")
+                    ConfigUtils.setBool("schedtunes", false)
                     RebootManager.checkAgainstBaseline("pref_schedtunes", false)
                 }
             },
@@ -1923,7 +1934,7 @@ private fun PreferencedTweaksSubPane(
             checked = sflState,
             onCheckedChange = { isChecked ->
                 sflState = isChecked
-                PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
+                ConfigUtils.setBool("sfl", isChecked)
                 RebootManager.checkAgainstBaseline("pref_SFL", isChecked)
             },
             shape = shape
@@ -1939,7 +1950,7 @@ private fun PreferencedTweaksSubPane(
                 checked = jitState,
                 onCheckedChange = { isChecked ->
                     jitState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("justintime", isChecked)
                     RebootManager.checkAgainstBaseline("pref_justintime", isChecked)
                 },
                 shape = shape
@@ -1954,7 +1965,7 @@ private fun PreferencedTweaksSubPane(
                 checked = disableTrace,
                 onCheckedChange = { isChecked ->
                     disableTrace = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("disable_trace", isChecked)
                     RebootManager.checkAgainstBaseline("pref_disabletrace", isChecked)
                 },
                 shape = shape
@@ -1969,7 +1980,7 @@ private fun PreferencedTweaksSubPane(
                 checked = disableLogd,
                 onCheckedChange = { isChecked ->
                     disableLogd = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("kill_logd", isChecked)
                     RebootManager.checkAgainstBaseline("pref_logd", isChecked)
                 },
                 shape = shape
@@ -1986,29 +1997,26 @@ private fun PreferencedTweaksSubPane(
             enabled = isMediaTek,
             onCheckedChange = { isChecked ->
                 maliSched = isChecked
-                PropertyUtils.set("persist.sys.azenithconf.malisched", if (isChecked) "1" else "0")
+                ConfigUtils.setBool("mali_sched", isChecked)
                 RebootManager.checkAgainstBaseline("pref_malisched", isChecked)
             },
             shape = shape
         )
     }
 
-    if (isFullModeEnabled && isMediaTek) {
-        cards.add { shape ->
-            SettingsSwitchCard(
-                icon = Icons.Rounded.Thermostat,
-                title = stringResource(R.string.disable_thermals),
-                summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else stringResource(R.string.str_unavailable_mediatek),
-                checked = disableThermal,
-                enabled = isMediaTek,
-                onCheckedChange = { isChecked ->
-                    disableThermal = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
-                    RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
-                },
-                shape = shape
-            )
-        }
+    cards.add { shape ->
+        SettingsSwitchCard(
+            icon = Icons.Rounded.Thermostat,
+            title = stringResource(R.string.disable_thermals),
+            summary = stringResource(R.string.disable_thermals_desc),
+            checked = disableThermal,
+            onCheckedChange = { isChecked ->
+                disableThermal = isChecked
+                ConfigUtils.setBool("disable_thermal", isChecked)
+                RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
+            },
+            shape = shape
+        )
     }
 
     Column(
@@ -2063,9 +2071,10 @@ private fun FpsGoSubPane(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            fpsgoState = PropertyUtils.get("persist.sys.azenithconf.usefpsgo", "0") == "1"
-            fpsgedState = PropertyUtils.get("persist.sys.azenithconf.fpsged", "0") == "1"
-            sflState = PropertyUtils.get("persist.sys.azenithconf.SFL", "0") == "1"
+            val cfg = ConfigUtils.load()
+            fpsgoState = cfg.useFpsgo
+            fpsgedState = cfg.fpsged
+            sflState = cfg.sfl
         }
     }
 
@@ -2099,7 +2108,7 @@ private fun FpsGoSubPane(
                 onPositioned = onFirstPositioned,
                 onCheckedChange = { isChecked ->
                     fpsgoState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("use_fpsgo", isChecked)
                 },
                 shape = blockTopShape
             )
@@ -2111,7 +2120,7 @@ private fun FpsGoSubPane(
                 checked = fpsgedState,
                 onCheckedChange = { isChecked ->
                     fpsgedState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("fpsged", isChecked)
                 },
                 shape = blockMiddleShape
             )
@@ -2123,7 +2132,7 @@ private fun FpsGoSubPane(
                 checked = sflState,
                 onCheckedChange = { isChecked ->
                     sflState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
+                    ConfigUtils.setBool("sfl", isChecked)
                     RebootManager.checkAgainstBaseline("pref_SFL", isChecked)
                 },
                 shape = blockBottomShape
@@ -2160,22 +2169,37 @@ private fun DisplayColorSubPane(
 
     val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
 
+    // Each slider frame used to fork a root `service call SurfaceFlinger`.
+    // Debounce so a drag results in one call once the value settles, instead
+    // of one shell process per recomposition.
+    val applyScope = rememberCoroutineScope()
+    var rgbJob by remember { mutableStateOf<Job?>(null) }
+    var satJob by remember { mutableStateOf<Job?>(null) }
+
     val applyRGB = { r: Float, g: Float, b: Float ->
-        Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${r / 1000f} f 0 f 0 f 0 f 0 f ${g / 1000f} f 0 f 0 f 0 f 0 f ${b / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
+        rgbJob?.cancel()
+        rgbJob = applyScope.launch(Dispatchers.IO) {
+            delay(80)
+            Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${r / 1000f} f 0 f 0 f 0 f 0 f ${g / 1000f} f 0 f 0 f 0 f 0 f ${b / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
+        }
     }
 
     val applySat = { s: Float ->
-        Shell.cmd("service call SurfaceFlinger 1022 f ${s / 1000f}").submit()
+        satJob?.cancel()
+        satJob = applyScope.launch(Dispatchers.IO) {
+            delay(80)
+            Shell.cmd("service call SurfaceFlinger 1022 f ${s / 1000f}").submit()
+        }
     }
 
     val saveToProp = {
         val config = "${redVal.toInt()} ${greenVal.toInt()} ${blueVal.toInt()} ${satVal.toInt()}"
-        PropertyUtils.set("persist.sys.azenithconf.schemeconfig", config)
+        ConfigUtils.set("scheme_config", config)
     }
 
     LaunchedEffect(Unit) {
         val raw = withContext(Dispatchers.IO) {
-            PropertyUtils.get("persist.sys.azenithconf.schemeconfig", "")
+            ConfigUtils.load().schemeConfig
         }
         if (raw.isNotEmpty()) {
             val parts = raw.split(" ").mapNotNull { it.toFloatOrNull() }
@@ -2513,106 +2537,6 @@ private fun FreqOffsetSliderCard(
                     .then(if (onSliderPositioned != null) Modifier.onGloballyPositioned { onSliderPositioned() } else Modifier)
                     .then(if (sliderFocusRequester != null) Modifier.focusRequester(sliderFocusRequester) else Modifier)
             )
-        }
-    }
-}
-
-@Composable
-private fun BypassThresholdSliderCard(
-    threshold: Float,
-    onThresholdChange: (Float) -> Unit,
-    onThresholdChangeFinished: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(20.dp),
-    enabled: Boolean = true
-) {
-    val scheme = MaterialTheme.colorScheme
-    var sliderValue by remember(threshold) { mutableFloatStateOf(threshold.coerceIn(20f, 50f)) }
-
-    Surface(
-        shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = if (enabled) 0.85f else 0.55f),
-        contentColor = if (enabled) scheme.onSurface else scheme.onSurface.copy(alpha = 0.6f),
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (enabled) scheme.primaryContainer else scheme.surfaceContainerHighest,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.BatteryChargingFull,
-                                contentDescription = null,
-                                tint = if (enabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    Column {
-                        Text(
-                            text = stringResource(R.string.charging_threshold),
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = scheme.onSurface
-                        )
-                        Text(
-                            text = stringResource(R.string.charging_threshold_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onSurfaceVariant.copy(alpha = 0.82f)
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (enabled) scheme.primaryContainer else scheme.surfaceContainerHighest
-                ) {
-                    Text(
-                        text = "${sliderValue.roundToInt()}%",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = if (enabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            ZenithSlider(
-                value = sliderValue,
-                enabled = enabled,
-                onValueChange = {
-                    val step = 5f
-                    val snapped = (it / step).roundToInt() * step
-                    val finalVal = snapped.coerceIn(20f, 50f)
-                    sliderValue = finalVal
-                    onThresholdChange(finalVal)
-                },
-                onValueChangeFinished = { onThresholdChangeFinished(sliderValue) },
-                valueRange = 20f..50f,
-                steps = 5
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("20%", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant.copy(alpha = 0.6f))
-                Text("50%", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant.copy(alpha = 0.6f))
-            }
         }
     }
 }

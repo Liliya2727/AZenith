@@ -1,3 +1,17 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! FPS Recorder — owns recording state, sampling and file writing.
 //!
 //! Triggered from the floating monitor: the app writes `start` | `stop` to
@@ -178,7 +192,9 @@ pub struct Session {
     pub csv_path: PathBuf,
     pub json_path: PathBuf,
     pub writer: BufWriter<std::fs::File>,
-    pub samples: Vec<Sample>,
+    /// Streaming aggregates for the JSON summary. Replaces the old
+    /// `Vec<Sample>` that grew by one entry per second for the whole session.
+    pub sample_accum: writer::SampleAccum,
     pub rows_since_flush: usize,
     /// One sample per second, deadline-based: next_deadline += 1s after each
     /// written row so a slow read delays the row instead of dropping `t`.
@@ -266,6 +282,7 @@ impl Recorder {
             }
         }
         write_record_state("idle");
+        retention::apply_retention();
     }
 
     /// Handle a record_cmd write ("start" | "stop").
@@ -356,7 +373,7 @@ impl Recorder {
             csv_path,
             json_path,
             writer,
-            samples: Vec::new(),
+            sample_accum: writer::SampleAccum::new(),
             rows_since_flush: 0,
             next_deadline: began_at + Duration::from_secs(1),
             last_written_t: 0,
@@ -454,8 +471,12 @@ impl Recorder {
         let duration_str = format!("{:02}:{:02}", duration / 60, duration % 60);
 
         // Flush the CSV writer before reading the file.
-        let _ = sess.writer.flush();
-        let _ = sess.writer.get_ref().sync_all();
+        if let Err(e) = sess.writer.flush() {
+            crate::log_error!("recorder", "csv flush failed path={:?} error={}", sess.csv_path, e);
+        }
+        if let Err(e) = sess.writer.get_ref().sync_all() {
+            crate::log_error!("recorder", "csv sync failed path={:?} error={}", sess.csv_path, e);
+        }
 
         if duration < MIN_SESSION_SECS {
             let _ = std::fs::remove_file(&sess.csv_path);
@@ -552,7 +573,20 @@ fn unique_path(dir: &Path, base: &str, ext: &str) -> std::io::Result<(String, Pa
 }
 
 fn write_record_state(content: &str) {
+    let line = format!("{}\n", content);
     let tmp = format!("{}.tmp", RECORD_STATE_PATH);
-    let _ = std::fs::write(&tmp, format!("{}\n", content));
+    let _ = std::fs::write(&tmp, &line);
     let _ = std::fs::rename(&tmp, RECORD_STATE_PATH);
+
+    const RECORD_STATE_APP_PATH: &str = "/data/data/zx.azenith/API/record_state";
+    if std::path::Path::new("/data/data/zx.azenith/API").exists() {
+        let app_tmp = format!("{}.tmp", RECORD_STATE_APP_PATH);
+        if std::fs::write(&app_tmp, &line).is_ok() {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&app_tmp, std::fs::Permissions::from_mode(0o644));
+            let _ = std::fs::rename(&app_tmp, RECORD_STATE_APP_PATH);
+        } else {
+            let _ = std::fs::remove_file(&app_tmp);
+        }
+    }
 }

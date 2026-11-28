@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">អ្នកត្រួតពិនិត្យ Mali GPU សមតុល្យ</string>
     <string name="balanced_mali_gov_desc">អ្នកត្រួតពិនិត្យ GPU ដែលប្រើក្នុងគម្រោងសមតុល្យ</string>
     <string name="banner">បដា</string>
-    <string name="bcharging">ការផ្គត់ផ្គង់ថាមពលជំនួស (Bypass)</string>
-    <string name="bcharging_desc">កំណត់រចនាសម្ព័ន្ធមុខងារ Bypass Charging របស់ AZenith</string>
+    <string name="bcharging">ការផ្គត់ផ្គង់ថាមពលជំនួស (Standby)</string>
+    <string name="bcharging_desc">កំណត់រចនាសម្ព័ន្ធមុខងារ Standby Charge របស់ AZenith</string>
     <string name="bypass_not_supported">ឧបករណ៍នេះមិនគាំទ្រមុខងារនេះទេ</string>
     <string name="cd_app_icon">រូបតំណាងកម្មវិធី</string>
     <string name="cd_back">ត្រឡប់ក្រោយ</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">គម្រោងបច្ចុប្បន្ន</string>
     <string name="custom">ផ្ទាល់ខ្លួន</string>
     <string name="CompatibilityCheck">ពិនិត្យភាពឆបគ្នា</string>
-    <string name="CompatibilityCheck_desc">អនុវត្តការធ្វើរោគវិនិច្ឆ័យដើម្បីពិនិត្យថាតើឧបករណ៍គាំទ្រ Bypass Charging ដែរឬទេ</string>
+    <string name="CompatibilityCheck_desc">អនុវត្តការធ្វើរោគវិនិច្ឆ័យដើម្បីពិនិត្យថាតើឧបករណ៍គាំទ្រ Standby Charge ដែរឬទេ</string>
     <string name="default_cpu_gov">កម្មវិធីត្រួតពិនិត្យ CPU លំនាំដើម</string>
     <string name="default_cpu_gov_desc">កម្មវិធីត្រួតពិនិត្យដែលប្រើក្នុងគម្រោងសមតុល្យ</string>
     <string name="default_label">លំនាំដើម</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">ការស្តារឡើងវិញបរាជ័យ</string>
     <string name="dialog_start_hw_test_content">AZenith នឹងអនុវត្តការធ្វើតេស្តការធ្លាក់ចុះវ៉ុលលើថ្នាំងថ្មខាងក្នុង ដំណើរការធ្វើរោគវិនិច្ឆ័យមានសុវត្ថិភាព និងចំណាយពេលប៉ុន្មានវិនាទី</string>
     <string name="dialog_start_hw_test_title">តើត្រូវចាប់ផ្តើមតេស្តផ្នែករឹង?</string>
-    <string name="dialog_switch_node_content">តើត្រូវបង្ខំឲ្យប្តូរគោលដៅកំណត់រចនាសម្ព័ន្ធ Bypass ទៅ [%1$s] ទេ?</string>
+    <string name="dialog_switch_node_content">តើត្រូវបង្ខំឲ្យប្តូរគោលដៅកំណត់រចនាសម្ព័ន្ធ Standby ទៅ [%1$s] ទេ?</string>
     <string name="dialog_switch_node_title">តើត្រូវប្តូរថ្នាំងបញ្ជា?</string>
     <string name="dialog_update_available_confirm">ធ្វើបច្ចុប្បន្នភាពឥឡូវនេះ</string>
     <string name="dialog_update_available_content">កំណែកម្មវិធីគ្រប់គ្រង (%1$d) ទាបជាងកំណែម៉ូឌុល (%2$d) តើត្រូវធ្វើបច្ចុប្បន្នភាពឥឡូវនេះដើម្បីទទួលបានមុខងារថ្មីៗទេ?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">កុំរំខានពេលលេងហ្គេម</string>
     <string name="dnd_mode_gaming_desc">នៅក្រោមគម្រោងអនុវត្តដំណើរការខ្ពស់ បើករបៀបកុំរំខានដោយស្វ័យប្រវត្តិ</string>
     <string name="done">រួចរាល់</string>
-    <string name="enable_bypass_charge">បើកដំណើរការការផ្គត់ផ្គង់ថាមពលជំនួស (Bypass)</string>
-    <string name="enable_bypass_charge_desc">នៅក្រោមគម្រោងអនុវត្តដំណើរការខ្ពស់ បើក Bypass Charging</string>
+    <string name="enable_bypass_charge">បើកដំណើរការការផ្គត់ផ្គង់ថាមពលជំនួស (Standby)</string>
+    <string name="enable_bypass_charge_desc">នៅក្រោមគម្រោងអនុវត្តដំណើរការខ្ពស់ បើក Standby Charge</string>
     <string name="err_failed_load_changelog">ការផ្ទុកកំណត់ត្រាកំណែបរាជ័យ</string>
     <string name="err_invalid_backup">ឯកសារបម្រុងទុកមិនត្រឹមត្រូវ ឬខូច (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">ថ្នាំង Bypass Charging បច្ចុប្បន្ន</string>
+    <string name="str_active_bypass_node">ថ្នាំង Standby Charge បច្ចុប្បន្ន</string>
     <string name="str_adjust_and_calibrate_your_scre">កែសម្រួលពណ៌អេក្រង់ និងតិត្ថិភាពតាមរយៈសេវា SurfaceFlinger ដោយមិនត្រូវការការគាំទ្រពី Kernel</string>
     <string name="str_adjust_gradient">កែសម្រួលជម្រាល</string>
     <string name="str_app_info">ព័ត៌មានកម្មវិធី</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">អ្នកថែរក្សា</string>
     <string name="str_max_video_size">ទំហំវីដេអូអតិបរមា 50MB</string>
     <string name="str_no_active_nodes">គ្មានថ្នាំងដំណើរការទេ</string>
-    <string name="str_no_active_nodes_desc">មិនមានថ្នាំង Bypass ដែលអាចប្រើបាននៅក្នុងលក្ខណៈសម្បត្តិប្រព័ន្ធទេ</string>
+    <string name="str_no_active_nodes_desc">មិនមានថ្នាំង Standby ដែលអាចប្រើបាននៅក្នុងលក្ខណៈសម្បត្តិប្រព័ន្ធទេ</string>
     <string name="str_no_compatible_nodes">គ្មានថ្នាំងឆបគ្នាទេ</string>
     <string name="str_open_source">ប្រភពបើកចំហ</string>
     <string name="str_package_name">ឈ្មោះកញ្ចប់</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">សិទ្ធិ Root ត្រូវបានបដិសេធ AZenith ត្រូវការសិទ្ធិ Root ដើម្បីដំណើរការ</string>
     <string name="str_root_access_granted">ទទួលបានសិទ្ធិ Root អ្វីៗគ្រប់យ៉ាងរួចរាល់!</string>
-    <string name="str_run_diagnostics_above_or_check">ដំណើរការការធ្វើរោគវិនិច្ឆ័យខាងលើ ឬពិនិត្យមើលថាតើ Kernel មានថ្នាំង Bypass Charging ដែរឬទេ</string>
+    <string name="str_run_diagnostics_above_or_check">ដំណើរការការធ្វើរោគវិនិច្ឆ័យខាងលើ ឬពិនិត្យមើលថាតើ Kernel មានថ្នាំង Standby Charge ដែរឬទេ</string>
     <string name="str_safely_test">ធ្វើតេស្តភាពឆបគ្នារបស់ឧបករណ៍ដោយសុវត្ថិភាព</string>
     <string name="str_save_compressed_logs_to_a_fold">រក្សាទុកកំណត់ហេតុដែលបានបង្ហាប់ទៅក្នុងថតដែលបានបញ្ជាក់</string>
     <string name="str_save_your_current_tweak_settin">រក្សាទុកការកំណត់ Tweaks បច្ចុប្បន្ន</string>

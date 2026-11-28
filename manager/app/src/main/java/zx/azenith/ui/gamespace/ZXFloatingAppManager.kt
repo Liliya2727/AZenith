@@ -252,6 +252,8 @@ class ZXFloatingAppManager(
     private var nextSessionId = 1
     private var rootClient: ZXFloatingDisplayRootClient? = null
     private var rootBindingInFlight = false
+    /** Last root `input motionevent` fallback injection, to coalesce MOVE floods. */
+    private var lastFallbackInjectMs = 0L
     private val orientationWatchJobs = mutableMapOf<Int, Job>()
     private var minimizedStackHostView: FrameLayout? = null
     private var minimizedStackParams: WindowManager.LayoutParams? = null
@@ -1420,11 +1422,19 @@ class ZXFloatingAppManager(
                     else -> null
                 }
                 if (actionStr != null) {
-                    val mappedX = coords[0].x.toInt()
-                    val mappedY = coords[0].y.toInt()
-                    scope.launch(Dispatchers.IO) {
-                        runCatching {
-                            Shell.cmd("input -d $displayId motionevent $actionStr $mappedX $mappedY").exec()
+                    // Binder is unavailable, so each event costs a root shell fork.
+                    // Coalesce MOVE to ~20 Hz; DOWN/UP/CANCEL are always sent so
+                    // gesture start/end are never lost.
+                    val nowInjectMs = System.currentTimeMillis()
+                    val isMove = actionStr == "MOVE"
+                    if (!isMove || nowInjectMs - lastFallbackInjectMs >= 50L) {
+                        lastFallbackInjectMs = nowInjectMs
+                        val mappedX = coords[0].x.toInt()
+                        val mappedY = coords[0].y.toInt()
+                        scope.launch(Dispatchers.IO) {
+                            runCatching {
+                                Shell.cmd("input -d $displayId motionevent $actionStr $mappedX $mappedY").exec()
+                            }
                         }
                     }
                 }

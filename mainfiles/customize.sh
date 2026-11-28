@@ -178,10 +178,8 @@ mkdir -p "$MODULE_CONFIG"
 mkdir -p "$MODULE_CONFIG/debug"
 mkdir -p "$MODULE_CONFIG/API"
 mkdir -p "$MODULE_CONFIG/preload"
-mkdir -p "$MODULE_CONFIG/bypasschgconfig"
 mkdir -p "$MODULE_CONFIG/gamelist"
 mkdir -p "$MODPATH/system/bin"
-mkdir -p "$MODULE_CONFIG/debug"
 [ -f "$MODULE_CONFIG/debug/fps_counter_alwayson" ] || echo false > "$MODULE_CONFIG/debug/fps_counter_alwayson"
 [ -f "$MODULE_CONFIG/debug/explicit_fps_mthd" ] || echo use_default > "$MODULE_CONFIG/debug/explicit_fps_mthd"
 echo "- Create module config"
@@ -204,10 +202,9 @@ extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-profilesettings" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-rianixiathermalcore" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-utilityconf" "$TMPDIR"
-extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-preferencedtweaks" "$TMPDIR"
-extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-preloadbin" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-appmonitoring" "$TMPDIR"
 cp "$TMPDIR/libs/$ARCH_TMP/"* "$MODPATH/system/bin/"
+ln -sf "sys.azenith-service" "$MODPATH/system/bin/sys.azenith-preloadbin"
 rm -rf "$TMPDIR/libs"
 echo "- All binaries installed successfully"
 
@@ -279,9 +276,8 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/zx" # Binary calls for CLI
 			ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
 			ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
-			ln -sf "$BIN_PATH/sys.azenith-preferencedtweaks" "$dir/sys.azenith-preferencedtweaks"
-			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
-			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-appmonitoring"
+			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-preloadbin"
+			ln -sf "$BIN_PATH/sys.azenith-appmonitoring" "$dir/sys.azenith-appmonitoring"
             ln -sf "$BIN_PATH/sys.azenith-rianixiathermalcore" "$dir/sys.azenith-rianixiathermalcore"
 		}
 	done
@@ -295,32 +291,32 @@ case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
 *mt* | *MT*)
 	soc="MediaTek"
 	echo "- Applying Tweaks for $soc"
-	setprop persist.sys.azenith.soctype 1
+	soctype=1
 	;;
 *sm* | *qcom* | *SM* | *QCOM* | *Qualcomm* | *sdm* | *snapdragon*)
 	soc="Snapdragon"
 	echo "- Applying Tweaks for $soc"
-	setprop persist.sys.azenith.soctype 2
+	soctype=2
 	;;
 *exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
 	soc="Exynos"
 	echo "- Applying Tweaks for $soc"
-	setprop persist.sys.azenith.soctype 3
+	soctype=3
 	;;
 *Unisoc* | *unisoc* | *ums*)
 	soc="Unisoc"
 	echo "- Applying Tweaks for $soc"
-	setprop persist.sys.azenith.soctype 4
+	soctype=4
 	;;
 *gs* | *Tensor* | *tensor*)
 	soc="Tensor"
 	echo "- Applying Tweaks for $soc"
-	setprop persist.sys.azenith.soctype 5
+	soctype=5
 	;;
 *)
 	soc="Unknown"
 	echo "- Applying Tweaks for $chipset"
-	setprop persist.sys.azenith.soctype 0
+	soctype=0
 	;;
 esac
 
@@ -332,103 +328,21 @@ esac
 # 5) Tensor
 # 0) Unknown
 
-# Set default freqoffset
-if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
-	setprop persist.sys.azenithconf.freqoffset "Disabled"
-	touch "$MODULE_CONFIG/freqoffset"
-	echo "Disabled" > "$MODULE_CONFIG/freqoffset"
-fi
-
-# Set default color scheme if not set
-if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
-	setprop persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
-fi
-
-# Initiate bypasspath default value
-if [ -z "$(getprop persist.sys.azenithconf.bypasspath)" ]; then
-	setprop persist.sys.azenithconf.bypasspath "NEED_SETUP"
-	touch "$MODULE_CONFIG/bypasschgconfig/bypasspath"
-	echo "NEED_SETUP" > "$MODULE_CONFIG/bypasschgconfig/bypasspath"
-fi
-
-# Initiate bypasspath default value
-if [ -z "$(getprop persist.sys.azenithconf.bypasschgthreshold)" ]; then
-	setprop persist.sys.azenithconf.bypasschgthreshold "20"
-	touch "$MODULE_CONFIG/bypasschgconfig/bypasschgthreshold"
-	echo "20" > "$MODULE_CONFIG/bypasschgconfig/bypasschgthreshold"
-fi
-
-# Initiate bypasscharging state
-if [ -z "$(getprop persist.sys.azenithconf.bypasschg)" ]; then
-	setprop persist.sys.azenithconf.bypasschg "0"
-	touch "$MODULE_CONFIG/bypasschgconfig/bypasschg"
-	echo "0" > "$MODULE_CONFIG/bypasschgconfig/bypasschg"
-fi
-
-# Daemon Configurations
-if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
-	setprop persist.sys.azenithconf.showtoast 0
-fi
-
-if [ -z "$(getprop persist.sys.azenith.profilenotifications)" ]; then
-	setprop persist.sys.azenith.profilenotifications 1
-fi
-
-if [ -z "$(getprop persist.sys.azenith.dropforeground)" ]; then
-	setprop persist.sys.azenith.dropforeground 0
-fi
-
-if [ -z "$(getprop persist.sys.azenith.disabletweak)" ]; then
-	setprop persist.sys.azenith.disabletweak 0
-fi
-
-if [ -z "$(getprop persist.sys.azenithconf.iosched)" ]; then
-	setprop persist.sys.azenithconf.iosched 1
-fi
-
-if [ -z "$(getprop persist.sys.azenithconf.renderer)" ]; then
-	setprop persist.sys.azenithconf.renderer default
-fi
-
-if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
-    setprop persist.sys.azenithconf.preloadbudget 500M
-fi
-
-if [ -z "$(getprop persist.sys.azenithconf.AIenabled)" ]; then
+if [ ! -f "$MODULE_CONFIG/API/current_modes" ]; then
     echo "- Enabling Auto Mode"
-    setprop persist.sys.azenithconf.AIenabled 1
     echo 1 > "$MODULE_CONFIG/API/current_modes"
 fi
 
-echo "- Disable Debugmode"
-setprop persist.sys.azenith.debugmode "false"
-
-# Set config properties to use
-echo "- Setting config properties..."
-props="
-persist.sys.azenithconf.logd
-persist.sys.azenithconf.DThermal
-persist.sys.azenithconf.SFL
-persist.sys.azenithconf.malisched
-persist.sys.azenithconf.fpsged
-persist.sys.azenithconf.schedtunes
-persist.sys.azenithconf.clearbg
-persist.sys.azenithconf.APreload
-persist.sys.azenithconf.cpulimit
-persist.sys.azenithconf.dnd
-persist.sys.azenithconf.justintime
-persist.sys.azenithconf.disabletrace
-persist.sys.azenithconf.thermalcore
-persist.sys.azenithconf.walttunes
-persist.sys.azenithconf.fstrim
-persist.sys.azenithconf.usefpsgo
-"
-for prop in $props; do
-	curval=$(getprop "$prop")
-	if [ -z "$curval" ]; then
-		setprop "$prop" 0
-	fi
-done
+echo "- Setting up config.json..."
+BIN_STAGE="$TMP_DIR/sys.azenith-service"
+if [ -f "$MODPATH/system/bin/sys.azenith-service" ]; then
+    cp "$MODPATH/system/bin/sys.azenith-service" "$BIN_STAGE" && {
+        chmod 0755 "$BIN_STAGE"
+        "$BIN_STAGE" --config-set soc_type "$soctype"
+        "$BIN_STAGE" --config-set debug_mode false
+        rm -f "$BIN_STAGE"
+    }
+fi
 
 extract "$ZIPFILE" AZenith.apk "$MODPATH"
 

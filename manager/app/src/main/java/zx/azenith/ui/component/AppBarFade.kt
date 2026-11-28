@@ -57,10 +57,14 @@ fun ScaffoldContentColor(): Color = MaterialTheme.colorScheme.onSurface
  * input and samples itself instead of the content behind it.
  */
 @Composable
-fun Modifier.hazePageSource(): Modifier {
+fun Modifier.hazePageSource(
+    backgroundColor: Color = MaterialTheme.colorScheme.surface
+): Modifier {
     val hazeState = LocalAppHazeState.current
     return if (LocalAppBlurEnabled.current && hazeState != null) {
-        hazeSource(hazeState)
+        this
+            .hazeSource(hazeState)
+            .background(backgroundColor)
     } else this
 }
 
@@ -97,6 +101,7 @@ fun Modifier.appBarFade(surface: Color, overlap: Float): Modifier {
     }
 
     val style = HazeBlurStyle {
+        backgroundColor(surface)
         // progressive() only rescales an existing blur -- without a radius the
         // ramp has nothing to fade.
         blurRadius(32.dp)
@@ -112,9 +117,11 @@ fun Modifier.appBarFade(surface: Color, overlap: Float): Modifier {
         )
     }
 
-    // Tint first, blur second: haze reads the source from the window, and the tint
-    // has to be part of what gets blurred or it sits on top as a flat wash.
+    // Blur first, tint second: hazeBlur draws the captured source layer first, and
+    // the inner background modifier layers the surface gradient tint over it before
+    // the app bar's own content draws on top.
     return this
+        .hazeBlur(input = HazeInput.Sources(hazeState), style = style)
         .background(
             Brush.verticalGradient(
                 0f to surface.copy(alpha = 0.55f * overlap),
@@ -123,5 +130,4 @@ fun Modifier.appBarFade(surface: Color, overlap: Float): Modifier {
                 1f to Color.Transparent,
             )
         )
-        .hazeBlur(input = HazeInput.Sources(hazeState), style = style)
 }

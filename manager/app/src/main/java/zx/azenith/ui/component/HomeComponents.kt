@@ -30,6 +30,7 @@ import android.view.Surface
 import android.view.TextureView
 import android.view.ViewGroup
 import android.webkit.MimeTypeMap
+import kotlinx.coroutines.isActive
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -321,13 +322,13 @@ fun BannerCard(
     val bannerShape = currentPersonalization().bannerCorner()
 
     val statusBgColor = when (tone) {
-        BannerTone.Good -> colorScheme.secondaryContainer
+        BannerTone.Good -> colorScheme.primaryContainer
         BannerTone.Bad -> colorScheme.errorContainer
-        BannerTone.Neutral -> colorScheme.surfaceContainerHighest
+        BannerTone.Neutral -> if (isBannerEnabled) colorScheme.surfaceContainerHighest else colorScheme.surfaceContainerLow
     }
 
     val statusTextColor = when (tone) {
-        BannerTone.Good -> colorScheme.onSecondaryContainer
+        BannerTone.Good -> colorScheme.onPrimaryContainer
         BannerTone.Bad -> colorScheme.onErrorContainer
         BannerTone.Neutral -> colorScheme.onSurfaceVariant
     }
@@ -400,14 +401,14 @@ fun BannerCard(
                     if (pid.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Surface(
-                            color = if (isBlurEnabled) Color.Transparent else colorScheme.secondaryContainer, 
+                            color = if (isBlurEnabled) Color.Transparent else colorScheme.primaryContainer, 
                             shape = CircleShape,
                             modifier = Modifier
                                 .clip(CircleShape)
                                 .then(if (isBlurEnabled) Modifier.hazeBlur(
                                 input = HazeInput.Sources(bannerHazeState),
                                 style = HazeBlurStyle.Material3(
-                                    containerColor = colorScheme.secondaryContainer
+                                    containerColor = colorScheme.primaryContainer
                                         .accentTint(ACCENT_TINT_BLUR)
                                 ) { blurRadius(14.dp) }
                             ) else Modifier)
@@ -424,7 +425,7 @@ fun BannerCard(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold, 
-                                    color = colorScheme.onSecondaryContainer
+                                    color = colorScheme.onPrimaryContainer
                                 )
                             }
                         }
@@ -546,7 +547,7 @@ fun InfoTile(
     val colorScheme = MaterialTheme.colorScheme
     val granted = grantedPalette()
 
-    val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
+    val cardBgColor = colorScheme.surfaceContainerLow
 
     // One spring drives every colour, so the container, icon and value label
     // cross-fade as a single change instead of three staggered tweens.
@@ -714,7 +715,7 @@ fun DeviceInfoCard() {
     val shape = currentPersonalization().widgetCorner(26.dp)
     Surface(
         shape = shape,
-        color = colorScheme.surfaceColorAtElevation(1.dp),
+        color = colorScheme.surfaceContainerLow,
         modifier = Modifier.gamepadFocusOutline(shape = shape, onActivate = { isExpanded = !isExpanded }, register = true),
         onClick = { isExpanded = !isExpanded }
     ) {
@@ -891,7 +892,7 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
     
     Surface(
         shape = shape, 
-        color = colorScheme.surfaceColorAtElevation(1.dp),
+        color = colorScheme.surfaceContainerLow,
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
@@ -1146,7 +1147,7 @@ fun ElapsedTimeText(startTimeStr: String) {
         val startParsed = try { sdf.parse(startTimeStr) } catch(e: Exception) { null }
         
         if (startParsed != null) {
-            while (true) {
+            while (isActive) {
                 val now = java.util.Calendar.getInstance()
                 val start = java.util.Calendar.getInstance().apply {
                     time = startParsed
@@ -1162,7 +1163,8 @@ fun ElapsedTimeText(startTimeStr: String) {
                 val m = (diff / 60000) % 60
                 val s = (diff / 1000) % 60
                 
-                elapsedTime = String.format("%02d:%02d:%02d", h, m, s)
+                val next = String.format("%02d:%02d:%02d", h, m, s)
+                if (next != elapsedTime) elapsedTime = next
                 kotlinx.coroutines.delay(1000)
             }
         } else {

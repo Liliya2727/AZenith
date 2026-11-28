@@ -1,11 +1,23 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Bypass charging logic.
 
-use crate::android_ffi::PROP_VALUE_MAX;
 use crate::config::resolution::restore_resolution_target;
 use crate::core::{BypassNode, ProfileMode, DaemonContext};
 use crate::proc::{get_pids_of_at, set_priority};
 use crate::profile::{is_manual_mode, restore_per_app_overrides, update_game_info};
-use crate::sysprop::{get_or_default, get_into};
 use crate::fileops;
 use crate::{IS_FALSE, IS_TRUE, log_error, log_info, log_warn};
 use std::os::raw::c_int;
@@ -1009,15 +1021,14 @@ pub fn test_node(node: &BypassNode, verbose: bool) -> NodeTestOutcome {
 // ---------------------------------------------------------------------------
 // disable_bypass
 // ---------------------------------------------------------------------------
-pub fn disable_bypass(_ctx: &mut DaemonContext) {
+pub fn disable_bypass(ctx: &mut DaemonContext) {
     // The write-ahead record is authoritative even when no path is configured:
     // it exists precisely because a node may still be ON.
     if fileops::exists(PENDING_RESTORE_FILE) {
         let _ = replay_pending_at(PENDING_RESTORE_FILE);
     }
 
-    // bypass path is stored in prop "persist.sys.azenithconf.bypasspath"
-    let path_key = get_or_default("persist.sys.azenithconf.bypasspath", "");
+    let path_key = ctx.config_bypasspath_str();
 
     if path_key.is_empty() || path_key == "UNSUPPORTED" {
         return;
@@ -1036,7 +1047,7 @@ pub fn disable_bypass(_ctx: &mut DaemonContext) {
 // ---------------------------------------------------------------------------
 // enable_bypass
 // ---------------------------------------------------------------------------
-pub fn enable_bypass() -> i32 {
+pub fn enable_bypass(ctx: &DaemonContext) -> i32 {
     if fileops::exists(PENDING_RESTORE_FILE) {
         log_warn!(
             "bypass",
@@ -1046,7 +1057,7 @@ pub fn enable_bypass() -> i32 {
         return -3;
     }
 
-    let path_key = get_or_default("persist.sys.azenithconf.bypasspath", "");
+    let path_key = ctx.config_bypasspath_str();
 
     if path_key.is_empty() || path_key == "UNSUPPORTED" {
         return -1;
@@ -1086,7 +1097,7 @@ fn write_check_report(lines: &[String], result: &str) -> String {
 }
 
 pub fn check_bypass_compatibility() -> i32 {
-    println!("\u{1b}[36m[Bypass Charge Compatibility Check]\u{1b}[0m Initializing...");
+    println!("\u{1b}[36m[Standby Charge Compatibility Check]\u{1b}[0m Initializing...");
 
     replay_pending_restore();
 
@@ -1259,7 +1270,7 @@ pub fn check_bypass_compatibility() -> i32 {
         return 0;
     }
 
-    println!("\n\u{1b}[1;31m[-]\u{1b}[0m Final Result: No compatible bypass node found.");
+    println!("\n\u{1b}[1;31m[-]\u{1b}[0m Final Result: No compatible standby charge node found.");
     println!("\u{1b}[33m[INFO]\u{1b}[0m Summary: {} Scanned, {} Tested, {} Skipped.\u{1b}[0m", total_nodes, available_count, skipped_count);
 
     // A scan is a diagnostic, not a decision: leave the stored configuration
@@ -1274,7 +1285,7 @@ pub fn check_bypass_compatibility() -> i32 {
         );
     }
 
-    let current_path = get_or_default("persist.sys.azenithconf.bypasspath", "");
+    let current_path = archconfig::load().standby_path;
     if current_path.is_empty() || current_path == "UNSUPPORTED" {
         println!("\u{1b}[33m[INFO]\u{1b}[0m Configuration left unchanged (no bypass path configured).");
     } else {
@@ -1311,7 +1322,7 @@ pub fn test_bypass_node_by_name(name: &str) -> i32 {
 }
 
 fn test_single_node(node: &BypassNode) -> i32 {
-    println!("\n\u{1b}[36m[Bypass Charge Test - Single Node]\u{1b}[0m Initializing...");
+    println!("\n\u{1b}[36m[Standby Charge Test - Single Node]\u{1b}[0m Initializing...");
 
     std::thread::sleep(std::time::Duration::from_secs(2));
 
@@ -1372,7 +1383,7 @@ fn test_single_node(node: &BypassNode) -> i32 {
 // print_bypass_path_list
 // ---------------------------------------------------------------------------
 pub fn print_bypass_path_list() {
-    println!("\n\u{1b}[36m[AZenith Available Bypass Path List]\u{1b}[0m");
+    println!("\n\u{1b}[36m[AZenith Available Standby Charge Path List]\u{1b}[0m");
     println!("---------------------------------------------------------------------------------------");
     println!(" {:<30} | {:<10} | {}", "NODE NAME", "STATUS", "SYSFS/PROC PATH");
     println!("---------------------------------------------------------------------------------------");
@@ -1458,21 +1469,21 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
             ctx.game.game_pids[i] = new_pids[i];
             if IS_TRUE!(ctx.opts_app_priority()) {
                 set_priority(ctx.game.game_pids[i]);
-            } else if !IS_FALSE!(ctx.opts_app_priority()) {
-                let mut val = [0u8; PROP_VALUE_MAX];
-                let _ = get_into("persist.sys.azenithconf.iosched", &mut val);
-                let val = unsafe { std::ffi::CStr::from_ptr(val.as_ptr() ) }.to_string_lossy();
-                if val == "1" {
-                    set_priority(ctx.game.game_pids[i]);
-                }
+            } else if !IS_FALSE!(ctx.opts_app_priority()) && ctx.config.app_priority {
+                set_priority(ctx.game.game_pids[i]);
             }
         }
 
         if new_count == 0 {
             let focused = ctx.current_system_cache.focused_app_str();
-            if focused == gamestart.as_str() || ctx.render.is_restarting_renderer {
+            let now_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+            let in_prelaunch = now_ms < ctx.game.prelaunch_until_ms;
+            if focused == gamestart.as_str() || ctx.render.is_restarting_renderer || in_prelaunch {
                 log_info!("inotify", "game pids dropped reason={} game={}",
-                    if ctx.render.is_restarting_renderer { "renderer_restart" } else { "still_focused" }, gamestart);
+                    if ctx.render.is_restarting_renderer { "renderer_restart" } else if in_prelaunch { "prelaunch_grace" } else { "still_focused" }, gamestart);
             } else {
                 let manual = is_manual_mode(ctx);
                 log_info!("inotify", "game closed action={} game={}",
@@ -1486,6 +1497,8 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
                 }
                 ctx.game.gamestart = None;
                 ctx.game.active_app_name = None;
+                ctx.game.prelaunched_pkg = None;
+                ctx.game.prelaunch_until_ms = 0;
                 ctx.power.fg_away_active = false;
                 ctx.render.manual_sidepanel_shown = false;
                 ctx.power.fg_away_timer = 0;
@@ -1499,12 +1512,20 @@ pub fn handle_background_apps_event_at(ctx: &mut DaemonContext, path: &str) {
 // ---------------------------------------------------------------------------
 // handle_dynamic_bypass
 // ---------------------------------------------------------------------------
+/// Hardcoded minimum battery level below which Standby Charge never pauses charging.
+pub const STANDBY_CHARGE_FLOOR_PCT: i32 = 20;
+/// Hysteresis window (in battery percentage points) below the locked session target
+/// before charging resumes.
+pub const STANDBY_CHARGE_HYSTERESIS_PCT: i32 = 2;
+
 pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
     let bypass_before = ctx.bypass.bypass_applied;
+    let target_before = ctx.bypass.target_level;
 
     if ctx.config_bypasspath_str() != "UNSUPPORTED" && !ctx.config_bypasspath_str().is_empty() {
-        if ctx.profile.cur_mode == ProfileMode::PerformanceProfile {
-            let threshold = ctx.bypass.config_bypasschgthreshold;
+        let bypass_active_session = ctx.profile.cur_mode == ProfileMode::PerformanceProfile
+            || (ctx.game.gamestart.is_some() && IS_TRUE!(ctx.opts_bypass_charging()));
+        if bypass_active_session {
             let current_battery = ctx.current_system_cache.battery_level;
             let is_device_charging = ctx.current_system_cache.is_charging != 0;
 
@@ -1513,33 +1534,75 @@ pub fn handle_dynamic_bypass(ctx: &mut DaemonContext) {
             } else if IS_TRUE!(ctx.opts_bypass_charging()) {
                 true
             } else {
-                ctx.bypass.config_bypasschg == 1
+                ctx.config.standby_chg
             };
 
             if current_battery >= 0 && bypass_charging_allowed && is_device_charging {
-                if current_battery >= threshold {
-                    if read_current_ma() > 50 {
-                        if enable_bypass() == 0 && !ctx.bypass.bypass_applied {
-                            log_info!("bypass", "bypass enabled battery={} threshold={}", current_battery, threshold);
-                            ctx.bypass.bypass_applied = true;
-                        }
+                if ctx.bypass.target_level < 0 {
+                    ctx.bypass.target_level = current_battery.max(STANDBY_CHARGE_FLOOR_PCT);
+                    log_info!(
+                        "bypass",
+                        "standby charge target locked battery={} target={} floor={}",
+                        current_battery,
+                        ctx.bypass.target_level,
+                        STANDBY_CHARGE_FLOOR_PCT
+                    );
+                }
+                let target = ctx.bypass.target_level.max(STANDBY_CHARGE_FLOOR_PCT);
+
+                if current_battery < STANDBY_CHARGE_FLOOR_PCT {
+                    // Never pause charging below the hardcoded 20% safety floor.
+                    if ctx.bypass.bypass_applied {
+                        log_info!(
+                            "bypass",
+                            "standby charge resumed (below {}% floor) battery={} target={}",
+                            STANDBY_CHARGE_FLOOR_PCT,
+                            current_battery,
+                            target
+                        );
+                        disable_bypass(ctx);
+                        ctx.bypass.bypass_applied = false;
                     }
-                } else if ctx.bypass.bypass_applied {
-                    log_info!("bypass", "bypass disabled battery={} threshold={}", current_battery, threshold);
+                } else if !ctx.bypass.bypass_applied {
+                    if current_battery >= target && read_current_ma() > 50 && enable_bypass(ctx) == 0 {
+                        log_info!(
+                            "bypass",
+                            "standby charge paused charging battery={} target={}",
+                            current_battery,
+                            target
+                        );
+                        ctx.bypass.bypass_applied = true;
+                    }
+                } else if current_battery <= target - STANDBY_CHARGE_HYSTERESIS_PCT {
+                    log_info!(
+                        "bypass",
+                        "standby charge resumed charging battery={} target={} resume_at={}",
+                        current_battery,
+                        target,
+                        target - STANDBY_CHARGE_HYSTERESIS_PCT
+                    );
                     disable_bypass(ctx);
                     ctx.bypass.bypass_applied = false;
                 }
-            } else if ctx.bypass.bypass_applied {
+            } else {
+                if ctx.bypass.bypass_applied {
+                    disable_bypass(ctx);
+                    ctx.bypass.bypass_applied = false;
+                }
+                ctx.bypass.target_level = -1;
+            }
+        } else {
+            if ctx.bypass.bypass_applied {
                 disable_bypass(ctx);
                 ctx.bypass.bypass_applied = false;
             }
-        } else if ctx.bypass.bypass_applied {
-            disable_bypass(ctx);
-            ctx.bypass.bypass_applied = false;
+            ctx.bypass.target_level = -1;
         }
     }
 
-    if bypass_before != ctx.bypass.bypass_applied && ctx.profile.cur_mode == ProfileMode::PerformanceProfile {
+    if (bypass_before != ctx.bypass.bypass_applied || target_before != ctx.bypass.target_level)
+        && ctx.profile.cur_mode == ProfileMode::PerformanceProfile
+    {
         crate::config::state::save_daemon_state(ctx);
     }
 }

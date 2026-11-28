@@ -18,16 +18,10 @@ package zx.azenith.TileService
 
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import com.topjohnwu.superuser.Shell
 import zx.azenith.R
-import zx.azenith.ui.util.PropertyUtils
-import zx.azenith.ui.util.RootUtils
+import zx.azenith.ui.util.ConfigUtils
 
 class BypassChgTileService : TileService() {
-
-    private val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
-    private val PATH_PROP = "persist.sys.azenithconf.bypasspath"
-    private val BYPASSCHG_FILE = "/data/adb/.config/AZenith/bypasschgconfig/bypasschg"
 
     override fun onStartListening() {
         super.onStartListening()
@@ -41,11 +35,11 @@ class BypassChgTileService : TileService() {
         if (tile.state == Tile.STATE_UNAVAILABLE) return
 
         if (tile.state == Tile.STATE_ACTIVE) {
-            setBypassChg("0")
+            setBypassChg(false)
             tile.state = Tile.STATE_INACTIVE
             updateSubtitle(tile, getString(R.string.status_inactive))
         } else {
-            setBypassChg("1")
+            setBypassChg(true)
             tile.state = Tile.STATE_ACTIVE
             updateSubtitle(tile, getString(R.string.status_active))
         }
@@ -53,20 +47,20 @@ class BypassChgTileService : TileService() {
         tile.updateTile()
     }
 
-    private fun setBypassChg(value: String) {
-        PropertyUtils.set(BYPASS_PROP, value)
-        RootUtils.writeRootFile(BYPASSCHG_FILE, "$value\n")
+    private fun setBypassChg(enabled: Boolean) {
+        ConfigUtils.setBool("standby_chg", enabled)
     }
 
     private fun updateTileState() {
         val tile = qsTile ?: return
-        val bypassPath = PropertyUtils.get(PATH_PROP, "")
+        val cfg = ConfigUtils.load()
+        val bypassPath = cfg.standbyPath
 
         if (bypassPath == "UNSUPPORTED") {
             tile.state = Tile.STATE_UNAVAILABLE
             updateSubtitle(tile, getString(R.string.status_not_supported))
         } else {
-            val isEnabled = PropertyUtils.get(BYPASS_PROP, "0") == "1"
+            val isEnabled = cfg.standbyChg
             tile.state = if (isEnabled) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             updateSubtitle(tile, getString(if (isEnabled) R.string.status_active else R.string.status_inactive))
         }

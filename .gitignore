@@ -1,5 +1,8 @@
 *.zip
 *.o
+# reference material and binary test
+/.binarytest/
+/.reference/
 logcollections
 # The fps uprobe is shipped prebuilt so the build needs no clang.
 !sysdaemon/assets/fps_probe.bpf.o
@@ -25,3 +28,6 @@ manager/app/src/main/assets/changelog.md
 *.cache
 local.properties
 manager/local.properties
+
+# Internal architecture
+DAEMONWORKFLOWS.md

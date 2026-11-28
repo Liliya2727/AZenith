@@ -1,4 +1,4 @@
-//! System property access and user configuration flags.
+//! System property access and user configuration flags (`config.json` via `archconfig`).
 //!
 //! `getprop` / `setprop` go through bionic directly (see `crate::android_ffi`)
 //! instead of spawning their binaries. `resetprop` still spawns, because only
@@ -6,9 +6,18 @@
 
 use crate::android_ffi;
 use crate::utils::logging::log_error;
+use archconfig::AZenithConfig;
 use std::fs;
+use std::sync::OnceLock;
 
 pub const CONFIG_PATH: &str = "/data/adb/.config/AZenith";
+
+static CACHED_CFG: OnceLock<AZenithConfig> = OnceLock::new();
+
+/// Access the cached `AZenithConfig` loaded once per one-shot invocation.
+pub fn cfg() -> &'static AZenithConfig {
+    CACHED_CFG.get_or_init(archconfig::load)
+}
 
 /// Returns the property value, or `""` when unset/empty.
 pub fn getprop(key: &str) -> String {
@@ -35,35 +44,30 @@ pub fn setprop(key: &str, val: &str) {
     }
 }
 
-pub fn setprop_cmd(key: &str, value: &str) {
-    let _ = android_ffi::prop_set(key, value);
-}
-
-/// Returns the first non-empty property value, following the fallback chain order.
-///
-/// Every profile uses this to resolve its CPU governor, I/O scheduler and
-/// Mali GPU governor with the same pattern.
-pub fn prop_first(keys: &[&str]) -> String {
-    keys.iter()
-        .map(|key| getprop(key))
-        .find(|value| !value.is_empty())
+/// Returns the first non-empty string slice from `values`.
+pub fn first_non_empty<'a>(values: &[&'a str]) -> String {
+    values
+        .iter()
+        .copied()
+        .find(|v| !v.is_empty())
         .unwrap_or_default()
+        .to_string()
 }
 
-/// Property fallback chain, using `default` when every property is empty.
-pub fn prop_or(keys: &[&str], default: &str) -> String {
-    let value = prop_first(keys);
-    if value.is_empty() {
-        default.to_string()
-    } else {
-        value
-    }
+/// Returns the first non-empty string slice from `values`, falling back to `default`.
+pub fn first_or(values: &[&str], default: &str) -> String {
+    values
+        .iter()
+        .copied()
+        .find(|v| !v.is_empty())
+        .unwrap_or(default)
+        .to_string()
 }
 
 /// Frequency limit in percent. `Disabled` or empty means 100.
 pub fn get_limiter() -> u64 {
-    let val = getprop("persist.sys.azenithconf.freqoffset");
-    if val == "Disabled" || val.is_empty() {
+    let val = cfg().freq_offset.trim();
+    if val.eq_ignore_ascii_case("Disabled") || val.is_empty() {
         100
     } else {
         val.replace('%', "").parse().unwrap_or(100)
@@ -71,15 +75,15 @@ pub fn get_limiter() -> u64 {
 }
 
 pub fn get_debugmode() -> bool {
-    getprop("persist.sys.azenith.debugmode") == "true"
+    cfg().debug_mode
 }
 
 pub fn get_clearapps() -> bool {
-    getprop("persist.sys.azenithconf.clearbg") == "1"
+    cfg().clear_bg
 }
 
 pub fn get_litemode() -> bool {
-    getprop("persist.sys.azenithconf.litemode") == "1"
+    getprop("sys.azenith.litemode") == "1"
 }
 
 pub fn get_curprofile() -> String {
@@ -89,8 +93,7 @@ pub fn get_curprofile() -> String {
         .to_string()
 }
 
-/// Master switch: `persist.sys.azenith.disabletweak = 1` disables every tweak.
+/// Master switch: `disable_tweak = true` disables every tweak.
 pub fn is_tweak_disabled() -> bool {
-    let disable_tweak = getprop("persist.sys.azenith.disabletweak");
-    disable_tweak == "1"
+    cfg().disable_tweak
 }

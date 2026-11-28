@@ -44,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -71,7 +72,7 @@ import zx.azenith.ui.navigation.safePopBackStack
 @Composable
 fun ExperimentalScreen(navController: NavController) {
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val listState = rememberLazyListState()
     var launcherOn by remember { mutableStateOf(isGameSpaceLauncherEnabled(context)) }
     var sidepanelOn by remember {
@@ -97,6 +98,7 @@ fun ExperimentalScreen(navController: NavController) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
                 AboutTopAppBar(
                     title = stringResource(R.string.section_experimental),

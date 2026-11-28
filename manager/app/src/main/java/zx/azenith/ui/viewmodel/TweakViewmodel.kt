@@ -28,7 +28,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.io.SuFile
-import com.topjohnwu.superuser.io.SuFileOutputStream
 import zx.azenith.ui.util.RootUtils
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +38,7 @@ import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.RefreshRateReceiver
 import zx.azenith.ui.util.BackupManager
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.PropertyUtils
 
 
@@ -110,37 +110,37 @@ class TweakViewModel : ViewModel() {
         private set
     
     private val configKeysToBackup = listOf(
-        "persist.sys.azenith.soctype",
-        "persist.sys.azenithconf.cpulimit",
-        "persist.sys.azenithconf.freqoffset",
-        "persist.sys.azenithconf.APreload",
-        "persist.sys.azenithconf.clearbg",
-        "persist.sys.azenithconf.iosched",
-        "persist.sys.azenithconf.dnd",
-        "persist.sys.azenithconf.fstrim",
-        "persist.sys.azenithconf.thermalcore",
-        "persist.sys.azenithconf.schedtunes",
-        "persist.sys.azenithconf.SFL",
-        "persist.sys.azenithconf.justintime",
-        "persist.sys.azenithconf.fpsged",
-        "persist.sys.azenithconf.malisched",
-        "persist.sys.azenithconf.walttunes",
-        "persist.sys.azenithconf.disabletrace",
-        "persist.sys.azenithconf.logd",
-        "persist.sys.azenithconf.schemeconfig",
-        "persist.sys.azenithconf.DThermal",
-        "persist.sys.azenithconf.usefpsgo",
-        "persist.sys.azenithconf.bypasschgthreshold",
-        "persist.sys.azenithconf.preloadbudget",
-        "persist.sys.azenith.custom_default_cpu_gov",
-        "persist.sys.azenith.custom_powersave_cpu_gov",
-        "persist.sys.azenith.custom_performance_cpu_gov",
-        "persist.sys.azenith.custom_default_balanced_IO",
-        "persist.sys.azenith.custom_performance_IO",
-        "persist.sys.azenith.custom_powersave_IO",
-        "persist.sys.azenith.custom_default_maligpu_gov",
-        "persist.sys.azenith.custom_performance_maligpu_gov",
-        "persist.sys.azenith.custom_powersave_maligpu_gov" 
+        "soc_type",
+        "cpu_limit",
+        "freq_offset",
+        "app_preload",
+        "clear_bg",
+        "app_priority",
+        "dnd",
+        "fstrim",
+        "thermalcore",
+        "schedtunes",
+        "sfl",
+        "justintime",
+        "fpsged",
+        "mali_sched",
+        "walttunes",
+        "disable_trace",
+        "kill_logd",
+        "scheme_config",
+        "disable_thermal",
+        "use_fpsgo",
+        "standby_chg",
+        "preload_budget",
+        "custom_default_cpu_gov",
+        "custom_powersave_cpu_gov",
+        "custom_performance_cpu_gov",
+        "custom_default_io",
+        "custom_performance_io",
+        "custom_powersave_io",
+        "custom_default_mali_gov",
+        "custom_performance_mali_gov",
+        "custom_powersave_mali_gov"
     )
     
     
@@ -155,14 +155,14 @@ class TweakViewModel : ViewModel() {
     ): Boolean {
         return withContext(Dispatchers.IO) {
             val propsMap = mutableMapOf<String, String>()
-            
+            val cfg = ConfigUtils.load(forceRootReload = true)
 
-            propsMap["persist.sys.azenith.soctype"] = PropertyUtils.get("persist.sys.azenith.soctype")
+            propsMap["soc_type"] = cfg.socType?.toString().orEmpty()
 
             if (backupTweaks) {
                 configKeysToBackup.forEach { key ->
-                    if (key != "persist.sys.azenith.soctype") {
-                        propsMap[key] = PropertyUtils.get(key)
+                    if (key != "soc_type") {
+                        propsMap[key] = ConfigUtils.getKeyString(cfg, key)
                     }
                 }
             }
@@ -190,15 +190,15 @@ class TweakViewModel : ViewModel() {
             if (backupData == null) {
                 return@withContext ValidationResult(false, context.getString(R.string.err_invalid_backup), false, false, null, null)
             }
-            val backupSocType = backupData["persist.sys.azenith.soctype"] 
+            val backupSocType = backupData["soc_type"]
+                ?: backupData["persist.sys.azenith.soctype"] 
                 ?: backupData["persist.sys.azenithdebug.soctype"]
                 
             val hasApplist = backupData.containsKey(APPLIST_BACKUP_KEY)
             
-            val hasTweaks = backupData.keys.any { 
-                it.startsWith("persist.sys.azenith") && 
-                it != "persist.sys.azenith.soctype" &&
-                it != "persist.sys.azenithdebug.soctype" 
+            val hasTweaks = backupData.keys.any { key ->
+                val canonical = ConfigUtils.mapLegacyOrNewKey(key)
+                canonical != null && canonical != "soc_type"
             }
     
             ValidationResult(true, "", hasTweaks, hasApplist, backupSocType, backupData)
@@ -213,31 +213,23 @@ class TweakViewModel : ViewModel() {
     ) {
         withContext(Dispatchers.IO) {
             if (restoreTweaks) {
+                val updates = mutableMapOf<String, String>()
                 backupData.forEach { (key, value) ->
-                    if (key != "persist.sys.azenith.soctype" && 
-                        key != "persist.sys.azenithdebug.soctype" && 
-                        key != APPLIST_BACKUP_KEY && 
-                        value.isNotEmpty()) {
-                        
-                        PropertyUtils.set(key, value)
-                        
-                        if (key == "persist.sys.azenithconf.freqoffset") {
-                            RootUtils.writeRootFile("/data/adb/.config/AZenith/freqoffset", "$value\n")
-                        }
+                    val canonical = ConfigUtils.mapLegacyOrNewKey(key)
+                    if (canonical != null &&
+                        canonical != "soc_type" &&
+                        key != APPLIST_BACKUP_KEY &&
+                        value.isNotEmpty()
+                    ) {
+                        updates[canonical] = value
                     }
                 }
+                ConfigUtils.setMany(updates)
             }
 
             if (restoreApplist && backupData.containsKey(APPLIST_BACKUP_KEY)) {
                 val applistContent = backupData[APPLIST_BACKUP_KEY]!!
-                val file = SuFile(APPLIST_PATH)
-                val parent = file.parentFile
-                if (parent != null && !parent.exists()) {
-                    parent.mkdirs()
-                }
-                SuFileOutputStream.open(file).use { outputStream ->
-                    outputStream.write(applistContent.toByteArray())
-                }
+                RootUtils.writeRootFile(APPLIST_PATH, applistContent)
             }
             
             RootUtils.touchRootFile("/data/adb/modules/AZenith/reboot")
@@ -259,7 +251,7 @@ class TweakViewModel : ViewModel() {
      */
     suspend fun refreshDisplayState(context: Context) = withContext(Dispatchers.IO) {
         val rawRenderer = PropertyUtils.get("debug.hwui.renderer")
-        val azenithRenderer = PropertyUtils.get("persist.sys.azenithconf.renderer")
+        val azenithRenderer = ConfigUtils.load().renderer
 
         val renderer = when {
             rawRenderer.isEmpty() && (azenithRenderer.isEmpty() || azenithRenderer.equals("default", ignoreCase = true)) -> "Default"
@@ -294,21 +286,21 @@ class TweakViewModel : ViewModel() {
 
     fun loadAllConfiguration(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            
+            val cfg = ConfigUtils.load()
             launch {
-                liteState = PropertyUtils.get("persist.sys.azenithconf.cpulimit") == "1"
+                liteState = cfg.cpuLimit
                 
-                val savedOffset = PropertyUtils.get("persist.sys.azenithconf.freqoffset", "Disabled")
+                val savedOffset = cfg.freqOffset.ifEmpty { "Disabled" }
                 freqOffsetIndex = when (savedOffset) {
                     "90" -> 1f; "80" -> 2f; "70" -> 3f; "60" -> 4f; "50" -> 5f; "40" -> 6f; else -> 0f
                 }            
                 
-                preloadState = PropertyUtils.get("persist.sys.azenithconf.APreload") == "1"
-                memKillerState = PropertyUtils.get("persist.sys.azenithconf.clearbg") == "1"
-                appPriorState = PropertyUtils.get("persist.sys.azenithconf.iosched") == "1"
-                dndState = PropertyUtils.get("persist.sys.azenithconf.dnd") == "1"
-                fstrimState = PropertyUtils.get("persist.sys.azenithconf.fstrim") == "1"
-                thermalState = PropertyUtils.get("persist.sys.azenithconf.thermalcore") == "1"
+                preloadState = cfg.appPreload
+                memKillerState = cfg.clearBg
+                appPriorState = cfg.appPriority
+                dndState = cfg.dnd
+                fstrimState = cfg.fstrim
+                thermalState = cfg.thermalcore
 
                 refreshDisplayState(context)
             }
@@ -331,11 +323,10 @@ class TweakViewModel : ViewModel() {
         val govs = RootUtils.readRootFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors")
             ?.let { parseNodeTokens(it) } ?: emptyList()
         if (govs.isNotEmpty()) {
-            val currentDefault = PropertyUtils.get("persist.sys.azenith.custom_default_cpu_gov").ifEmpty {
-                PropertyUtils.get("persist.sys.azenith.default_cpu_gov")
-            }
-            val currentPowersave = PropertyUtils.get("persist.sys.azenith.custom_powersave_cpu_gov")
-            val currentPerformance = PropertyUtils.get("persist.sys.azenith.custom_performance_cpu_gov")
+            val cfg = ConfigUtils.load()
+            val currentDefault = cfg.customDefaultCpuGov.ifEmpty { cfg.defaultCpuGov }
+            val currentPowersave = cfg.customPowersaveCpuGov
+            val currentPerformance = cfg.customPerformanceCpuGov
 
             availableGovernors = govs
             defaultGovIndex = govs.indexOf(currentDefault).coerceAtLeast(0)
@@ -359,12 +350,11 @@ class TweakViewModel : ViewModel() {
             val rawOut = RootUtils.readRootFile("/sys/block/$validBlock/queue/scheduler").orEmpty()
             if (rawOut.isNotEmpty()) {
                 val schedulers = parseNodeTokens(rawOut.replace("[", "").replace("]", ""))
+                val cfg = ConfigUtils.load()
 
-                val currentBal = PropertyUtils.get("persist.sys.azenith.custom_default_balanced_IO").ifEmpty {
-                    PropertyUtils.get("persist.sys.azenith.default_balanced_IO")
-                }
-                val currentPerf = PropertyUtils.get("persist.sys.azenith.custom_performance_IO")
-                val currentEco = PropertyUtils.get("persist.sys.azenith.custom_powersave_IO")
+                val currentBal = cfg.customDefaultIo.ifEmpty { cfg.defaultIo }
+                val currentPerf = cfg.customPerformanceIo
+                val currentEco = cfg.customPowersaveIo
 
                 availableIOSchedulers = schedulers
                 balancedIOIndex = schedulers.indexOf(currentBal).coerceAtLeast(0)
@@ -403,12 +393,11 @@ class TweakViewModel : ViewModel() {
             if (!maliGovs.isNullOrEmpty()) {
                 val govs = parseNodeTokens(maliGovs)
                     .filterNot { it.startsWith("apu", ignoreCase = true) }
+                val cfg = ConfigUtils.load()
                 
-                val currentBal = PropertyUtils.get("persist.sys.azenith.custom_default_maligpu_gov").ifEmpty {
-                    PropertyUtils.get("persist.sys.azenith.default_maligpu_gov")
-                }
-                val currentPerf = PropertyUtils.get("persist.sys.azenith.custom_performance_maligpu_gov")
-                val currentEco = PropertyUtils.get("persist.sys.azenith.custom_powersave_maligpu_gov")
+                val currentBal = cfg.customDefaultMaliGov.ifEmpty { cfg.defaultMaliGov }
+                val currentPerf = cfg.customPerformanceMaliGov
+                val currentEco = cfg.customPowersaveMaliGov
 
                 availableMaliGovernors = govs
                 balancedMaliGovIndex = govs.indexOf(currentBal).coerceAtLeast(0)
@@ -427,7 +416,7 @@ class TweakViewModel : ViewModel() {
     fun updateLiteMode(checked: Boolean) {
         liteState = checked
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.cpulimit", if (checked) "1" else "0")
+            ConfigUtils.setBool("cpu_limit", checked)
         }
     }
 
@@ -435,7 +424,7 @@ class TweakViewModel : ViewModel() {
         defaultGovIndex = index
         val selectedGov = availableGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_default_cpu_gov", selectedGov)
+            ConfigUtils.set("custom_default_cpu_gov", selectedGov)
             val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "2") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").exec()
@@ -447,7 +436,7 @@ class TweakViewModel : ViewModel() {
         powersaveGovIndex = index
         val selectedGov = availableGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_powersave_cpu_gov", selectedGov)
+            ConfigUtils.set("custom_powersave_cpu_gov", selectedGov)
             val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").exec()
@@ -459,7 +448,7 @@ class TweakViewModel : ViewModel() {
         performanceGovIndex = index
         val selectedGov = availableGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_performance_cpu_gov", selectedGov)
+            ConfigUtils.set("custom_performance_cpu_gov", selectedGov)
             val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").exec()
@@ -472,8 +461,7 @@ class TweakViewModel : ViewModel() {
         val index = value.roundToInt()
         val propValue = if (index == 0) "Disabled" else offsetLabels[index].replace("%", "")
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.freqoffset", propValue)
-            RootUtils.writeRootFile("/data/adb/.config/AZenith/freqoffset", "$propValue\n")
+            ConfigUtils.set("freq_offset", propValue)
         }
     }
 
@@ -481,7 +469,7 @@ class TweakViewModel : ViewModel() {
         balancedIOIndex = index
         val selectedIO = availableIOSchedulers?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_default_balanced_IO", selectedIO)
+            ConfigUtils.set("custom_default_io", selectedIO)
             val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "2") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").exec()
@@ -493,7 +481,7 @@ class TweakViewModel : ViewModel() {
         performanceIOIndex = index
         val selectedIO = availableIOSchedulers?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_performance_IO", selectedIO)
+            ConfigUtils.set("custom_performance_io", selectedIO)
             val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "1") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").exec()
@@ -505,7 +493,7 @@ class TweakViewModel : ViewModel() {
         powersaveIOIndex = index
         val selectedIO = availableIOSchedulers?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_powersave_IO", selectedIO)
+            ConfigUtils.set("custom_powersave_io", selectedIO)
             val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").exec()
@@ -517,7 +505,7 @@ class TweakViewModel : ViewModel() {
         balancedMaliGovIndex = index
         val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_default_maligpu_gov", selectedGov)
+            ConfigUtils.set("custom_default_mali_gov", selectedGov)
 
             val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "2") {
@@ -530,7 +518,7 @@ class TweakViewModel : ViewModel() {
         performanceMaliGovIndex = index
         val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_performance_maligpu_gov", selectedGov)
+            ConfigUtils.set("custom_performance_mali_gov", selectedGov)
             val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "1") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
@@ -542,7 +530,7 @@ class TweakViewModel : ViewModel() {
         powersaveMaliGovIndex = index
         val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_powersave_maligpu_gov", selectedGov)
+            ConfigUtils.set("custom_powersave_mali_gov", selectedGov)
             val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
@@ -553,49 +541,50 @@ class TweakViewModel : ViewModel() {
     fun updatePreloadMode(checked: Boolean) {
         preloadState = checked
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.APreload", if (checked) "1" else "0")
+            ConfigUtils.setBool("app_preload", checked)
         }
     }
 
     fun updateMemoryKiller(checked: Boolean) {
         memKillerState = checked
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.clearbg", if (checked) "1" else "0")
+            ConfigUtils.setBool("clear_bg", checked)
         }
     }
 
     fun updateAppPriority(checked: Boolean) {
         appPriorState = checked
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.iosched", if (checked) "1" else "0")
+            ConfigUtils.setBool("app_priority", checked)
         }
     }
 
     fun updateDndMode(checked: Boolean) {
         dndState = checked
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.dnd", if (checked) "1" else "0")
+            ConfigUtils.setBool("dnd", checked)
         }
     }
 
     fun updateFstrim(checked: Boolean) {
         fstrimState = checked
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.fstrim", if (checked) "1" else "0")
+            ConfigUtils.setBool("fstrim", checked)
         }
     }
 
     fun updateThermalCore(checked: Boolean) {
         thermalState = checked
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenithconf.thermalcore", if (checked) "1" else "0")
+            ConfigUtils.setBool("thermalcore", checked)
             Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setthermalcore ${if (checked) "1" else "0"}").exec()
         }
     }
 
     fun executeSetRenderer(reason: String, context: Context) {
         isRendererLoading = true
-        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setrender $reason && setprop persist.sys.azenithconf.renderer $reason").submit {
+        ConfigUtils.set("renderer", reason)
+        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setrender $reason").submit {
             viewModelScope.launch {
                 delay(1000)
                 loadAllConfiguration(context)

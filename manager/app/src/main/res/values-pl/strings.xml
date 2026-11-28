@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Zrównoważony regulator GPU Mali</string>
     <string name="balanced_mali_gov_desc">Regulator GPU używany w zrównoważonym profilu</string>
     <string name="banner">Baner</string>
-    <string name="bcharging">Zasilanie bypass</string>
-    <string name="bcharging_desc">Skonfiguruj funkcję zasilania bypass AZenith</string>
+    <string name="bcharging">Zasilanie standby</string>
+    <string name="bcharging_desc">Skonfiguruj funkcję zasilania standby AZenith</string>
     <string name="bypass_not_supported">To urządzenie nie obsługuje tej funkcji</string>
     <string name="cd_app_icon">Ikona aplikacji</string>
     <string name="cd_back">Wstecz</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Obecny profil</string>
     <string name="custom">Niestandardowy</string>
     <string name="CompatibilityCheck">Sprawdzanie zgodności</string>
-    <string name="CompatibilityCheck_desc">Wykonaj diagnostykę, aby sprawdzić, czy urządzenie obsługuje zasilanie bypass</string>
+    <string name="CompatibilityCheck_desc">Wykonaj diagnostykę, aby sprawdzić, czy urządzenie obsługuje zasilanie standby</string>
     <string name="default_cpu_gov">Domyślny regulator CPU</string>
     <string name="default_cpu_gov_desc">Regulator używany w zrównoważonym profilu</string>
     <string name="default_label">Domyślny</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Przywracanie nie powiodło się</string>
     <string name="dialog_start_hw_test_content">AZenith przeprowadzi test spadku napięcia na wbudowanym węźle baterii. Diagnostyka jest bezpieczna i trwa kilka sekund</string>
     <string name="dialog_start_hw_test_title">Rozpocząć test sprzętu?</string>
-    <string name="dialog_switch_node_content">Czy wymusić przełączenie celu konfiguracji bypass na [%1$s]?</string>
+    <string name="dialog_switch_node_content">Czy wymusić przełączenie celu konfiguracji standby na [%1$s]?</string>
     <string name="dialog_switch_node_title">Przełączyć węzeł sterowania?</string>
     <string name="dialog_update_available_confirm">Zaktualizuj teraz</string>
     <string name="dialog_update_available_content">Wersja menedżera aplikacji (%1$d) jest niższa niż wersja modułu (%2$d). Czy zaktualizować teraz, aby uzyskać najnowsze funkcje?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Nie przeszkadzać podczas gry</string>
     <string name="dnd_mode_gaming_desc">Automatycznie włącz tryb nie przeszkadzać w profilu wydajnościowym</string>
     <string name="done">Gotowe</string>
-    <string name="enable_bypass_charge">Włącz zasilanie bypass</string>
-    <string name="enable_bypass_charge_desc">Włącz zasilanie bypass w profilu wydajnościowym</string>
+    <string name="enable_bypass_charge">Włącz zasilanie standby</string>
+    <string name="enable_bypass_charge_desc">Włącz zasilanie standby w profilu wydajnościowym</string>
     <string name="err_failed_load_changelog">Nie udało się załadować dziennika zmian</string>
     <string name="err_invalid_backup">Plik kopii zapasowej jest nieprawidłowy lub uszkodzony (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Obecny węzeł zasilania bypass</string>
+    <string name="str_active_bypass_node">Obecny węzeł zasilania standby</string>
     <string name="str_adjust_and_calibrate_your_scre">Dostosuj kolory i nasycenie ekranu za pomocą usługi SurfaceFlinger, bez potrzeby wsparcia na poziomie jądra</string>
     <string name="str_adjust_gradient">Dostosuj gradient</string>
     <string name="str_app_info">Informacje o aplikacji</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Opiekun</string>
     <string name="str_max_video_size">Maksymalny rozmiar wideo to 50MB</string>
     <string name="str_no_active_nodes">Brak dostępnych węzłów pracy</string>
-    <string name="str_no_active_nodes_desc">Brak dostępnych węzłów bypass zmapowanych we właściwościach systemu</string>
+    <string name="str_no_active_nodes_desc">Brak dostępnych węzłów standby zmapowanych we właściwościach systemu</string>
     <string name="str_no_compatible_nodes">Brak zgodnych węzłów</string>
     <string name="str_open_source">Open source</string>
     <string name="str_package_name">Nazwa pakietu</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Uprawnienia root odrzucone. AZenith wymaga uprawnień root do działania.</string>
     <string name="str_root_access_granted">Uprawnienia root uzyskane, wszystko gotowe!</string>
-    <string name="str_run_diagnostics_above_or_check">Uruchom powyższą diagnostykę lub sprawdź, czy jądro zawiera węzły zasilania bypass</string>
+    <string name="str_run_diagnostics_above_or_check">Uruchom powyższą diagnostykę lub sprawdź, czy jądro zawiera węzły zasilania standby</string>
     <string name="str_safely_test">Bezpieczne testowanie zgodności urządzenia</string>
     <string name="str_save_compressed_logs_to_a_fold">Zapisz skompresowane logi w wybranym folderze</string>
     <string name="str_save_your_current_tweak_settin">Zapisz bieżące ustawienia konfiguracji</string>

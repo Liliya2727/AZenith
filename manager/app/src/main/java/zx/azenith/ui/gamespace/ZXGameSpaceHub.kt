@@ -17,6 +17,7 @@
 package zx.azenith.ui.gamespace
 
 import android.content.Context
+import android.os.Build
 import android.view.KeyEvent
 import zx.azenith.ui.theme.ColorMode
 import androidx.activity.compose.BackHandler
@@ -89,6 +90,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.KeyEventType
@@ -190,16 +192,40 @@ fun ZXGameSpaceHub(
     var nowPlayingOpen by remember { mutableStateOf(false) }
     var nowPlayingAnchor by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     var pendingLaunchApp by remember { mutableStateOf<ApplistViewmodel.AppInfo?>(null) }
+    var pendingLaunchPkg by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var sidePanelPromptOpen by remember { mutableStateOf(false) }
-    val requestAppLaunch: (ApplistViewmodel.AppInfo) -> Unit = { app ->
-        val setupDone = prefs.getBoolean("gamespace_sidepanel_setup_done", false)
-        if (!setupDone) {
-            pendingLaunchApp = app
-            sidePanelPromptOpen = true
-        } else {
-            ZXSidePanelService.show(context, app.packageName, app.label)
-            onLaunch(app)
+    val launchController = remember { GameLaunchController() }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, launchController) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> launchController.onActivityPaused()
+                androidx.lifecycle.Lifecycle.Event.ON_START,
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> launchController.onActivityResumed(scope)
+                else -> Unit
+            }
         }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            launchController.onDispose()
+        }
+    }
+    val requestPackageLaunch: (String, String?) -> Unit = { pkg, label ->
+        if (!launchController.isRunning) {
+            val setupDone = prefs.getBoolean("gamespace_sidepanel_setup_done", false)
+            if (!setupDone) {
+                pendingLaunchApp = allApps.firstOrNull { it.packageName == pkg }
+                    ?: games.firstOrNull { it.packageName == pkg }
+                pendingLaunchPkg = pkg to label
+                sidePanelPromptOpen = true
+            } else {
+                launchController.requestLaunch(scope, context, pkg, label)
+            }
+        }
+    }
+    val requestAppLaunch: (ApplistViewmodel.AppInfo) -> Unit = { app ->
+        requestPackageLaunch(app.packageName, app.label)
     }
     val welcomeScroll = rememberScrollState()
     var homeExpanded by remember { mutableStateOf(false) }
@@ -637,16 +663,68 @@ fun ZXGameSpaceHub(
             }
     ) {
         // Dynamic full-bleed atmospheric backdrop driven by the selected ribbon entry.
+        // The launch blur is a graphicsLayer renderEffect on this wrapper; its radius is read
+        // inside the lambda so the ramp never recomposes.
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .hazeSource(backdropHazeState)
-                .hazeSource(overlayHazeState, zIndex = 0f)
+                .graphicsLayer {
+                    val radiusDp = launchController.blurDpAnim.value
+                    renderEffect = if (radiusDp > 0.01f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        // Chain up to 4 passes of 25dp each: Skia/HWUI single-pass blur caps out
+                        // around ~25-30dp, so chaining multiple passes makes high-dp blur truly
+                        // smooth and uniform ("rata") all the way up to 100dp.
+                        val maxPassPx = 25f * density
+                        var remainingPx = radiusDp * density
+                        var effect: android.graphics.RenderEffect? = null
+                        var passes = 0
+                        while (remainingPx > 0.5f && passes < 4) {
+                            val stepPx = remainingPx.coerceAtMost(maxPassPx)
+                            val blur = android.graphics.RenderEffect.createBlurEffect(
+                                stepPx,
+                                stepPx,
+                                android.graphics.Shader.TileMode.CLAMP
+                            )
+                            effect = if (effect == null) {
+                                blur
+                            } else {
+                                android.graphics.RenderEffect.createChainEffect(blur, effect)
+                            }
+                            remainingPx -= stepPx
+                            passes++
+                        }
+                        effect?.asComposeRenderEffect()
+                    } else {
+                        null
+                    }
+                }
         ) {
-            ZXGameSpaceStageBackdrop(
-                entry = activeEntry
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(backdropHazeState)
+                    .hazeSource(overlayHazeState, zIndex = 0f)
+            ) {
+                ZXGameSpaceStageBackdrop(
+                    entry = activeEntry,
+                    launchShapesElapsedMs = { launchController.shapesElapsedMsAnim.value }
+                )
+            }
         }
+
+        // Hub UI + popups layer: fades and scales down as one layer during game launch
+        // while leaving the wallpaper backdrop underneath untouched (darkened by the scrim).
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val p = launchController.contentFadeAnim.value
+                    alpha = (1f - p).coerceIn(0f, 1f)
+                    val s = 1f + (UI_OUT_END_SCALE - 1f) * p
+                    scaleX = s
+                    scaleY = s
+                }
+        ) {
 
         val isAmoled = remember { prefs.getInt("color_mode", ColorMode.SYSTEM.value) == ColorMode.DARKAMOLED.value }
         val isHomescreenScrolled = category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 10)
@@ -1151,6 +1229,7 @@ fun ZXGameSpaceHub(
             allApps = allApps,
             hazeState = overlayHazeState,
             onLaunch = requestAppLaunch,
+            onLaunchPackage = { pkg -> requestPackageLaunch(pkg, null) },
             onClose = { tuningPkg = null }
         )
 
@@ -1160,6 +1239,7 @@ fun ZXGameSpaceHub(
             allApps = allApps,
             hazeState = overlayHazeState,
             onLaunch = requestAppLaunch,
+            onLaunchPackage = { pkg -> requestPackageLaunch(pkg, null) },
             onClose = { wallpaperPkg = null }
         )
 
@@ -1170,20 +1250,30 @@ fun ZXGameSpaceHub(
             onDismiss = {
                 sidePanelPromptOpen = false
                 pendingLaunchApp = null
+                pendingLaunchPkg = null
             },
             onConfirm = {
                 val appToLaunch = pendingLaunchApp
+                val pkgFallback = pendingLaunchPkg
                 sidePanelPromptOpen = false
                 pendingLaunchApp = null
-                if (appToLaunch != null) {
+                pendingLaunchPkg = null
+                val targetPkg = appToLaunch?.packageName ?: pkgFallback?.first
+                val targetLabel = appToLaunch?.label ?: pkgFallback?.second
+                if (targetPkg != null) {
                     scope.launch {
                         delay(240)
-                        ZXSidePanelService.show(context, appToLaunch.packageName, appToLaunch.label)
-                        onLaunch(appToLaunch)
+                        launchController.requestLaunch(scope, context, targetPkg, targetLabel)
                     }
                 }
             }
         )
+        } // end Hub UI + popups layer
+
+        // Scrim, centered AZenith wordmark, and pointer lock overlay during game launch.
+        GameLaunchTransitionOverlay(controller = launchController)
+
+        BackHandler(enabled = launchController.isRunning) { }
     }
     }
 }

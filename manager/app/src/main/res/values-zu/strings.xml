@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Umqondisi we-Mali GPU olinganiselwe</string>
     <string name="balanced_mali_gov_desc">Umqondisi we-GPU osetshenziswa ngohlelo olulinganiselwe</string>
     <string name="banner">Ibhanela</string>
-    <string name="bcharging">Ukushaja nge bypass</string>
-    <string name="bcharging_desc">Lungiselela umsebenzi we-bypass power supply we-AZenith</string>
+    <string name="bcharging">Ukushaja nge standby</string>
+    <string name="bcharging_desc">Lungiselela umsebenzi we-standby power supply we-AZenith</string>
     <string name="bypass_not_supported">Lo msebenzi awusekelwa kule divayisi</string>
     <string name="cd_app_icon">Isithonjana sesicelo</string>
     <string name="cd_back">Emuva</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Uhlelo lwamanje</string>
     <string name="custom">Okwenziwe ngenketho</string>
     <string name="CompatibilityCheck">Ukuhlola ukuhambisana</string>
-    <string name="CompatibilityCheck_desc">Yenza ukuhlola ukuthola ukuthi idivayisi iyasekela yini i-bypass power supply</string>
+    <string name="CompatibilityCheck_desc">Yenza ukuhlola ukuthola ukuthi idivayisi iyasekela yini i-standby power supply</string>
     <string name="default_cpu_gov">Umqondisi we-CPU ozenzakalelayo</string>
     <string name="default_cpu_gov_desc">Umqondisi osetshenziswa ngohlelo olulinganiselwe</string>
     <string name="default_label">Okuzenzakalelayo</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Ukubuyisela kuhlulekile</string>
     <string name="dialog_start_hw_test_content">I-AZenith izokwenza ukuhlola kokwehla kwamandla kagesi kumanodi ebhethri angaphakathi, inqubo iphephile, ithatha imizuzwana embalwa</string>
     <string name="dialog_start_hw_test_title">Qala ukuhlola i-hardware?</string>
-    <string name="dialog_switch_node_content">Ngabe ufuna ukuphoqa ukushintsha inodi yokuhlela ye-bypass ibe [%1$s]?</string>
+    <string name="dialog_switch_node_content">Ngabe ufuna ukuphoqa ukushintsha inodi yokuhlela ye-standby ibe [%1$s]?</string>
     <string name="dialog_switch_node_title">Shintsha inodi yokulawula?</string>
     <string name="dialog_update_available_confirm">Buyekeza manje</string>
     <string name="dialog_update_available_content">Inguqulo yomenenja wesicelo (%1$d) ingaphansi kwenguqulo yemojula (%2$d), ngabe ufuna ukuyibuyekeza manje ukuze uthole izici ezintsha?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Ungaphazamisi ngesikhathi sokudlala</string>
     <string name="dnd_mode_gaming_desc">Ngaphansi kohlelo lokusebenza, vula ukungaphazamisi ngokuzenzakalelayo</string>
     <string name="done">Kwenziwe</string>
-    <string name="enable_bypass_charge">Vula ukushaja nge-bypass</string>
-    <string name="enable_bypass_charge_desc">Ngaphansi kohlelo lokusebenza, vula ukushaja nge-bypass</string>
+    <string name="enable_bypass_charge">Vula ukushaja nge-standby</string>
+    <string name="enable_bypass_charge_desc">Ngaphansi kohlelo lokusebenza, vula ukushaja nge-standby</string>
     <string name="err_failed_load_changelog">Ukulayisha umlando wezinguquko kuhlulekile</string>
     <string name="err_invalid_backup">Ifayela le-backup alivumelekile noma lonakele (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Inodi yamanje ye-bypass power supply</string>
+    <string name="str_active_bypass_node">Inodi yamanje ye-standby power supply</string>
     <string name="str_adjust_and_calibrate_your_scre">Lungisa umbala nokugcwala kwesikrini usebenzisa isevisi ye-SurfaceFlinger, ngaphandle kwesidingo sokusekelwa yi-kernel</string>
     <string name="str_adjust_gradient">Lungisa i-gradient</string>
     <string name="str_app_info">Ulwazi lwesicelo</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Umgcini</string>
     <string name="str_max_video_size">Ubukhulu bevidiyo bukhawulelwe ku-50MB</string>
     <string name="str_no_active_nodes">Awekho amanodi asebenzayo</string>
-    <string name="str_no_active_nodes_desc">Azikho izici zesistimu ezimaphu amanodi e-bypass atholakalayo</string>
+    <string name="str_no_active_nodes_desc">Azikho izici zesistimu ezimaphu amanodi e-standby atholakalayo</string>
     <string name="str_no_compatible_nodes">Awekho amanodi ahambisanayo</string>
     <string name="str_open_source">Umthombo ovulekile</string>
     <string name="str_package_name">Igama lephakheji</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">I-Rianixia</string>
     <string name="str_root_access_denied">Amandla e-Root anqatshiwe, i-AZenith izidinga amandla e-Root ukuze isebenze</string>
     <string name="str_root_access_granted">Amandla e-Root atholiwe, konke kulungile!</string>
-    <string name="str_run_diagnostics_above_or_check">Sebenzisa ukuxilonga ngenhla, noma hlola ukuthi i-kernel iqukethe yini inodi ye-bypass power supply</string>
+    <string name="str_run_diagnostics_above_or_check">Sebenzisa ukuxilonga ngenhla, noma hlola ukuthi i-kernel iqukethe yini inodi ye-standby power supply</string>
     <string name="str_safely_test">Hlola ukuhambisana kwedivayisi ngokuphepha</string>
     <string name="str_save_compressed_logs_to_a_fold">Gcina amalogi acindezelwe emgodini othile</string>
     <string name="str_save_your_current_tweak_settin">Gcina izilungiselelo zakho zamanje</string>

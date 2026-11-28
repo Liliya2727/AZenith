@@ -2,9 +2,30 @@
 
 use crate::utils::logging::log_debug;
 use crate::utils::props::{get_curprofile, get_limiter, get_litemode};
-use crate::utils::sysfs::{chmod, write_lock, write_unlock};
+use crate::utils::sysfs::{chmod, hide_val, hide_write_multi, unhide_val, write_lock, write_unlock};
 use std::fs;
 use std::path::Path;
+
+const PPM_SHIELD_NODES: [&str; 5] = [
+    "/proc/ppm/policy_status",
+    "/proc/ppm/policy/hard_userlimit_max_cpu_freq",
+    "/proc/ppm/policy/hard_userlimit_min_cpu_freq",
+    "/proc/ppm/policy/userlimit_max_cpu_freq",
+    "/proc/ppm/policy/userlimit_min_cpu_freq",
+];
+
+pub fn unshield_cpu_freq_nodes() {
+    for node in PPM_SHIELD_NODES {
+        unhide_val(node);
+    }
+    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                unhide_val(p_str);
+            }
+        }
+    }
+}
 
 pub fn read_freqs(path: &str) -> Vec<u64> {
     let mut freqs: Vec<u64> = fs::read_to_string(path)
@@ -77,8 +98,11 @@ pub fn setfreqppm() {
         return;
     }
 
+    unshield_cpu_freq_nodes();
+
     let limiter = get_limiter();
     let curprofile = get_curprofile();
+    let lock_max = limiter < 100 || curprofile == "3";
     let mut cluster = 0;
 
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*") {
@@ -96,11 +120,25 @@ pub fn setfreqppm() {
             let mut new_maxfreq = setfreqs(&avail_file, new_max_target);
 
             if curprofile == "3" {
-                new_maxfreq = which_midfreq(&avail_file).unwrap_or(new_maxfreq);
+                if let Some(mid) = which_midfreq(&avail_file) {
+                    new_maxfreq = new_maxfreq.min(mid);
+                }
             }
 
-            write_unlock(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
-            write_unlock(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+            let max_cmd = format!("{} {}", cluster, new_maxfreq);
+            let min_cmd = format!("{} {}", cluster, cpu_minfreq);
+            if lock_max {
+                write_lock(&max_cmd, "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
+                write_lock(&max_cmd, "/proc/ppm/policy/userlimit_max_cpu_freq");
+                write_lock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+            } else {
+                write_unlock(&max_cmd, "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
+                write_unlock(&max_cmd, "/proc/ppm/policy/userlimit_max_cpu_freq");
+                write_unlock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+            }
+            write_unlock(&min_cmd, "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+            write_unlock(&min_cmd, "/proc/ppm/policy/userlimit_min_cpu_freq");
+            write_unlock(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
             log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
             cluster += 1;
@@ -109,8 +147,11 @@ pub fn setfreqppm() {
 }
 
 pub fn setfreq() {
+    unshield_cpu_freq_nodes();
+
     let limiter = get_limiter();
     let curprofile = get_curprofile();
+    let lock_max = limiter < 100 || curprofile == "3";
 
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/*/cpufreq") {
         for path in paths.flatten() {
@@ -131,19 +172,31 @@ pub fn setfreq() {
             let mut new_maxfreq = setfreqs(&avail_file, new_max_target);
 
             if curprofile == "3" {
-                new_maxfreq = which_midfreq(&avail_file).unwrap_or(new_maxfreq);
+                if let Some(mid) = which_midfreq(&avail_file) {
+                    new_maxfreq = new_maxfreq.min(mid);
+                }
             }
 
-            write_unlock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+            if lock_max {
+                write_lock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+            } else {
+                write_unlock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+            }
             write_unlock(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
             log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
         }
     }
 
-    if let Ok(sc_paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq") {
+    if let Ok(sc_paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_min_freq") {
         for sp in sc_paths.flatten() {
             chmod(sp.to_str().unwrap(), 0o644);
+        }
+    }
+    if let Ok(sc_paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq") {
+        let mode = if lock_max { 0o444 } else { 0o644 };
+        for sp in sc_paths.flatten() {
+            chmod(sp.to_str().unwrap(), mode);
         }
     }
 }
@@ -153,8 +206,12 @@ pub fn setgamefreqppm() {
         return;
     }
 
+    unshield_cpu_freq_nodes();
+
     let litemode = get_litemode();
     let mut cluster = 0;
+    let mut max_cmds = Vec::new();
+    let mut min_cmds = Vec::new();
 
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*") {
         for path in paths.flatten() {
@@ -172,16 +229,26 @@ pub fn setgamefreqppm() {
                 cpu_maxfreq
             };
 
-            write_unlock(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
-            write_unlock(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+            max_cmds.push(format!("{} {}", cluster, cpu_maxfreq));
+            min_cmds.push(format!("{} {}", cluster, cpu_minfreq));
+
+            hide_val(&cpu_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+            hide_val(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
             log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, cpu_minfreq));
             cluster += 1;
         }
     }
+
+    hide_write_multi(&max_cmds, "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
+    hide_write_multi(&min_cmds, "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+    hide_write_multi(&max_cmds, "/proc/ppm/policy/userlimit_max_cpu_freq");
+    hide_write_multi(&min_cmds, "/proc/ppm/policy/userlimit_min_cpu_freq");
 }
 
 pub fn setgamefreq() {
+    unshield_cpu_freq_nodes();
+
     let litemode = get_litemode();
 
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/*/cpufreq") {
@@ -211,7 +278,9 @@ pub fn setgamefreq() {
 
     if let Ok(sc_paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq") {
         for sp in sc_paths.flatten() {
-            chmod(sp.to_str().unwrap(), 0o444);
+            let p_str = sp.to_str().unwrap();
+            let cur = fs::read_to_string(p_str).unwrap_or_default();
+            hide_val(cur.trim(), p_str);
         }
     }
 }

@@ -1,6 +1,19 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Logging.
 
-use crate::sysprop::get_or_default;
 use crate::android_ffi::{ANDROID_LOG_DEBUG, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL, ANDROID_LOG_INFO, ANDROID_LOG_WARN, logcat};
 use crate::core::{
     LogLevel, LOG_FILE, LOG_FILE_PRELOAD, LOG_MAX_BYTES, LOG_KEEP_FILES, LOG_TAG, LOG_TAG_PROFILE, LOG_VFILE,
@@ -9,6 +22,9 @@ use crate::io::write2file;
 use crate::util::timern;
 
 use std::fs;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::OnceLock;
+use std::time::Instant;
 
 fn safe_component(component: &str) -> &str {
     if component.is_empty() { "daemon" } else { component }
@@ -142,8 +158,30 @@ pub fn external_vlog(_level: i32, tag: &str, message: &str, _args: std::fmt::Arg
     logcat(ANDROID_LOG_INFO, LOG_TAG_PROFILE, &format!("[{comp}] {body}"));
 }
 
+static DEBUG_FLAG: OnceLock<AtomicBool> = OnceLock::new();
+static DEBUG_CHECKED_MS: AtomicU64 = AtomicU64::new(0);
+static DEBUG_ORIGIN: OnceLock<Instant> = OnceLock::new();
+
+pub fn set_cached_debug_mode(enabled: bool) {
+    let flag = DEBUG_FLAG.get_or_init(|| AtomicBool::new(false));
+    let origin = DEBUG_ORIGIN.get_or_init(Instant::now);
+    flag.store(enabled, Ordering::Relaxed);
+    DEBUG_CHECKED_MS.store(origin.elapsed().as_millis() as u64, Ordering::Relaxed);
+}
+
+/// Debug mode is read from `config.json` and cached for 5 s (or updated
+/// immediately on inotify `config.json` reload via `set_cached_debug_mode`).
 fn debug_enabled() -> bool {
-    get_or_default("persist.sys.azenith.debugmode", "false").as_str() == "true"
+    let flag = DEBUG_FLAG.get_or_init(|| AtomicBool::new(false));
+    let origin = DEBUG_ORIGIN.get_or_init(Instant::now);
+    let now_ms = origin.elapsed().as_millis() as u64;
+    let last = DEBUG_CHECKED_MS.load(Ordering::Relaxed);
+    if last == 0 || now_ms.saturating_sub(last) >= 5_000 {
+        let enabled = archconfig::load().debug_mode;
+        flag.store(enabled, Ordering::Relaxed);
+        DEBUG_CHECKED_MS.store(now_ms.max(1), Ordering::Relaxed);
+    }
+    flag.load(Ordering::Relaxed)
 }
 
 // ---------------------------------------------------------------------------

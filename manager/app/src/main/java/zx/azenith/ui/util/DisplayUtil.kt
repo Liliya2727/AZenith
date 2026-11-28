@@ -17,15 +17,27 @@
 package zx.azenith.ui.util
 
 import android.content.Context
+import android.os.Build
 import android.view.WindowManager
 import java.util.Locale
 
+private val LEGACY_DOWNSCALE_STEPS = listOf(
+    "0.3", "0.35", "0.4", "0.45", "0.5", "0.55",
+    "0.6", "0.65", "0.7", "0.75", "0.8", "0.85", "0.9",
+    "default"
+)
+
+private val LEGACY_FPS_STEPS = listOf(30, 40, 45, 60, 90, 120)
+
 /**
- * Generates downscale factor steps from 0.30 to 0.95 in 0.05 increments,
- * with "default" (native, no downscale) placed last. 1.00 is omitted
- * since it's functionally identical to "default".
+ * Generates downscale factor steps.
+ * On SDK <= 33, GameManagerService only accepts exact ratios 0.3..0.9 (no 0.95).
+ * On SDK > 33, generates 0.30 to 0.95 in 0.05 increments, with "default" last.
  */
 fun getSupportedDownscaleFactors(): List<String> {
+    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU) {
+        return LEGACY_DOWNSCALE_STEPS
+    }
     val factors = mutableListOf<String>()
     var current = 0.30
     while (current <= 0.951) {
@@ -37,8 +49,9 @@ fun getSupportedDownscaleFactors(): List<String> {
 }
 
 /**
- * Generates FPS target steps in multiples of 30, up to the device's
- * max supported refresh rate. No "default" entry — 60fps is the baseline.
+ * Generates FPS target steps up to the device's max supported refresh rate.
+ * On SDK <= 33, limits to GameManagerService's allowlist {30, 40, 45, 60, 90, 120}.
+ * On SDK > 33, generates multiples of 30 up to maxRefreshRate.
  */
 @Suppress("DEPRECATION")
 fun getSupportedFpsTargets(context: Context): List<String> {
@@ -46,6 +59,11 @@ fun getSupportedFpsTargets(context: Context): List<String> {
     val maxRefreshRate = wm.defaultDisplay.supportedModes
         .maxOf { it.refreshRate }
         .toInt()
+
+    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU) {
+        val steps = LEGACY_FPS_STEPS.filter { it <= maxRefreshRate }.map { it.toString() }
+        return steps.ifEmpty { listOf("60") }
+    }
 
     val steps = mutableListOf<String>()
     var fps = 30

@@ -84,7 +84,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.component.ZenithSlider
 
 enum class ColorPreset(
@@ -149,7 +149,7 @@ fun ColorSchemeSettings(navController: NavController) {
         indexOf = { id -> COLORS_RIGHT_ITEMS[id] }
     )
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
@@ -197,12 +197,12 @@ fun ColorSchemeSettings(navController: NavController) {
 
     val saveToProp = {
         val config = "${redVal.toInt()} ${greenVal.toInt()} ${blueVal.toInt()} ${satVal.toInt()}"
-        PropertyUtils.set("persist.sys.azenithconf.schemeconfig", config)
+        ConfigUtils.set("scheme_config", config)
     }
 
     LaunchedEffect(Unit) {
         val rawProp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            PropertyUtils.get("persist.sys.azenithconf.schemeconfig")
+            ConfigUtils.load().schemeConfig
         }
         if (rawProp.isNotEmpty()) {
             val parts = rawProp.split(" ").mapNotNull { it.toFloatOrNull() }
@@ -231,7 +231,7 @@ fun ColorSchemeSettings(navController: NavController) {
     }
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             ColorSchemeTopAppBar(
                 onBack = { navController.safePopBackStack() },
@@ -704,7 +704,7 @@ fun ColorSchemeTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

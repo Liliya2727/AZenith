@@ -23,6 +23,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -55,6 +59,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -83,6 +89,7 @@ import zx.azenith.ui.theme.azShape
  *
  * [animate] false drops straight to a plain M3 popup with no motion.
  */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AZenithDialog(
     visible: Boolean,
@@ -91,6 +98,7 @@ fun AZenithDialog(
     spec: DialogSpec = DialogSpec(),
     origin: Offset = Offset(0.5f, 0.5f),
     animate: Boolean = true,
+    sharedKey: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val context = LocalContext.current
@@ -98,6 +106,8 @@ fun AZenithDialog(
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val dialogsAnimated = animate
     val hazeState = LocalAppHazeState.current
+    val sharedScope = LocalSharedTransitionScope.current
+    val useSharedBounds = sharedKey != null && sharedScope != null && dialogsAnimated
 
     val activeDialogCount = LocalActiveDialogCount.current
     DisposableEffect(visible, spec.registersActiveDialog) {
@@ -127,6 +137,7 @@ fun AZenithDialog(
         if (visible) {
             wasVisible = true
             Log.d("PAD", "dialog opened dismissible=${spec.dismissible}")
+            if (!GamepadInput.active) return@LaunchedEffect
             dialogRequester.requestFocus()
             // Focusing the root is not enough: Cross invokes the activation of
             // an outlined control, so step into the first button/checkbox and
@@ -154,11 +165,13 @@ fun AZenithDialog(
             // The dialog's focused node is disposed along with it and nothing re-seeds focus,
             // so without this the d-pad has nothing to move from once a dialog closes.
             wasVisible = false
+            if (!GamepadInput.active) return@LaunchedEffect
             // The card's exit transition is Motion.DurationShort4 (200ms). Restoring
             // before it finishes focuses a dialog row that is still composed but on
             // its way out; when that row is disposed focus vanishes with it and X
             // has nothing left to activate. Wait for the rows to be gone first.
             kotlinx.coroutines.delay(Motion.DurationShort4.toLong() + 80L)
+            if (!GamepadInput.active) return@LaunchedEffect
             val returned = GamepadFocusNav.restoreFocus()
             Log.d("PAD", "dialog closed focusReturn=$returned rowFocus=${GamepadShortcuts.hasRowFocus}")
         }
@@ -232,14 +245,37 @@ fun AZenithDialog(
         ) {
             AnimatedVisibility(
                 visible = visible,
-                enter = if (dialogsAnimated) Motion.cardEnterFrom(cardOrigin) else EnterTransition.None,
-                exit = if (dialogsAnimated) Motion.cardExitTo(cardOrigin) else ExitTransition.None
+                enter = when {
+                    !dialogsAnimated -> EnterTransition.None
+                    useSharedBounds -> fadeIn(animationSpec = tween(180))
+                    else -> Motion.cardEnterFrom(cardOrigin)
+                },
+                exit = when {
+                    !dialogsAnimated -> ExitTransition.None
+                    useSharedBounds -> fadeOut(animationSpec = tween(150))
+                    else -> Motion.cardExitTo(cardOrigin)
+                }
             ) {
+                val cardShape = azShape(spec.cornerRadius)
+                val sharedModifier = if (useSharedBounds && sharedScope != null && sharedKey != null) {
+                    with(sharedScope) {
+                        Modifier.sharedBounds(
+                            sharedContentState = rememberSharedContentState(key = sharedKey),
+                            animatedVisibilityScope = this@AnimatedVisibility,
+                            enter = fadeIn(animationSpec = tween(180)),
+                            exit = fadeOut(animationSpec = tween(150)),
+                            clipInOverlayDuringTransition = OverlayClip(cardShape)
+                        )
+                    }
+                } else {
+                    Modifier
+                }
                 Box(
                     modifier = Modifier
+                        .then(sharedModifier)
                         .widthIn(min = spec.minWidth, max = spec.maxWidth)
                         .onGloballyPositioned { cardSize = it.size }
-                        .clip(azShape(spec.cornerRadius))
+                        .clip(cardShape)
                         .then(
                             if (isBlurEnabled && hazeState != null) {
                                 Modifier.hazeBlur(
@@ -253,6 +289,22 @@ fun AZenithDialog(
                         )
                         .background(
                             if (isBlurEnabled) Color.Transparent else containerColor
+                        )
+                        // Block pointer input while the dialog is animating out so rapid taps
+                        // on the same spot cannot trigger options inside the closing card.
+                        .then(
+                            if (!visible) {
+                                Modifier.pointerInput(Unit) {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                                            event.changes.forEach { it.consume() }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Modifier
+                            }
                         )
                         // The card swallows taps; it is not itself a d-pad stop.
                         .focusProperties { canFocus = false }

@@ -275,23 +275,23 @@ fn main() {
     unsafe { (n.ABinderProcess_joinThreadPool)(); }
 }
 
-/// API/current_modes mirrors persist.sys.azenithconf.AIenabled for the manager
-/// app, which polls it to tell Auto Mode from Manual Mode. The file is written
-/// by the manager app, but customize.sh only creates it when the property is
-/// still empty - after a re-install the property is set but the file is gone,
-/// and nothing recreates it. Mirror the property so the UI has a consistent
-/// state, the app writes both together afterwards.
+/// API/current_modes mirrors `auto_mode` from `config.json` for the manager
+/// app, which polls it to tell Auto Mode from Manual Mode.
 fn ensure_current_modes() {
     let dir = format!("{CFG_DIR}/API");
     let path = format!("{dir}/current_modes");
-    // A non-empty file is managed by the app, do not touch it.
-    if fs::read_to_string(&path).is_ok_and(|v| !v.trim().is_empty()) {
-        return;
+    if let Ok(existing) = fs::read_to_string(&path) {
+        let trimmed = existing.trim();
+        if !trimmed.is_empty() {
+            state::mirror_to_app_api("current_modes", &format!("{trimmed}\n"));
+            return;
+        }
     }
     let _ = fs::create_dir_all(&dir);
-    let prop = label::prop_str("persist.sys.azenithconf.AIenabled");
-    let state = if prop.is_empty() { "1" } else { prop.as_str() };
-    if state::write_atomic(&path, &format!("{state}\n")) {
+    let state = if archconfig::load().auto_mode { "1" } else { "0" };
+    let line = format!("{state}\n");
+    if state::write_atomic(&path, &line) {
+        state::mirror_to_app_api("current_modes", &line);
         info!("created API/current_modes = {state}");
     } else {
         warn!("failed to create API/current_modes");

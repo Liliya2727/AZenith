@@ -1,3 +1,17 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Monitor: app status + gamelist.
 
 use crate::core::{
@@ -102,42 +116,40 @@ pub fn free_gamelist_cache() {
 // ---------------------------------------------------------------------------
 // reload_gamelist_cache
 // ---------------------------------------------------------------------------
-pub fn reload_gamelist_cache(ctx: &mut crate::core::DaemonContext) {
+pub fn reload_gamelist_cache(ctx: &mut crate::core::DaemonContext) -> bool {
     reload_gamelist_cache_at(ctx, GAMELIST)
 }
 
-pub fn reload_gamelist_cache_at(ctx: &mut crate::core::DaemonContext, path: &str) {
-    let _mutex = crate::core::CACHE_MUTEX.get().unwrap().lock().unwrap();
-    let cache_lock = crate::core::G_GAME_CACHE.get().expect("game cache initialized");
-    let mut cache = cache_lock.write().unwrap();
-    cache.clear();
-    crate::core::set_game_cache_count(0);
-
+pub fn reload_gamelist_cache_at(ctx: &mut crate::core::DaemonContext, path: &str) -> bool {
+    // Read and parse into a fresh vec FIRST. Holding CACHE_MUTEX plus the
+    // write lock across read_to_string + serde_json::from_str used to block
+    // every get_gamestart() caller for the whole parse, and a failed rewrite
+    // also left the cache empty. Build the replacement lock-free, then swap.
     let content = match fs::read_to_string(path) {
         Ok(c) => c,
         Err(e) => {
             log_error!("apploader", "gamelist open failed path={} errno={}", path, e.raw_os_error().unwrap_or(-1));
-            return;
+            return false;
         }
     };
 
-    if content.is_empty() {
+    if content.trim().is_empty() {
         log_warn!("apploader", "gamelist empty path={}", path);
-        crate::core::set_game_cache_count(0);
-        return;
+        return false;
     }
 
     let root: serde_json::Value = match serde_json::from_str(&content) {
         Ok(value) => value,
         Err(error) => {
             log_error!("apploader", "gamelist JSON parse failed path={} error={}", path, error);
-            return;
+            return false;
         }
     };
     let Some(games) = root.as_object() else {
         log_warn!("apploader", "gamelist root must be a JSON object path={}", path);
-        return;
+        return false;
     };
+    let mut new_cache = Vec::with_capacity(games.len());
     for (package, value) in games {
         let Some(fields) = value.as_object() else { continue };
         if package.is_empty() { continue; }
@@ -160,12 +172,31 @@ pub fn reload_gamelist_cache_at(ctx: &mut crate::core::DaemonContext, path: &str
         set!(resolution_downscale, "resolution_downscale");
         set!(resolution_fps, "resolution_fps");
         set!(bypass_charging, "bypass_charging");
-        cache.push(entry);
+        new_cache.push(entry);
     }
+
+    let _mutex = crate::core::CACHE_MUTEX.get().unwrap().lock().unwrap();
+    let cache_lock = crate::core::G_GAME_CACHE.get().expect("game cache initialized");
+    let mut cache = cache_lock.write().unwrap();
+    *cache = new_cache;
     crate::core::set_game_cache_count(cache.len() as i32);
     if !ctx.is_initialize_complete {
         log_info!("apploader", "gamelist cached games={}", cache.len());
     }
+    drop(cache);
+    drop(_mutex);
+
+    if path == GAMELIST && std::path::Path::new("/data/data/zx.azenith/API").exists() {
+        let tmp = format!("{}.tmp", crate::core::GAMELIST_APP);
+        if fs::write(&tmp, &content).is_ok() {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o644));
+            let _ = fs::rename(&tmp, crate::core::GAMELIST_APP);
+        } else {
+            let _ = fs::remove_file(&tmp);
+        }
+    }
+    true
 }
 
 #[cfg(test)]

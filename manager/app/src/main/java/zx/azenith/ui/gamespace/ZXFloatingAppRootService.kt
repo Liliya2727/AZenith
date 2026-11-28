@@ -220,10 +220,14 @@ class ZXFloatingAppRootService : RootService() {
     }
 
     override fun onDestroy() {
-        virtualDisplays.values.forEach { vd ->
-            runCatching { vd.release() }
+        // Drop queued surface/resize/release posts first: they retain Surface
+        // and callback proxies and would otherwise outlive the service.
+        mainHandler.removeCallbacksAndMessages(null)
+        (virtualDisplays.keys + displayCallbacks.keys).toSet().forEach { id ->
+            runCatching { releaseDisplayResources(id) }
         }
         virtualDisplays.clear()
+        displayCallbacks.clear()
         ioExecutor.shutdownNow()
         super.onDestroy()
     }
@@ -431,18 +435,21 @@ class ZXFloatingAppRootService : RootService() {
     }
 
     private fun releaseVirtualDisplay(displayId: Int) {
-        mainHandler.post {
-            virtualDisplays.remove(displayId)?.let { vd ->
-                runCatching { vd.surface = null }
-                runCatching { vd.release() }
-            }
-            displayCallbacks.remove(displayId)?.let { cb ->
-                val iDm = getIDisplayManager() ?: return@let
-                runCatching {
-                    val m = iDm.javaClass.methods.firstOrNull { it.name == "releaseVirtualDisplay" }
-                    m?.isAccessible = true
-                    m?.invoke(iDm, cb)
-                }
+        mainHandler.post { releaseDisplayResources(displayId) }
+    }
+
+    /** Symmetric release of both the VirtualDisplay and its display callback. */
+    private fun releaseDisplayResources(displayId: Int) {
+        virtualDisplays.remove(displayId)?.let { vd ->
+            runCatching { vd.surface = null }
+            runCatching { vd.release() }
+        }
+        displayCallbacks.remove(displayId)?.let { cb ->
+            val iDm = getIDisplayManager() ?: return@let
+            runCatching {
+                val m = iDm.javaClass.methods.firstOrNull { it.name == "releaseVirtualDisplay" }
+                m?.isAccessible = true
+                m?.invoke(iDm, cb)
             }
         }
     }

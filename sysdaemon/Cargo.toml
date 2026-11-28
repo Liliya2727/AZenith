@@ -5,6 +5,7 @@ edition = "2024"
 description = "AZenith System Monitors"
 
 [dependencies]
+archconfig = { path = "../archconfig" }
 libc = "0.2"
 signal-hook = "0.3"
 

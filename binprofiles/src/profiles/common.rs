@@ -12,8 +12,8 @@
 //! 3. [`apply_custom_governor_io`]
 //! 4. [`apply_cpu_freq`]
 //! 5. Log frequency mode
-//! 6. [`apply_common_tweaks`] — VM → workqueue → stune → battery saver →
-//!    split lock → sched features → block I/O, then [`apply_touchpanel`]
+//! 6. [`apply_common_tweaks`] — VM → workqueue → stune → uclamp → cpuset →
+//!    battery saver → split lock → sched features → block I/O, then [`apply_touchpanel`]
 //! 7. Clear background apps (optional, performance only)
 //! 8. Chipset-specific tweaks (EAS lives here, per SoC)
 //! 9. [`apply_drop_caches`] — always the last write of the profile
@@ -70,6 +70,18 @@ pub struct CommonTweaks {
     pub stune_boost_enabled: &'static str,
     /// `/dev/stune/top-app/schedtune.prefer_idle`
     pub stune_prefer_idle: &'static str,
+    /// `/dev/cpuctl/top-app/cpu.uclamp.min`
+    pub uclamp_top_min: &'static str,
+    /// `/dev/cpuctl/top-app/cpu.uclamp.latency_sensitive`
+    pub uclamp_top_latency_sensitive: &'static str,
+    /// `/dev/cpuctl/foreground/cpu.uclamp.min`
+    pub uclamp_fg_min: &'static str,
+    /// `/dev/cpuctl/{background,system-background}/cpu.uclamp.max`
+    pub uclamp_bg_max: &'static str,
+    /// Restrict `/dev/cpuset/{background,system-background}/cpus` to the
+    /// LITTLE cluster (`policy0/related_cpus`) when `true` (performance & eco),
+    /// or restore them to all present CPUs when `false` (balanced).
+    pub restrict_bg_cpuset: bool,
     /// `/sys/module/battery_saver/parameters/enabled`, numeric form (`0`/`1`)
     pub battery_saver: &'static str,
     /// The same value in boolean form (`N`/`Y`) for non-numeric nodes.
@@ -98,6 +110,60 @@ pub fn apply_common_tweaks(tweaks: &CommonTweaks) {
         write_lock(tweaks.stune_boost, &format!("{}/schedtune.boost", top_app));
         write_lock(tweaks.stune_boost_enabled, &format!("{}/schedtune.sched_boost_enabled", top_app));
         write_lock(tweaks.stune_prefer_idle, &format!("{}/schedtune.prefer_idle", top_app));
+    }
+
+    // uclamp (modern GKI replacement for schedtune, adopted from Uperf unify_sched
+    // and adapted per-profile): top-app gets latency_sensitive and min boost in
+    // Performance, while background groups are capped in Eco/Performance.
+    let cpuctl_top = "/dev/cpuctl/top-app";
+    if Path::new(cpuctl_top).is_dir() {
+        write_lock(tweaks.uclamp_top_min, &format!("{}/cpu.uclamp.min", cpuctl_top));
+        write_lock("max", &format!("{}/cpu.uclamp.max", cpuctl_top));
+        write_lock(
+            tweaks.uclamp_top_latency_sensitive,
+            &format!("{}/cpu.uclamp.latency_sensitive", cpuctl_top),
+        );
+    }
+    let cpuctl_fg = "/dev/cpuctl/foreground";
+    if Path::new(cpuctl_fg).is_dir() {
+        write_lock(tweaks.uclamp_fg_min, &format!("{}/cpu.uclamp.min", cpuctl_fg));
+        write_lock("max", &format!("{}/cpu.uclamp.max", cpuctl_fg));
+        write_lock("0", &format!("{}/cpu.uclamp.latency_sensitive", cpuctl_fg));
+    }
+    for group in &["background", "system-background"] {
+        let dir = format!("/dev/cpuctl/{}", group);
+        if Path::new(&dir).is_dir() {
+            write_lock("0", &format!("{}/cpu.uclamp.min", dir));
+            write_lock(tweaks.uclamp_bg_max, &format!("{}/cpu.uclamp.max", dir));
+            write_lock("0", &format!("{}/cpu.uclamp.latency_sensitive", dir));
+        }
+    }
+
+    // cpuset cluster masking (adopted from Uperf): isolate background and
+    // system-background tasks to the LITTLE cluster in Performance (so they do
+    // not steal big/prime core cycles mid-game) and Eco (so they do not wake
+    // high-power clusters), and restore full masks in Balanced.
+    let (all_cpus, little_cpus) = resolve_cpuset_masks();
+    let bg_cpus = if tweaks.restrict_bg_cpuset { &little_cpus } else { &all_cpus };
+    for group in &["top-app", "foreground"] {
+        let path = format!("/dev/cpuset/{}/cpus", group);
+        if Path::new(&path).exists() {
+            if tweaks.restrict_bg_cpuset {
+                write_lock(&all_cpus, &path);
+            } else {
+                write_unlock(&all_cpus, &path);
+            }
+        }
+    }
+    for group in &["background", "system-background"] {
+        let path = format!("/dev/cpuset/{}/cpus", group);
+        if Path::new(&path).exists() {
+            if tweaks.restrict_bg_cpuset {
+                write_lock(bg_cpus, &path);
+            } else {
+                write_unlock(bg_cpus, &path);
+            }
+        }
     }
 
     // Battery saver module (legacy nodes use Y/N, newer nodes use 1/0)
@@ -184,4 +250,46 @@ pub fn clear_background_apps_if_enabled() {
     if get_clearapps() {
         clear_background_apps();
     }
+}
+
+/// Resolve `(all_cpus, little_cpus)` in kernel cpulist format (e.g. `("0-7", "0-3")`).
+///
+/// Reads `/sys/devices/system/cpu/present` (falling back to `possible`, then `"0-7"`)
+/// for `all_cpus`, and `/sys/devices/system/cpu/cpufreq/policy0/related_cpus` for the
+/// LITTLE cluster (converting space-separated core IDs into `"first-last"` when
+/// contiguous or comma-separated `"0,1,2,3"` otherwise).
+fn resolve_cpuset_masks() -> (String, String) {
+    let all_cpus = fs::read_to_string("/sys/devices/system/cpu/present")
+        .or_else(|_| fs::read_to_string("/sys/devices/system/cpu/possible"))
+        .map(|s| s.trim().to_string())
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "0-7".to_string());
+
+    let little_cpus = fs::read_to_string("/sys/devices/system/cpu/cpufreq/policy0/related_cpus")
+        .ok()
+        .and_then(|raw| {
+            let mut ids: Vec<u32> = raw
+                .split_whitespace()
+                .filter_map(|tok| tok.parse::<u32>().ok())
+                .collect();
+            ids.sort_unstable();
+            ids.dedup();
+            match (ids.first(), ids.last()) {
+                (Some(&first), Some(&last)) if ids.len() == 1 => Some(first.to_string()),
+                (Some(&first), Some(&last)) if (last - first + 1) as usize == ids.len() => {
+                    Some(format!("{}-{}", first, last))
+                }
+                (Some(_), Some(_)) => Some(
+                    ids.iter()
+                        .map(|n| n.to_string())
+                        .collect::<Vec<_>>()
+                        .join(","),
+                ),
+                _ => None,
+            }
+        })
+        .unwrap_or_else(|| "0-3".to_string());
+
+    (all_cpus, little_cpus)
 }

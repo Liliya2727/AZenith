@@ -12,7 +12,7 @@ pub mod snapdragon;
 pub mod tensor;
 pub mod unisoc;
 
-use crate::utils::getprop;
+use crate::utils::cfg;
 
 /// Profile variant applied to the chipset.
 #[derive(Clone, Copy, Debug)]
@@ -27,30 +27,30 @@ type ChipsetFns = (fn(), fn(), fn());
 
 /// Dispatch chipset tweaks for the SoC that is currently running.
 pub fn apply_chipset(profile: ChipsetProfile) {
-    let soc = getprop("persist.sys.azenith.soctype");
+    let soc = cfg().soc_type.unwrap_or(0);
 
-    let (balanced, performance, powersave): ChipsetFns = match soc.as_str() {
-        "1" => (
+    let (balanced, performance, powersave): ChipsetFns = match soc {
+        1 => (
             mediatek::mediatek_balance,
             mediatek::mediatek_performance,
             mediatek::mediatek_powersave,
         ),
-        "2" => (
+        2 => (
             snapdragon::snapdragon_balance,
             snapdragon::snapdragon_performance,
             snapdragon::snapdragon_powersave,
         ),
-        "3" => (
+        3 => (
             exynos::exynos_balance,
             exynos::exynos_performance,
             exynos::exynos_powersave,
         ),
-        "4" => (
+        4 => (
             unisoc::unisoc_balance,
             unisoc::unisoc_performance,
             unisoc::unisoc_powersave,
         ),
-        "5" => (
+        5 => (
             tensor::tensor_balance,
             tensor::tensor_performance,
             tensor::tensor_powersave,

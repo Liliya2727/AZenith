@@ -360,6 +360,7 @@ object GamepadShortcuts {
 
     private var activationToken: Any? = null
     private var activation: (() -> Unit)? = null
+    private var lastFocusSoundToken: Any? = null
 
     /**
      * Last activation callback published by each outlined node.
@@ -380,16 +381,24 @@ object GamepadShortcuts {
     var rootHasFocus: Boolean by mutableStateOf(false)
 
     fun publishActivation(token: Any, callback: (() -> Unit)?) {
+        val focusMoved = token !== lastFocusSoundToken
         activationToken = token
         activation = callback
         if (callback != null) activationByRequester[token] = callback
         GamepadFocusNav.publishLastFocusedToken(token)
+        if (focusMoved) {
+            lastFocusSoundToken = token
+            if (GamepadInput.active) {
+                zx.azenith.ui.util.AudioUtil.playFocusMove()
+            }
+        }
     }
 
     fun clearActivation(token: Any) {
         if (activationToken === token) {
             activationToken = null
             activation = null
+            lastFocusSoundToken = null
         }
         // Keep the remembered callback: the node may still be focused in the
         // main window while a dialog window above it comes and goes.
@@ -400,6 +409,7 @@ object GamepadShortcuts {
         val callback = activationByRequester[token] ?: return false
         activationToken = token
         activation = callback
+        lastFocusSoundToken = token
         Log.d("PAD", "activation reassert focusKeyRemembered token=${token.javaClass.simpleName}")
         return true
     }
@@ -621,6 +631,8 @@ object GamepadFocusNav {
 
     private val focusHistory = ArrayDeque<FocusRequester>()
 
+    fun lastFocusedRequester(): FocusRequester? = focusHistory.lastOrNull()
+
     fun publishLastFocused(requester: FocusRequester) {
         publishLastFocusedToken(requester)
     }
@@ -664,6 +676,7 @@ object GamepadFocusNav {
     }
 
     fun restoreFocus(): Boolean {
+        if (!GamepadInput.active) return false
         val scope = currentScope()
         if (scope != null && lastKeyByScope.containsKey(scope)) {
             val restoredByKey = restoreSavedFocus(scope)
@@ -876,7 +889,7 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
     LaunchedEffect(isActiveScreen) {
         if (!isActiveScreen) {
             entered = false
-        } else if (focusEnabled && (GamepadInput.dpadMode || GamepadInput.controllerConnected)) {
+        } else if (focusEnabled && GamepadInput.dpadMode) {
             // When this screen/page becomes active again (e.g. returning from a
             // subscreen) and its rows are already composed, explicitly restore the
             // saved focus for this scope before falling back to generic seeding.
@@ -888,15 +901,13 @@ fun Modifier.gamepadScreenEntry(page: Int = -1, scopeKey: String? = null): Modif
 
     LaunchedEffect(
         GamepadInput.dpadMode,
-        GamepadInput.controllerConnected,
         pagerActive,
         page,
         GamepadFocusNav.currentPage
     ) {
         GamepadFocusNav.publishLastEntry(requester)
         if (page < 0) GamepadFocusNav.lastEntryScope = scope
-        val canSeed = focusEnabled &&
-            (GamepadInput.dpadMode || GamepadInput.controllerConnected) && isActiveScreen
+        val canSeed = focusEnabled && GamepadInput.dpadMode && isActiveScreen
         if (!canSeed) return@LaunchedEffect
 
         val seedStart = SystemClock.uptimeMillis()

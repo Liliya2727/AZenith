@@ -1,3 +1,17 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! IPC / inotify watchers.
 //! Uses raw inotify syscalls via libc (same as the C implementation).
 
@@ -17,9 +31,8 @@ use crate::fileops;
 
 use nix::poll::{poll, PollFlags, PollFd, PollTimeout};
 use std::os::fd::BorrowedFd;
-use std::sync::atomic::{AtomicI32, Ordering};
-use std::thread;
-use std::time::Duration;
+use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // inotify_event structure from <sys/inotify.h>
 #[repr(C)]
@@ -56,6 +69,26 @@ static API_WATCH_FD: AtomicI32 = AtomicI32::new(-1);
 static WD_API_PROFILE: AtomicI32 = AtomicI32::new(-1);
 static WD_API_MODES: AtomicI32 = AtomicI32::new(-1);
 static WD_REC_CMD: AtomicI32 = AtomicI32::new(-1);
+
+/// A single atomic applist rewrite produces several inotify events (CREATE +
+/// MODIFY + CLOSE_WRITE + MOVED_TO). One full JSON parse is enough; the
+/// debounce also covers a rapid burst of rewrites from the app.
+static LAST_APPLIST_RELOAD_MS: AtomicU64 = AtomicU64::new(0);
+const APPLIST_RELOAD_DEBOUNCE_MS: u64 = 250;
+static LAST_CONFIG_RELOAD_MS: AtomicU64 = AtomicU64::new(0);
+const CONFIG_RELOAD_DEBOUNCE_MS: u64 = 100;
+/// `record_cmd` only exists after the first overlay tap. Retrying
+/// `inotify_add_watch` on every loop iteration is wasted syscalls while it is
+/// absent, but a 500 ms backoff still feels immediate when it appears.
+static LAST_REC_CMD_RETRY_MS: AtomicU64 = AtomicU64::new(0);
+const REC_CMD_RETRY_MS: u64 = 500;
+
+fn now_millis() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
 
 const API_PROFILE_PATH: &str = "/data/adb/.config/AZenith/API/current_profile";
 const API_MODES_PATH: &str = "/data/adb/.config/AZenith/API/current_modes";
@@ -247,13 +280,17 @@ fn retry_api_file_watches(inotify_fd: i32, ctx: &mut DaemonContext, rec: &mut Re
         WD_API_MODES.store(wd, Ordering::Relaxed);
     }
     if WD_REC_CMD.load(Ordering::Relaxed) < 0 {
-        let wd = add_file_watch(inotify_fd, RECORD_CMD_PATH);
-        WD_REC_CMD.store(wd, Ordering::Relaxed);
-        if wd >= 0 {
-            // The file was created while we had no watch (e.g. the very first
-            // command): process its content now.
-            if let Ok(s) = std::fs::read_to_string(RECORD_CMD_PATH) {
-                rec.handle_cmd(ctx, s.trim());
+        let now = now_millis();
+        if now.saturating_sub(LAST_REC_CMD_RETRY_MS.load(Ordering::Relaxed)) >= REC_CMD_RETRY_MS {
+            LAST_REC_CMD_RETRY_MS.store(now, Ordering::Relaxed);
+            let wd = add_file_watch(inotify_fd, RECORD_CMD_PATH);
+            WD_REC_CMD.store(wd, Ordering::Relaxed);
+            if wd >= 0 {
+                // The file was created while we had no watch (e.g. the very first
+                // command): process its content now.
+                if let Ok(s) = std::fs::read_to_string(RECORD_CMD_PATH) {
+                    rec.handle_cmd(ctx, s.trim());
+                }
             }
         }
     }
@@ -285,6 +322,12 @@ fn process_api_file_event(ctx: &mut DaemonContext, wd: i32, mask: u32, rec: &mut
                 if let Ok(s) = line {
                     let trimmed = s.trim().to_string();
                     let ai_state = trimmed;
+                    if let Some(b) = archconfig::parse_bool_flexible(&ai_state) {
+                        if ctx.config.auto_mode != b {
+                            ctx.config.auto_mode = b;
+                            let _ = archconfig::update(|c| c.auto_mode = b);
+                        }
+                    }
                     if ctx.is_initialize_complete && ctx.prev_ai_state_str() != ai_state {
                         log_info!("inotify", "dynamic profile toggled action=reapply_balanced");
                         ctx.profile.cur_mode = ProfileMode::PerfCommon;
@@ -345,16 +388,45 @@ fn process_event(
 
     const CLOSE_WRITE: u32 = 0x00000008;
     const MOVED_TO: u32 = 0x00000080;
-    const CREATE: u32 = 0x00000100;
 
-    // Check for IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE on azenithApplist.json
-    if (mask & (CLOSE_WRITE | MOVED_TO | CREATE)) != 0 && name.contains("azenithApplist.json") {
-        thread::sleep(Duration::from_millis(50));
-        reload_gamelist_cache(ctx);
-        ctx.need_profile_checkup = true;
+    // Check for IN_CLOSE_WRITE | IN_MOVED_TO on the final applist name.
+    // Ignore IN_CREATE so an in-place open(O_CREAT|O_TRUNC) does not trigger a
+    // read while the file is still 0 bytes. Only arm the debounce when the
+    // reload succeeds so a transient empty read never swallows the real write.
+    if (mask & (CLOSE_WRITE | MOVED_TO)) != 0 && name == "azenithApplist.json" {
+        let now = now_millis();
+        if now.saturating_sub(LAST_APPLIST_RELOAD_MS.load(Ordering::Relaxed)) >= APPLIST_RELOAD_DEBOUNCE_MS
+            && reload_gamelist_cache(ctx)
+        {
+            LAST_APPLIST_RELOAD_MS.store(now, Ordering::Relaxed);
+            ctx.need_profile_checkup = true;
+        }
+    }
+
+    // Watch "config.json" exact match (ignore .tmp files). Debounce and diff
+    // old vs new config so only changed fields trigger actions and self-writes
+    // (where ctx.config already equals the on-disk config) are no-ops.
+    if (mask & (CLOSE_WRITE | MOVED_TO)) != 0 && name == "config.json" {
+        let now = now_millis();
+        if now.saturating_sub(LAST_CONFIG_RELOAD_MS.load(Ordering::Relaxed)) >= CONFIG_RELOAD_DEBOUNCE_MS {
+            LAST_CONFIG_RELOAD_MS.store(now, Ordering::Relaxed);
+            handle_config_json_event(ctx);
+        }
+        return;
     }
 
     match name {
+        "prelaunch" => {
+            if (mask & (CLOSE_WRITE | MOVED_TO)) != 0 {
+                if let Ok(raw) = std::fs::read_to_string(crate::core::PRELAUNCH_FILE) {
+                    let pkg = raw.trim();
+                    if !pkg.is_empty() {
+                        crate::profile::apply_prelaunch_game(ctx, pkg);
+                    }
+                }
+                fileops::remove_file_best_effort(crate::core::PRELAUNCH_FILE);
+            }
+        }
         "app_status" => {
             crate::log_debug!("inotify", "app_status event received mask=0x{:x}, re-reading", mask);
             read_app_status(&mut ctx.current_system_cache);
@@ -385,6 +457,18 @@ fn process_event(
                     if let Ok(s) = line {
                         let trimmed = s.trim().to_string();
                         let ai_state = trimmed;
+                        let _ = crate::io::write2file(
+                            super::core::DAEMON_MODES_APP,
+                            false,
+                            false,
+                            &format!("{ai_state}\n"),
+                        );
+                        if let Some(b) = archconfig::parse_bool_flexible(&ai_state) {
+                            if ctx.config.auto_mode != b {
+                                ctx.config.auto_mode = b;
+                                let _ = archconfig::update(|c| c.auto_mode = b);
+                            }
+                        }
                         if ctx.is_initialize_complete && ctx.prev_ai_state_str() != ai_state {
                             log_info!("inotify", "dynamic profile toggled action=reapply_balanced");
                             ctx.profile.cur_mode = ProfileMode::PerfCommon;
@@ -397,6 +481,8 @@ fn process_event(
                             if ai_state == "1" {
                                 ctx.game.gamestart = None;
                                 ctx.game.active_app_name = None;
+                                ctx.game.prelaunched_pkg = None;
+                                ctx.game.prelaunch_until_ms = 0;
                                 ctx.game.game_pids = [0; super::core::MAX_GAME_PIDS];
                                 ctx.game.game_pid_count = 0;
                                 update_game_info(ctx);
@@ -415,8 +501,8 @@ fn process_event(
         "update" => {
             log_info!("inotify", "module update detected action=exit");
             notify("Module Update", "Please reboot your device to complete module update.", false, 0, None);
-            set("persist.sys.azenith.service", "");
-            set("persist.sys.azenith.state", "stopped");
+            set("sys.azenith.service", "");
+            set("sys.azenith.state", "stopped");
             crate::core::set_java_daemon_died(true);
         }
         "remove" => {
@@ -436,38 +522,97 @@ fn process_event(
             let path = "/data/adb/.config/AZenith/freqoffset";
             if let Ok(s) = fileops::read_string_result(path) {
                 let trimmed = s.trim().to_string();
-                let bytes = trimmed.as_bytes();
-                let n = bytes.len().min(ctx.config_freqoffset.len() - 1);
-                ctx.config_freqoffset[..n].copy_from_slice(&bytes[..n]);
-                ctx.config_freqoffset[n] = 0;
-                log_info!("inotify", "freqoffset updated value={}", ctx.config_freqoffset_str());
+                if !trimmed.is_empty() && ctx.config.freq_offset != trimmed {
+                    ctx.config.freq_offset = trimmed.clone();
+                    let _ = archconfig::update(|c| c.freq_offset = trimmed);
+                    log_info!("inotify", "freqoffset updated value={}", ctx.config_freqoffset_str());
+                }
             }
         }
         "bypasspath" => {
             let path = "/data/adb/.config/AZenith/bypasschgconfig/bypasspath";
             if let Ok(s) = fileops::read_string_result(path) {
                 let trimmed = s.trim().to_string();
-                let bytes = trimmed.as_bytes();
-                let n = bytes.len().min(ctx.bypass.config_bypasspath.len() - 1);
-                ctx.bypass.config_bypasspath[..n].copy_from_slice(&bytes[..n]);
-                ctx.bypass.config_bypasspath[n] = 0;
+                if !trimmed.is_empty() && ctx.config.standby_path != trimmed {
+                    ctx.config.standby_path = trimmed.clone();
+                    let _ = archconfig::update(|c| c.standby_path = trimmed);
+                }
             }
         }
         "bypasschg" => {
             let path = "/data/adb/.config/AZenith/bypasschgconfig/bypasschg";
             if let Ok(s) = fileops::read_string_result(path) {
-                let val: i32 = s.trim().parse().unwrap_or(0);
-                ctx.bypass.config_bypasschg = val;
-            }
-        }
-        "bypasschgthreshold" => {
-            let path = "/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold";
-            if let Ok(s) = fileops::read_string_result(path) {
-                let val: i32 = s.trim().parse().unwrap_or(0);
-                ctx.bypass.config_bypasschgthreshold = val;
+                if let Some(val) = archconfig::parse_bool_flexible(s.trim()) {
+                    if ctx.config.standby_chg != val {
+                        ctx.config.standby_chg = val;
+                        let _ = archconfig::update(|c| c.standby_chg = val);
+                    }
+                }
             }
         }
         _ => {}
+    }
+}
+
+fn handle_config_json_event(ctx: &mut DaemonContext) {
+    let Ok(new_cfg) = archconfig::try_load_from(std::path::Path::new(archconfig::CONFIG_PATH)) else {
+        return;
+    };
+
+    // Self-write or identical rewrite: no fields changed, do nothing.
+    if new_cfg == ctx.config {
+        return;
+    }
+
+    let old_cfg = std::mem::replace(&mut ctx.config, new_cfg.clone());
+
+    if old_cfg.debug_mode != new_cfg.debug_mode {
+        crate::log::set_cached_debug_mode(new_cfg.debug_mode);
+        log_info!("inotify", "config.json debug_mode updated value={}", new_cfg.debug_mode);
+    }
+
+    if old_cfg.freq_offset != new_cfg.freq_offset {
+        log_info!("inotify", "config.json freq_offset updated value={}", new_cfg.freq_offset);
+    }
+
+    if old_cfg.standby_path != new_cfg.standby_path
+        || old_cfg.standby_chg != new_cfg.standby_chg
+    {
+        log_info!(
+            "inotify",
+            "config.json standby charge updated chg={} path={}",
+            new_cfg.standby_chg,
+            new_cfg.standby_path
+        );
+        crate::bypass::handle_dynamic_bypass(ctx);
+    }
+
+    if old_cfg.auto_mode != new_cfg.auto_mode {
+        let ai_state = if new_cfg.auto_mode { "1" } else { "0" };
+        let _ = crate::io::write2file(DAEMON_MODES, false, false, &format!("{ai_state}\n"));
+        let _ = crate::io::write2file(super::core::DAEMON_MODES_APP, false, false, &format!("{ai_state}\n"));
+        if ctx.is_initialize_complete && ctx.prev_ai_state_str() != ai_state {
+            log_info!("inotify", "config.json auto_mode toggled action=reapply_balanced");
+            ctx.profile.cur_mode = ProfileMode::PerfCommon;
+            apply_balanced_profile(ctx);
+            let bytes = ai_state.as_bytes();
+            let n = bytes.len().min(ctx.prev_ai_state.len() - 1);
+            ctx.prev_ai_state[..n].copy_from_slice(&bytes[..n]);
+            ctx.prev_ai_state[n] = 0;
+            ctx.render.manual_sidepanel_shown = false;
+            if ai_state == "1" {
+                ctx.game.gamestart = None;
+                ctx.game.active_app_name = None;
+                ctx.game.prelaunched_pkg = None;
+                ctx.game.prelaunch_until_ms = 0;
+                ctx.game.game_pids = [0; super::core::MAX_GAME_PIDS];
+                ctx.game.game_pid_count = 0;
+                update_game_info(ctx);
+                ctx.need_profile_checkup = true;
+            } else {
+                ctx.need_profile_checkup = true;
+            }
+        }
     }
 }
 

@@ -30,9 +30,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import zx.azenith.R
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.isBannerImageEnabled
-import zx.azenith.ui.util.PropertyUtils
 
 enum class RootStatusState { Checking, Granted, NotGranted }
 
@@ -157,7 +157,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
             _uiState.value = _uiState.value.copy(startupStage = StartupStage.FetchingModule)
             val isModuleInstalled = RootUtils.isModuleInstalled()
-            val mode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+            val mode = if (ConfigUtils.load().autoMode) "1" else "0"
             delay(STARTUP_STAGE_DWELL_MS)
 
             _uiState.value = _uiState.value.copy(
@@ -218,7 +218,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshAiMode() {
         viewModelScope.launch(Dispatchers.IO) {
-            val mode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+            val mode = if (ConfigUtils.load().autoMode) "1" else "0"
             _uiState.value = _uiState.value.copy(autoMode = mode)
         }
     }

@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Balanseng Mali GPU governor</string>
     <string name="balanced_mali_gov_desc">GPU governor na ginagamit ng balanced profile</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass charging</string>
-    <string name="bcharging_desc">I-configure ang AZenith bypass charging function</string>
+    <string name="bcharging">Standby Charge</string>
+    <string name="bcharging_desc">I-configure ang AZenith standby charge function</string>
     <string name="bypass_not_supported">Hindi sinusuportahan ng kasalukuyang device ang function na ito</string>
     <string name="cd_app_icon">Icon ng app</string>
     <string name="cd_back">Bumalik</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Kasalukuyang profile</string>
     <string name="custom">Custom</string>
     <string name="CompatibilityCheck">Compatibility Check</string>
-    <string name="CompatibilityCheck_desc">Magsagawa ng detection upang masuri kung sinusuportahan ng device ang bypass charging</string>
+    <string name="CompatibilityCheck_desc">Magsagawa ng detection upang masuri kung sinusuportahan ng device ang standby charge</string>
     <string name="default_cpu_gov">Default na CPU governor</string>
     <string name="default_cpu_gov_desc">Governor na ginagamit ng balanced profile</string>
     <string name="default_label">Default</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Nabigo ang pag-restore</string>
     <string name="dialog_start_hw_test_content">Ang AZenith ay magsasagawa ng current voltage drop test sa built-in na battery node. Ligtas ang proseso, tatagal ng ilang segundo.</string>
     <string name="dialog_start_hw_test_title">Simulan ang hardware test?</string>
-    <string name="dialog_switch_node_content">Puwersahang ilipat ang bypass configuration target sa [%1$s]?</string>
+    <string name="dialog_switch_node_content">Puwersahang ilipat ang standby configuration target sa [%1$s]?</string>
     <string name="dialog_switch_node_title">Lumipat ng control node?</string>
     <string name="dialog_update_available_confirm">I-update agad</string>
     <string name="dialog_update_available_content">Ang bersyon ng app manager (%1$d) ay mas mababa sa bersyon ng module (%2$d), i-update agad para makuha ang pinakabagong feature?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Do Not Disturb habang naglalaro</string>
     <string name="dnd_mode_gaming_desc">Awtomatikong i-on ang Do Not Disturb sa ilalim ng performance profile</string>
     <string name="done">Tapos na</string>
-    <string name="enable_bypass_charge">Paganahin ang bypass charging</string>
-    <string name="enable_bypass_charge_desc">Paganahin ang bypass charging sa ilalim ng performance profile</string>
+    <string name="enable_bypass_charge">Paganahin ang standby charge</string>
+    <string name="enable_bypass_charge_desc">Paganahin ang standby charge sa ilalim ng performance profile</string>
     <string name="err_failed_load_changelog">Nabigo ang pag-load ng changelog</string>
     <string name="err_invalid_backup">Hindi valid o sira ang backup file (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Kasalukuyang bypass charging node</string>
+    <string name="str_active_bypass_node">Kasalukuyang standby charge node</string>
     <string name="str_adjust_and_calibrate_your_scre">Ayusin ang kulay at saturation ng screen sa pamamagitan ng SurfaceFlinger service, hindi kailangan ng kernel support</string>
     <string name="str_adjust_gradient">Ayusin ang gradient</string>
     <string name="str_app_info">Impormasyon ng app</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Maintainer</string>
     <string name="str_max_video_size">Ang maximum na laki ng video ay 50MB</string>
     <string name="str_no_active_nodes">Walang available na working node</string>
-    <string name="str_no_active_nodes_desc">Walang naka-map na bypass node sa system properties</string>
+    <string name="str_no_active_nodes_desc">Walang naka-map na standby node sa system properties</string>
     <string name="str_no_compatible_nodes">Walang compatible na node</string>
     <string name="str_open_source">Open source</string>
     <string name="str_package_name">Package name</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Tinanggihan ang Root permission, kailangan ng AZenith ang Root permission para tumakbo</string>
     <string name="str_root_access_granted">Nakuha na ang Root permission, handa na ang lahat!</string>
-    <string name="str_run_diagnostics_above_or_check">Patakbuhin ang diagnosis sa itaas, o suriin kung ang kernel ay naglalaman ng bypass charging node</string>
+    <string name="str_run_diagnostics_above_or_check">Patakbuhin ang diagnosis sa itaas, o suriin kung ang kernel ay naglalaman ng standby charge node</string>
     <string name="str_safely_test">Ligtas na subukan ang compatibility ng device</string>
     <string name="str_save_compressed_logs_to_a_fold">I-save ang compressed log sa isang tinukoy na folder</string>
     <string name="str_save_your_current_tweak_settin">I-save ang kasalukuyang tweak settings</string>
@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">I-configure ang Governor at mga Scheduler</string>
     <string name="gov_settingsdesc2">I-configure ang halaga ng CPU, GPU Governor at IO Scheduler ng iyong device, bawat halaga ay inilalapat sa bawat profile ng AZenith</string>
     <string name="presets">Mga Preset</string>
-    <string name="str_bypass_need_setup">Hindi pa nai-set up ang bypass charge path. Mangyaring kumpletuhin muna ang setup sa pamamagitan ng Compatibility Check.</string>
+    <string name="str_bypass_need_setup">Hindi pa nai-set up ang standby charge path. Mangyaring kumpletuhin muna ang setup sa pamamagitan ng Compatibility Check.</string>
     <string name="reboot_required_content">Ang opsyong ito ay nangangailangan ng pag-reboot upang mailapat. Magpatuloy?</string>
     <string name="disable_auto_mode_desc">Pinipigilan ang mga profile sa awtomatikong paglipat kapag may natukoy na laro. Pagkatapos ay itinakda mo mismo ang profile mula sa tile ng Kasalukuyang Profile sa Home page.</string>
     <string name="no_apps_found">Walang mga app na tumutugma sa paghahanap na ito</string>

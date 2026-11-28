@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -110,9 +111,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .heightIn(max = 280.dp)
                 .aspectRatio(0.48f)
-                .background(MaterialTheme.colorScheme.primary, azShape(18.dp))
-                .padding(2.dp)
-                .clip(azShape(15.dp))
+                .clip(azShape(18.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
 
@@ -124,7 +123,19 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxSize()
                 )
             }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.2f))
+            )
             
+
+            val clockColor = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) {
+                MaterialTheme.colorScheme.inverseSurface
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            }
 
             Column(
                 modifier = Modifier.align(Alignment.Center),
@@ -133,14 +144,14 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = hourFormat.format(time.time),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = clockColor,
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.displayMedium
                 )
                 Text(
                     text = minuteFormat.format(time.time),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = clockColor,
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.displayMedium,

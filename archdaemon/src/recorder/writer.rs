@@ -1,3 +1,17 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! CSV/JSON writers + summary computation.
 
 use super::{frametime, Sample, Session, StopReason};
@@ -33,7 +47,7 @@ pub fn write_json_atomic(path: &Path, content: &str) -> std::io::Result<()> {
 }
 
 pub fn build_summary_json(sess: &Session, reason: StopReason, incomplete: bool) -> String {
-    let st = stats(&sess.samples);
+    let st = sess.sample_accum.to_stats();
     // low1/low01/jank come from the merged session histogram. fps.avg /
     // fps.min stay per-second FPS based and are untouched by frametime.
     let ft = frametime::summarize(&sess.session_hist, sess.session_frames, sess.session_jank,
@@ -145,6 +159,97 @@ fn fps_avg_min(values: &[i64]) -> (i64, i64) {
     let min = values.iter().min().copied().unwrap_or(-1);
     let avg = (values.iter().sum::<i64>() as f64 / values.len() as f64).round() as i64;
     (avg, min)
+}
+
+/// Streaming equivalent of `stats()`: keeps only aggregates, so a long
+/// recording does not need to retain one `Sample` per second in memory.
+/// The values produced by `to_stats()` are identical to `stats(&samples)`.
+#[derive(Debug, Clone, Default)]
+pub struct SampleAccum {
+    fps_all_sum: i64,
+    fps_all_count: u64,
+    fps_all_min: i64,
+    fps_active_sum: i64,
+    fps_active_count: u64,
+    fps_active_min: i64,
+    cpu_max: Option<i64>,
+    bat_first: Option<i64>,
+    bat_last: Option<i64>,
+    bat_min: Option<i64>,
+    bat_max: Option<i64>,
+    power_sum: i64,
+    power_count: u64,
+}
+
+impl SampleAccum {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn push(&mut self, s: &Sample) {
+        if s.fps >= 0 {
+            if self.fps_all_count == 0 || s.fps < self.fps_all_min {
+                self.fps_all_min = s.fps;
+            }
+            self.fps_all_sum += s.fps;
+            self.fps_all_count += 1;
+        }
+        if s.fps > 0 {
+            if self.fps_active_count == 0 || s.fps < self.fps_active_min {
+                self.fps_active_min = s.fps;
+            }
+            self.fps_active_sum += s.fps;
+            self.fps_active_count += 1;
+        }
+        if s.cpu_temp != -1 {
+            self.cpu_max = Some(self.cpu_max.map_or(s.cpu_temp, |v| v.max(s.cpu_temp)));
+        }
+        if let Some(temp) = valid_bat_temp(s.bat_temp) {
+            if self.bat_first.is_none() {
+                self.bat_first = Some(temp);
+            }
+            self.bat_last = Some(temp);
+            self.bat_min = Some(self.bat_min.map_or(temp, |v| v.min(temp)));
+            self.bat_max = Some(self.bat_max.map_or(temp, |v| v.max(temp)));
+        }
+        if s.ma != -1 && s.mv != -1 {
+            self.power_sum += s.ma * s.mv / 1000;
+            self.power_count += 1;
+        }
+    }
+
+    pub fn to_stats(&self) -> SummaryStats {
+        let avg_min = |sum: i64, count: u64, min: i64| -> (i64, i64) {
+            if count == 0 {
+                (-1, -1)
+            } else {
+                ((sum as f64 / count as f64).round() as i64, min)
+            }
+        };
+        let (fps_avg, fps_min) = avg_min(self.fps_all_sum, self.fps_all_count, self.fps_all_min);
+        let (fps_active_avg, fps_active_min) = avg_min(self.fps_active_sum, self.fps_active_count, self.fps_active_min);
+        let avg_mw = if self.power_count == 0 {
+            -1
+        } else {
+            (self.power_sum as f64 / self.power_count as f64).round() as i64
+        };
+        SummaryStats {
+            fps_avg,
+            fps_min,
+            fps_active_avg,
+            fps_active_min,
+            cpu_max: self.cpu_max.unwrap_or(-1),
+            bat_start: self.bat_first,
+            bat_end: self.bat_last,
+            bat_delta: match (self.bat_first, self.bat_last) {
+                (Some(a), Some(b)) => Some(b - a),
+                _ => None,
+            },
+            bat_min: self.bat_min,
+            bat_max: self.bat_max,
+            avg_mw,
+        }
+    }
 }
 
 pub fn stats(samples: &[Sample]) -> SummaryStats {

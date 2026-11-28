@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Governador de GPU Mali equilibrado</string>
     <string name="balanced_mali_gov_desc">Governador de GPU usado no perfil equilibrado</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Alimentação de bypass</string>
-    <string name="bcharging_desc">Configurar a função de alimentação de bypass do AZenith</string>
+    <string name="bcharging">Alimentação de standby</string>
+    <string name="bcharging_desc">Configurar a função de alimentação de standby do AZenith</string>
     <string name="bypass_not_supported">Este dispositivo não oferece suporte a este recurso</string>
     <string name="cd_app_icon">Ícone do aplicativo</string>
     <string name="cd_back">Voltar</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Perfil atual</string>
     <string name="custom">Personalizado</string>
     <string name="CompatibilityCheck">Verificação de compatibilidade</string>
-    <string name="CompatibilityCheck_desc">Executar diagnóstico para verificar se o dispositivo suporta alimentação de bypass</string>
+    <string name="CompatibilityCheck_desc">Executar diagnóstico para verificar se o dispositivo suporta alimentação de standby</string>
     <string name="default_cpu_gov">Governador de CPU padrão</string>
     <string name="default_cpu_gov_desc">Governador usado no perfil equilibrado</string>
     <string name="default_label">Padrão</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Falha na restauração</string>
     <string name="dialog_start_hw_test_content">O AZenith executará um teste de queda de tensão no nó da bateria interna, o diagnóstico é seguro e dura alguns segundos</string>
     <string name="dialog_start_hw_test_title">Iniciar teste de hardware?</string>
-    <string name="dialog_switch_node_content">Deseja forçar a troca do destino da configuração de bypass para [%1$s]？</string>
+    <string name="dialog_switch_node_content">Deseja forçar a troca do destino da configuração de standby para [%1$s]？</string>
     <string name="dialog_switch_node_title">Trocar nó de controle?</string>
     <string name="dialog_update_available_confirm">Atualizar agora</string>
     <string name="dialog_update_available_content">A versão do gerenciador de aplicativos (%1$d) é inferior à versão do módulo (%2$d), deseja atualizar agora para obter os recursos mais recentes?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Não Perturbe durante jogos</string>
     <string name="dnd_mode_gaming_desc">Ativar automaticamente o Não Perturbe no perfil de desempenho</string>
     <string name="done">Concluído</string>
-    <string name="enable_bypass_charge">Ativar alimentação de bypass</string>
-    <string name="enable_bypass_charge_desc">Ativar alimentação de bypass no perfil de desempenho</string>
+    <string name="enable_bypass_charge">Ativar alimentação de standby</string>
+    <string name="enable_bypass_charge_desc">Ativar alimentação de standby no perfil de desempenho</string>
     <string name="err_failed_load_changelog">Falha ao carregar o registro de alterações</string>
     <string name="err_invalid_backup">Arquivo de backup inválido ou corrompido (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Nó de alimentação de bypass atual</string>
+    <string name="str_active_bypass_node">Nó de alimentação de standby atual</string>
     <string name="str_adjust_and_calibrate_your_scre">Ajustar a cor e a saturação da tela por meio do serviço SurfaceFlinger, sem necessidade de suporte no nível do kernel</string>
     <string name="str_adjust_gradient">Ajustar gradiente</string>
     <string name="str_app_info">Informações do aplicativo</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Mantenedor</string>
     <string name="str_max_video_size">Tamanho máximo do vídeo é 50 MB</string>
     <string name="str_no_active_nodes">Nenhum nó de trabalho disponível</string>
-    <string name="str_no_active_nodes_desc">Nenhum nó de bypass disponível mapeado nas propriedades do sistema</string>
+    <string name="str_no_active_nodes_desc">Nenhum nó de standby disponível mapeado nas propriedades do sistema</string>
     <string name="str_no_compatible_nodes">Nenhum nó compatível</string>
     <string name="str_open_source">Código aberto</string>
     <string name="str_package_name">Nome do pacote</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Acesso root negado, o AZenith precisa de acesso root para funcionar</string>
     <string name="str_root_access_granted">Acesso root concedido, tudo pronto!</string>
-    <string name="str_run_diagnostics_above_or_check">Execute o diagnóstico acima ou verifique se o kernel possui nós de alimentação de bypass</string>
+    <string name="str_run_diagnostics_above_or_check">Execute o diagnóstico acima ou verifique se o kernel possui nós de alimentação de standby</string>
     <string name="str_safely_test">Testar com segurança a compatibilidade do dispositivo</string>
     <string name="str_save_compressed_logs_to_a_fold">Salvar registros compactados em uma pasta especificada</string>
     <string name="str_save_your_current_tweak_settin">Salvar suas configurações atuais de ajuste</string>
@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Configurar governor e agendadores</string>
     <string name="gov_settingsdesc2">Configure os valores de governor de CPU, GPU e agendadores de E/S do dispositivo, cada valor aplicado a cada perfil do AZenith</string>
     <string name="presets">Predefinições</string>
-    <string name="str_bypass_need_setup">O caminho de carregamento bypass ainda não foi configurado. Conclua a configuração através da Verificação de Compatibilidade primeiro.</string>
+    <string name="str_bypass_need_setup">O caminho de carregamento standby ainda não foi configurado. Conclua a configuração através da Verificação de Compatibilidade primeiro.</string>
     <string name="reboot_required_content">Esta opção requer uma reinicialização para ser aplicada. Continuar?</string>
     <string name="disable_auto_mode_desc">Impede que os perfis mudem automaticamente quando um jogo é detetado. Em seguida, define você mesmo o perfil no bloco Perfil Atual na página inicial.</string>
     <string name="no_apps_found">Nenhuma aplicação corresponde a esta pesquisa</string>

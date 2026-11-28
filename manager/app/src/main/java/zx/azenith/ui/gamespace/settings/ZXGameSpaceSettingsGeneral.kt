@@ -18,14 +18,19 @@ package zx.azenith.ui.gamespace.settings
 
 import android.content.ComponentName
 import android.content.pm.PackageManager
+import android.view.KeyEvent
 import zx.azenith.ui.mainscreens.isLauncherIconEnabled
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -39,30 +44,52 @@ import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.launch
 import zx.azenith.R
+import zx.azenith.ui.component.LocalGamepadFocusEnabled
+import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.component.gamepadKeyWatch
 import zx.azenith.ui.gamespace.AdaptiveSettingsGrid
+import zx.azenith.ui.gamespace.BindGameSpaceDialogGamepad
+import zx.azenith.ui.gamespace.GameSpaceInputSource
+import zx.azenith.ui.gamespace.GameSpaceOverlayState
 import zx.azenith.ui.gamespace.SettingsActionCard
 import zx.azenith.ui.gamespace.SettingsSwitchCard
+import zx.azenith.ui.util.RebootManager
 import zx.azenith.ui.util.dumpDiagnosticLogs
 import zx.azenith.ui.viewmodel.SettingsViewModel
 
@@ -86,10 +113,20 @@ internal fun SettingsGeneralPane(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var statusFeedback by remember { mutableStateOf<String?>(null) }
+    var isSavingLog by remember { mutableStateOf(false) }
+    var saveLogBadge by remember { mutableStateOf<String?>(null) }
+    var saveLogSummary by remember { mutableStateOf<String?>(null) }
+    var pendingDisableTweakValue by remember { mutableStateOf<Boolean?>(null) }
     val scrollState = rememberScrollState()
     zx.azenith.ui.component.RegisterGamepadActions(columnScrollState = scrollState)
     var isLauncherVisible by remember { mutableStateOf(isLauncherIconEnabled(context)) }
     val scheme = MaterialTheme.colorScheme
+
+    LaunchedEffect(uiState.isLoaded) {
+        if (uiState.isLoaded) {
+            RebootManager.captureBaselineOnce("disable_tweak", uiState.disableTweak)
+        }
+    }
 
     Column(
         modifier = modifier
@@ -165,7 +202,13 @@ internal fun SettingsGeneralPane(
                     title = stringResource(R.string.disable_tweak),
                     summary = stringResource(R.string.disable_tweak_desc),
                     checked = uiState.disableTweak,
-                    onCheckedChange = { settingsViewModel.setDisableTweak(it) }
+                    onCheckedChange = { isChecked ->
+                        if (RebootManager.wouldRequireReboot("disable_tweak", isChecked)) {
+                            pendingDisableTweakValue = isChecked
+                        } else {
+                            settingsViewModel.setDisableTweak(isChecked)
+                        }
+                    }
                 )
             },
             {
@@ -253,14 +296,29 @@ internal fun SettingsGeneralPane(
                 SettingsActionCard(
                     icon = Icons.Rounded.Save,
                     title = stringResource(R.string.save_log),
-                    summary = stringResource(R.string.save_log_desc),
+                    summary = saveLogSummary ?: stringResource(R.string.save_log_desc),
+                    trailingBadge = when {
+                        isSavingLog -> "Saving..."
+                        else -> saveLogBadge
+                    },
+                    enabled = !isSavingLog,
                     onClick = {
+                        if (isSavingLog) return@SettingsActionCard
+                        isSavingLog = true
+                        saveLogBadge = "Saving..."
                         coroutineScope.launch {
                             val file = dumpDiagnosticLogs(context, saveToDownloads = true)
-                            statusFeedback = if (file != null && file.exists()) {
-                                context.getString(R.string.toast_log_saved)
+                            isSavingLog = false
+                            if (file != null) {
+                                val msg = context.getString(R.string.toast_log_saved)
+                                statusFeedback = msg
+                                saveLogBadge = "Saved"
+                                saveLogSummary = "$msg (${file.name})"
                             } else {
-                                context.getString(R.string.toast_log_save_fail)
+                                val err = context.getString(R.string.toast_log_save_fail)
+                                statusFeedback = err
+                                saveLogBadge = "Failed"
+                                saveLogSummary = err
                             }
                         }
                     }
@@ -273,5 +331,109 @@ internal fun SettingsGeneralPane(
             minColumnWidth = 340.dp,
             spacing = 10.dp
         )
+    }
+
+    pendingDisableTweakValue?.let { targetChecked ->
+        Dialog(onDismissRequest = { pendingDisableTweakValue = null }) {
+            BindGameSpaceDialogGamepad()
+            val dialogToken = remember { Any() }
+            val confirmRequester = remember { FocusRequester() }
+            DisposableEffect(Unit) {
+                GameSpaceOverlayState.acquire(dialogToken, "DisableTweakRebootDialog")
+                onDispose {
+                    GameSpaceOverlayState.release(dialogToken)
+                }
+            }
+            LaunchedEffect(Unit) {
+                if (GameSpaceInputSource.isGamepadLast) {
+                    for (attempt in 1..12) {
+                        withFrameNanos { }
+                        if (runCatching { confirmRequester.requestFocus() }.getOrDefault(false)) break
+                    }
+                }
+            }
+            val confirmAction = {
+                settingsViewModel.setDisableTweak(targetChecked)
+                pendingDisableTweakValue = null
+            }
+            CompositionLocalProvider(LocalGamepadFocusEnabled provides true) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = scheme.surfaceContainerHigh,
+                    contentColor = scheme.onSurface,
+                    tonalElevation = 6.dp,
+                    modifier = Modifier
+                        .fillMaxWidth(0.92f)
+                        .clip(RoundedCornerShape(24.dp))
+                        .gamepadKeyWatch()
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown &&
+                                (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                                 event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
+                            ) {
+                                pendingDisableTweakValue = null
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Warning,
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.dialog_reboot_required_title),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.reboot_required_content),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = { pendingDisableTweakValue = null },
+                                colors = ButtonDefaults.textButtonColors(),
+                                modifier = Modifier.gamepadFocusOutline(
+                                    shape = CircleShape,
+                                    onActivate = { pendingDisableTweakValue = null }
+                                )
+                            ) {
+                                Text(stringResource(R.string.no), color = scheme.outline)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = confirmAction,
+                                modifier = Modifier
+                                    .focusRequester(confirmRequester)
+                                    .gamepadFocusOutline(
+                                        shape = CircleShape,
+                                        onActivate = confirmAction
+                                    )
+                            ) {
+                                Text(stringResource(R.string.yes))
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

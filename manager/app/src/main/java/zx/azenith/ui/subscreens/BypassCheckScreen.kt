@@ -82,7 +82,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
-import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.ConfigUtils
 
 
 data class ShellOutput(
@@ -97,7 +97,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -139,7 +139,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
 
     fun refreshBypassData(onComplete: ((List<Pair<String, String>>) -> Unit)? = null) {
-        activePath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "UNSUPPORTED")
+        activePath = ConfigUtils.load().standbyPath.ifEmpty { "UNSUPPORTED" }
         
         scope.launch(Dispatchers.IO) {
             val binaryPath = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
@@ -218,13 +218,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
 
     fun applyBypassNode(nodeName: String) {
-        PropertyUtils.set("persist.sys.azenithconf.bypasspath", nodeName)
-        scope.launch(Dispatchers.IO) {
-            val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
-            SuFileOutputStream.open(file).writer().use { writer ->
-                writer.write(nodeName)
-            }
-        }
+        ConfigUtils.set("standby_path", nodeName)
         activePath = nodeName
     }
 
@@ -404,7 +398,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
     }
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { 
             BypassChgCheckTopAppBar(
                 onBack = { navController.safePopBackStack() },
@@ -565,7 +559,7 @@ private fun LazyListScope.bypassDiagnosticsItems(
 
             Surface(
                 shape = azShape(26.dp),
-                color = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -873,7 +867,7 @@ fun BypassChgCheckTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

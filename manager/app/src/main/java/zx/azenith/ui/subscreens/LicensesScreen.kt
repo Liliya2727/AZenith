@@ -41,9 +41,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Gavel
-import androidx.compose.material.icons.rounded.LibraryBooks
-import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +60,7 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -73,7 +74,7 @@ import zx.azenith.ui.navigation.safePopBackStack
 @Composable
 fun LicensesScreen(navController: NavController) {
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val scrollState = rememberScrollState()
 
     RegisterGamepadActions(
@@ -90,6 +91,7 @@ fun LicensesScreen(navController: NavController) {
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             AboutTopAppBar(
                 title = stringResource(R.string.str_licenses),
@@ -105,10 +107,10 @@ fun LicensesScreen(navController: NavController) {
                 .fillMaxSize()
                 .hazePageSource()
                 .gamepadScreenEntry(scopeKey = "subscreen:licenses")
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
                 .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp)
                 .padding(
+                    top = innerPadding.calculateTopPadding(),
                     bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -119,7 +121,7 @@ fun LicensesScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 shape = azShape(26.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 )
             ) {
                 Column(
@@ -168,7 +170,7 @@ fun LicensesScreen(navController: NavController) {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.OpenInNew,
+                                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -198,7 +200,7 @@ fun LicensesScreen(navController: NavController) {
                         onClick = { navController.navigate("librariesscreen") },
                         headlineContent = { Text(stringResource(R.string.str_libraries_used)) },
                         supportingContent = { Text(stringResource(R.string.str_libraries_hint)) },
-                        leadingContent = { LeadingIcon(icon = Icons.Rounded.LibraryBooks) },
+                        leadingContent = { LeadingIcon(icon = Icons.AutoMirrored.Rounded.LibraryBooks) },
                         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                     )
                 }

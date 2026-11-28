@@ -82,7 +82,6 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.mainscreens.*
-import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.TweakViewModel
 import zx.azenith.ui.navigation.rememberScopedStoreOwner
@@ -113,7 +112,7 @@ fun GovSettings(
     navController: NavController,
     viewModel: TweakViewModel = viewModel(viewModelStoreOwner = rememberScopedStoreOwner(navController, "main"))
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
     RegisterGamepadActions(
@@ -146,7 +145,7 @@ fun GovSettings(
 
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { GovSettingsTopAppBar(
             onBack = { navController.safePopBackStack() },
             scrollBehavior = scrollBehavior
@@ -393,7 +392,7 @@ fun GovSettingsTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
+            scrollBehavior = scrollBehavior,
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

@@ -293,7 +293,9 @@ fn sync_always_on() {
 /// nothing can overwrite it behind our back.
 fn mark_idle() {
     let _ = fs::create_dir_all(FPS_DIR);
-    let _ = crate::state::write_atomic(FPS_FILE, &format!("{NO_GAME_MARKER}\n"));
+    let line = format!("{NO_GAME_MARKER}\n");
+    let _ = crate::state::write_atomic(FPS_FILE, &line);
+    crate::state::mirror_to_app_api("current_fps", &line);
 }
 
 /// Replace current_frametime with the same no-game marker (archdaemon parses it as
@@ -678,10 +680,34 @@ impl StreamTracker {
         *self = StreamTracker::new();
     }
 
+    /// Normalize `raw_key` so `ANativeWindow*` (`Surface* + 0x10` in
+    /// `hook_queueBuffer` / `queueBufferInternal`) and `Surface*` (`this` in
+    /// `Surface::queueBuffer*` / `onBufferQueuedLocked`) map to the same stream
+    /// key instead of competing as two separate surfaces of identical rate.
+    fn canonical_key(&self, raw_key: u64) -> u64 {
+        if raw_key < 0x1000
+            || self.last_ktime.contains_key(&raw_key)
+            || self.counts.contains_key(&raw_key)
+            || self.active == Some(raw_key)
+        {
+            return raw_key;
+        }
+        for candidate in [raw_key.wrapping_sub(0x10), raw_key.wrapping_add(0x10)] {
+            if self.last_ktime.contains_key(&candidate)
+                || self.counts.contains_key(&candidate)
+                || self.active == Some(candidate)
+            {
+                return candidate;
+            }
+        }
+        raw_key
+    }
+
     /// Feed one record. Returns the interval in microseconds when this
     /// event produced one (active stream, not first, not collapsed),
     /// `None` otherwise.
-    fn on_event(&mut self, ktime_ns: u64, key: u64) -> Option<u64> {
+    fn on_event(&mut self, ktime_ns: u64, raw_key: u64) -> Option<u64> {
+        let key = self.canonical_key(raw_key);
         // Collapse same-frame double dispatch (one queueBuffer passing
         // through several attached symbols): < 1 ms after the previous
         // event *of that same stream* is the same frame.
@@ -709,15 +735,36 @@ impl StreamTracker {
     /// Changing the active stream resets its timestamp history so no
     /// interval bridges across streams.
     fn close_window(&mut self) -> u32 {
-        let fps = self.window_frames;
+        let active_frames = self.window_frames;
         self.window_frames = 0;
-        let next = self.counts.iter().max_by_key(|(_, c)| **c).map(|(k, _)| *k);
+        let best = self
+            .counts
+            .iter()
+            .max_by_key(|(k, c)| (**c, Some(**k) == self.active, **k))
+            .map(|(k, c)| (*k, *c));
+        let next = best.map(|(k, _)| k);
+        // Once an active stream exists, if a busier game surface took over in
+        // this window (e.g. 90 FPS 3D surface overtaking a 60 Hz UI surface),
+        // report the busier stream's frame count immediately rather than
+        // lagging behind on the old surface's count.
+        let fps = if self.active.is_some() {
+            best.map(|(_, c)| (c as u32).max(active_frames))
+                .unwrap_or(active_frames)
+        } else {
+            active_frames
+        };
         if next != self.active {
             if let Some(k) = next {
                 self.last_ktime.remove(&k);
             }
         }
         self.active = next;
+        // Only the active stream can produce intervals in the next window.
+        // Without this, every Surface pointer ever seen during a long game
+        // leaves a permanent entry in last_ktime (counts is cleared, this was
+        // not). A newly selected stream correctly starts without a previous
+        // timestamp, matching the "first frame yields no interval" rule.
+        self.last_ktime.retain(|k, _| Some(*k) == self.active);
         self.counts.clear();
         fps
     }
@@ -912,6 +959,11 @@ fn run_windmanager(forced: Option<Method>, frametime: &FrameTime) -> bool {
             last_ft_publish = Instant::now();
             if active() {
                 frametime.publish_source("none");
+                if let Ok(raw) = fs::read_to_string(FPS_FILE) {
+                    if !raw.is_empty() {
+                        crate::state::mirror_to_app_api("current_fps", &raw);
+                    }
+                }
             }
         }
 
@@ -1232,16 +1284,49 @@ mod uprobe {
     const SYMBOLS: &[&str] = &[
         // Shared tail of both paths on Android 12+.
         "_ZN7android7Surface20onBufferQueuedLockedEiNS_2spINS_5FenceEEERKNS_22IGraphicBufferProducer17QueueBufferOutputE",
-        // EGL / HWUI / Vulkan producers.
+        // EGL / HWUI / Vulkan / BLAST producers (Android 12–17+).
         "_ZN7android7Surface11queueBufferEONS_2spINS_13GraphicBufferEEEiPNS_24SurfaceQueueBufferOutputE",
+        "_ZN7android7Surface11queueBufferERKNS_2spINS_13GraphicBufferEEERKNS1_INS_5FenceEEEPNS_24SurfaceQueueBufferOutputE",
+        "_ZN7android7Surface12queueBuffersERKNSt3__16vectorINS0_17BatchQueuedBufferENS1_9allocatorIS3_EEEEPNS2_INS_24SurfaceQueueBufferOutputENS4_IS9_EEEE",
         "_ZN7android7Surface11queueBufferEONS_2spINS_13GraphicBufferEEEi",
         // ANativeWindow producers.
         "_ZN7android7Surface16hook_queueBufferEP13ANativeWindowP19ANativeWindowBufferi",
         "_ZN7android7Surface19queueBufferInternalEP13ANativeWindowP19ANativeWindowBufferi",
+        "_ZN7android7Surface27hook_queueBuffer_DEPRECATEDEP13ANativeWindowP19ANativeWindowBuffer",
         // Legacy direct entry points.
         "_ZN7android7Surface11queueBufferEP19ANativeWindowBufferi",
         "_ZN7android7Surface11queueBufferEP19ANativeWindowBufferiPNS_24SurfaceQueueBufferOutputE",
     ];
+
+    /// Discover all exported `android::Surface` queueBuffer / onBufferQueuedLocked symbols in
+    /// `/system/lib64/libgui.so`, merged with `SYMBOLS` so Android 16/17+ signature changes are
+    /// picked up automatically without losing known entry points.
+    fn resolved_symbols() -> &'static [String] {
+        static CACHE: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+        CACHE.get_or_init(|| {
+            let mut out: Vec<String> = SYMBOLS.iter().map(|s| (*s).to_string()).collect();
+            if let Ok(bytes) = fs::read(LIBGUI) {
+                for slice in bytes.split(|&b| b == 0) {
+                    if !slice.starts_with(b"_ZN7android7Surface") {
+                        continue;
+                    }
+                    let Ok(sym) = std::str::from_utf8(slice) else {
+                        continue;
+                    };
+                    let matches = sym.starts_with("_ZN7android7Surface20onBufferQueuedLocked")
+                        || sym.starts_with("_ZN7android7Surface11queueBuffer")
+                        || sym.starts_with("_ZN7android7Surface12queueBuffers")
+                        || sym.starts_with("_ZN7android7Surface16hook_queueBuffer")
+                        || sym.starts_with("_ZN7android7Surface19queueBufferInternal")
+                        || sym.starts_with("_ZN7android7Surface27hook_queueBuffer_DEPRECATED");
+                    if matches && !out.iter().any(|existing| existing == sym) {
+                        out.push(sym.to_string());
+                    }
+                }
+            }
+            out
+        })
+    }
 
     /// Pause between ring buffer drains.
     pub(super) const POLL_INTERVAL: Duration = Duration::from_millis(20);
@@ -1292,9 +1377,10 @@ mod uprobe {
             }
 
             let mut links = Vec::new();
+            let symbols = resolved_symbols();
             for pid in pids {
-                for symbol in SYMBOLS {
-                    match program.attach(Some(symbol), 0, LIBGUI, Some(*pid)) {
+                for symbol in symbols {
+                    match program.attach(Some(symbol.as_str()), 0, LIBGUI, Some(*pid)) {
                         Ok(id) => links.push(id),
                         Err(e) => {
                             debug!("uprobe symbol unavailable pid={pid} symbol={symbol}: {e}");
@@ -1490,7 +1576,12 @@ fn read_sf_timestats() -> Option<SfTimestats> {
 
 /// Publish "<fps> <epoch_ms>", the format the manager parses.
 fn publish(fps: i64) -> bool {
-    crate::state::write_atomic(FPS_FILE, &format!("{fps} {}\n", now_ms()))
+    let line = format!("{fps} {}\n", now_ms());
+    let ok = crate::state::write_atomic(FPS_FILE, &line);
+    if ok {
+        crate::state::mirror_to_app_api("current_fps", &line);
+    }
+    ok
 }
 
 fn now_ms() -> u128 {
@@ -1758,6 +1849,16 @@ mod tests {
         t2.on_event(1_000_000, 0xA);
         t2.on_event(1_000_500, 0xA);
         assert_eq!(t2.window_frames, 1, "collapsed duplicate must not count");
+        // ANativeWindow* (Surface* + 0x10) vs Surface* collapse into one stream.
+        let mut t3 = StreamTracker::new();
+        let surf_ptr = 0x7000_1234_5000u64;
+        let anw_ptr = surf_ptr + 0x10;
+        t3.active = Some(anw_ptr);
+        t3.on_event(10_000_000, anw_ptr);
+        t3.on_event(10_005_000, surf_ptr); // 5 us later on Surface* -> collapsed
+        assert_eq!(t3.window_frames, 1, "Surface* and ANativeWindow* must unify");
+        assert_eq!(t3.on_event(21_111_000, surf_ptr), Some(11_111));
+        assert_eq!(t3.window_frames, 2);
     }
 
     #[test]

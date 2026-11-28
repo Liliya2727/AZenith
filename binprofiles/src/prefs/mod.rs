@@ -14,9 +14,44 @@
 // limitations under the License.
 //
 
-use crate::utils::*;
-use std::process::Command;
+use crate::utils::{cfg, log_debug, log_info as bp_log_info, write_unlock_core};
+use std::process::{Command, Stdio};
 use std::thread;
+
+/// Keep the preference helpers' original log component inside the merged binary.
+const LOG_COMPONENT: &str = "AZenith_Prefs";
+
+fn log_verbose(message: &str) { log_debug(LOG_COMPONENT, message); }
+fn log_info(message: &str) { bp_log_info(LOG_COMPONENT, message); }
+
+/// Preserve the old `resetprop -n` behaviour (do not create missing props).
+fn resetprop(key: &str, val: &str) {
+    let _ = Command::new("resetprop").arg("-n").arg(key).arg(val).status();
+}
+
+/// Thin adapter over the profiler's sysfs writer.
+fn write_val(value: &str, path: &str, lock: bool) {
+    write_unlock_core(value, path, lock);
+}
+
+fn chmod_glob(pattern: &str, mode: u32) {
+    if let Ok(paths) = glob::glob(pattern) {
+        for path in paths.flatten() {
+            if let Some(p) = path.to_str() {
+                crate::utils::chmod(p, mode);
+            }
+        }
+    }
+}
+
+fn cmd_split(parts: &[&str]) {
+    if parts.is_empty() { return; }
+    let _ = Command::new(parts[0])
+        .args(&parts[1..])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+}
 
 const LIST_LOGGER: [&str; 8] = [
     "logd",
@@ -28,19 +63,6 @@ const LIST_LOGGER: [&str; 8] = [
     "charge_logger",
     "wlan_logging",
 ];
-
-fn get_state(key: &str) -> String {
-    let val = getprop(key);
-    if val.is_empty() {
-        "0".to_string()
-    } else {
-        val
-    }
-}
-
-fn state_enabled(state: &str) -> bool {
-    state == "1"
-}
 
 fn top_freqs(available: &str, max: usize) -> Vec<u64> {
     let mut freqs: Vec<u64> = available
@@ -565,11 +587,34 @@ fn apply_disable_thermal() {
     log_info("Disabling Thermal Engine");
 
     let _ = Command::new("pkill")
-        .args(["-9", "-f", "thermald|thermal-engine|mtk_thermal"])
+        .args(["-9", "-f", "thermald|thermal-engine|mtk_thermal|mi_thermald"])
+        .status();
+
+    let _ = Command::new("stop")
+        .arg("vendor.thermal-hal-2-0.mtk")
         .status();
 
     for svc in find_thermal_init_services() {
         let _ = Command::new("stop").arg(&svc).status();
+    }
+
+    // Prohibit Xiaomi mi_thermald from capping CPU frequencies via thermal_message
+    let cpu_limits = "/sys/devices/virtual/thermal/thermal_message/cpu_limits";
+    if std::path::Path::new(cpu_limits).exists() {
+        if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu[0-9]*") {
+            for path in paths.flatten() {
+                if let Some(cpu_name) = path.file_name().and_then(|n| n.to_str()) {
+                    let max_path = path.join("cpufreq/cpuinfo_max_freq");
+                    if let Ok(raw) = std::fs::read_to_string(&max_path) {
+                        if let Ok(freq) = raw.trim().parse::<u64>() {
+                            if freq > 0 {
+                                write_val(&format!("{} {}", cpu_name, freq), cpu_limits, true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if let Ok(output) = Command::new("getprop").output() {
@@ -602,6 +647,12 @@ fn apply_disable_thermal() {
     chmod_glob("/sys/devices/virtual/thermal/thermal_zone*/temp", 0o000);
     chmod_glob("/sys/devices/virtual/thermal/thermal_zone*/trip_point_*", 0o000);
 
+    // Qualcomm / Snapdragon msm_thermal & KGSL thermal throttling
+    write_val("0", "/sys/module/msm_thermal/core_control/enabled", true);
+    write_val("N", "/sys/module/msm_thermal/parameters/enabled", true);
+    write_val("0", "/sys/class/kgsl/kgsl-3d0/thermal_pwrlevel", true);
+    write_val("0", "/sys/class/kgsl/kgsl-3d0/throttling", true);
+
     if let Ok(content) = std::fs::read_to_string("/proc/ppm/policy_status") {
         for line in content.lines() {
             if line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") {
@@ -610,6 +661,24 @@ fn apply_disable_thermal() {
                 }
             }
         }
+    }
+
+    // MediaTek GPU thermal limit tables (gpufreqv2 & legacy gpufreq)
+    let gpufreqv2_limit = "/proc/gpufreqv2/limit_table";
+    if std::path::Path::new(gpufreqv2_limit).exists() {
+        for i in 0..=10 {
+            write_val(&format!("{} 0 0", i), gpufreqv2_limit, true);
+        }
+        write_val("1 1 1", gpufreqv2_limit, true);
+        write_val("3 1 1", gpufreqv2_limit, true);
+    }
+
+    let gpufreq_limit_table = "/proc/gpufreq/gpufreq_limit_table";
+    if std::path::Path::new(gpufreq_limit_table).exists() {
+        for i in 0..=8 {
+            write_val(&format!("{} 0 0", i), gpufreq_limit_table, true);
+        }
+        write_val("1 1 1", gpufreq_limit_table, true);
     }
 
     let gpu_limit = "/proc/gpufreq/gpufreq_power_limited";
@@ -624,6 +693,15 @@ fn apply_disable_thermal() {
             write_val(&format!("{} 1", key), gpu_limit, true);
         }
     }
+
+    // MediaTek FPSGO thermal, EARA thermal & WMT TX throttling
+    write_val("0", "/sys/kernel/fpsgo/fbt/thrm_enable", true);
+    write_val("300000", "/sys/kernel/fpsgo/fbt/thrm_temp_th", true);
+    write_val("-1", "/sys/kernel/fpsgo/fbt/thrm_limit_cpu", true);
+    write_val("-1", "/sys/kernel/fpsgo/fbt/thrm_sub_cpu", true);
+    write_val("0", "/sys/kernel/eara_thermal/enable", true);
+    write_val("0", "/proc/wmt_tm/tx_thro", true);
+    write_val("-1", "/proc/wmt_tm/tx_thro_limit", true);
 
     let _ = Command::new("cmd")
         .args(["thermalservice", "override-status", "0"])
@@ -679,8 +757,8 @@ fn apply_disable_trace() {
     }
 }
 
-fn apply_logd() {
-    if state_enabled(&get_state("persist.sys.azenithconf.logd")) {
+fn apply_logd(kill_logd: bool) {
+    if kill_logd {
         log_info("Applying Kill Logd");
         for logger in &LIST_LOGGER {
             let _ = Command::new("stop").arg(logger).status();
@@ -693,48 +771,41 @@ fn apply_logd() {
 }
 
 pub fn prefsettings() -> bool {
-    let walt_state = get_state("persist.sys.azenithconf.walttunes");
-    let dthermal_state = get_state("persist.sys.azenithconf.DThermal");
-    let sfl_state = get_state("persist.sys.azenithconf.SFL");
-    let malisched_state = get_state("persist.sys.azenithconf.malisched");
-    let fpsged_state = get_state("persist.sys.azenithconf.fpsged");
-    let schedtunes_state = get_state("persist.sys.azenithconf.schedtunes");
-    let justintime_state = get_state("persist.sys.azenithconf.justintime");
-    let disabletrace_state = get_state("persist.sys.azenithconf.disabletrace");
+    let c = cfg();
 
-    if state_enabled(&justintime_state) {
+    if c.justintime {
         apply_jit();
     }
 
-    if state_enabled(&schedtunes_state) {
+    if c.schedtunes {
         apply_schedtunes();
     }
 
-    if state_enabled(&walt_state) {
+    if c.walttunes {
         apply_walt();
     }
 
-    if state_enabled(&fpsged_state) {
+    if c.fpsged {
         apply_fpsged();
     }
 
-    if state_enabled(&malisched_state) {
+    if c.mali_sched {
         apply_mali_sched();
     }
 
-    if state_enabled(&sfl_state) {
+    if c.sfl {
         apply_surfaceflinger();
     }
 
-    if state_enabled(&dthermal_state) {
+    if c.disable_thermal {
         apply_disable_thermal();
     }
 
-    if state_enabled(&disabletrace_state) {
+    if c.disable_trace {
         apply_disable_trace();
     }
 
-    apply_logd();
+    apply_logd(c.kill_logd);
 
     true
 }

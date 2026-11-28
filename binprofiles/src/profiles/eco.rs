@@ -15,6 +15,11 @@ const TWEAKS: CommonTweaks = CommonTweaks {
     stune_boost: "0",
     stune_boost_enabled: "0",
     stune_prefer_idle: "0",
+    uclamp_top_min: "0",
+    uclamp_top_latency_sensitive: "0",
+    uclamp_fg_min: "0",
+    uclamp_bg_max: "50",
+    restrict_bg_cpuset: true,
     battery_saver: "1",
     battery_saver_bool: "Y",
     split_lock_mitigate: "1",
@@ -29,12 +34,13 @@ pub fn eco_mode() {
     }
 
     // 2. Resolve governor CPU / I/O scheduler / Mali GPU
-    let cpu_gov = prop_or(&["persist.sys.azenith.custom_powersave_cpu_gov"], "powersave");
-    let io_scheduler = prop_or(&["persist.sys.azenith.custom_powersave_IO"], "none");
-    let mali_gov = prop_first(&[
-        "persist.sys.azenith.custom_powersave_maligpu_gov",
-        "persist.sys.azenith.custom_default_maligpu_gov",
-        "persist.sys.azenith.default_maligpu_gov",
+    let c = cfg();
+    let cpu_gov = first_or(&[&c.custom_powersave_cpu_gov], "powersave");
+    let io_scheduler = first_or(&[&c.custom_powersave_io], "none");
+    let mali_gov = first_non_empty(&[
+        &c.custom_powersave_mali_gov,
+        &c.custom_default_mali_gov,
+        &c.default_mali_gov,
     ]);
 
     // 3. Apply governor

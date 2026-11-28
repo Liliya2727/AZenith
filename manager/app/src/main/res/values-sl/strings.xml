@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Uravnoteženi regulator Mali GPU</string>
     <string name="balanced_mali_gov_desc">Regulator GPU, uporabljen v uravnoteženem profilu</string>
     <string name="banner">Pasica</string>
-    <string name="bcharging">Bypass polnjenje</string>
-    <string name="bcharging_desc">Konfiguriraj funkcijo bypass polnjenja AZenith</string>
+    <string name="bcharging">Standby polnjenje</string>
+    <string name="bcharging_desc">Konfiguriraj funkcijo standby polnjenja AZenith</string>
     <string name="bypass_not_supported">Naprava ne podpira te funkcije</string>
     <string name="cd_app_icon">Ikona aplikacije</string>
     <string name="cd_back">Nazaj</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Trenutni profil</string>
     <string name="custom">Po meri</string>
     <string name="CompatibilityCheck">Preverjanje združljivosti</string>
-    <string name="CompatibilityCheck_desc">Izvedi diagnostiko, da preveriš, ali naprava podpira bypass polnjenje</string>
+    <string name="CompatibilityCheck_desc">Izvedi diagnostiko, da preveriš, ali naprava podpira standby polnjenje</string>
     <string name="default_cpu_gov">Privzeti regulator CPU</string>
     <string name="default_cpu_gov_desc">Regulator, uporabljen v uravnoteženem profilu</string>
     <string name="default_label">Privzeto</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Obnovitev ni uspela</string>
     <string name="dialog_start_hw_test_content">AZenith bo izvedel test padca toka na notranjem baterijskem vozlišču. Postopek je varen in traja nekaj sekund.</string>
     <string name="dialog_start_hw_test_title">Začeti strojni test?</string>
-    <string name="dialog_switch_node_content">Ali naj cilj bypass konfiguracije prisilno preklopimo na [%1$s]?</string>
+    <string name="dialog_switch_node_content">Ali naj cilj standby konfiguracije prisilno preklopimo na [%1$s]?</string>
     <string name="dialog_switch_node_title">Zamenjaj nadzorno vozlišče?</string>
     <string name="dialog_update_available_confirm">Posodobi zdaj</string>
     <string name="dialog_update_available_content">Različica upravitelja aplikacije (%1$d) je nižja od različice modula (%2$d). Ali želiš takoj posodobiti za najnovejše funkcije?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Ne moti med igranjem</string>
     <string name="dnd_mode_gaming_desc">Samodejno vklopi način Ne moti v profilu zmogljivosti</string>
     <string name="done">Končano</string>
-    <string name="enable_bypass_charge">Omogoči bypass polnjenje</string>
-    <string name="enable_bypass_charge_desc">Omogoči bypass polnjenje v profilu zmogljivosti</string>
+    <string name="enable_bypass_charge">Omogoči standby polnjenje</string>
+    <string name="enable_bypass_charge_desc">Omogoči standby polnjenje v profilu zmogljivosti</string>
     <string name="err_failed_load_changelog">Nalaganje dnevnika sprememb ni uspelo</string>
     <string name="err_invalid_backup">Varnostna kopija je neveljavna ali poškodovana (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Trenutno vozlišče bypass polnjenja</string>
+    <string name="str_active_bypass_node">Trenutno vozlišče standby polnjenja</string>
     <string name="str_adjust_and_calibrate_your_scre">Prilagodi barve in nasičenost zaslona prek storitve SurfaceFlinger, brez podpore jedra</string>
     <string name="str_adjust_gradient">Prilagodi preliv</string>
     <string name="str_app_info">Podatki o aplikaciji</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Vzdrževalec</string>
     <string name="str_max_video_size">Največja velikost videa je 50 MB</string>
     <string name="str_no_active_nodes">Ni aktivnih vozlišč</string>
-    <string name="str_no_active_nodes_desc">V sistemskih lastnostih ni preslikanih vozlišč za bypass</string>
+    <string name="str_no_active_nodes_desc">V sistemskih lastnostih ni preslikanih vozlišč za standby</string>
     <string name="str_no_compatible_nodes">Ni združljivih vozlišč</string>
     <string name="str_open_source">Odprta koda</string>
     <string name="str_package_name">Ime paketa</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root dostop zavrnjen. AZenith potrebuje root dostop za delovanje.</string>
     <string name="str_root_access_granted">Root dostop pridobljen, vse pripravljeno!</string>
-    <string name="str_run_diagnostics_above_or_check">Zaženi zgornjo diagnostiko ali preveri, ali jedro vsebuje vozlišča za bypass polnjenje</string>
+    <string name="str_run_diagnostics_above_or_check">Zaženi zgornjo diagnostiko ali preveri, ali jedro vsebuje vozlišča za standby polnjenje</string>
     <string name="str_safely_test">Varno preizkusi združljivost naprave</string>
     <string name="str_save_compressed_logs_to_a_fold">Shrani stisnjene dnevnike v določeno mapo</string>
     <string name="str_save_your_current_tweak_settin">Shrani trenutne nastavitve prilagoditev</string>

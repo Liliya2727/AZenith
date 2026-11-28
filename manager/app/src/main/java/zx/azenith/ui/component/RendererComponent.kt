@@ -75,6 +75,7 @@ fun RendererDialog(
     onDismiss: () -> Unit,
     onRenderer: (String) -> Unit,
     origin: Offset = Offset(0.5f, 0.28f),
+    sharedKey: String? = null,
     currentRenderer: String? = null
 ) {
     val context = LocalContext.current
@@ -84,6 +85,7 @@ fun RendererDialog(
         visible = show,
         onDismiss = onDismiss,
         origin = origin,
+        sharedKey = sharedKey,
         spec = DialogSpec.Choice
     ) {
         Text(

@@ -1,8 +1,24 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Main daemon loop.
 
-use crate::sysprop::{get_into, set};
+use crate::sysprop::set;
 use crate::fileops;use crate::bypass::handle_dynamic_bypass;
-use crate::config::resolution::{apply_resolution_target, restore_resolution_target};
+use crate::config::resolution::{
+    apply_resolution_target, probe_game_capability, restore_resolution_target,
+};
 use crate::config::rendering::apply_smart_renderer;
 use crate::core::{
     DaemonContext, ProfileMode,
@@ -15,7 +31,7 @@ use crate::monitor::{read_app_status, reload_gamelist_cache};
 use crate::config::state::{restore_daemon_state, save_daemon_state};
 use crate::profile::{
     apply_balanced_profile, apply_eco_profile, apply_performance_profile_inner,
-    apply_per_app_overrides, get_gamestart, get_low_power_state, get_screenstate,
+    apply_per_app_overrides, get_low_power_state, get_screenstate,
     profile_mode_name, restore_per_app_overrides, run_profiler, show_sidepanel,
     update_game_info,
 };
@@ -41,8 +57,8 @@ pub fn main_daemon() -> c_int {
     unsafe {
         if libc::daemon(0, 0) != 0 {
             log_fatal!("daemon", "daemonize failed errno={}", std::io::Error::last_os_error());
-            set("persist.sys.azenith.service", "");
-            set("persist.sys.azenith.state", "stopped");
+            set("sys.azenith.service", "");
+            set("sys.azenith.state", "stopped");
             return 1;
         }
     }
@@ -56,6 +72,7 @@ pub fn main_daemon() -> c_int {
     let mut ctx = DaemonContext::new();
     init_daemon_context(&mut ctx);
     restore_daemon_state(&mut ctx);
+    probe_game_capability();
 
     // A previous run may have been killed between switching a charge node ON
     // and restoring it. Clear that before anything else touches bypass state.
@@ -98,12 +115,17 @@ pub fn main_daemon() -> c_int {
     log_info!("daemon", "daemon started pid={}", std::process::id());
     set("persist.sys.rynx.learning_enabled", "true");
     set("persist.sys.rynx.thermalcore-bigdata.path", "/data/adb/.config/AZenith/debug");
-    set("persist.sys.azenith.state", "running");
+    set("sys.azenith.state", "running");
     notify("Initializing...", "Starting AZenith service...", false, 0, None);
     setspid();
 
-    // Read AI state (fall back to the AIenabled prop when the modes file is
-    // missing or empty, mirroring the C daemon's live property read).
+    // Migrate legacy persist.sys.azenith* props and files to config.json once,
+    // then load initial config into ctx.config.
+    validateprop();
+    load_initial_config_files(&mut ctx);
+
+    // Read AI state (fall back to ctx.config.auto_mode when the modes file is
+    // missing or empty).
     let mut ai_state_loaded = false;
     if let Ok(fp) = std::fs::File::open(DAEMON_MODES) {
         use std::io::BufRead;
@@ -121,24 +143,19 @@ pub fn main_daemon() -> c_int {
         }
     }
     if !ai_state_loaded {
-        let prop = crate::sysprop::get_or_default("persist.sys.azenithconf.AIenabled", "");
-        let prop = prop.trim();
-        if !prop.is_empty() {
-            let bytes = prop.as_bytes();
-            let n = bytes.len().min(ctx.prev_ai_state.len() - 1);
-            ctx.prev_ai_state[..n].copy_from_slice(&bytes[..n]);
-            ctx.prev_ai_state[n] = 0;
-        }
+        let ai_str = if ctx.config.auto_mode { "1" } else { "0" };
+        let bytes = ai_str.as_bytes();
+        let n = bytes.len().min(ctx.prev_ai_state.len() - 1);
+        ctx.prev_ai_state[..n].copy_from_slice(&bytes[..n]);
+        ctx.prev_ai_state[n] = 0;
     }
 
     // Setup inotify watchers
     let inotify_fd = setup_inotify_watchers();
-    load_initial_config_files(&mut ctx);
 
     checkstate();
     is_kanged();
     check_module_version();
-    validateprop();
     log_debug!("integrity", "module integrity passed");
 
     log_info!("daemon", "daemon ready pid={} mode={} profile={}", std::process::id(),
@@ -215,8 +232,8 @@ pub fn main_daemon() -> c_int {
             log_fatal!("daemon", "java companion lock released, stopping daemon");
             recorder.finalize(&mut ctx, crate::recorder::StopReason::DaemonStop);
             notify("Daemon Error", "Java companion daemon crashed. Stopping AZenith.", false, 0, None);
-            set("persist.sys.azenith.service", "");
-            set("persist.sys.azenith.state", "stopped");
+            set("sys.azenith.service", "");
+            set("sys.azenith.state", "stopped");
             break;
         }
 
@@ -238,14 +255,36 @@ pub fn main_daemon() -> c_int {
 
         let real_screen_state = get_screenstate(&ctx.current_system_cache);
 
-        if ctx.config_freqoffset_str() == "Disabled" {
-            if ctx.last_freqoffset_str() != "Disabled" {
+        // Re-apply the frequency balance only when its inputs change, never on
+        // a steady-state tick. `systemv()` forks a shell (fork + execle +
+        // waitpid), so the old Balanced/Eco branch spawned one every loop
+        // iteration. Profile application already honours the current limiter,
+        // so a standalone re-balance is only needed on a transition.
+        let freqoffset = ctx.config_freqoffset_str();
+        let balance_sig = format!(
+            "{}|{}|{}",
+            freqoffset,
+            real_screen_state as u8,
+            ctx.profile.cur_mode as i32,
+        );
+        if balance_sig != ctx.last_balance_sig {
+            let in_balance_or_eco = real_screen_state
+                && (ctx.profile.cur_mode == ProfileMode::BalancedProfile
+                    || ctx.profile.cur_mode == ProfileMode::EcoMode);
+            let should_apply = if freqoffset == "Disabled" {
+                // Preserve the original transition-only semantics here, gated
+                // to Balanced/Eco so toggling freqoffset to Disabled mid-game
+                // or on initial startup never clobbers Performance freq locks.
+                in_balance_or_eco
+                    && ctx.last_freqoffset_str() != "Disabled"
+                    && ctx.last_freqoffset_str() != "Initial"
+            } else {
+                in_balance_or_eco
+            };
+            if should_apply {
                 systemv("sys.azenith-profilesettings applyfreqbalance");
             }
-        } else if real_screen_state
-            && (ctx.profile.cur_mode == ProfileMode::BalancedProfile || ctx.profile.cur_mode == ProfileMode::EcoMode)
-        {
-            systemv("sys.azenith-profilesettings applyfreqbalance");
+            ctx.last_balance_sig = balance_sig;
         }
         // strcpy(ctx.last_freqoffset, ctx.config_freqoffset)
         let freq = ctx.config_freqoffset_str().to_string();
@@ -262,10 +301,23 @@ pub fn main_daemon() -> c_int {
         let is_manual_mode = ctx.prev_ai_state_str() == "0";
 
         if ctx.need_profile_checkup {
+            let now_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+            let in_prelaunch_grace = now_ms < ctx.game.prelaunch_until_ms;
+            let prelaunched_pkg = ctx.game.prelaunched_pkg.clone();
             let opts = &mut ctx.opts;
             let cache = &ctx.current_system_cache;
-            if let Some(current_focused_game) = get_gamestart(opts, cache) {
+            if let Some(current_focused_game) = crate::profile::get_gamestart_with_prelaunch(
+                opts,
+                cache,
+                prelaunched_pkg.as_deref(),
+            ) {
                 if ctx.game.gamestart.as_deref() == Some(&current_focused_game) {
+                    if !ctx.current_system_cache.app_name_str().is_empty() {
+                        ctx.game.active_app_name = Some(ctx.current_system_cache.app_name_str().to_string());
+                    }
                     ctx.need_profile_checkup = false;
                 } else {
                     let old_gs = ctx.game.gamestart.clone();
@@ -276,6 +328,7 @@ pub fn main_daemon() -> c_int {
                     }
                     ctx.game.gamestart = Some(current_focused_game.clone());
                     ctx.game.active_app_name = Some(ctx.current_system_cache.app_name_str().to_string());
+                    ctx.game.prelaunch_until_ms = 0;
                     log_info!("profile", "game detected pkg={} name={}",
                         ctx.game.gamestart.as_deref().unwrap_or(""),
                         ctx.game.active_app_name.as_deref().unwrap_or("unknown")
@@ -289,6 +342,10 @@ pub fn main_daemon() -> c_int {
                     handle_dynamic_bypass(&mut ctx);
                     update_game_info(&ctx);
                 }
+            } else if in_prelaunch_grace {
+                // GameSpace prelaunch is still transitioning into `am start`; keep
+                // the pre-applied game state intact until the game window focuses.
+                ctx.need_profile_checkup = false;
             } else if is_manual_mode || (ctx.profile.cur_mode != ProfileMode::BalancedProfile && ctx.profile.cur_mode != ProfileMode::EcoMode) {
                 ctx.need_profile_checkup = false;
             }
@@ -343,12 +400,7 @@ pub fn main_daemon() -> c_int {
         let gs_clone = ctx.game.gamestart.clone();
         if let Some(gs) = gs_clone.as_deref() {
             if ctx.profile.cur_mode == ProfileMode::PerformanceProfile {
-                let mut dropfg_val = [0u8; 92];
-                let _ = get_into("persist.sys.azenith.dropforeground", &mut dropfg_val);
-                let dropfg = unsafe {
-                    std::ffi::CStr::from_ptr(dropfg_val.as_ptr() ).to_string_lossy()
-                };
-                let dropforeground_enabled = dropfg.len() > 0 && dropfg == "1";
+                let dropforeground_enabled = ctx.config.drop_foreground;
 
                 if dropforeground_enabled {
                     let is_focused = ctx.current_system_cache.focused_app_str() == gs;
@@ -375,6 +427,8 @@ pub fn main_daemon() -> c_int {
                                 restore_resolution_target(&mut ctx, gs);
                                 ctx.game.gamestart = None;
                                 ctx.game.active_app_name = None;
+                                ctx.game.prelaunched_pkg = None;
+                                ctx.game.prelaunch_until_ms = 0;
                                 ctx.need_profile_checkup = true;
                                 update_game_info(&ctx);
                             }
@@ -429,6 +483,9 @@ pub fn main_daemon() -> c_int {
                         &mut ctx.profile.saved_renderer,
                         &mut ctx.profile.saved_sys_renderer,
                     );
+                    if renderer_changed {
+                        ctx.config.renderer = renderer;
+                    }
                 }
 
                 let mut reso_changed = false;
@@ -456,8 +513,20 @@ pub fn main_daemon() -> c_int {
             }
 
             if ctx.game.game_pid_count == 0 {
+                let now_ms = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis() as u64)
+                    .unwrap_or(0);
                 if ctx.current_system_cache.focused_app_str() == &gs {
+                    ctx.game.prelaunch_until_ms = 0;
+                    if !ctx.current_system_cache.app_name_str().is_empty() {
+                        ctx.game.active_app_name = Some(ctx.current_system_cache.app_name_str().to_string());
+                    }
                     ctx.game.game_pid_count = get_pids_of(&gs, &mut ctx.game.game_pids, crate::core::MAX_GAME_PIDS as i32);
+                } else if now_ms < ctx.game.prelaunch_until_ms {
+                    // Still waiting for GameSpace `am start` to bring the prelaunched
+                    // game into focus; do not consume pid_retries yet.
+                    continue;
                 }
                 if ctx.game.game_pid_count == 0 {
                     if ctx.pid_retries < 5 {
@@ -472,6 +541,8 @@ pub fn main_daemon() -> c_int {
                             ctx.game.active_app_name.as_deref().unwrap_or(&gs));
                         ctx.game.gamestart = None;
                         ctx.game.active_app_name = None;
+                        ctx.game.prelaunched_pkg = None;
+                        ctx.game.prelaunch_until_ms = 0;
                         ctx.pid_retries = 0;
                         ctx.render.manual_sidepanel_shown = false;
                         ctx.need_profile_checkup = true;
@@ -484,15 +555,8 @@ pub fn main_daemon() -> c_int {
                 for i in 0..ctx.game.game_pid_count {
                     if IS_TRUE!(ctx.opts_app_priority()) {
                         set_priority(ctx.game.game_pids[i as usize]);
-                    } else if !IS_FALSE!(ctx.opts_app_priority()) {
-                        let mut val = [0u8; 92];
-                        let _ = get_into("persist.sys.azenithconf.iosched", &mut val);
-                        let val = unsafe {
-                            std::ffi::CStr::from_ptr(val.as_ptr() ).to_string_lossy()
-                        };
-                        if val == "1" {
-                            set_priority(ctx.game.game_pids[i as usize]);
-                        }
+                    } else if !IS_FALSE!(ctx.opts_app_priority()) && ctx.config.app_priority {
+                        set_priority(ctx.game.game_pids[i as usize]);
                     }
                 }
             }

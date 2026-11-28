@@ -1,5 +1,20 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Core types shared across the daemon.
 
+use archconfig::AZenithConfig;
 use std::os::raw::c_int;
 
 pub const MAX_DATA_LENGTH: usize = 2048;
@@ -27,7 +42,9 @@ pub const PROFILE_MODE_APP: &str = "/data/data/zx.azenith/API/current_profile";
 pub const GAME_INFO: &str = "/data/adb/.config/AZenith/API/gameinfo";
 pub const GAME_INFO_APP: &str = "/data/data/zx.azenith/API/gameinfo";
 pub const GAMELIST: &str = "/data/adb/.config/AZenith/gamelist/azenithApplist.json";
+pub const GAMELIST_APP: &str = "/data/data/zx.azenith/API/azenithApplist.json";
 pub const DAEMON_MODES: &str = "/data/adb/.config/AZenith/API/current_modes";
+pub const DAEMON_MODES_APP: &str = "/data/data/zx.azenith/API/current_modes";
 pub const MODULE_PROP: &str = "/data/adb/modules/AZenith/module.prop";
 pub const MODULE_UPDATE: &str = "/data/adb/modules/AZenith/update";
 pub const MODULE_REMOVE: &str = "/data/adb/modules/AZenith/remove";
@@ -36,6 +53,7 @@ pub const APP_MONITOR_FILE: &str = "/data/adb/.config/AZenith/app_status";
 pub const DAEMON_STATE_FILE: &str = "/data/adb/.config/AZenith/daemon_state";
 pub const JAVA_LOCK_PATH: &str = "/data/adb/.config/AZenith/java.lock";
 pub const RR_MODES_PATH: &str = "/data/adb/.config/AZenith/rr_modes.json";
+pub const PRELAUNCH_FILE: &str = "/data/adb/.config/AZenith/prelaunch";
 
 pub const AZENITH_PROPERTIES: &str = "persist.sys.azenith";
 
@@ -277,22 +295,19 @@ impl Default for ProfileState {
     }
 }
 
-/// Bypass charging state
+/// Standby charging state
 #[derive(Debug, Clone)]
 pub struct BypassState {
     pub bypass_applied: bool,
-    pub config_bypasspath: [u8; crate::android_ffi::PROP_VALUE_MAX],
-    pub config_bypasschg: i32,
-    pub config_bypasschgthreshold: i32,
+    /// Session target battery percentage locked at the start of a charging game session (-1 when inactive).
+    pub target_level: i32,
 }
 
 impl Default for BypassState {
     fn default() -> Self {
         Self {
             bypass_applied: false,
-            config_bypasspath: [0; crate::android_ffi::PROP_VALUE_MAX],
-            config_bypasschg: 0,
-            config_bypasschgthreshold: 0,
+            target_level: -1,
         }
     }
 }
@@ -304,6 +319,8 @@ pub struct GameState {
     pub active_app_name: Option<String>,
     pub game_pids: [i32; MAX_GAME_PIDS],
     pub game_pid_count: i32,
+    pub prelaunch_until_ms: u64,
+    pub prelaunched_pkg: Option<String>,
 }
 
 /// Power-related state (grace period, foreground away)
@@ -315,16 +332,35 @@ pub struct PowerState {
     pub fg_away_timer: i64,
 }
 
+/// Snapshot of a package's pre-existing GameManager state before AZenith modifies it.
+#[derive(Debug, Clone, Default)]
+pub struct GameSnapshot {
+    pub parsed_ok: bool,
+    pub current_mode: Option<String>,
+    pub had_mode2_config: bool,
+    pub mode2_scaling: Option<String>,
+    pub mode2_fps: Option<String>,
+    pub had_mode4_config: bool,
+    pub mode4_scaling: Option<String>,
+    pub mode4_fps: Option<String>,
+    pub prev_device_config: Option<String>,
+}
+
 /// Renderer/resolution state
 #[derive(Debug, Clone, Default)]
 pub struct RenderState {
     pub has_applied_renderer: bool,
     pub resolution_applied: bool,
     pub used_legacy_fallback: bool,
+    pub used_downscale_cmd: bool,
     pub is_restarting_renderer: bool,
     /// True once the manual-mode sidepanel has been broadcast for the
     /// active game; reset whenever the tracked game changes or is dropped.
     pub manual_sidepanel_shown: bool,
+    /// Tracks the last package for which initial resolution SDK info was logged.
+    pub last_resolution_log_pkg: Option<String>,
+    /// Pre-apply game mode/config snapshot for safe restoration.
+    pub resolution_snapshot: Option<GameSnapshot>,
 }
 
 // ---------------------------------------------------------------------------
@@ -337,8 +373,12 @@ pub struct DaemonContext {
     pub need_profile_checkup: bool,
     pub pid_retries: i32,
     pub java_lock_path: String,
-    pub config_freqoffset: [u8; crate::android_ffi::PROP_VALUE_MAX],
+    pub config: AZenithConfig,
     pub last_freqoffset: [u8; crate::android_ffi::PROP_VALUE_MAX],
+    /// Signature of the inputs that dictate whether `applyfreqbalance` must be
+    /// re-applied (freqoffset value, screen state, profile mode). Used to turn
+    /// the old per-tick fork into a transition-only one.
+    pub last_balance_sig: String,
     pub prev_ai_state: [u8; 16],
     pub opts: GameConfig,
     pub current_system_cache: SystemStateCache,
@@ -360,8 +400,9 @@ impl DaemonContext {
             need_profile_checkup: false,
             pid_retries: 0,
             java_lock_path: JAVA_LOCK_PATH.to_string(),
-            config_freqoffset: [0; crate::android_ffi::PROP_VALUE_MAX],
+            config: AZenithConfig::default(),
             last_freqoffset: [0; crate::android_ffi::PROP_VALUE_MAX],
+            last_balance_sig: String::new(),
             prev_ai_state: [0; 16],
             opts: GameConfig::default(),
             current_system_cache: SystemStateCache::default(),
@@ -383,13 +424,11 @@ impl DaemonContext {
     }
 
     pub fn config_freqoffset_str(&self) -> &str {
-        let len = self.config_freqoffset.iter().position(|&b| b == 0).unwrap_or(self.config_freqoffset.len());
-        unsafe { std::str::from_utf8_unchecked(&self.config_freqoffset[..len]) }
+        &self.config.freq_offset
     }
 
     pub fn config_bypasspath_str(&self) -> &str {
-        let len = self.bypass.config_bypasspath.iter().position(|&b| b == 0).unwrap_or(self.bypass.config_bypasspath.len());
-        unsafe { std::str::from_utf8_unchecked(&self.bypass.config_bypasspath[..len]) }
+        &self.config.standby_path
     }
 
     pub fn saved_renderer_str(&self) -> &str {

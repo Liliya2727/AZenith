@@ -17,20 +17,22 @@
 package zx.azenith.ui.util
 
 
-import android.os.FileObserver
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.io.SuFile
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import zx.azenith.R
 
 
@@ -42,6 +44,7 @@ object RootUtils {
     private const val DAEMON_API_DIR_PATH = "/data/adb/.config/AZenith/API"
     private const val DAEMON_PROFILE_PATH = "$DAEMON_API_DIR_PATH/$PROFILE_FILE_NAME"
     private const val MODES_FILE_NAME = "current_modes"
+    private const val MODES_PATH = "$API_DIR_PATH/$MODES_FILE_NAME"
     private const val DAEMON_MODES_PATH = "$DAEMON_API_DIR_PATH/$MODES_FILE_NAME"
 
     /**
@@ -58,6 +61,59 @@ object RootUtils {
             null
         }
     }
+
+    /** App-private mirror files can be read directly; only fall back to root. */
+    private fun readDirectOrRoot(path: String): String? {
+        val direct = try {
+            File(path).takeIf { it.exists() }?.readText()?.trim()
+        } catch (_: Exception) {
+            null
+        }
+        return direct ?: readRootFile(path)
+    }
+
+    /**
+     * One poller for both daemon API files, shared by every observer. The old
+     * design started a separate 600 ms `SuFile` (root `dd` fork) watcher per
+     * collector — roughly 12-14 forks/second with Home and Game Space open.
+     */
+    private val watcherScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val daemonFileEvents: SharedFlow<String> = flow {
+        var lastProfile: String? = null
+        var lastModes: String? = null
+        while (true) {
+            val profile = (readMirror()?.trim()?.takeIf { it.isNotEmpty() }
+                ?: readRootFile(DAEMON_PROFILE_PATH)?.trim())
+            if (profile != null && profile != lastProfile) {
+                lastProfile = profile
+                emit(PROFILE_FILE_NAME)
+            }
+            val modes = (try {
+                File(MODES_PATH).takeIf { it.exists() }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
+            } catch (_: Exception) {
+                null
+            } ?: readRootFile(DAEMON_MODES_PATH)?.trim())
+            if (modes != null && modes != lastModes) {
+                lastModes = modes
+                emit(MODES_FILE_NAME)
+            }
+            delay(600)
+        }
+    }.shareIn(watcherScope, SharingStarted.WhileSubscribed(5_000), replay = 0)
+
+    /** One `pidof` poll shared by all liveness collectors. */
+    private val serviceStatusEvents: SharedFlow<Pair<Int, String>> = flow {
+        var last: Pair<Int, String>? = null
+        while (true) {
+            val current = getServiceStatusRes()
+            if (current != last) {
+                emit(current)
+                last = current
+            }
+            delay(2_000)
+        }
+    }.shareIn(watcherScope, SharingStarted.WhileSubscribed(5_000), replay = 1)
 
     /**
      * Write a file through the root shell. Content is written verbatim -- a
@@ -154,7 +210,7 @@ object RootUtils {
     fun observeGameInfo(): Flow<GameInfo> = flow {
         var lastInfo: GameInfo? = null
         while (true) {
-            val raw = readRootFile("/data/data/zx.azenith/API/gameinfo")
+            val raw = readDirectOrRoot("/data/data/zx.azenith/API/gameinfo")
             var currentInfo = GameInfo(null, null)
 
             if (!raw.isNullOrBlank()) {
@@ -183,54 +239,16 @@ object RootUtils {
         trySend(getCurrentProfileValue())
 
         val job = launch {
-            watchDaemonProfile {
-                syncProfileState()
-                trySend(getCurrentProfileValue())
+            daemonFileEvents.collect { file ->
+                if (file == PROFILE_FILE_NAME) {
+                    syncProfileState()
+                    trySend(getCurrentProfileValue())
+                }
             }
         }
 
         awaitClose { job.cancel() }
     }.flowOn(Dispatchers.IO)
-
-    /**
-     * The daemon owns the profile file and writes it under /data/adb, so a
-     * FileObserver on the app-private mirror never fires when the profile
-     * changes. Watch the daemon's directory and mirror the value across on
-     * every event; the app then reads a file it can actually reach.
-     */
-    /**
-     * /data/adb is drwx------ root, so an inotify watch on the daemon's API dir
-     * always fails with EACCES and FileObserver swallows it -- the app never sees
-     * a single event. Poll the daemon file through root instead, and mirror it
-     * into the app-private dir so the rest of the app can read it directly.
-     */
-    private suspend fun CoroutineScope.watchDaemonProfile(
-        fileName: String = PROFILE_FILE_NAME,
-        onChange: () -> Unit
-    ) {
-        val dir = SuFile(API_DIR_PATH)
-        if (!dir.exists()) dir.mkdirs()
-
-        val observer = object : FileObserver(dir.absolutePath, MODIFY or CREATE or MOVED_TO) {
-            override fun onEvent(event: Int, path: String?) {
-                if (path == fileName) onChange()
-            }
-        }
-        observer.startWatching()
-        try {
-            var last: String? = null
-            while (true) {
-                val current = readRootFile(DAEMON_API_DIR_PATH + "/" + fileName)?.trim()
-                if (current != null && current != last) {
-                    last = current
-                    onChange()
-                }
-                delay(600)
-            }
-        } finally {
-            observer.stopWatching()
-        }
-    }
 
     /**
      * Auto mode lives in AIenabled but is mirrored to current_modes by whoever
@@ -242,8 +260,8 @@ object RootUtils {
         trySend(getAutoModeValue())
 
         val job = launch {
-            watchDaemonProfile(fileName = MODES_FILE_NAME) {
-                trySend(getAutoModeValue())
+            daemonFileEvents.collect { file ->
+                if (file == MODES_FILE_NAME) trySend(getAutoModeValue())
             }
         }
 
@@ -251,8 +269,12 @@ object RootUtils {
     }.flowOn(Dispatchers.IO)
 
     private fun getAutoModeValue(): String =
-        readRootFile(DAEMON_MODES_PATH)?.trim()
-            ?: PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+        try {
+            File(MODES_PATH).takeIf { it.exists() }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
+        } catch (_: Exception) {
+            null
+        } ?: readRootFile(DAEMON_MODES_PATH)?.trim()
+            ?: if (ConfigUtils.load().autoMode) "1" else "0"
 
     fun getCurrentProfileValue(): String {
         // The mirror is the app's own file; a plain read costs nothing, a SuFile read
@@ -268,9 +290,11 @@ object RootUtils {
         trySend(getCurrentProfileRes())
 
         val job = launch {
-            watchDaemonProfile {
-                syncProfileState()
-                trySend(getCurrentProfileRes())
+            daemonFileEvents.collect { file ->
+                if (file == PROFILE_FILE_NAME) {
+                    syncProfileState()
+                    trySend(getCurrentProfileRes())
+                }
             }
         }
 
@@ -278,7 +302,7 @@ object RootUtils {
     }.flowOn(Dispatchers.IO)
 
     fun getCurrentProfileRes(): Int {
-        val content = readRootFile(PROFILE_PATH)?.trim()
+        val content = readDirectOrRoot(PROFILE_PATH)?.trim()
 
         if (content.isNullOrBlank()) {
             return R.string.status_unknown
@@ -287,7 +311,7 @@ object RootUtils {
         return when (content) {
             "0" -> R.string.status_initializing
             "1" -> {
-                val isLite = PropertyUtils.get("persist.sys.azenithconf.litemode", "0") == "1"
+                val isLite = PropertyUtils.get("sys.azenith.litemode", "0") == "1"
                 if (isLite) R.string.profile_perflite else R.string.Profile_Performance
             }
             "2" -> R.string.Profile_Balanced
@@ -304,17 +328,7 @@ object RootUtils {
         return Shell.getShell().isRoot
     }
 
-    fun observeServiceStatusRes(): Flow<Pair<Int, String>> = flow {
-        var lastStatus: Pair<Int, String>? = null
-        while (true) {
-            val currentStatus = getServiceStatusRes()
-            if (currentStatus != lastStatus) {
-                emit(currentStatus)
-                lastStatus = currentStatus
-            }
-            delay(2000)
-        }
-    }.flowOn(Dispatchers.IO)
+    fun observeServiceStatusRes(): Flow<Pair<Int, String>> = serviceStatusEvents
 
     fun isRootGranted(): Boolean {
         val currentShell = Shell.getCachedShell()

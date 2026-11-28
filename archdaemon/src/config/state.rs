@@ -1,3 +1,17 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Daemon state persistence.
 
 use crate::core::{GameConfig, 
@@ -25,6 +39,7 @@ pub fn save_daemon_state(ctx: &crate::core::DaemonContext) {
          dnd_enabled={}\n\
          cur_mode={}\n\
          bypass_applied={}\n\
+         bypass_target_level={}\n\
          bypass_charging={}\n",
         ctx.saved_renderer_str(),
         ctx.saved_sys_renderer_str(),
@@ -33,6 +48,7 @@ pub fn save_daemon_state(ctx: &crate::core::DaemonContext) {
         if ctx.dnd_enabled { 1 } else { 0 },
         ctx.profile.cur_mode as i32,
         if ctx.bypass.bypass_applied { 1 } else { 0 },
+        ctx.bypass.target_level,
         ctx.opts_bypass_charging()
     );
 
@@ -89,6 +105,9 @@ pub fn restore_daemon_state(ctx: &mut crate::core::DaemonContext) {
                 }
                 "bypass_applied" => {
                     ctx.bypass.bypass_applied = val == "1";
+                }
+                "bypass_target_level" => {
+                    ctx.bypass.target_level = val.parse().unwrap_or(-1);
                 }
                 "bypass_charging" => {
                     if !val.is_empty() {

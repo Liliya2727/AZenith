@@ -1428,16 +1428,15 @@ fun BottomNavBar(
                             // which left the bar looking barely resized. Both axes
                             // interpolate with the style so the row does not jump
                             // as the bar pins.
-                            horizontal = NAV_FLOATING_MIN_MARGIN * navScale * navSpacing *
+                            horizontal = (if (navLabels == NavLabelMode.Always) NAV_FLOATING_ALWAYS_MIN_MARGIN else NAV_FLOATING_MIN_MARGIN) * navScale * navSpacing *
                                 floatingAmount,
-                            vertical = NAV_BAR_VERTICAL_PAD * navScale * floatingAmount
+                            vertical = (if (navLabels == NavLabelMode.Always) NAV_BAR_ALWAYS_VERTICAL_PAD else NAV_BAR_VERTICAL_PAD) * navScale * floatingAmount
                         )
                         // Extend the pinned row past the gesture bar so the surface
                         // fills to the bottom edge instead of stopping above it.
                         .padding(bottom = navInset * pinnedProgress),
                     horizontalArrangement = Arrangement.spacedBy(
-                        if (navLabels == NavLabelMode.Never) 0.dp
-                        else NAV_PILL_GAP * navScale * navSpacing * floatingAmount,
+                        NAV_PILL_GAP * navScale * navSpacing * floatingAmount,
                         Alignment.CenterHorizontally
                     ),
                     verticalAlignment = Alignment.CenterVertically
@@ -1752,11 +1751,15 @@ private const val NAV_BAR_DARKEN = 0.72f
 
 /** Screen margin a floating bar keeps either side, whatever its content. */
 private val NAV_FLOATING_MIN_MARGIN = 14.dp
+/** Horizontal inner padding for the floating bar in Always label mode. */
+private val NAV_FLOATING_ALWAYS_MIN_MARGIN = 17.dp
 /** Gap between two pills. */
 private val NAV_PILL_GAP = 6.dp
 
 /** Vertical padding the floating bar adds above and below its row. */
 private val NAV_BAR_VERTICAL_PAD = 10.dp
+/** Vertical inner padding for the floating bar in Always label mode. */
+private val NAV_BAR_ALWAYS_VERTICAL_PAD = 5.dp
 
 /** Vertical padding the floating bar's container adds outside the surface. */
 private val NAV_FLOATING_OUTER_PAD = 20.dp

@@ -46,10 +46,10 @@ if [ ! -f /data/adb/service.d/.azenith_cleanup.sh ]; then
 fi
 
 # Refresh AZenith daemon state
-STATE=$(getprop persist.sys.azenith.state)
+STATE=$(getprop sys.azenith.state)
 { [ -z "$STATE" ] || { [ "$STATE" = "running" ] && [ -z "$(/system/bin/toybox pidof sys.azenith-service)" ]; }; } && {
-    setprop persist.sys.azenith.state stopped
-    setprop persist.sys.azenith.service ""
+    setprop sys.azenith.state stopped
+    setprop sys.azenith.service ""
 }
 
 # Expose public read access on CPU/GPU telemetry sysfs nodes and API mirror so the app reads via File IO without shell polling

@@ -21,9 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -41,16 +42,20 @@ internal object GameSpaceClock {
 
     val seconds = mutableFloatStateOf(0f)
 
+    // Owned by the clock itself rather than the first caller's composition scope, so disposing
+    // an earlier Crossfade/AnimatedContent child never kills the ticker for surviving consumers.
+    private val clockScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var consumers = 0
     private var ticker: Job? = null
 
-    fun retain(scope: CoroutineScope) {
+    fun retain() {
         consumers++
-        if (ticker == null) {
-            ticker = scope.launch {
+        if (ticker?.isActive != true) {
+            val baseSeconds = seconds.floatValue
+            ticker = clockScope.launch {
                 val start = SystemClock.uptimeMillis()
                 while (isActive) {
-                    seconds.floatValue = (SystemClock.uptimeMillis() - start) / 1000f
+                    seconds.floatValue = baseSeconds + (SystemClock.uptimeMillis() - start) / 1000f
                     delay(TICK_MS)
                 }
             }
@@ -69,9 +74,8 @@ internal object GameSpaceClock {
 /** Holds the shared ticker open for as long as the caller is in composition. */
 @Composable
 internal fun rememberGameSpaceClock(): FloatState {
-    val scope = rememberCoroutineScope()
     DisposableEffect(Unit) {
-        GameSpaceClock.retain(scope)
+        GameSpaceClock.retain()
         onDispose { GameSpaceClock.release() }
     }
     return GameSpaceClock.seconds

@@ -22,8 +22,8 @@
     <string name="balanced_mali_gov">Balansert Mali GPU-regulator</string>
     <string name="balanced_mali_gov_desc">GPU-regulator brukt i balansert profil</string>
     <string name="banner">Banner</string>
-    <string name="bcharging">Bypass-lading</string>
-    <string name="bcharging_desc">Konfigurer AZeniths bypass-ladefunksjon</string>
+    <string name="bcharging">Standby-lading</string>
+    <string name="bcharging_desc">Konfigurer AZeniths standby-ladefunksjon</string>
     <string name="bypass_not_supported">Denne enheten støtter ikke denne funksjonen</string>
     <string name="cd_app_icon">App-ikon</string>
     <string name="cd_back">Tilbake</string>
@@ -53,7 +53,7 @@
     <string name="current_profile">Gjeldende profil</string>
     <string name="custom">Egendefinert</string>
     <string name="CompatibilityCheck">Kompatibilitetssjekk</string>
-    <string name="CompatibilityCheck_desc">Utfør diagnostikk for å sjekke om enheten støtter bypass-lading</string>
+    <string name="CompatibilityCheck_desc">Utfør diagnostikk for å sjekke om enheten støtter standby-lading</string>
     <string name="default_cpu_gov">Standard CPU-regulator</string>
     <string name="default_cpu_gov_desc">Regulator brukt i balansert profil</string>
     <string name="default_label">Standard</string>
@@ -83,7 +83,7 @@
     <string name="dialog_restore_fail_title">Gjenoppretting mislyktes</string>
     <string name="dialog_start_hw_test_content">AZenith vil utføre en spenningsfalltest på batterinoden. Diagnostikken er trygg og varer i noen sekunder.</string>
     <string name="dialog_start_hw_test_title">Start maskinvaretester?</string>
-    <string name="dialog_switch_node_content">Vil du tvinge bytte av bypass-mål til [%1$s]?</string>
+    <string name="dialog_switch_node_content">Vil du tvinge bytte av standby-mål til [%1$s]?</string>
     <string name="dialog_switch_node_title">Bytt kontrollnode?</string>
     <string name="dialog_update_available_confirm">Oppdater nå</string>
     <string name="dialog_update_available_content">Appversjon (%1$d) er lavere enn modulversjon (%2$d). Vil du oppdatere for å få de nyeste funksjonene?</string>
@@ -102,8 +102,8 @@
     <string name="dnd_mode_gaming">Ikke forstyrr under spilling</string>
     <string name="dnd_mode_gaming_desc">Aktiver automatisk Ikke forstyrr under ytelsesprofil</string>
     <string name="done">Fullført</string>
-    <string name="enable_bypass_charge">Aktiver bypass-lading</string>
-    <string name="enable_bypass_charge_desc">Aktiver bypass-lading under ytelsesprofil</string>
+    <string name="enable_bypass_charge">Aktiver standby-lading</string>
+    <string name="enable_bypass_charge_desc">Aktiver standby-lading under ytelsesprofil</string>
     <string name="err_failed_load_changelog">Kunne ikke laste endringslogg</string>
     <string name="err_invalid_backup">Sikkerhetskopifil er ugyldig eller skadet (.zx)</string>
     <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
@@ -291,7 +291,7 @@
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>
-    <string name="str_active_bypass_node">Nåværende bypass-ladenode</string>
+    <string name="str_active_bypass_node">Nåværende standby-ladenode</string>
     <string name="str_adjust_and_calibrate_your_scre">Juster skjermfarger og metning via SurfaceFlinger-tjenesten, uten kjernestøtte</string>
     <string name="str_adjust_gradient">Juster gradient</string>
     <string name="str_app_info">Appinformasjon</string>
@@ -349,7 +349,7 @@
     <string name="str_maintainer">Vedlikeholder</string>
     <string name="str_max_video_size">Maks videostørrelse er 50 MB</string>
     <string name="str_no_active_nodes">Ingen tilgjengelige arbeidsnoder</string>
-    <string name="str_no_active_nodes_desc">Ingen tilgjengelige bypass-noder kartlagt i systemegenskaper</string>
+    <string name="str_no_active_nodes_desc">Ingen tilgjengelige standby-noder kartlagt i systemegenskaper</string>
     <string name="str_no_compatible_nodes">Ingen kompatible noder</string>
     <string name="str_open_source">Åpen kildekode</string>
     <string name="str_package_name">Pakkenavn</string>
@@ -366,7 +366,7 @@
     <string name="str_rianixia">Rianixia</string>
     <string name="str_root_access_denied">Root-tilgang nektet. AZenith trenger root-tilgang for å fungere.</string>
     <string name="str_root_access_granted">Root-tilgang oppnådd. Alt er klart!</string>
-    <string name="str_run_diagnostics_above_or_check">Kjør diagnostikken over, eller sjekk om kjernen inneholder bypass-ladenoder</string>
+    <string name="str_run_diagnostics_above_or_check">Kjør diagnostikken over, eller sjekk om kjernen inneholder standby-ladenoder</string>
     <string name="str_safely_test">Test enhetskompatibilitet trygt</string>
     <string name="str_save_compressed_logs_to_a_fold">Lagre komprimerte logger i en bestemt mappe</string>
     <string name="str_save_your_current_tweak_settin">Lagre gjeldende konfigurasjonsinnstillinger</string>
@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Konfigurer regulator og planleggere</string>
     <string name="gov_settingsdesc2">Konfigurer enhetens CPU-, GPU-regulator og I/O-planleggingsverdier; hver verdi brukes på hver AZenith-profil</string>
     <string name="presets">Forhåndsinnstillinger</string>
-    <string name="str_bypass_need_setup">Bypass-ladebane er ikke konfigurert ennå. Fullfør oppsettet via kompatibilitetssjekk først.</string>
+    <string name="str_bypass_need_setup">Standby-ladebane er ikke konfigurert ennå. Fullfør oppsettet via kompatibilitetssjekk først.</string>
     <string name="reboot_required_content">Dette alternativet krever en omstart for å tre i kraft. Fortsette?</string>
     <string name="disable_auto_mode_desc">Stopper profiler fra å bytte automatisk når et spill oppdages. Du angir deretter profilen selv fra Current Profile-flisen på hjemmesiden.</string>
     <string name="no_apps_found">Ingen apper samsvarer med dette søket</string>

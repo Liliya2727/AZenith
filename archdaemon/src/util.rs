@@ -1,3 +1,17 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Utilities.
 
 use crate::sysprop::{get_or_default, set};
@@ -92,12 +106,12 @@ pub extern "C" fn sighandler(_signal: c_int) {
 // checkstate
 // ---------------------------------------------------------------------------
 pub fn checkstate() {
-    let state = get_or_default("persist.sys.azenith.state", "");
+    let state = get_or_default("sys.azenith.state", "");
 
     if state.is_empty() || state == "stopped" {
         log_fatal!("daemon", "service killed reason=state_empty_or_stopped");
-        set("persist.sys.azenith.service", "");
-        set("persist.sys.azenith.state", "stopped");
+        set("sys.azenith.service", "");
+        set("sys.azenith.state", "stopped");
         std::process::exit(1);
     }
 }
@@ -141,8 +155,7 @@ pub fn notify(title: &str, fmt: &str, chrono: bool, timeout_ms: i32, args: Optio
 // toast
 // ---------------------------------------------------------------------------
 pub fn toast(message: &str) {
-    let val = get_or_default("persist.sys.azenithconf.showtoast", "");
-    if val == "1" {
+    if archconfig::load().show_toast {
         let safe_message = escape_shell_string(message);
         let exit = systemv(&format!(
             "su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n zx.azenith/.receiver.ZenithReceiver --es toasttext '{safe_message}' >/dev/null 2>&1\""
@@ -159,9 +172,23 @@ pub fn toast(message: &str) {
 pub fn restart_target_app(pkg: &str) {
     log_info!("daemon", "restarting app pkg={} reason=pending_changes", pkg);
     let safe_pkg = escape_shell_string(pkg);
-    systemv(&format!(
+    let cmd = format!(
         "am force-stop '{safe_pkg}' && am start -n \"$(cmd package resolve-activity --brief '{safe_pkg}' | tail -n 1)\""
-    ));
+    );
+    let res = crate::shell::systemv_capture_both(&cmd);
+    if res.exit_code != 0
+        || res.output.contains("Error")
+        || res.output.contains("Exception")
+        || res.output.contains("No activity")
+    {
+        log_error!(
+            "daemon",
+            "restart_target_app failed pkg={} rc={} out={}",
+            pkg,
+            res.exit_code,
+            res.output
+        );
+    }
     std::thread::sleep(std::time::Duration::from_millis(700));
 }
 
@@ -212,8 +239,7 @@ pub fn update_module_description(pid: i32) {
 // runthermalcore
 // ---------------------------------------------------------------------------
 pub fn runthermalcore() {
-    let thermalcore = get_or_default("persist.sys.azenithconf.thermalcore", "");
-    if thermalcore == "1" {
+    if archconfig::load().thermalcore {
         systemv("sys.azenith-rianixiathermalcore &");
         let output = crate::shell::execute_command("pidof sys.azenith-rianixiathermalcore");
 

@@ -1,9 +1,22 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Rendering / HWUI.
 
 use crate::{log_debug, log_info};
 use crate::shell::systemv;
-
-use crate::sysprop::{get_or_default, set};
+use crate::sysprop::get_or_default;
 
 // ---------------------------------------------------------------------------
 // apply_smart_renderer
@@ -14,7 +27,7 @@ pub fn apply_smart_renderer(target_type: &str, saved_ref: &mut [u8], saved_sys: 
     }
 
     let current_renderer = get_or_default("debug.hwui.renderer", "");
-    let current_sys_renderer = get_or_default("persist.sys.azenithconf.renderer", "");
+    let current_sys_renderer = archconfig::load().renderer;
 
     let current_renderer = if current_renderer.is_empty() { "default".to_string() } else { current_renderer };
     let current_sys_renderer = if current_sys_renderer.is_empty() { "default".to_string() } else { current_sys_renderer };
@@ -38,7 +51,7 @@ pub fn apply_smart_renderer(target_type: &str, saved_ref: &mut [u8], saved_sys: 
     if current_renderer != target_type {
         log_info!("render", "renderer changed from={} to={}", current_renderer, target_type);
         systemv(&format!("sys.azenith-utilityconf setrender {target_type}"));
-        set("persist.sys.azenithconf.renderer", target_type);
+        let _ = archconfig::update(|c| c.renderer = target_type.to_string());
         return true;
     }
 

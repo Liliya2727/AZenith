@@ -24,6 +24,10 @@ resetprop | awk -F'[][]' '/persist\.sys\.azenith/ {print $2}' | while read -r pr
     resetprop -p --delete "$prop"
 done
 
+for prop in sys.azenith.state sys.azenith.service sys.azenith.litemode; do
+    resetprop --delete "$prop" 2>/dev/null
+done
+
 for prop in persist.sys.rynx.learning_enabled persist.sys.rynx.thermalcore-bigdata.path; do
     resetprop -p --delete "$prop"
 done

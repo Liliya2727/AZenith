@@ -1,3 +1,17 @@
+// Copyright (C) 2026-2027 Zexshia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Sampler: sysfs reads every ~1s, no shell forks.
 
 use super::{frametime, now_ms, now_epoch_sec, Sample, Session, read_int};
@@ -53,12 +67,18 @@ pub fn sample_once(sess: &mut Session, t: i64) {
     row.bat_lvl = read_int(Path::new("/sys/class/power_supply/battery/capacity")).unwrap_or(-1);
 
     let line = row.to_csv();
-    let _ = std::io::Write::write_all(&mut sess.writer, format!("{}\n", line).as_bytes());
-    sess.samples.push(row);
+    if let Err(e) = std::io::Write::write_all(&mut sess.writer, format!("{}\n", line).as_bytes()) {
+        crate::log_error!("recorder", "csv write failed path={:?} error={}", sess.csv_path, e);
+    }
+    sess.sample_accum.push(&row);
     sess.rows_since_flush += 1;
     if sess.rows_since_flush >= super::FLUSH_EVERY {
-        let _ = sess.writer.flush();
-        let _ = sess.writer.get_ref().sync_all();
+        if let Err(e) = sess.writer.flush() {
+            crate::log_error!("recorder", "csv flush failed path={:?} error={}", sess.csv_path, e);
+        }
+        if let Err(e) = sess.writer.get_ref().sync_all() {
+            crate::log_error!("recorder", "csv sync failed path={:?} error={}", sess.csv_path, e);
+        }
         sess.rows_since_flush = 0;
     }
 }

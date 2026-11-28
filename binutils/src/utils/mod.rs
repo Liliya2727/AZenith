@@ -11,16 +11,6 @@ use crate::utils::logging::{log_info, log_debug, log_warn, log_error};
 
 pub const MY_PATH: &str = "/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/data/data/com.termux/files/usr/bin";
 
-pub fn getprop(key: &str) -> String {
-    match Command::new("getprop").arg(key).output() {
-        Ok(output) => String::from_utf8_lossy(&output.stdout).trim().to_string(),
-        Err(e) => {
-            log_error("prop", &format!("getprop failed key={} err={}", key, e));
-            String::new()
-        }
-    }
-}
-
 pub fn resetprop(key: &str, val: &str) {
     let status = if val.is_empty() {
         Command::new("resetprop").arg("--delete").arg(key).status()
@@ -40,11 +30,11 @@ pub fn setprop(key: &str, val: &str) {
 }
 
 pub fn get_debugmode() -> bool {
-    getprop("persist.sys.azenith.debugmode") == "true"
+    archconfig::load().debug_mode
 }
 
-pub fn get_fstrim_state() -> String {
-    getprop("persist.sys.azenithconf.fstrim")
+pub fn get_fstrim_state() -> bool {
+    archconfig::load().fstrim
 }
 
 pub fn chmod(path: &str, mode: u32) {
@@ -194,7 +184,7 @@ pub fn setthermalcore(state: &str) {
 }
 
 pub fn fstrim() {
-    if get_fstrim_state() == "1" {
+    if get_fstrim_state() {
         log_debug("fstrim", "trying native framework");
         
         let mut status = systemv("vdc fstrim dotrim");
@@ -249,7 +239,7 @@ pub fn restartservice() {
     let _ = systemv("pkill -9 -f sys.azenith-appmonitoring");
     let _ = systemv("pkill -9 -f sys.azenith-fpsclient");
     
-    setprop("persist.sys.azenith.state", "stopped");
+    setprop("sys.azenith.state", "stopped");
     
     if systemv("sh /data/adb/modules/AZenith/service.sh &") != 0 {
         log_error("daemon", "service restart failed");

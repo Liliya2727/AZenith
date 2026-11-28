@@ -86,7 +86,26 @@ class ZXGameSpaceActivity : ComponentActivity() {
         return super.dispatchTouchEvent(event)
     }
 
+    private fun isSystemKey(keyCode: Int): Boolean = when (keyCode) {
+        KeyEvent.KEYCODE_HOME,
+        KeyEvent.KEYCODE_POWER,
+        KeyEvent.KEYCODE_SLEEP,
+        KeyEvent.KEYCODE_WAKEUP,
+        KeyEvent.KEYCODE_VOLUME_UP,
+        KeyEvent.KEYCODE_VOLUME_DOWN,
+        KeyEvent.KEYCODE_VOLUME_MUTE,
+        KeyEvent.KEYCODE_APP_SWITCH,
+        KeyEvent.KEYCODE_SYSRQ,
+        KeyEvent.KEYCODE_ASSIST,
+        KeyEvent.KEYCODE_VOICE_ASSIST -> true
+        else -> false
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (GameLaunchInputLock.isLocked && !isSystemKey(event.keyCode)) {
+            GamepadDirectionRepeat.release()
+            return true
+        }
         GameSpaceInputSource.onKeyEvent(event)
         // Real L2/R2 digital keys: keep the shared held state in sync and swallow
         // a duplicate arrived after we already synthesized the same press from
@@ -137,6 +156,10 @@ class ZXGameSpaceActivity : ComponentActivity() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (GameLaunchInputLock.isLocked) {
+            GamepadDirectionRepeat.release()
+            return true
+        }
         val source = event.source
         val isJoystick = source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
         val isGamepad = source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
@@ -173,8 +196,10 @@ class ZXGameSpaceActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StatusBarGuard.restoreIfPending(this)
         wireGamepadDirectionRepeat()
         TapHapticState.init(this)
+        volumeControlStream = android.media.AudioManager.STREAM_MUSIC
         zx.azenith.ui.util.AudioUtil.isGameHubActive = true
         zx.azenith.ui.util.AudioUtil.init(this)
         BgmManager.init(this)
@@ -232,11 +257,18 @@ class ZXGameSpaceActivity : ComponentActivity() {
         return scheme.surface.toArgb()
     }
 
+    override fun onStart() {
+        super.onStart()
+        StatusBarGuard.restoreIfPending(this)
+    }
+
     override fun onResume() {
         super.onResume()
+        StatusBarGuard.restoreIfPending(this)
         // This window owns direction-key dispatch while GameSpace is foreground.
         wireGamepadDirectionRepeat()
         ZXSidePanelService.hide(this)
+        zx.azenith.ui.util.AudioUtil.onActivityResume(this)
         BgmManager.onActivityResume(this)
     }
 
@@ -244,12 +276,15 @@ class ZXGameSpaceActivity : ComponentActivity() {
         super.onPause()
         GamepadDirectionRepeat.release()
         GamepadStickScroll.reset()
+        zx.azenith.ui.util.AudioUtil.onActivityPause()
         BgmManager.onActivityPause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        GameLaunchInputLock.isLocked = false
         zx.azenith.ui.util.AudioUtil.isGameHubActive = false
+        zx.azenith.ui.util.AudioUtil.release()
         BgmManager.onDestroy()
     }
 }

@@ -191,6 +191,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.component.ResetConfirmDialog
+import zx.azenith.ui.util.ConfigUtils
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -226,23 +227,26 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         const val NOTIFICATION_ID = 1002
 
         private const val APPLIST_PATH = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
+        private const val APP_APPLIST_PATH = "/data/data/zx.azenith/API/azenithApplist.json"
         private const val APP_STATUS_PATH = "/data/adb/.config/AZenith/app_status"
+        private const val APP_STATUS_MIRROR_PATH = "/data/data/zx.azenith/API/app_status"
         private const val DAEMON_BIN = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
         private const val DAEMON_PROFILE_PATH = "/data/adb/.config/AZenith/API/current_profile"
         private const val APP_PROFILE_PATH = "/data/data/zx.azenith/API/current_profile"
         private const val DAEMON_GAMEINFO_PATH = "/data/adb/.config/AZenith/API/gameinfo"
         private const val APP_GAMEINFO_PATH = "/data/data/zx.azenith/API/gameinfo"
         private const val DAEMON_MODES_PATH = "/data/adb/.config/AZenith/API/current_modes"
+        private const val APP_MODES_PATH = "/data/data/zx.azenith/API/current_modes"
         private const val DAEMON_RECORD_CMD_PATH = "/data/adb/.config/AZenith/API/record_cmd"
         private const val DAEMON_RECORD_STATE_PATH = "/data/adb/.config/AZenith/API/record_state"
+        private const val APP_RECORD_STATE_PATH = "/data/data/zx.azenith/API/record_state"
+        private const val DAEMON_FPS_PATH = "/data/adb/.config/AZenith/API/current_fps"
+        private const val APP_FPS_PATH = "/data/data/zx.azenith/API/current_fps"
         private const val FRAMERATEDATA_DIR = "/data/adb/.config/AZenith/frameratedata"
-        private const val AI_PROP = "persist.sys.azenithconf.AIenabled"
-        private const val LITE_PROP = "persist.sys.azenithconf.litemode"
-        private const val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
+        private const val LITE_PROP = "sys.azenith.litemode"
         private const val PREF_QUICK_APPS = "gamespace_sidepanel_quick_apps"
         const val PREF_SIDEPANEL_ENABLED = "gamespace_sidepanel_enabled"
 
-        const val PROP_FORCE_SIDEPANEL = "persist.sys.azenith.force_sidepanel"
         const val PROP_FORCE_SIDEPANEL_DEBUG = "debug.azenith.force_sidepanel"
 
         val appsOpenedFromAzenith: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf<String>())
@@ -255,8 +259,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
 
         fun isForceSidepanelEnabled(): Boolean {
-            val p1 = PropertyUtils.get(PROP_FORCE_SIDEPANEL, "0").trim()
-            if (p1 == "1" || p1.equals("true", ignoreCase = true)) return true
+            if (ConfigUtils.load().forceSidepanel) return true
             val p2 = PropertyUtils.get(PROP_FORCE_SIDEPANEL_DEBUG, "0").trim()
             return p2 == "1" || p2.equals("true", ignoreCase = true)
         }
@@ -358,6 +361,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var isViewAttached = false
     private var monitorJob: Job? = null
     private var telemetryJob: Job? = null
+    /** stopServiceIfIdle forks `pidof` through root; the monitor tick is 550 ms. */
+    private var lastIdleCheckMs = 0L
     private var windowTransitionJob: Job? = null
     private var fpsTrackingActive = false
     private var fpsSamplerJob: Job? = null
@@ -1733,9 +1738,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     var screenAwake = pm?.isInteractive ?: true
                     var focusedPkg: String? = null
 
-                    val daemonRunning = PropertyUtils.get("persist.sys.azenith.state", "") == "running"
+                    val daemonRunning = PropertyUtils.get("sys.azenith.state", "") == "running"
                     if (daemonRunning) {
-                        val statusText = telemetryCollector.readFileTextDirectOrSu(APP_STATUS_PATH, rootGranted)
+                        val statusText = telemetryCollector.readFileTextDirectOrSu(APP_STATUS_MIRROR_PATH, false)
+                            ?: telemetryCollector.readFileTextDirectOrSu(APP_STATUS_PATH, rootGranted)
                         if (!statusText.isNullOrBlank()) {
                             val focusedLine = statusText.lineSequence().firstOrNull { it.startsWith("focused_app ") }
                             focusedPkg = focusedLine?.substringAfter("focused_app ")?.substringBefore(" ")?.trim()
@@ -1804,10 +1810,13 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 // background, but only gameinfo can end the service. Keep the
                                 // launch grace intact until it expires so stopServiceIfIdle()
                                 // cannot tear down a service that is still within that window.
-                                if (!stopServiceIfIdle(rootGranted)) {
-                                    if (nowMs >= pendingLaunchGraceUntilMs) {
-                                        pendingLaunchPkg = null
-                                        pendingLaunchGraceUntilMs = 0L
+                                if (nowMs - lastIdleCheckMs >= 5_000L) {
+                                    lastIdleCheckMs = nowMs
+                                    if (!stopServiceIfIdle(rootGranted)) {
+                                        if (nowMs >= pendingLaunchGraceUntilMs) {
+                                            pendingLaunchPkg = null
+                                            pendingLaunchGraceUntilMs = 0L
+                                        }
                                     }
                                 }
                             }
@@ -1861,7 +1870,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         if (now - cachedApplistTimestampMs > 1_500L) {
             cachedApplistTimestampMs = now
             try {
-                val raw = telemetryCollector.readFileTextDirectOrSu(APPLIST_PATH, rootGranted)
+                val raw = telemetryCollector.readFileTextDirectOrSu(APP_APPLIST_PATH, false)
+                    ?: telemetryCollector.readFileTextDirectOrSu(APPLIST_PATH, rootGranted)
                 if (!raw.isNullOrBlank()) {
                     val json = JSONObject(raw)
                     val parsed = HashSet<String>()
@@ -2054,8 +2064,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun applyAutoModeToggle(enableAuto: Boolean) {
         serviceScope.launch(Dispatchers.IO) {
             val stateStr = if (enableAuto) "1" else "0"
-            PropertyUtils.set(AI_PROP, stateStr)
+            ConfigUtils.setBool("auto_mode", enableAuto)
             AutoModeBus.notify(stateStr)
+            runCatching { File(APP_MODES_PATH).writeText("$stateStr\n") }
             if (checkRootGranted()) {
                 RootUtils.writeRootFile(DAEMON_MODES_PATH, "$stateStr\n")
             }
@@ -2078,7 +2089,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         onRecordLastTapMs = now
         serviceScope.launch(Dispatchers.IO) {
             val rootGranted = checkRootGranted()
-            val stateText = telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted)?.trim().orEmpty()
+            val stateText = (telemetryCollector.readFileTextDirectOrSu(APP_RECORD_STATE_PATH, false)
+                ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted))?.trim().orEmpty()
             val cmd = if (stateText.startsWith("recording")) "stop\n" else "start\n"
             if (rootGranted) {
                 RootUtils.writeRootFile(DAEMON_RECORD_CMD_PATH, cmd)
@@ -2113,7 +2125,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun startRealTelemetryMonitor() {
         telemetryJob?.cancel()
         telemetryJob = serviceScope.launch(Dispatchers.IO) {
-            var tick = 0
+            var lastPingAtMs = 0L
             var lastObservedProfileCode = ""
             var lastParsedStartTimeStr = ""
 
@@ -2140,19 +2152,20 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val batteryInfo = readBatteryAndThermal(rootGranted)
 
                     // 3. Read AZenith Auto Mode, Running Profile, and Profile Duration
-                    val daemonRunning = PropertyUtils.get("persist.sys.azenith.state", "") == "running"
-                    val aiPropVal = PropertyUtils.get(AI_PROP, "")
-                    val modesFileVal = telemetryCollector.readFileTextDirectOrSu(DAEMON_MODES_PATH, rootGranted)?.trim()
+                    val cfg = ConfigUtils.load()
+                    val daemonRunning = PropertyUtils.get("sys.azenith.state", "") == "running"
+                    val modesFileVal = (telemetryCollector.readFileTextDirectOrSu(APP_MODES_PATH, false)
+                        ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_MODES_PATH, rootGranted))?.trim()
                     val resolvedAuto = when {
                         !modesFileVal.isNullOrEmpty() -> modesFileVal == "1"
-                        aiPropVal.isNotEmpty() -> aiPropVal == "1"
-                        else -> panelState.isAutoMode
+                        else -> cfg.autoMode
                     }
                     val liteEnabled = PropertyUtils.get(LITE_PROP, "0") == "1"
-                    val bypassActive = PropertyUtils.get(BYPASS_PROP, "0") == "1"
+                    val bypassActive = cfg.standbyChg
 
                     // FPS Recorder status (daemon-owned state file, for the overlay).
-                    val recordStateText = telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted)?.trim()
+                    val recordStateText = (telemetryCollector.readFileTextDirectOrSu(APP_RECORD_STATE_PATH, false)
+                        ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_RECORD_STATE_PATH, rootGranted))?.trim()
                     if (!recordStateText.isNullOrEmpty()) {
                         val previous = panelState.recordState
                         val isRecording = recordStateText.startsWith("recording")
@@ -2171,7 +2184,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         }
                         panelState.recordState = recordStateText
                     }
-                    panelState.recordGameActive = isGameInfoFileActive(DAEMON_GAMEINFO_PATH, rootGranted)
+                    panelState.recordGameActive = isGameInfoFileActive(APP_GAMEINFO_PATH, false) ||
+                        isGameInfoFileActive(DAEMON_GAMEINFO_PATH, rootGranted)
 
                     val rawProfileCode = if (daemonRunning) {
                         telemetryCollector.readFileTextDirectOrSu(APP_PROFILE_PATH, false)?.trim()
@@ -2231,9 +2245,13 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val secs = totalSec % 60L
                     val durationFormatted = String.format(Locale.US, "%02d:%02d:%02d", hours, mins, secs)
 
-                    // 4. Periodically measure network latency & sync external brightness/volume changes
+                    // 4. Periodically measure network latency & sync external brightness/volume changes.
+                    // Time-based, not tick-based: at 400 ms HUD cadence the old `tick % 3`
+                    // opened a socket roughly every 1.2 s and kept the radio awake.
                     var measuredPing = panelState.pingMs
-                    if (tick % 3 == 0) {
+                    val nowPingMs = System.currentTimeMillis()
+                    if (nowPingMs - lastPingAtMs >= 30_000L) {
+                        lastPingAtMs = nowPingMs
                         telemetryCollector.measureTcpPingMs()?.let { measuredPing = it }
                     }
 
@@ -2261,7 +2279,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         panelState.profileDurationText = durationFormatted
                         panelState.pingMs = measuredPing
                     }
-                    tick++
                 }
                 delay(if (panelState.floatingHudVisible) 400L else 1000L)
             }
@@ -2441,21 +2458,88 @@ private class ZXRealTelemetryCollector {
 
     private fun parseProcStatLine(line: String?): Pair<Long, Long>? {
         if (line == null || !line.startsWith("cpu ")) return null
-        val parts = line.trim().split(Regex("\\s+"))
-        if (parts.size < 5) return null
-        val user = parts.getOrNull(1)?.toLongOrNull() ?: 0L
-        val nice = parts.getOrNull(2)?.toLongOrNull() ?: 0L
-        val system = parts.getOrNull(3)?.toLongOrNull() ?: 0L
-        val idle = parts.getOrNull(4)?.toLongOrNull() ?: 0L
-        val iowait = parts.getOrNull(5)?.toLongOrNull() ?: 0L
-        val irq = parts.getOrNull(6)?.toLongOrNull() ?: 0L
-        val softirq = parts.getOrNull(7)?.toLongOrNull() ?: 0L
-        val steal = parts.getOrNull(8)?.toLongOrNull() ?: 0L
+        // Zero-allocation scanner: parse up to 8 numeric columns after "cpu " without Regex/List allocations
+        var i = 4
+        val len = line.length
+        var col = 0
+        var user = 0L
+        var nice = 0L
+        var system = 0L
+        var idle = 0L
+        var iowait = 0L
+        var irq = 0L
+        var softirq = 0L
+        var steal = 0L
+
+        while (i < len && col < 8) {
+            while (i < len && line[i].isWhitespace()) i++
+            if (i >= len) break
+            var acc = 0L
+            var hasDigit = false
+            while (i < len && line[i] in '0'..'9') {
+                acc = acc * 10L + (line[i] - '0')
+                hasDigit = true
+                i++
+            }
+            while (i < len && !line[i].isWhitespace()) i++
+            if (!hasDigit) break
+            when (col) {
+                0 -> user = acc
+                1 -> nice = acc
+                2 -> system = acc
+                3 -> idle = acc
+                4 -> iowait = acc
+                5 -> irq = acc
+                6 -> softirq = acc
+                7 -> steal = acc
+            }
+            col++
+        }
+        if (col < 4) return null
 
         val totalIdle = idle + iowait
         val total = user + nice + system + totalIdle + irq + softirq + steal
         return Pair(total, totalIdle)
     }
+
+    private fun parseFirstInt(raw: String, maxIndex: Int = raw.length): Int? {
+        var i = 0
+        val limit = maxIndex.coerceAtMost(raw.length)
+        while (i < limit && raw[i] !in '0'..'9') i++
+        if (i >= limit) return null
+        var acc = 0
+        while (i < limit && raw[i] in '0'..'9') {
+            acc = acc * 10 + (raw[i] - '0')
+            i++
+        }
+        return acc
+    }
+
+    private fun parseGpubusyPct(raw: String): Int? {
+        var i = 0
+        val len = raw.length
+        while (i < len && raw[i] !in '0'..'9') i++
+        if (i >= len) return null
+        var busy = 0L
+        while (i < len && raw[i] in '0'..'9') {
+            busy = busy * 10L + (raw[i] - '0')
+            i++
+        }
+        while (i < len && raw[i] !in '0'..'9') i++
+        if (i >= len) return null
+        var total = 0L
+        while (i < len && raw[i] in '0'..'9') {
+            total = total * 10L + (raw[i] - '0')
+            i++
+        }
+        if (total <= 0L) return null
+        return ((busy * 100L) / total).toInt().coerceIn(0, 100)
+    }
+
+    private var cachedGpuDirectPath: String? = null
+    private var cachedGpuClockPaths: Pair<String, String>? = null
+    private var cachedGpuDevfreqDir: File? = null
+    private var gpuNodesProbedOnce = false
 
     fun readCpuLoadPercent(rootGranted: Boolean): Int {
         // 1. Read kernel /proc/stat delta via direct File or libsu stream (never affected by governor max-freq pinning)
@@ -2541,61 +2625,98 @@ private class ZXRealTelemetryCollector {
         return 25
     }
 
+    private fun tryParseGpuDirectNode(path: String, rootGranted: Boolean): Int? {
+        val raw = readFileTextDirectOrSu(path, rootGranted)?.trim()
+        if (raw.isNullOrEmpty()) return null
+        if (path.endsWith("gpubusy")) {
+            return parseGpubusyPct(raw)
+        }
+        val firstInt = parseFirstInt(raw)
+        return if (firstInt != null && firstInt in 0..100) firstInt else null
+    }
+
+    private fun tryParseGpuDevfreqDir(d: File): Int? {
+        val loadRaw = readFirstLineDirect(File(d, "load"))
+            ?: readFirstLineDirect(File(d, "utilization"))
+        if (!loadRaw.isNullOrEmpty()) {
+            val atIdx = loadRaw.indexOf('@').let { if (it >= 0) it else loadRaw.length }
+            val pct = parseFirstInt(loadRaw, atIdx)
+            if (pct != null && pct in 0..100) return pct
+        }
+        val cf = readLongDirect(File(d, "cur_freq"))
+        val mf = readLongDirect(File(d, "max_freq"))
+        if (cf != null && mf != null && mf > 0L) {
+            return ((cf * 100L) / mf).toInt().coerceIn(1, 100)
+        }
+        return null
+    }
+
     fun readGpuLoadPercent(
         rootGranted: Boolean,
         currentFps: Int,
         fpsCap: Int,
         cpuLoad: Int
     ): Int {
-        // 1. Probe direct GPU load sysfs files
-        for (path in gpuDirectCandidates) {
-            val raw = readFileTextDirectOrSu(path, rootGranted)?.trim()
-            if (!raw.isNullOrEmpty()) {
-                if (path.endsWith("gpubusy")) {
-                    val nums = Regex("\\d+").findAll(raw).mapNotNull { it.value.toLongOrNull() }.toList()
-                    if (nums.size >= 2 && nums[1] > 0L) {
-                        return ((nums[0] * 100L) / nums[1]).toInt().coerceIn(0, 100)
-                    }
-                } else {
-                    val firstInt = Regex("\\d+").find(raw)?.value?.toIntOrNull()
-                    if (firstInt != null && firstInt in 0..100) {
-                        return firstInt
+        // Fast path: reuse previously discovered working GPU node without scanning 20 paths
+        cachedGpuDirectPath?.let { path ->
+            tryParseGpuDirectNode(path, rootGranted)?.let { return it }
+            cachedGpuDirectPath = null
+        }
+        cachedGpuClockPaths?.let { (curPath, maxPath) ->
+            val curClk = readFileTextDirectOrSu(curPath, rootGranted)?.trim()?.toLongOrNull()
+            val maxClk = readFileTextDirectOrSu(maxPath, rootGranted)?.trim()?.toLongOrNull()
+            if (curClk != null && maxClk != null && maxClk > 0L) {
+                return ((curClk * 100L) / maxClk).toInt().coerceIn(1, 100)
+            }
+            cachedGpuClockPaths = null
+        }
+        cachedGpuDevfreqDir?.let { d ->
+            tryParseGpuDevfreqDir(d)?.let { return it }
+            cachedGpuDevfreqDir = null
+        }
+
+        if (!gpuNodesProbedOnce) {
+            // 1. Probe direct GPU load sysfs files once and cache the winner
+            for (path in gpuDirectCandidates) {
+                val pct = tryParseGpuDirectNode(path, rootGranted)
+                if (pct != null) {
+                    cachedGpuDirectPath = path
+                    return pct
+                }
+            }
+
+            // 2. Try /sys/kernel/gpu/gpu_clock vs gpu_max_clock or /sys/class/kgsl/kgsl-3d0/devfreq
+            val clockCandidates = listOf(
+                "/sys/kernel/gpu/gpu_clock" to "/sys/kernel/gpu/gpu_max_clock",
+                "/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq" to "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq"
+            )
+            for ((curPath, maxPath) in clockCandidates) {
+                val curClk = readFileTextDirectOrSu(curPath, rootGranted)?.trim()?.toLongOrNull()
+                val maxClk = readFileTextDirectOrSu(maxPath, rootGranted)?.trim()?.toLongOrNull()
+                if (curClk != null && maxClk != null && maxClk > 0L) {
+                    cachedGpuClockPaths = curPath to maxPath
+                    return ((curClk * 100L) / maxClk).toInt().coerceIn(1, 100)
+                }
+            }
+
+            // 3. Try /sys/class/devfreq/*gpu* or *mali*
+            runCatching {
+                val devfreqRoot = File("/sys/class/devfreq")
+                val dirs = devfreqRoot.listFiles()
+                if (dirs != null) {
+                    for (d in dirs) {
+                        val name = d.name.lowercase(Locale.US)
+                        if (name.contains("gpu") || name.contains("mali") || name.contains("kgsl") || name.contains("dfrgx")) {
+                            val pct = tryParseGpuDevfreqDir(d)
+                            if (pct != null) {
+                                cachedGpuDevfreqDir = d
+                                return pct
+                            }
+                        }
                     }
                 }
             }
-        }
-
-        // 2. Try /sys/kernel/gpu/gpu_clock vs gpu_max_clock or /sys/class/kgsl/kgsl-3d0/devfreq
-        val curClk = readFileTextDirectOrSu("/sys/kernel/gpu/gpu_clock", rootGranted)?.trim()?.toLongOrNull()
-            ?: readFileTextDirectOrSu("/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq", rootGranted)?.trim()?.toLongOrNull()
-        val maxClk = readFileTextDirectOrSu("/sys/kernel/gpu/gpu_max_clock", rootGranted)?.trim()?.toLongOrNull()
-            ?: readFileTextDirectOrSu("/sys/class/kgsl/kgsl-3d0/devfreq/max_freq", rootGranted)?.trim()?.toLongOrNull()
-        if (curClk != null && maxClk != null && maxClk > 0L) {
-            return ((curClk * 100L) / maxClk).toInt().coerceIn(1, 100)
-        }
-
-        // 3. Try /sys/class/devfreq/*gpu* or *mali*
-        runCatching {
-            val devfreqRoot = File("/sys/class/devfreq")
-            val dirs = devfreqRoot.listFiles()
-            if (dirs != null) {
-                for (d in dirs) {
-                    val name = d.name.lowercase(Locale.US)
-                    if (name.contains("gpu") || name.contains("mali") || name.contains("kgsl") || name.contains("dfrgx")) {
-                        val loadRaw = readFirstLineDirect(File(d, "load"))
-                            ?: readFirstLineDirect(File(d, "utilization"))
-                        if (!loadRaw.isNullOrEmpty()) {
-                            val pct = Regex("\\d+").find(loadRaw.substringBefore('@'))?.value?.toIntOrNull()
-                            if (pct != null && pct in 0..100) return pct
-                        }
-                        val cf = readLongDirect(File(d, "cur_freq"))
-                        val mf = readLongDirect(File(d, "max_freq"))
-                        if (cf != null && mf != null && mf > 0L) {
-                            return ((cf * 100L) / mf).toInt().coerceIn(1, 100)
-                        }
-                    }
-                }
-            }
+            gpuNodesProbedOnce = true
         }
 
         // 4. Non-root fallback when kernel hides all GPU sysfs nodes: derive from live frame cadence & CPU freq load
@@ -2706,17 +2827,30 @@ private class ZXRealTelemetryCollector {
     }
 
     /**
-     * The daemon's fps client writes "<fps> <epoch_ms>". The stamp separates a live
-     * reading from a frozen one, because /data/adb is root-only and the file cannot
-     * be stat'ed without su.
+     * The daemon's fps client writes "<fps> <epoch_ms>". Read the app-private mirror
+     * (/data/data/zx.azenith/API/current_fps) first via direct File IO, falling back to
+     * /data/adb/.config/AZenith/API/current_fps.
      */
     private fun readDaemonFps(cap: Int, rootGranted: Boolean): Int? {
-        val raw = readFileTextDirectOrSu("/data/adb/.config/AZenith/API/current_fps", rootGranted)
+        val raw = readFileTextDirectOrSu("/data/data/zx.azenith/API/current_fps", false)
+            ?: readFileTextDirectOrSu("/data/adb/.config/AZenith/API/current_fps", rootGranted)
             ?: return null
-        val f = raw.trim().split(Regex("\\s+"))
-        if (f.size < 2) return null
-        val fps = f[0].toIntOrNull() ?: return null
-        val at = f[1].toLongOrNull() ?: return null
+        var i = 0
+        val len = raw.length
+        while (i < len && raw[i].isWhitespace()) i++
+        if (i >= len || raw[i] !in '0'..'9') return null
+        var fps = 0
+        while (i < len && raw[i] in '0'..'9') {
+            fps = fps * 10 + (raw[i] - '0')
+            i++
+        }
+        while (i < len && raw[i].isWhitespace()) i++
+        if (i >= len || raw[i] !in '0'..'9') return null
+        var at = 0L
+        while (i < len && raw[i] in '0'..'9') {
+            at = at * 10L + (raw[i] - '0')
+            i++
+        }
         if (System.currentTimeMillis() - at > 3_000L) return null
         if (fps <= 0) return null
         return fps.coerceIn(1, cap)
@@ -2768,7 +2902,8 @@ fun SidePanelRoot(
     LaunchedEffect(Unit) {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         while (isActive) {
-            clockTime = formatter.format(Date())
+            val next = formatter.format(Date())
+            if (next != clockTime) clockTime = next
             delay(1000L)
         }
     }

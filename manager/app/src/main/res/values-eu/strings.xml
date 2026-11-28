@@ -427,7 +427,7 @@
     <string name="gov_settingsdesc">Konfiguratu gobernadorea eta programatzaileak</string>
     <string name="gov_settingsdesc2">Konfiguratu gailuaren CPU, GPU gobernadorearen eta I/O programatzaileen balioak, balio bakoitza AZenith profil bakoitzari aplikatuko zaio</string>
     <string name="presets">Aurrezarpenak</string>
-    <string name="str_bypass_need_setup">Bypass kargatze-bidea ez da oraindik konfiguratu. Mesedez, osatu lehenik konfigurazioa Bateragarritasun Egiaztapenaren bidez.</string>
+    <string name="str_bypass_need_setup">Standby kargatze-bidea ez da oraindik konfiguratu. Mesedez, osatu lehenik konfigurazioa Bateragarritasun Egiaztapenaren bidez.</string>
     <string name="reboot_required_content">Aukera hau aplikatzeko berrabiarazi behar da. Jarraitu?</string>
     <string name="disable_auto_mode_desc">Profilak automatikoki aldatzeari uzten dio joko bat hautematen denean. Ondoren, zuk zeuk ezarriko duzu profila Hasierako orrialdeko Uneko profilaren lauzatik.</string>
     <string name="no_apps_found">Ez dago bilaketa honekin bat datorren aplikaziorik</string>
