@@ -76,6 +76,7 @@ fun RefreshRatePickerDialog(
     onDismiss: () -> Unit,
     onRefreshRatePicker: (String) -> Unit,
     origin: Offset = Offset(0.5f, 0.28f),
+    sharedKey: String? = null,
     currentRefreshRate: String? = null
 ) {
     val context = LocalContext.current
@@ -85,6 +86,7 @@ fun RefreshRatePickerDialog(
         visible = show,
         onDismiss = onDismiss,
         origin = origin,
+        sharedKey = sharedKey,
         spec = DialogSpec.Choice
     ) {
         Text(

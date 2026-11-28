@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@file:OptIn(
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalMaterial3Api::class,
+    ExperimentalSharedTransitionApi::class
+)
 
 package zx.azenith.ui.mainscreens
 
@@ -27,9 +31,12 @@ import android.os.Build
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -153,6 +160,9 @@ fun TweakScreen(
     val rendererOrigin = rememberDialogOrigin()
     var showRefreshRateDialog by remember { mutableStateOf(false) }
     val refreshRateOrigin = rememberDialogOrigin()
+    val sharedScope = LocalSharedTransitionScope.current
+    val refreshRateSharedKey = "tweak_refresh_rate_dialog"
+    val rendererSharedKey = "tweak_renderer_dialog"
     val backupOptionsOrigin = rememberDialogOrigin()
     val restoreDialogOrigin = rememberDialogOrigin()
     var pendingRestoreData by remember { mutableStateOf<Map<String, String>?>(null) }
@@ -510,50 +520,100 @@ fun TweakScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 if (viewModel.currentRefreshRate != null && viewModel.currentRenderer != null) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Max),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         JumpRow(
                             activeId = jumpPulse,
                             entryId = "tweaks.refresh_rate",
-                            modifier = Modifier.weight(1f).then(refreshRateOrigin.trackedModifier())
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .then(refreshRateOrigin.trackedModifier())
                         ) {
-                            ExpressiveTile(
-                                modifier = Modifier.fillMaxWidth(),
-                                icon = Icons.Rounded.WebStories,
-                                label = stringResource(R.string.refreshrates),
-                                value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
-                                showArrow = true,
-                                highlight = true,
-                                isLoading = viewModel.isRefreshRateLoading,
-                                focusKey = "tweaks.refresh_rate",
-                                focusIndex = 5,
-                                horizontalNav = HorizontalNav.BLOCK_LEFT
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = !showRefreshRateDialog,
+                                enter = fadeIn(animationSpec = tween(180)),
+                                exit = fadeOut(animationSpec = tween(120)),
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                showRefreshRateDialog = true
+                                val tileShape = azShape(26.dp)
+                                val sharedTileModifier = if (sharedScope != null) {
+                                    with(sharedScope) {
+                                        Modifier.sharedBounds(
+                                            sharedContentState = rememberSharedContentState(key = refreshRateSharedKey),
+                                            animatedVisibilityScope = this@AnimatedVisibility,
+                                            enter = fadeIn(animationSpec = tween(180)),
+                                            exit = fadeOut(animationSpec = tween(120)),
+                                            clipInOverlayDuringTransition = OverlayClip(tileShape)
+                                        )
+                                    }
+                                } else {
+                                    Modifier
+                                }
+                                ExpressiveTile(
+                                    modifier = Modifier.fillMaxSize().then(sharedTileModifier),
+                                    icon = Icons.Rounded.WebStories,
+                                    label = stringResource(R.string.refreshrates),
+                                    value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
+                                    showArrow = true,
+                                    highlight = true,
+                                    isLoading = viewModel.isRefreshRateLoading,
+                                    focusKey = "tweaks.refresh_rate",
+                                    focusIndex = 5,
+                                    horizontalNav = HorizontalNav.BLOCK_LEFT
+                                ) {
+                                    showRefreshRateDialog = true
+                                }
                             }
                         }
 
                         JumpRow(
                             activeId = jumpPulse,
                             entryId = "tweaks.renderer",
-                            modifier = Modifier.weight(1f).then(rendererOrigin.trackedModifier())
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .then(rendererOrigin.trackedModifier())
                         ) {
-                            ExpressiveTile(
-                                modifier = Modifier.fillMaxWidth(),
-                                icon = Icons.Rounded.SettingsSuggest,
-                                label = stringResource(R.string.renderengine),
-                                value = viewModel.currentRenderer!!.let { r ->
-                                    if (r.startsWith("Default")) stringResource(R.string.Renderer_Default) + r.removePrefix("Default") else r
-                                }.uppercase(),
-                                showArrow = true,
-                                highlight = true,
-                                isLoading = viewModel.isRendererLoading,
-                                focusKey = "tweaks.renderer",
-                                focusIndex = 5,
-                                horizontalNav = HorizontalNav.BLOCK_RIGHT
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = !showRendererDialog,
+                                enter = fadeIn(animationSpec = tween(180)),
+                                exit = fadeOut(animationSpec = tween(120)),
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                showRendererDialog = true
+                                val tileShape = azShape(26.dp)
+                                val sharedTileModifier = if (sharedScope != null) {
+                                    with(sharedScope) {
+                                        Modifier.sharedBounds(
+                                            sharedContentState = rememberSharedContentState(key = rendererSharedKey),
+                                            animatedVisibilityScope = this@AnimatedVisibility,
+                                            enter = fadeIn(animationSpec = tween(180)),
+                                            exit = fadeOut(animationSpec = tween(120)),
+                                            clipInOverlayDuringTransition = OverlayClip(tileShape)
+                                        )
+                                    }
+                                } else {
+                                    Modifier
+                                }
+                                ExpressiveTile(
+                                    modifier = Modifier.fillMaxSize().then(sharedTileModifier),
+                                    icon = Icons.Rounded.SettingsSuggest,
+                                    label = stringResource(R.string.renderengine),
+                                    value = viewModel.currentRenderer!!.let { r ->
+                                        if (r.startsWith("Default")) stringResource(R.string.Renderer_Default) + r.removePrefix("Default") else r
+                                    }.uppercase(),
+                                    showArrow = true,
+                                    highlight = true,
+                                    isLoading = viewModel.isRendererLoading,
+                                    focusKey = "tweaks.renderer",
+                                    focusIndex = 5,
+                                    horizontalNav = HorizontalNav.BLOCK_RIGHT
+                                ) {
+                                    showRendererDialog = true
+                                }
                             }
                         }
                     }
@@ -810,6 +870,7 @@ fun TweakScreen(
             onDismiss = { showRendererDialog = false },
             onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) },
             origin = rendererOrigin.origin,
+            sharedKey = rendererSharedKey,
             currentRenderer = viewModel.currentRenderer
         )
     }
@@ -820,6 +881,7 @@ fun TweakScreen(
             onDismiss = { showRefreshRateDialog = false },
             onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) },
             origin = refreshRateOrigin.origin,
+            sharedKey = refreshRateSharedKey,
             currentRefreshRate = viewModel.currentRefreshRate?.toString()
         )
     }
