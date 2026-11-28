@@ -547,6 +547,7 @@ fun TweakScreen(
                                             animatedVisibilityScope = this@AnimatedVisibility,
                                             enter = fadeIn(animationSpec = tween(180)),
                                             exit = fadeOut(animationSpec = tween(120)),
+                                            zIndexInOverlay = if (showRefreshRateDialog) 2f else 0f,
                                             clipInOverlayDuringTransition = OverlayClip(tileShape)
                                         )
                                     }
@@ -592,6 +593,7 @@ fun TweakScreen(
                                             animatedVisibilityScope = this@AnimatedVisibility,
                                             enter = fadeIn(animationSpec = tween(180)),
                                             exit = fadeOut(animationSpec = tween(120)),
+                                            zIndexInOverlay = if (showRendererDialog) 2f else 0f,
                                             clipInOverlayDuringTransition = OverlayClip(tileShape)
                                         )
                                     }

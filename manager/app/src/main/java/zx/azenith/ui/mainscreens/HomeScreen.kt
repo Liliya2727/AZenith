@@ -259,6 +259,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                                     animatedVisibilityScope = this@AnimatedVisibility,
                                                     enter = fadeIn(animationSpec = tween(180)),
                                                     exit = fadeOut(animationSpec = tween(120)),
+                                                    zIndexInOverlay = if (showProfileDialog) 2f else 0f,
                                                     clipInOverlayDuringTransition = OverlayClip(tileShape)
                                                 )
                                             }
@@ -376,6 +377,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                                 animatedVisibilityScope = this@AnimatedVisibility,
                                                 enter = fadeIn(animationSpec = tween(180)),
                                                 exit = fadeOut(animationSpec = tween(120)),
+                                                zIndexInOverlay = if (showProfileDialog) 2f else 0f,
                                                 clipInOverlayDuringTransition = OverlayClip(tileShape)
                                             )
                                         }

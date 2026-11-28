@@ -264,6 +264,7 @@ fun AZenithDialog(
                             animatedVisibilityScope = this@AnimatedVisibility,
                             enter = fadeIn(animationSpec = tween(180)),
                             exit = fadeOut(animationSpec = tween(150)),
+                            zIndexInOverlay = if (visible) 2f else 0f,
                             clipInOverlayDuringTransition = OverlayClip(cardShape)
                         )
                     }
