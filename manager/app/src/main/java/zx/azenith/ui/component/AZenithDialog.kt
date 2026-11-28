@@ -59,6 +59,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -287,6 +289,22 @@ fun AZenithDialog(
                         )
                         .background(
                             if (isBlurEnabled) Color.Transparent else containerColor
+                        )
+                        // Block pointer input while the dialog is animating out so rapid taps
+                        // on the same spot cannot trigger options inside the closing card.
+                        .then(
+                            if (!visible) {
+                                Modifier.pointerInput(Unit) {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                                            event.changes.forEach { it.consume() }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Modifier
+                            }
                         )
                         // The card swallows taps; it is not itself a d-pad stop.
                         .focusProperties { canFocus = false }
