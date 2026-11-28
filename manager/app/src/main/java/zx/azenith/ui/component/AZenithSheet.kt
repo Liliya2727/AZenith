@@ -260,7 +260,12 @@ private fun AZenithSheet(
         // races the dialog teardown and can leave the app window non-interactive.
         onDismissRequest = currentOnDismiss,
         sheetState = sheetState,
-        containerColor = Color.Transparent,
+        // Paint the sheet base on ModalBottomSheet's own Surface instead of
+        // Color.Transparent so Material 3's expressive spring overshoot on open
+        // fills the bottom extension seamlessly instead of revealing a gap.
+        // When blur is enabled, HazeInput.Backdrop draws over the content
+        // Column on top of this base.
+        containerColor = sheetSurface.base,
         scrimColor = if (scheme.surfaceContainerLowest == Color.Black) Color.Black.copy(alpha = 0.5f) else scheme.scrim.copy(alpha = 0.32f),
         shape = shape,
         dragHandle = null,
@@ -445,18 +450,16 @@ private fun Modifier.sheetSurface(
 ): Modifier {
     val base = surface.base
 
-    return this
-        .background(base)
-        .then(
-            if (isBlurEnabled && hazeState != null) {
-                Modifier.hazeBlur(
-                    input = HazeInput.Backdrop(hazeState),
-                    style = HazeBlurStyle.Material3(
-                        containerColor = base.copy(alpha = 0.35f).accentTint(ACCENT_TINT_BLUR)
-                    ) { blurRadius(24.dp) }
-                )
-            } else Modifier
+    return if (isBlurEnabled && hazeState != null) {
+        this.hazeBlur(
+            input = HazeInput.Backdrop(hazeState),
+            style = HazeBlurStyle.Material3(
+                containerColor = base.copy(alpha = 0.35f).accentTint(ACCENT_TINT_BLUR)
+            ) { blurRadius(24.dp) }
         )
+    } else {
+        this
+    }
 }
 
 /**
