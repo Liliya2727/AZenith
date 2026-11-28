@@ -214,8 +214,20 @@ fun AZenithDialog(
     ) {
         BackHandler(enabled = visible, onBack = { if (spec.dismissible) onDismiss() })
 
+        val scrimOverlayModifier = if (useSharedBounds && sharedScope != null) {
+            with(sharedScope) {
+                Modifier.renderInSharedTransitionScopeOverlay(
+                    renderInOverlay = { isTransitionActive && visible },
+                    zIndexInOverlay = 1f
+                )
+            }
+        } else {
+            Modifier
+        }
+
         AnimatedVisibility(
             visible = visible,
+            modifier = scrimOverlayModifier,
             enter = if (dialogsAnimated) Motion.scrimEnter() else EnterTransition.None,
             exit = if (dialogsAnimated) Motion.scrimExit() else ExitTransition.None
         ) {
