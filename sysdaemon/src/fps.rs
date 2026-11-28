@@ -680,10 +680,11 @@ impl StreamTracker {
         *self = StreamTracker::new();
     }
 
-    /// Normalize `raw_key` so `ANativeWindow*` (`Surface* + 0x10` in
-    /// `hook_queueBuffer` / `queueBufferInternal`) and `Surface*` (`this` in
-    /// `Surface::queueBuffer*` / `onBufferQueuedLocked`) map to the same stream
-    /// key instead of competing as two separate surfaces of identical rate.
+    /// Normalize `raw_key` so `ANativeWindow*` (`Surface* + 0x10` on 64-bit,
+    /// `Surface* + 0x08` on 32-bit in `hook_queueBuffer` / `queueBufferInternal`)
+    /// and `Surface*` (`this` in `Surface::queueBuffer*` / `onBufferQueuedLocked`)
+    /// map to the same stream key instead of competing as two separate surfaces of
+    /// identical rate.
     fn canonical_key(&self, raw_key: u64) -> u64 {
         if raw_key < 0x1000
             || self.last_ktime.contains_key(&raw_key)
@@ -692,7 +693,12 @@ impl StreamTracker {
         {
             return raw_key;
         }
-        for candidate in [raw_key.wrapping_sub(0x10), raw_key.wrapping_add(0x10)] {
+        for candidate in [
+            raw_key.wrapping_sub(0x10),
+            raw_key.wrapping_add(0x10),
+            raw_key.wrapping_sub(0x08),
+            raw_key.wrapping_add(0x08),
+        ] {
             if self.last_ktime.contains_key(&candidate)
                 || self.counts.contains_key(&candidate)
                 || self.active == Some(candidate)
@@ -1115,6 +1121,7 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
     let mut focused: Option<(String, i32, i32)> = None;
     let mut targets: Vec<i32> = Vec::new();
     let mut attached_at: Option<Instant> = None;
+    let mut frames_since_attach = false;
     let mut attach_failures = 0u32;
     let mut tracked = StreamTracker::new();
     let mut window = Instant::now();
@@ -1165,6 +1172,7 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
 
                     targets = pids;
                     attached_at = None;
+                    frames_since_attach = false;
                     tracked.reset();
                     window = Instant::now();
 
@@ -1187,7 +1195,7 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
                                 targets.clear();
                                 if attach_failures >= uprobe::MAX_ATTACH_FAILURES {
                                     warn!("uprobe source unusable, giving up");
-                                    return healthy;
+                                    return false;
                                 }
                             }
                         }
@@ -1207,9 +1215,12 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
         });
         let drain_ms = drain_t.elapsed().as_millis();
 
-        if seen && !healthy {
-            healthy = true;
-            info!("uprobe fps source is publishing to {FPS_FILE}");
+        if seen {
+            frames_since_attach = true;
+            if !healthy {
+                healthy = true;
+                info!("uprobe fps source is publishing to {FPS_FILE}");
+            }
         }
 
         let elapsed = window.elapsed();
@@ -1232,11 +1243,11 @@ fn run_uprobe(forced: Option<Method>, frametime: &FrameTime) -> bool {
             warn!("uprobe slow iter={iter_ms}ms scan={scan_ms}ms reattach={reattach_ms}ms drain={drain_ms}ms");
         }
 
-        if !healthy
+        if !frames_since_attach
             && attached_at.is_some_and(|started| started.elapsed() >= CLIENT_STARTUP_TIMEOUT)
         {
             warn!(
-                "uprobe attached but produced no frames in {}s, giving up",
+                "uprobe attached to pids={targets:?} but produced no frames in {}s, giving up",
                 CLIENT_STARTUP_TIMEOUT.as_secs()
             );
             return false;
@@ -1256,8 +1267,12 @@ fn run_uprobe(_forced: Option<Method>, _frametime: &FrameTime) -> bool {
 /// links for the current pid and the ring buffer.
 #[cfg(target_pointer_width = "64")]
 mod uprobe {
+    use std::collections::HashMap;
     use std::convert::TryInto;
     use std::fs;
+    use std::io::Read;
+    use std::path::Path;
+    use std::sync::{Mutex, OnceLock};
     use std::time::Duration;
 
     use aya::maps::{MapData, RingBuf};
@@ -1272,7 +1287,8 @@ mod uprobe {
     const OBJECT: &[u8] = aya::include_bytes_aligned!("../assets/fps_probe.bpf.o");
     const PROGRAM: &str = "fps_probe";
     const MAP: &str = "RING_BUF";
-    const LIBGUI: &str = "/system/lib64/libgui.so";
+    const LIBGUI_64: &str = "/system/lib64/libgui.so";
+    const LIBGUI_32: &str = "/system/lib/libgui.so";
     /// One `frame_record` from `assets/fps_probe.bpf.c`:
     /// `ktime_ns:u64, surface_key:u64, tgid:u32, pad:u32`.
     const RECORD_SIZE: usize = 24;
@@ -1298,34 +1314,78 @@ mod uprobe {
         "_ZN7android7Surface11queueBufferEP19ANativeWindowBufferiPNS_24SurfaceQueueBufferOutputE",
     ];
 
-    /// Discover all exported `android::Surface` queueBuffer / onBufferQueuedLocked symbols in
-    /// `/system/lib64/libgui.so`, merged with `SYMBOLS` so Android 16/17+ signature changes are
-    /// picked up automatically without losing known entry points.
-    fn resolved_symbols() -> &'static [String] {
-        static CACHE: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
-        CACHE.get_or_init(|| {
-            let mut out: Vec<String> = SYMBOLS.iter().map(|s| (*s).to_string()).collect();
-            if let Ok(bytes) = fs::read(LIBGUI) {
-                for slice in bytes.split(|&b| b == 0) {
-                    if !slice.starts_with(b"_ZN7android7Surface") {
-                        continue;
-                    }
-                    let Ok(sym) = std::str::from_utf8(slice) else {
-                        continue;
-                    };
-                    let matches = sym.starts_with("_ZN7android7Surface20onBufferQueuedLocked")
-                        || sym.starts_with("_ZN7android7Surface11queueBuffer")
-                        || sym.starts_with("_ZN7android7Surface12queueBuffers")
-                        || sym.starts_with("_ZN7android7Surface16hook_queueBuffer")
-                        || sym.starts_with("_ZN7android7Surface19queueBufferInternal")
-                        || sym.starts_with("_ZN7android7Surface27hook_queueBuffer_DEPRECATED");
-                    if matches && !out.iter().any(|existing| existing == sym) {
-                        out.push(sym.to_string());
-                    }
+    /// Extract the mapped `libgui.so` path from `/proc/<pid>/maps` text, ignoring deleted entries.
+    pub(super) fn parse_libgui_from_maps(maps: &str) -> Option<String> {
+        for line in maps.lines() {
+            if line.ends_with("(deleted)") {
+                continue;
+            }
+            let Some(path) = line.split_whitespace().nth(5) else {
+                continue;
+            };
+            if path.starts_with('/') && path.ends_with("/libgui.so") {
+                return Some(path.to_string());
+            }
+        }
+        None
+    }
+
+    /// Resolve which `libgui.so` a target process actually uses (32-bit games map
+    /// `/system/lib/libgui.so` on 64-bit devices, while 64-bit apps map `/system/lib64/libgui.so`).
+    fn libgui_for_pid(pid: i32) -> String {
+        if let Ok(maps) = fs::read_to_string(format!("/proc/{pid}/maps")) {
+            if let Some(path) = parse_libgui_from_maps(&maps) {
+                if Path::new(&path).is_file() {
+                    return path;
                 }
             }
-            out
-        })
+        }
+        // Fallback: inspect ELF class of /proc/<pid>/exe (1 = ELFCLASS32, 2 = ELFCLASS64).
+        if let Ok(mut f) = fs::File::open(format!("/proc/{pid}/exe")) {
+            let mut hdr = [0u8; 5];
+            if f.read_exact(&mut hdr).is_ok() && &hdr[..4] == b"\x7fELF" && hdr[4] == 1 {
+                if Path::new(LIBGUI_32).is_file() {
+                    return LIBGUI_32.to_string();
+                }
+            }
+        }
+        LIBGUI_64.to_string()
+    }
+
+    /// Discover all exported `android::Surface` queueBuffer / onBufferQueuedLocked symbols in
+    /// `lib_path` (cached per path), merged with `SYMBOLS` so Android 16/17+ and 32-bit ABI
+    /// signature differences are picked up automatically without losing known entry points.
+    fn resolved_symbols(lib_path: &str) -> Vec<String> {
+        static CACHE: OnceLock<Mutex<HashMap<String, Vec<String>>>> = OnceLock::new();
+        let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+        if let Some(cached) = cache.lock().unwrap_or_else(|e| e.into_inner()).get(lib_path) {
+            return cached.clone();
+        }
+        let mut out: Vec<String> = SYMBOLS.iter().map(|s| (*s).to_string()).collect();
+        if let Ok(bytes) = fs::read(lib_path) {
+            for slice in bytes.split(|&b| b == 0) {
+                if !slice.starts_with(b"_ZN7android7Surface") {
+                    continue;
+                }
+                let Ok(sym) = std::str::from_utf8(slice) else {
+                    continue;
+                };
+                let matches = sym.starts_with("_ZN7android7Surface20onBufferQueuedLocked")
+                    || sym.starts_with("_ZN7android7Surface11queueBuffer")
+                    || sym.starts_with("_ZN7android7Surface12queueBuffers")
+                    || sym.starts_with("_ZN7android7Surface16hook_queueBuffer")
+                    || sym.starts_with("_ZN7android7Surface19queueBufferInternal")
+                    || sym.starts_with("_ZN7android7Surface27hook_queueBuffer_DEPRECATED");
+                if matches && !out.iter().any(|existing| existing == sym) {
+                    out.push(sym.to_string());
+                }
+            }
+        }
+        cache
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(lib_path.to_string(), out.clone());
+        out
     }
 
     /// Pause between ring buffer drains.
@@ -1361,7 +1421,7 @@ mod uprobe {
             Ok(Self { bpf, ring, links: Vec::new(), loaded: false })
         }
 
-        /// Attach to every symbol this libgui has, for every process of the focused app.
+        /// Attach to every symbol each target process's `libgui.so` has (64-bit or 32-bit).
         /// Returns the number of links created; an empty set means the combination cannot be
         /// probed.
         pub(super) fn attach(&mut self, pids: &[i32]) -> Result<usize, String> {
@@ -1377,13 +1437,15 @@ mod uprobe {
             }
 
             let mut links = Vec::new();
-            let symbols = resolved_symbols();
             for pid in pids {
-                for symbol in symbols {
-                    match program.attach(Some(symbol.as_str()), 0, LIBGUI, Some(*pid)) {
+                let lib_path = libgui_for_pid(*pid);
+                let symbols = resolved_symbols(&lib_path);
+                debug!("uprobe resolving pid={pid} libgui={lib_path} candidates={}", symbols.len());
+                for symbol in &symbols {
+                    match program.attach(Some(symbol.as_str()), 0, lib_path.as_str(), Some(*pid)) {
                         Ok(id) => links.push(id),
                         Err(e) => {
-                            debug!("uprobe symbol unavailable pid={pid} symbol={symbol}: {e}");
+                            debug!("uprobe symbol unavailable pid={pid} lib={lib_path} symbol={symbol}: {e}");
                         }
                     }
                 }
@@ -1849,7 +1911,7 @@ mod tests {
         t2.on_event(1_000_000, 0xA);
         t2.on_event(1_000_500, 0xA);
         assert_eq!(t2.window_frames, 1, "collapsed duplicate must not count");
-        // ANativeWindow* (Surface* + 0x10) vs Surface* collapse into one stream.
+        // ANativeWindow* (Surface* + 0x10) vs Surface* collapse into one stream (64-bit).
         let mut t3 = StreamTracker::new();
         let surf_ptr = 0x7000_1234_5000u64;
         let anw_ptr = surf_ptr + 0x10;
@@ -1859,6 +1921,34 @@ mod tests {
         assert_eq!(t3.window_frames, 1, "Surface* and ANativeWindow* must unify");
         assert_eq!(t3.on_event(21_111_000, surf_ptr), Some(11_111));
         assert_eq!(t3.window_frames, 2);
+        // ANativeWindow* (Surface* + 0x08) vs Surface* collapse into one stream (32-bit).
+        let mut t4 = StreamTracker::new();
+        let surf32 = 0xd234_5000u64;
+        let anw32 = surf32 + 0x08;
+        t4.active = Some(anw32);
+        t4.on_event(10_000_000, anw32);
+        t4.on_event(10_005_000, surf32);
+        assert_eq!(t4.window_frames, 1, "32-bit Surface* and ANativeWindow* must unify");
+        assert_eq!(t4.on_event(26_667_000, surf32), Some(16_667));
+        assert_eq!(t4.window_frames, 2);
+    }
+
+    #[cfg(target_pointer_width = "64")]
+    #[test]
+    fn parse_libgui_path_from_proc_maps() {
+        let maps_32 = "\
+f1000000-f1010000 r--p 00000000 fd:00 123 /system/lib/libgui.so (deleted)\n\
+f2000000-f2010000 r-xp 00010000 fd:00 456 /system/lib/libgui.so\n";
+        assert_eq!(
+            uprobe::parse_libgui_from_maps(maps_32).as_deref(),
+            Some("/system/lib/libgui.so")
+        );
+        let maps_64 = "7a00000000-7a00080000 r-xp 00020000 fd:00 789 /system/lib64/libgui.so\n";
+        assert_eq!(
+            uprobe::parse_libgui_from_maps(maps_64).as_deref(),
+            Some("/system/lib64/libgui.so")
+        );
+        assert_eq!(uprobe::parse_libgui_from_maps("7a0000-7a1000 rw-p 00000000 00:00 0 [anon]\n"), None);
     }
 
     #[test]
